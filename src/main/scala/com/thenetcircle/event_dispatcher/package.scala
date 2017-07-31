@@ -4,6 +4,10 @@ import akka.util.ByteString
 
 package object event_dispatcher {
 
+  sealed trait EventFmt
+  object Plain extends EventFmt
+  object ActivityStreams extends EventFmt
+
   case class RawEvent(
       body: ByteString,
       context: Map[String, Any],

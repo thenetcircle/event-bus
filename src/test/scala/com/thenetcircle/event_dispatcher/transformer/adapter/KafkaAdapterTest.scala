@@ -1,14 +1,14 @@
 package com.thenetcircle.event_dispatcher.transformer.adapter
 
 import akka.util.ByteString
-import com.thenetcircle.event_dispatcher.{TestCase, RawEvent}
+import com.thenetcircle.event_dispatcher.transformer.Adapter.KafkaAdapter
+import com.thenetcircle.event_dispatcher.{RawEvent, TestCase}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.record.TimestampType
 
 class KafkaAdapterTest extends TestCase {
 
-  val adapter = new KafkaAdapter
+  val adapter = KafkaAdapter
   val pkey = "test-key".getBytes("UTF-8")
   val pval = "test-data".getBytes("UTF-8")
   val rawEvent = RawEvent(

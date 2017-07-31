@@ -4,11 +4,12 @@ import akka.stream.alpakka.amqp.IncomingMessage
 import com.rabbitmq.client.Envelope
 import akka.util.ByteString
 import com.rabbitmq.client.AMQP.BasicProperties
-import com.thenetcircle.event_dispatcher.{TestCase, RawEvent}
+import com.thenetcircle.event_dispatcher.transformer.Adapter.AMQPAdapter
+import com.thenetcircle.event_dispatcher.{RawEvent, TestCase}
 
 class AMQPAdapterTest extends TestCase {
 
-  val adapter = new AMQPAdapter
+  val adapter = AMQPAdapter
   val envelope = new Envelope(123, true, "test-channel", "test-*")
   val properties = new BasicProperties()
   val rawEvent = RawEvent(
