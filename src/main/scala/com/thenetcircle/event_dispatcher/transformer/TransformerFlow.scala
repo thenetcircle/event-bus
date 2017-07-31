@@ -4,15 +4,15 @@ import akka.stream.javadsl.BidiFlow
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_dispatcher.Event
 
-object TransformerFlow
-{
-  def apply[T](adapter: Adapter[T], extractor: Extractor): BidiFlow[T, Event, Event, T, NotUsed] =
-  {
-    // Transform source data to Event
-    val flow1 = Flow[T].map(adapter.adapt _).map(extractor.extract _)
+object TransformerFlow {
+  def apply[In, Out](
+      adapter: Adapter[In, Out],
+      extractor: Extractor): BidiFlow[In, Event, Event, Out, NotUsed] = {
+    // Transform raw data to Event
+    val flow1 = Flow[In].map(adapter.adapt).map(extractor.extract)
 
-    // Transform Event to sink data
-    val flow2 = Flow[Event].map(extractor.deExtract _).map(adapter.deAdapt _)
+    // Transform Event to raw data
+    val flow2 = Flow[Event].map(extractor.deExtract).map(adapter.deAdapt)
 
     BidiFlow.fromFlows(flow1, flow2)
   }
