@@ -1,6 +1,8 @@
 package com.thenetcircle.event_dispatcher.transformer.extractor
 
-import com.thenetcircle.event_dispatcher.{Event, UnExtractedEvent}
+import java.text.SimpleDateFormat
+
+import com.thenetcircle.event_dispatcher.{BizData, Event, RawEvent}
 import com.thenetcircle.event_dispatcher.transformer.Extractor
 import spray.json._
 
@@ -73,24 +75,31 @@ class ActivityStreamsExtractor extends Extractor {
 
   import ActivityStreamsProtocol._
 
-  override def extract(unExtractedEvent: UnExtractedEvent): Event = {
-    val jsonAst = unExtractedEvent.body.utf8String.parseJson
-    val activity = jsonAst.convertTo[Activity]
+  override def extract(rawEvent: RawEvent): Event = {
+    val jsonAst = rawEvent.body.utf8String.parseJson
+    val activity = jsonAst.convertTo[ThinActivity]
 
     val provider = activity.provider match {
       case Some(p: ActivityObject) => p.id
       case _                       => None
     }
     val category = activity.verb
+    val actor = activity.actor
 
-    Event(
-      genUUID(),
-      unExtractedEvent.body,
-      unExtractedEvent.context,
-      unExtractedEvent.channel,
-      provider,
-      category
+    val timestamp = activity.published match {
+      case Some(datetime: String) =>
+        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(datetime).getTime
+      case None => System.currentTimeMillis()
+    }
+    val bizData = BizData(
+      sessionId = activity.id,
+      provider = provider,
+      category = category,
+      actorId = actor.id,
+      actorType = actor.objectType
     )
+
+    Event(genUUID(), timestamp, rawEvent, bizData)
   }
 
 }

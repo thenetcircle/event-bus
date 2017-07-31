@@ -1,7 +1,7 @@
 package com.thenetcircle.event_dispatcher.transformer.adapter
 
 import akka.util.ByteString
-import com.thenetcircle.event_dispatcher.UnExtractedEvent
+import com.thenetcircle.event_dispatcher.RawEvent
 import com.thenetcircle.event_dispatcher.transformer.Adapter
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -11,8 +11,8 @@ class KafkaAdapter
                     ProducerRecord[Array[Byte], Array[Byte]]] {
 
   override def adapt(
-      message: ConsumerRecord[Array[Byte], Array[Byte]]): UnExtractedEvent =
-    UnExtractedEvent(
+      message: ConsumerRecord[Array[Byte], Array[Byte]]): RawEvent =
+    RawEvent(
       ByteString(message.value()),
       Map("key" -> ByteString(message.key()),
           "offset" -> message.offset(),
@@ -22,7 +22,7 @@ class KafkaAdapter
     )
 
   override def deAdapt(
-      event: UnExtractedEvent): ProducerRecord[Array[Byte], Array[Byte]] = {
+      event: RawEvent): ProducerRecord[Array[Byte], Array[Byte]] = {
 
     val context = event.context
 

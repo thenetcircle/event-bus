@@ -1,6 +1,9 @@
 package com.thenetcircle.event_dispatcher.transformer.extractor
 
-import com.thenetcircle.event_dispatcher.{TestCase, UnExtractedEvent}
+import java.text.SimpleDateFormat
+
+import akka.util.ByteString
+import com.thenetcircle.event_dispatcher.{BizData, Event, RawEvent, TestCase}
 
 class ActivityStreamsExtractorTest extends TestCase {
 
@@ -52,6 +55,35 @@ class ActivityStreamsExtractorTest extends TestCase {
     val extra = activity.extra.get
     extra("name") shouldEqual JsString("user.login")
     extra("propagationStopped") shouldEqual JsBoolean(false)
+  }
+
+  test("extrator") {
+    val extractor = new ActivityStreamsExtractor
+    val rawEvent = RawEvent(
+      body = ByteString(json),
+      context = Map.empty[String, Any],
+      channel = None
+    )
+
+    val event = extractor.extract(rawEvent)
+    val expectedEvent = Event(
+      uuid = "test-uuid",
+      timestamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
+        .parse("2017-07-17T13:26:11+02:00")
+        .getTime,
+      rawEvent = rawEvent,
+      bizData = BizData(
+        sessionId = Some("user-1008646-1500290771-820"),
+        provider = Some("COMM1"),
+        category = Some("user.login"),
+        actorId = Some("1008646"),
+        actorType = Some("user")
+      )
+    )
+
+    event.timestamp shouldEqual expectedEvent.timestamp
+    event.rawEvent shouldEqual expectedEvent.rawEvent
+    event.bizData shouldEqual expectedEvent.bizData
   }
 
 }

@@ -2,7 +2,7 @@ package com.thenetcircle.event_dispatcher.transformer
 import akka.NotUsed
 import akka.stream.javadsl.BidiFlow
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_dispatcher.{Event, UnExtractedEvent}
+import com.thenetcircle.event_dispatcher.{Event, RawEvent}
 
 object TransformerFlow {
   def apply[In, Out](extractor: Extractor)(implicit adapter: Adapter[In, Out])
@@ -13,12 +13,9 @@ object TransformerFlow {
 
     // Transform Event to raw data
     val flow2 =
-      Flow[Event].map(convertEventToUnExtractedEvent).map(adapter.deAdapt)
+      Flow[Event].map(_.rawEvent).map(adapter.deAdapt)
 
     BidiFlow.fromFlows(flow1, flow2)
 
   }
-
-  def convertEventToUnExtractedEvent(event: Event): UnExtractedEvent =
-    UnExtractedEvent(event.body, event.context, event.channel)
 }
