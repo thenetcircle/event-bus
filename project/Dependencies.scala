@@ -21,12 +21,18 @@ object Dependencies {
 
   private val base = akkaBase ++ log ++ test
 
+  private val jsonParser = "io.spray" %% "spray-json" % "1.3.3"
+  private val uuidGenerater = "io.jvm.uuid" %% "scala-uuid" % "0.2.3"
+
   private val redisConnector = "com.github.etaty" %% "rediscala" % "1.8.0"
-  private val amqpConnector  = "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "0.10"
+  private val amqpConnector = "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "0.10"
   private val kafkaConnector = "com.typesafe.akka" %% "akka-stream-kafka" % "0.16"
 
   // Apps
   val rootDeps = base ++ Seq(
+    jsonParser,
+    uuidGenerater
+  ) ++ Seq(
     redisConnector,
     amqpConnector,
     kafkaConnector
