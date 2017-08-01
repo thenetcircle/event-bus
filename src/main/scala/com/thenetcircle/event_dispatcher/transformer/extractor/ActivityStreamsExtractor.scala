@@ -2,7 +2,7 @@ package com.thenetcircle.event_dispatcher.transformer.extractor
 
 import java.text.SimpleDateFormat
 
-import com.thenetcircle.event_dispatcher.{BizData, Event, RawEvent}
+import com.thenetcircle.event_dispatcher.{EventFmt, BizData, Event, RawEvent}
 import com.thenetcircle.event_dispatcher.transformer.Extractor
 import spray.json._
 
@@ -99,7 +99,7 @@ class ActivityStreamsExtractor extends Extractor {
       actorType = actor.objectType
     )
 
-    Event(genUUID(), timestamp, rawEvent, bizData)
+    Event(genUUID(), timestamp, rawEvent, bizData, EventFmt.ActivityStreams)
   }
 
 }

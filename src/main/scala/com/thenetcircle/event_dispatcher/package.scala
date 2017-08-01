@@ -5,8 +5,10 @@ import akka.util.ByteString
 package object event_dispatcher {
 
   sealed trait EventFmt
-  object Plain extends EventFmt
-  object ActivityStreams extends EventFmt
+  object EventFmt {
+    object Plain extends EventFmt
+    object ActivityStreams extends EventFmt
+  }
 
   case class RawEvent(
       body: ByteString,
@@ -26,7 +28,8 @@ package object event_dispatcher {
       uuid: String,
       timestamp: Long,
       rawEvent: RawEvent,
-      bizData: BizData
+      bizData: BizData,
+      format: EventFmt
   )
 
 }

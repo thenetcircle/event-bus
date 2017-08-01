@@ -1,8 +1,10 @@
-package com.thenetcircle.event_dispatcher.transformer
+package com.thenetcircle.event_dispatcher.transformer.scaladsl
+
 import akka.NotUsed
 import akka.stream.javadsl.BidiFlow
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_dispatcher.{Event, RawEvent}
+import com.thenetcircle.event_dispatcher.Event
+import com.thenetcircle.event_dispatcher.transformer.{Adapter, Extractor}
 
 object TransformerFlow {
   def apply[In, Out](extractor: Extractor)(implicit adapter: Adapter[In, Out])
