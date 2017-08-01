@@ -3,6 +3,7 @@ package com.thenetcircle.event_dispatcher.transformer.extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
+import com.thenetcircle.event_dispatcher.EventFmt
 import com.thenetcircle.event_dispatcher.{BizData, Event, RawEvent, TestCase}
 
 class ActivityStreamsExtractorTest extends TestCase {
@@ -78,7 +79,8 @@ class ActivityStreamsExtractorTest extends TestCase {
         category = Some("user.login"),
         actorId = Some("1008646"),
         actorType = Some("user")
-      )
+      ),
+      format = EventFmt.ActivityStreams
     )
 
     event.timestamp shouldEqual expectedEvent.timestamp
