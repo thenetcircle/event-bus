@@ -1,6 +1,7 @@
 package com.thenetcircle.event_dispatcher.connector.adapter
 
 import akka.util.ByteString
+import com.thenetcircle.event_dispatcher.connector.{ KafkaKey, KafkaValue }
 import com.thenetcircle.event_dispatcher.{ RawEvent, TestCase }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -24,7 +25,7 @@ class KafkaAdapterTest extends TestCase {
 
     val adapter = KafkaSourceAdapter
     val message =
-      new ConsumerRecord[Array[Byte], Array[Byte]]("test-channel", 1, 10, pkey, pval)
+      new ConsumerRecord[KafkaKey, KafkaValue]("test-channel", 1, 10, pkey, pval)
 
     adapter.fit(message) should equal(rawEvent)
 
@@ -34,7 +35,7 @@ class KafkaAdapterTest extends TestCase {
 
     val adapter = KafkaSinkAdapter
     val actual = adapter.unfit(rawEvent)
-    val expected = new ProducerRecord[Array[Byte], Array[Byte]](
+    val expected = new ProducerRecord[KafkaKey, KafkaValue](
       "test-channel",
       1,
       null,

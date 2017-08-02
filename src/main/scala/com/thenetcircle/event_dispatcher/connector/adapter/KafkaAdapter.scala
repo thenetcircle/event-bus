@@ -2,12 +2,12 @@ package com.thenetcircle.event_dispatcher.connector.adapter
 
 import akka.util.ByteString
 import com.thenetcircle.event_dispatcher.RawEvent
-import com.thenetcircle.event_dispatcher.connector.{ SinkAdapter, SourceAdapter }
+import com.thenetcircle.event_dispatcher.connector.{ KafkaKey, KafkaValue, SinkAdapter, SourceAdapter }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 
-object KafkaSourceAdapter extends SourceAdapter[ConsumerRecord[Array[Byte], Array[Byte]]] {
-  override def fit(message: ConsumerRecord[Array[Byte], Array[Byte]]): RawEvent =
+object KafkaSourceAdapter extends SourceAdapter[ConsumerRecord[KafkaKey, KafkaValue]] {
+  override def fit(message: ConsumerRecord[KafkaKey, KafkaValue]): RawEvent =
     RawEvent(
       ByteString(message.value()),
       Map("key" -> ByteString(message.key()),
@@ -18,8 +18,8 @@ object KafkaSourceAdapter extends SourceAdapter[ConsumerRecord[Array[Byte], Arra
     )
 }
 
-object KafkaSinkAdapter extends SinkAdapter[ProducerRecord[Array[Byte], Array[Byte]]] {
-  override def unfit(event: RawEvent): ProducerRecord[Array[Byte], Array[Byte]] = {
+object KafkaSinkAdapter extends SinkAdapter[ProducerRecord[KafkaKey, KafkaValue]] {
+  override def unfit(event: RawEvent): ProducerRecord[KafkaKey, KafkaValue] = {
     val context = event.context
 
     val topic = event.channel.get
@@ -35,15 +35,15 @@ object KafkaSinkAdapter extends SinkAdapter[ProducerRecord[Array[Byte], Array[By
     val key = context.get("key") match {
       case Some(k: ByteString) => k.toArray
       case Some(k: String) => k.getBytes("UTF-8")
-      case Some(k: Array[Byte]) => k
+      case Some(k: KafkaKey) => k
       case _ => null
     }
 
-    new ProducerRecord[Array[Byte], Array[Byte]](topic,
-                                                 partition.asInstanceOf[java.lang.Integer],
-                                                 timestamp.asInstanceOf[java.lang.Long],
-                                                 key,
-                                                 value)
+    new ProducerRecord[KafkaKey, KafkaValue](topic,
+                                             partition.asInstanceOf[java.lang.Integer],
+                                             timestamp.asInstanceOf[java.lang.Long],
+                                             key,
+                                             value)
   }
 
 }
