@@ -2,7 +2,7 @@ package com.thenetcircle.event_dispatcher.extractor
 
 import java.text.SimpleDateFormat
 
-import com.thenetcircle.event_dispatcher.{BizData, Event, EventFmt, RawEvent}
+import com.thenetcircle.event_dispatcher.{ BizData, Event, EventFmt, RawEvent }
 import spray.json._
 
 case class ActivityObject(
@@ -70,7 +70,7 @@ object ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val fatActivityFormat = jsonFormat15(FatActivity)
 }
 
-class ActivityStreamsExtractor extends Extractor {
+class ActivityStreamsExtractor extends Extractor[EventFmt.ActivityStreams] {
 
   import ActivityStreamsProtocol._
 
@@ -80,7 +80,7 @@ class ActivityStreamsExtractor extends Extractor {
 
     val provider = activity.provider match {
       case Some(p: ActivityObject) => p.id
-      case _                       => None
+      case _ => None
     }
     val category = activity.verb
     val actor = activity.actor
@@ -98,7 +98,7 @@ class ActivityStreamsExtractor extends Extractor {
       actorType = actor.objectType
     )
 
-    Event(genUUID(), timestamp, rawEvent, bizData, EventFmt.ActivityStreams)
+    Event(genUUID(), timestamp, rawEvent, bizData, EventFmt.ActivityStreams())
   }
 
 }

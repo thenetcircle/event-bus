@@ -4,18 +4,11 @@ import akka.util.ByteString
 
 package object event_dispatcher {
 
-  trait SourceAdapter[In] {
-    def fit(message: In): RawEvent
-  }
-  trait SinkAdapter[Out] {
-    def unfit(event: RawEvent): Out
-  }
-
   sealed trait EventFmt
   object EventFmt {
-    object Plain extends EventFmt
-    object Json extends EventFmt
-    object ActivityStreams extends EventFmt
+    case class Plain() extends EventFmt
+    case class Json() extends EventFmt
+    case class ActivityStreams() extends EventFmt
   }
 
   case class RawEvent(

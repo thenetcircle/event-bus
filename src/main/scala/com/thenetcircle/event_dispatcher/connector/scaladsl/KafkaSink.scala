@@ -1,10 +1,12 @@
-package com.thenetcircle.event_dispatcher.adapter.scaladsl
+package com.thenetcircle.event_dispatcher.connector.scaladsl
 
 import akka.Done
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.thenetcircle.event_dispatcher.Event
-import com.thenetcircle.event_dispatcher.adapter.{ KafkaSinkAdapter, KafkaSinkSettings }
+import com.thenetcircle.event_dispatcher.connector.KafkaSinkSettings
+import com.thenetcircle.event_dispatcher.connector.adapter.KafkaSinkAdapter
+
 import scala.concurrent.Future
 
 object KafkaSink {
