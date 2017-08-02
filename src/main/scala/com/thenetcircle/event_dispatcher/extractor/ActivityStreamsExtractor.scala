@@ -1,9 +1,8 @@
-package com.thenetcircle.event_dispatcher.transformer.extractor
+package com.thenetcircle.event_dispatcher.extractor
 
 import java.text.SimpleDateFormat
 
-import com.thenetcircle.event_dispatcher.{EventFmt, BizData, Event, RawEvent}
-import com.thenetcircle.event_dispatcher.transformer.Extractor
+import com.thenetcircle.event_dispatcher.{BizData, Event, EventFmt, RawEvent}
 import spray.json._
 
 case class ActivityObject(
