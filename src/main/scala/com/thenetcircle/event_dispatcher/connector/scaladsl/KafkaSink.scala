@@ -7,9 +7,10 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import com.thenetcircle.event_dispatcher.Event
 import com.thenetcircle.event_dispatcher.connector.{ KafkaKey, KafkaSinkSettings, KafkaValue }
 import com.thenetcircle.event_dispatcher.connector.adapter.KafkaSinkAdapter
-import com.thenetcircle.event_dispatcher.extractor.DeExtractor
+import com.thenetcircle.event_dispatcher.extractor.Extractor
 import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerRecord }
 import java.util.concurrent.ConcurrentHashMap
+
 import akka.kafka.ProducerMessage
 
 object KafkaSink {
@@ -33,7 +34,7 @@ object KafkaSink {
       .via(Producer.flow(settings.producerSettings, producer))
 
     Flow[Event]
-      .map(DeExtractor.apply)
+      .map(Extractor.deExtract)
       .map(KafkaSinkAdapter.unfit)
       .viaMat(kafkaProducerFlow)(Keep.left)
 
