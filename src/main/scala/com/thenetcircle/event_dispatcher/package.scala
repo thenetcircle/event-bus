@@ -15,7 +15,9 @@ package object event_dispatcher {
       body: ByteString,
       context: Map[String, Any],
       channel: Option[String] = None
-  )
+  ) {
+    def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))
+  }
 
   case class BizData(
       sessionId: Option[String] = None,

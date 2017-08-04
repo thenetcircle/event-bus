@@ -31,7 +31,6 @@ final case class KafkaSourceSettings(
     consumerSettings: ConsumerSettings[KafkaKey, KafkaValue],
     topics: Option[Set[String]] = None,
     topicPattern: Option[String] = None,
-    maxPartitions: Int = 5,
     name: String = "DefaultKafkaSource"
 ) extends SourceSettings
 

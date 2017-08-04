@@ -1,21 +1,20 @@
 package com.thenetcircle.event_dispatcher.connector.scaladsl
 
-import akka.NotUsed
-import akka.kafka.ConsumerMessage.CommittableOffsetBatch
-import akka.kafka.{ AutoSubscription, Subscriptions }
+import akka.{ Done, NotUsed }
+import akka.kafka.ConsumerMessage.{ CommittableOffset, CommittableOffsetBatch }
 import akka.kafka.scaladsl.Consumer
+import akka.kafka.{ AutoSubscription, Subscriptions }
 import akka.stream.scaladsl.{ Flow, Source }
 import com.thenetcircle.event_dispatcher.connector.KafkaSourceSettings
+import com.thenetcircle.event_dispatcher.connector.adapter.KafkaSourceAdapter
 import com.thenetcircle.event_dispatcher.extractor.Extractor
 import com.thenetcircle.event_dispatcher.{ Event, EventFmt }
 
 object KafkaSource {
 
-  def apply[Fmt <: EventFmt](
-      settings: KafkaSourceSettings,
-      bizFlow: Flow[Event, _, Any]
-  )(implicit extractor: Extractor[Fmt]): Source[Event, NotUsed] = {
-
+  def atLeastOnce[Fmt <: EventFmt](
+      settings: KafkaSourceSettings
+  )(implicit extractor: Extractor[Fmt]): Source[Event, Consumer.Control] = {
     val consumerName = settings.name
     val consumerSettings = settings.consumerSettings
 
@@ -27,14 +26,20 @@ object KafkaSource {
       throw new IllegalArgumentException("Kafka source need subscribe topics")
     }
 
-    val consumer = Consumer
+    Consumer
       .committableSource(consumerSettings, subscription)
-      .map(_.committableOffset)
-      .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
+      .map(msg => {
+        KafkaSourceAdapter.fit(msg.record).addContext("committableOffset", msg.committableOffset)
+      })
+      .map(extractor.extract)
+  }
+
+  def commit(parallelism: Int = 3, batchMax: Int = 20): Flow[Event, Done, NotUsed] =
+    Flow[Event]
+      .map(_.rawEvent.context("committableOffset").asInstanceOf[CommittableOffset])
+      .batch(max = batchMax, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
         batch.updated(elem)
       }
-      .named(consumerName)
-
-  }
+      .mapAsync(parallelism)(_.commitScaladsl())
 
 }
