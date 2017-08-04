@@ -5,7 +5,7 @@ import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import akka.util.ByteString
 import com.thenetcircle.event_dispatcher.connector.RedisPubSubSinkSettings
 import com.thenetcircle.event_dispatcher.connector.adapter.RedisPubSubSinkAdapter
-import com.thenetcircle.event_dispatcher.extractor.DeExtractor
+import com.thenetcircle.event_dispatcher.extractor.Extractor
 import com.thenetcircle.event_dispatcher.stage.redis.DefaultRedisSinkSettings
 import com.thenetcircle.event_dispatcher.stage.redis.scaladsl.RedisSink
 import com.thenetcircle.event_dispatcher.Event
@@ -15,7 +15,7 @@ object RedisPubSubSink {
     val redisSink = RedisSink[ByteString](DefaultRedisSinkSettings(settings.connectionSettings))
 
     Flow[Event]
-      .map(DeExtractor.apply)
+      .map(Extractor.deExtract)
       .map(RedisPubSubSinkAdapter.unfit)
       .toMat(redisSink)(Keep.right)
   }
