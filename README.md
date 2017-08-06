@@ -10,21 +10,22 @@ It supplies data operations (like partition, broadcast, filtering etc, thanks fo
 
 ## Background
 
- There is a first version(1.x) of EventDispatcher which running on production for a while already. 
- It's role also a proxy between different services/systems for delivering events.  
+ There is a first version(1.x) of EventDispatcher which has been running on production for a while already. 
+ It's role also a proxy between different services/systems for delivering events. 
  It's based on Akka with push-pull-model, no persistence support.  
- This project is based on goal of the first version. As a upgraded version with more features and safety guarantee.  
- This versoin will base on Akka Stream, Utilizing some grate features from Actor model and Reactive Streams.
+ This project is based on goal of the first version. As a upgraded version with more features and safety guarantee. 
+ New versoin will base on Akka Stream, Utilizing some grate features from Actor model and Reactive Streams.
  
 ## Roadmap
 
 ### 2.x
 
 1. Refactoring based on Akka-Stream.
-2. Supply some data sources and sinks (RedisPubSub, Kafka, AMQP, HTTP).
-3. Events persistence
-4. Support secondary source (for fallback)
+2. Supplies some data sources and sinks (RedisPubSub, Kafka, AMQP, HTTP).
+3. Event persistence
+4. Supports secondary pipeline (for fallback)
 5. At least once delivery guarantee and Exactly once (needs client support)
+6. Statistics and Monitoring
 
 ### 1.x
 
