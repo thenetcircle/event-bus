@@ -1,9 +1,10 @@
-package com.thenetcircle.event_dispatcher.connector
-import akka.kafka.{ ConsumerSettings, ProducerSettings }
+package com.thenetcircle.event_dispatcher.source
+
+import akka.kafka.ConsumerSettings
+import com.thenetcircle.event_dispatcher.driver.{ KafkaKey, KafkaValue }
 import com.thenetcircle.event_dispatcher.stage.redis.RedisConnectionSettings
 
 sealed trait SourceSettings
-sealed trait SinkSettings
 
 final case class RedisPubSubSourceSettings(
     connectionSettings: RedisConnectionSettings,
@@ -23,18 +24,9 @@ final case class RedisPubSubSourceSettings(
 
 }
 
-final case class RedisPubSubSinkSettings(
-    connectionSettings: RedisConnectionSettings
-) extends SinkSettings
-
 final case class KafkaSourceSettings(
     consumerSettings: ConsumerSettings[KafkaKey, KafkaValue],
     topics: Option[Set[String]] = None,
     topicPattern: Option[String] = None,
     name: String = "DefaultKafkaSource"
 ) extends SourceSettings
-
-final case class KafkaSinkSettings(
-    producerSettings: ProducerSettings[KafkaKey, KafkaValue],
-    name: String = "DefaultKafkaSink"
-) extends SinkSettings

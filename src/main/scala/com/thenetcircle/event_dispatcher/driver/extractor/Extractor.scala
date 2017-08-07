@@ -1,4 +1,4 @@
-package com.thenetcircle.event_dispatcher.extractor
+package com.thenetcircle.event_dispatcher.driver.extractor
 
 import com.thenetcircle.event_dispatcher.{ Event, EventFmt, RawEvent }
 import io.jvm.uuid.UUID

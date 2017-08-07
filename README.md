@@ -13,7 +13,7 @@ It supplies data operations (like partition, broadcast, filtering etc, thanks fo
  There is a first version(1.x) of EventDispatcher which has been running on production for a while already. 
  It's role also a proxy between different services/systems for delivering events. 
  It's based on Akka with push-pull-model, no persistence support.  
- This project is based on goal of the first version. As a upgraded version with more features and safety guarantee. 
+ This project is based on the goal of the first version. As a upgraded version with more features and safety guarantee. 
  New versoin will base on Akka Stream, Utilizing some grate features from Actor model and Reactive Streams.
  
 ## Roadmap

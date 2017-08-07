@@ -1,5 +1,4 @@
-package com.thenetcircle.event_dispatcher.extractor
-
+package com.thenetcircle.event_dispatcher.driver.extractor
 import com.thenetcircle.event_dispatcher.{ BizData, Event, EventFmt, RawEvent }
 
 class PlainExtractor extends Extractor[EventFmt.Plain] {

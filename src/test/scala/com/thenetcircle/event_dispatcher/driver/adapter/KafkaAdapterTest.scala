@@ -1,7 +1,7 @@
-package com.thenetcircle.event_dispatcher.connector.adapter
+package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.util.ByteString
-import com.thenetcircle.event_dispatcher.connector.{ KafkaKey, KafkaValue }
+import com.thenetcircle.event_dispatcher.driver.{ KafkaKey, KafkaValue }
 import com.thenetcircle.event_dispatcher.{ RawEvent, TestCase }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord

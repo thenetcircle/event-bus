@@ -1,13 +1,12 @@
-package com.thenetcircle.event_dispatcher.connector.scaladsl
+package com.thenetcircle.event_dispatcher.source
 
-import akka.{ Done, NotUsed }
 import akka.kafka.ConsumerMessage.{ CommittableOffset, CommittableOffsetBatch }
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{ AutoSubscription, Subscriptions }
 import akka.stream.scaladsl.{ Flow, Source }
-import com.thenetcircle.event_dispatcher.connector.KafkaSourceSettings
-import com.thenetcircle.event_dispatcher.connector.adapter.KafkaSourceAdapter
-import com.thenetcircle.event_dispatcher.extractor.Extractor
+import akka.{ Done, NotUsed }
+import com.thenetcircle.event_dispatcher.driver.adapter.KafkaSourceAdapter
+import com.thenetcircle.event_dispatcher.driver.extractor.Extractor
 import com.thenetcircle.event_dispatcher.{ Event, EventFmt }
 
 object KafkaSource {

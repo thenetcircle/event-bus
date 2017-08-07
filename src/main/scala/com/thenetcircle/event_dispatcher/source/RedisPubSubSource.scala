@@ -1,13 +1,12 @@
-package com.thenetcircle.event_dispatcher.connector.scaladsl
+package com.thenetcircle.event_dispatcher.source
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import com.thenetcircle.event_dispatcher.{ Event, EventFmt }
-import com.thenetcircle.event_dispatcher.connector.RedisPubSubSourceSettings
-import com.thenetcircle.event_dispatcher.connector.adapter.RedisPubSubSourceAdapter
-import com.thenetcircle.event_dispatcher.extractor.Extractor
+import com.thenetcircle.event_dispatcher.driver.adapter.RedisPubSubSourceAdapter
+import com.thenetcircle.event_dispatcher.driver.extractor.Extractor
 import com.thenetcircle.event_dispatcher.stage.redis.DefaultRedisSourceSettings
 import com.thenetcircle.event_dispatcher.stage.redis.scaladsl.RedisSource
+import com.thenetcircle.event_dispatcher.{ Event, EventFmt }
 
 import scala.collection.immutable
 

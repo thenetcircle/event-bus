@@ -1,4 +1,4 @@
-package com.thenetcircle.event_dispatcher.connector
+package com.thenetcircle.event_dispatcher.driver.adapter
 
 import com.thenetcircle.event_dispatcher.RawEvent
 

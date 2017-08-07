@@ -1,4 +1,4 @@
-package com.thenetcircle.event_dispatcher.connector.adapter
+package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.stream.alpakka.amqp.IncomingMessage
 import com.rabbitmq.client.Envelope

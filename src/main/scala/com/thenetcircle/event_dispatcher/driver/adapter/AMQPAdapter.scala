@@ -1,8 +1,7 @@
-package com.thenetcircle.event_dispatcher.connector.adapter
+package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.stream.alpakka.amqp.IncomingMessage
 import akka.util.ByteString
-import com.thenetcircle.event_dispatcher.connector.{ SinkAdapter, SourceAdapter }
 import com.thenetcircle.event_dispatcher.RawEvent
 
 object AMQPSourceAdapter extends SourceAdapter[IncomingMessage] {

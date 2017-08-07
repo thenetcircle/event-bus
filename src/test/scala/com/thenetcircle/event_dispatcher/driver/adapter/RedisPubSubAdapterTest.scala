@@ -1,4 +1,4 @@
-package com.thenetcircle.event_dispatcher.connector.adapter
+package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.util.ByteString
 import com.thenetcircle.event_dispatcher.stage.redis.{ IncomingMessage, OutgoingMessage }

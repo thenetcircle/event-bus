@@ -1,4 +1,4 @@
-package com.thenetcircle.event_dispatcher.extractor
+package com.thenetcircle.event_dispatcher.driver.extractor
 
 import java.text.SimpleDateFormat
 

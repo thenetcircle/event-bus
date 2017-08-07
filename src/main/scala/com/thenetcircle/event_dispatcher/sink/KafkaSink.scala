@@ -1,17 +1,17 @@
-package com.thenetcircle.event_dispatcher.connector.scaladsl
+package com.thenetcircle.event_dispatcher.sink
 
-import akka.{ Done, NotUsed }
-import akka.kafka.ProducerMessage.Message
-import akka.kafka.scaladsl.Producer
-import akka.stream.scaladsl.{ Flow, Keep, Sink }
-import com.thenetcircle.event_dispatcher.Event
-import com.thenetcircle.event_dispatcher.connector.{ KafkaKey, KafkaSinkSettings, KafkaValue }
-import com.thenetcircle.event_dispatcher.connector.adapter.KafkaSinkAdapter
-import com.thenetcircle.event_dispatcher.extractor.Extractor
-import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerRecord }
 import java.util.concurrent.ConcurrentHashMap
 
+import akka.NotUsed
 import akka.kafka.ProducerMessage
+import akka.kafka.ProducerMessage.Message
+import akka.kafka.scaladsl.Producer
+import akka.stream.scaladsl.{ Flow, Keep }
+import com.thenetcircle.event_dispatcher.Event
+import com.thenetcircle.event_dispatcher.driver.adapter.KafkaSinkAdapter
+import com.thenetcircle.event_dispatcher.driver.extractor.Extractor
+import com.thenetcircle.event_dispatcher.driver.{ KafkaKey, KafkaValue }
+import org.apache.kafka.clients.producer.{ KafkaProducer, ProducerRecord }
 
 object KafkaSink {
 
