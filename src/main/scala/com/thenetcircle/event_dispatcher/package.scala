@@ -16,6 +16,7 @@ package object event_dispatcher {
       context: Map[String, Any],
       channel: Option[String] = None
   ) {
+    def hasContext(key: String): Boolean = context.isDefinedAt(key)
     def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))
   }
 
