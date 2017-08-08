@@ -25,6 +25,7 @@ object Dependencies {
   private val uuidGenerater = "io.jvm.uuid" %% "scala-uuid" % "0.2.3"
 
   private val redisConnector = "com.github.etaty" %% "rediscala" % "1.8.0"
+  private val httpConnector = "com.typesafe.akka" %% "akka-http" % "10.0.9"
   private val amqpConnector = "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "0.10"
   private val kafkaConnector = "com.typesafe.akka" %% "akka-stream-kafka" % "0.16"
 
@@ -35,6 +36,7 @@ object Dependencies {
   ) ++ Seq(
     redisConnector,
     amqpConnector,
-    kafkaConnector
+    kafkaConnector,
+    httpConnector
   )
 }
