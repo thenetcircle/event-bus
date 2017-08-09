@@ -25,7 +25,8 @@ package object event_dispatcher {
       timestamp: Long,
       rawEvent: RawEvent,
       bizData: BizData,
-      format: EventFmt
+      format: EventFmt,
+      deliveredTimes: Int = 0
   )
 
   case class BizData(

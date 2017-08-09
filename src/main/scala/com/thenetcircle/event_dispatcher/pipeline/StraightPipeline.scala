@@ -23,8 +23,8 @@ class StraightPipeline(pipelineSettings: StraightPipelineSettings) {
       .run()
 
   private val pipelineName = pipelineSettings.name
-  private val inletId = new AtomicInteger(1)
-  private val outletId = new AtomicInteger(1)
+  private val inletId = new AtomicInteger(0)
+  private val outletId = new AtomicInteger(0)
 
   def inlet(): Sink[In, _] = sink.named(s"$pipelineName-inlet-${inletId.getAndIncrement()}")
 

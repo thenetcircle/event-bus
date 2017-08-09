@@ -4,10 +4,9 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.{ CommittableOffset, CommittableOffsetBatch }
-import akka.kafka.ProducerMessage.Message
 import akka.kafka.scaladsl.{ Consumer, Producer }
 import akka.kafka.{ AutoSubscription, ConsumerSettings, ProducerSettings, Subscriptions }
-import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, MergeHub, Sink, Source }
+import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, MergeHub, Sink, Source }
 import akka.stream.{ FlowShape, Graph }
 import com.thenetcircle.event_dispatcher.driver.adapter.{ KafkaSinkAdapter, KafkaSourceAdapter }
 import com.thenetcircle.event_dispatcher.driver.extractor.Extractor
@@ -33,16 +32,23 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) {
   type Out = Event
 
   private val pipelineName = pipelineSettings.name
-  private val inletId = new AtomicInteger(1)
-  private val outletId = new AtomicInteger(1)
+  private val inletId = new AtomicInteger(0)
+  private val outletId = new AtomicInteger(0)
 
+  /**
+   * If the function `f` throws an exception or if the `Future` is completed
+   * with failure and the supervision decision is [[akka.stream.Supervision.Stop]]
+   * the stream will be completed with failure.
+   *
+   * If the function `f` throws an exception or if the `Future` is completed
+   * with failure and the supervision decision is [[akka.stream.Supervision.Resume]] or
+   * [[akka.stream.Supervision.Restart]] the element is dropped and the stream continues.
+   */
   private val producerFlow =
     Flow[In]
       .map(Extractor.deExtract)
       .map(KafkaSinkAdapter.unfit)
-      .map(Message(_, NotUsed))
-      .viaMat(Producer.flow(pipelineSettings.producerSettings))(Keep.left)
-      .to(Sink.ignore)
+      .to(Producer.plainSink(pipelineSettings.producerSettings))
 
   lazy private val sink =
     MergeHub

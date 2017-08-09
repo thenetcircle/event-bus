@@ -30,10 +30,3 @@ It supplies data operations (like partition, broadcast, filtering etc, thanks fo
 ### 1.x
 
 First version of EventDispatcher based on Akka, Running with some basic requirements.
-
-## TODOs
-
-1. Admin Interface
-2. Cluster support
-3. Hot deployment
-4. Container support
