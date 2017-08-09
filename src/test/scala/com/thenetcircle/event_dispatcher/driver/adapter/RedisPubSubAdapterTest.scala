@@ -8,10 +8,10 @@ class RedisPubSubAdapterTest extends TestCase {
 
   val rawEvent = RawEvent(
     ByteString("test-data"),
+    "test-channel",
     Map(
       "patternMatched" -> Some("test-*")
-    ),
-    Some("test-channel")
+    )
   )
 
   test("reid pub-sub source adapter") {

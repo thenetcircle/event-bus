@@ -12,13 +12,13 @@ class KafkaAdapterTest extends TestCase {
   val pval = "test-data".getBytes("UTF-8")
   val rawEvent = RawEvent(
     ByteString(pval),
+    "test-channel",
     Map(
       "key" -> ByteString(pkey),
       "partition" -> 1,
       "offset" -> 10,
       "timestamp" -> -1
-    ),
-    Some("test-channel")
+    )
   )
 
   test("kafka source adapter") {

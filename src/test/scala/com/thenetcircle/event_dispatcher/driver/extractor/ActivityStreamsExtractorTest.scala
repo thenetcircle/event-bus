@@ -63,7 +63,7 @@ class ActivityStreamsExtractorTest extends TestCase {
     val rawEvent = RawEvent(
       body = ByteString(json),
       context = Map.empty[String, Any],
-      channel = None
+      channel = ""
     )
 
     val event = extractor.extract(rawEvent)

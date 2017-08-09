@@ -13,8 +13,8 @@ package object event_dispatcher {
 
   case class RawEvent(
       body: ByteString,
-      context: Map[String, Any],
-      channel: Option[String] = None
+      channel: String,
+      context: Map[String, Any]
   ) {
     def hasContext(key: String): Boolean = context.isDefinedAt(key)
     def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))

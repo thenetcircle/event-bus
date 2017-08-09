@@ -7,13 +7,13 @@ import com.thenetcircle.event_dispatcher.RawEvent
 object RedisPubSubSourceAdapter extends SourceAdapter[IncomingMessage] {
   def fit(message: IncomingMessage): RawEvent =
     RawEvent(message.data,
+             message.channel,
              Map(
                "patternMatched" -> message.patternMatched
-             ),
-             Some(message.channel))
+             ))
 }
 
 object RedisPubSubSinkAdapter extends SinkAdapter[OutgoingMessage[ByteString]] {
   override def unfit(event: RawEvent): OutgoingMessage[ByteString] =
-    OutgoingMessage[ByteString](event.channel.get, event.body)
+    OutgoingMessage[ByteString](event.channel, event.body)
 }

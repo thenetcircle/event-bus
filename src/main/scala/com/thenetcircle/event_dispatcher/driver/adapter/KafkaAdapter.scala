@@ -10,11 +10,11 @@ object KafkaSourceAdapter extends SourceAdapter[ConsumerRecord[KafkaKey, KafkaVa
   override def fit(message: ConsumerRecord[KafkaKey, KafkaValue]): RawEvent =
     RawEvent(
       ByteString(message.value()),
+      message.topic(),
       Map("key" -> ByteString(message.key()),
           "offset" -> message.offset(),
           "timestamp" -> message.timestamp(),
-          "partition" -> message.partition()),
-      channel = Some(message.topic())
+          "partition" -> message.partition())
     )
 }
 
@@ -22,7 +22,7 @@ object KafkaSinkAdapter extends SinkAdapter[ProducerRecord[KafkaKey, KafkaValue]
   override def unfit(event: RawEvent): ProducerRecord[KafkaKey, KafkaValue] = {
     val context = event.context
 
-    val topic = event.channel.get
+    val topic = event.channel
     val value = event.body.toArray
     val partition = context.get("partition") match {
       case Some(p: Int) => p

@@ -12,11 +12,11 @@ class AMQPAdapterTest extends TestCase {
   val properties = new BasicProperties()
   val rawEvent = RawEvent(
     ByteString("test-data"),
+    "test-channel",
     Map(
       "envelope" -> envelope,
       "properties" -> properties
-    ),
-    Some("test-channel")
+    )
   )
 
   test("adapt") {
