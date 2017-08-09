@@ -2,16 +2,20 @@ package com.thenetcircle.event_dispatcher.pipeline
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.NotUsed
+import akka.{ Done, NotUsed }
 import akka.kafka.ConsumerMessage.{ CommittableOffset, CommittableOffsetBatch }
+import akka.kafka.ProducerMessage.Message
 import akka.kafka.scaladsl.{ Consumer, Producer }
 import akka.kafka.{ AutoSubscription, ConsumerSettings, ProducerSettings, Subscriptions }
-import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, MergeHub, Sink, Source }
+import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, MergeHub, Sink, Source }
 import akka.stream.{ FlowShape, Graph }
 import com.thenetcircle.event_dispatcher.driver.adapter.{ KafkaSinkAdapter, KafkaSourceAdapter }
 import com.thenetcircle.event_dispatcher.driver.extractor.Extractor
 import com.thenetcircle.event_dispatcher.driver.{ KafkaKey, KafkaValue }
-import com.thenetcircle.event_dispatcher.{ Event, EventFmt }
+import com.thenetcircle.event_dispatcher.{ Event, EventCommitter, EventFmt }
+import org.apache.kafka.clients.producer.ProducerRecord
+
+import scala.concurrent.Future
 
 trait PipelineSettings {
   def name: String
@@ -44,11 +48,18 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) {
    * with failure and the supervision decision is [[akka.stream.Supervision.Resume]] or
    * [[akka.stream.Supervision.Restart]] the element is dropped and the stream continues.
    */
-  private val producerFlow =
+  private val producerFlow: Sink[In, Future[Done]] =
     Flow[In]
-      .map(Extractor.deExtract)
-      .map(KafkaSinkAdapter.unfit)
-      .to(Producer.plainSink(pipelineSettings.producerSettings))
+      .map[(ProducerRecord[KafkaKey, KafkaValue], Option[EventCommitter])](
+        event => (KafkaSinkAdapter.unfit(Extractor.deExtract(event)), event.committer)
+      )
+      .map(data => Message(data._1, data._2))
+      .via(
+        Producer
+          .flow(pipelineSettings.producerSettings)
+          .mapAsync(pipelineSettings.producerSettings.parallelism)(_.message.passThrough.commit())
+      )
+      .toMat(Sink.ignore)(Keep.right)
 
   lazy private val sink =
     MergeHub

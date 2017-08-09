@@ -2,6 +2,8 @@ package com.thenetcircle
 
 import akka.util.ByteString
 
+import scala.concurrent.Future
+
 package object event_dispatcher {
 
   sealed trait EventFmt
@@ -20,13 +22,20 @@ package object event_dispatcher {
     def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))
   }
 
+  trait EventCommitter {
+    def commit(): Future[_]
+  }
+
+  /**
+   * deliveredTimes?
+   */
   case class Event(
       uuid: String,
       timestamp: Long,
       rawEvent: RawEvent,
       bizData: BizData,
       format: EventFmt,
-      deliveredTimes: Int = 0
+      committer: Option[EventCommitter] = None
   )
 
   case class BizData(
