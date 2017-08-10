@@ -2,9 +2,9 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.12.2"
 )
 
-lazy val eventDispatcher = (project in file("."))
+lazy val eventBus = (project in file("."))
   .settings(
-    name := "event-dispatcher",
+    name := "event-bus",
     version := "2.0.1",
     commonSettings,
     libraryDependencies ++= Dependencies.rootDeps
