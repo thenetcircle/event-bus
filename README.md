@@ -1,7 +1,7 @@
 # EventBus
 
-[![Build Status](https://travis-ci.org/thenetcircle/event-dispatcher.svg?branch=master)](https://travis-ci.org/thenetcircle/event-dispatcher)
-[![License](https://img.shields.io/github/license/thenetcircle/event-dispatcher.svg)](LICENSE)
+[![Build Status](https://travis-ci.org/thenetcircle/event-bus.svg?branch=master)](https://travis-ci.org/thenetcircle/event-dispatcher)
+[![License](https://img.shields.io/github/license/thenetcircle/event-bus.svg)](LICENSE)
 
 ## Introduction
 
