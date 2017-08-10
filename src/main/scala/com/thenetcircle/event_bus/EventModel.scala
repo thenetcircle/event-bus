@@ -1,6 +1,5 @@
 package com.thenetcircle.event_bus
 
-import akka.Done
 import akka.util.ByteString
 
 import scala.concurrent.Future
@@ -30,14 +29,8 @@ case class RawEvent(
   def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))
 }
 
-trait EventCommitter {
-  def commit(): Future[_]
-}
-
-object EventCommitter {
-  object DefaultEventCommitter extends EventCommitter {
-    override def commit(): Future[Done] = Future { Done }
-  }
+trait EventCommitter[+A] {
+  def commit(): Future[A]
 }
 
 /**
@@ -49,12 +42,12 @@ case class Event(
     rawEvent: RawEvent,
     bizData: BizData,
     format: EventFmt,
-    committer: EventCommitter = EventCommitter.DefaultEventCommitter
+    committer: Option[EventCommitter[_]] = None
 ) {
-  def withCommitter(committerBuilder: => Future[_]): Event =
-    copy(committer = new EventCommitter {
-      override def commit(): Future[_] = committerBuilder
-    })
+  def withCommitter[A](committerBuilder: => Future[A]): Event =
+    copy(committer = Some(new EventCommitter[A] {
+      override def commit(): Future[A] = committerBuilder
+    }))
 }
 
 case class BizData(
