@@ -102,3 +102,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline(pi
     }
 
 }
+
+object KafkaPipeline {
+  def apply(pipelineSettings: KafkaPipelineSettings): KafkaPipeline = new KafkaPipeline(pipelineSettings)
+}
