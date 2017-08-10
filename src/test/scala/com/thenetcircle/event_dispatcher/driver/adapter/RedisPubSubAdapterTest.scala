@@ -2,7 +2,7 @@ package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.util.ByteString
 import com.thenetcircle.event_dispatcher.stage.redis.{ IncomingMessage, OutgoingMessage }
-import com.thenetcircle.event_dispatcher.{ RawEvent, TestCase }
+import com.thenetcircle.event_dispatcher.{ EventSource, RawEvent, TestCase }
 
 class RedisPubSubAdapterTest extends TestCase {
 
@@ -11,7 +11,8 @@ class RedisPubSubAdapterTest extends TestCase {
     "test-channel",
     Map(
       "patternMatched" -> Some("test-*")
-    )
+    ),
+    EventSource.Redis
   )
 
   test("reid pub-sub source adapter") {

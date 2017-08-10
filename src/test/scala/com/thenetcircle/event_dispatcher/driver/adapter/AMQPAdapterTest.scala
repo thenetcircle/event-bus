@@ -1,10 +1,10 @@
 package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.stream.alpakka.amqp.IncomingMessage
-import com.rabbitmq.client.Envelope
 import akka.util.ByteString
 import com.rabbitmq.client.AMQP.BasicProperties
-import com.thenetcircle.event_dispatcher.{ RawEvent, TestCase }
+import com.rabbitmq.client.Envelope
+import com.thenetcircle.event_dispatcher.{ EventSource, RawEvent, TestCase }
 
 class AMQPAdapterTest extends TestCase {
 
@@ -16,7 +16,8 @@ class AMQPAdapterTest extends TestCase {
     Map(
       "envelope" -> envelope,
       "properties" -> properties
-    )
+    ),
+    EventSource.AMQP
   )
 
   test("adapt") {

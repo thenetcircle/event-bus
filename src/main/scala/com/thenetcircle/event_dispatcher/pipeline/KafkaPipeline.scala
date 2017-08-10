@@ -50,7 +50,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) {
    */
   private val producerFlow: Sink[In, Future[Done]] =
     Flow[In]
-      .map[(ProducerRecord[KafkaKey, KafkaValue], Option[EventCommitter])](
+      .map[(ProducerRecord[KafkaKey, KafkaValue], EventCommitter)](
         event => (KafkaSinkAdapter.unfit(Extractor.deExtract(event)), event.committer)
       )
       .map(data => Message(data._1, data._2))

@@ -3,8 +3,7 @@ package com.thenetcircle.event_dispatcher.driver.extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_dispatcher.EventFmt
-import com.thenetcircle.event_dispatcher.{ BizData, Event, RawEvent, TestCase }
+import com.thenetcircle.event_dispatcher._
 
 class ActivityStreamsExtractorTest extends TestCase {
 
@@ -62,8 +61,9 @@ class ActivityStreamsExtractorTest extends TestCase {
     val extractor = new ActivityStreamsExtractor
     val rawEvent = RawEvent(
       body = ByteString(json),
+      channel = "",
       context = Map.empty[String, Any],
-      channel = ""
+      source = EventSource.Http
     )
 
     val event = extractor.extract(rawEvent)

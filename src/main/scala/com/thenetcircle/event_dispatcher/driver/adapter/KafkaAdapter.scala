@@ -1,7 +1,7 @@
 package com.thenetcircle.event_dispatcher.driver.adapter
 
 import akka.util.ByteString
-import com.thenetcircle.event_dispatcher.RawEvent
+import com.thenetcircle.event_dispatcher.{ EventSource, RawEvent }
 import com.thenetcircle.event_dispatcher.driver.{ KafkaKey, KafkaValue }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
@@ -14,7 +14,8 @@ object KafkaSourceAdapter extends SourceAdapter[ConsumerRecord[KafkaKey, KafkaVa
       Map("key" -> ByteString(message.key()),
           "offset" -> message.offset(),
           "timestamp" -> message.timestamp(),
-          "partition" -> message.partition())
+          "partition" -> message.partition()),
+      EventSource.Kafka
     )
 }
 
