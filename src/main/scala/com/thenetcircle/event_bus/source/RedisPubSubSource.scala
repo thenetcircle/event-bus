@@ -4,8 +4,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.thenetcircle.event_bus.driver.adapter.RedisPubSubSourceAdapter
 import com.thenetcircle.event_bus.driver.extractor.Extractor
-import com.thenetcircle.event_bus.stage.redis.DefaultRedisSourceSettings
-import com.thenetcircle.event_bus.stage.redis.scaladsl.RedisSource
+import com.thenetcircle.event_bus.alpakka.redis.DefaultRedisSourceSettings
+import com.thenetcircle.event_bus.alpakka.redis.scaladsl.RedisSource
 import com.thenetcircle.event_bus.{ Event, EventFmt }
 
 import scala.collection.immutable

@@ -6,8 +6,8 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.driver.adapter.RedisPubSubSinkAdapter
 import com.thenetcircle.event_bus.driver.extractor.Extractor
-import com.thenetcircle.event_bus.stage.redis.DefaultRedisSinkSettings
-import com.thenetcircle.event_bus.stage.redis.scaladsl.RedisSink
+import com.thenetcircle.event_bus.alpakka.redis.DefaultRedisSinkSettings
+import com.thenetcircle.event_bus.alpakka.redis.scaladsl.RedisSink
 
 object RedisPubSubSink {
   def apply(settings: RedisPubSubSinkSettings): Sink[Event, NotUsed] = {

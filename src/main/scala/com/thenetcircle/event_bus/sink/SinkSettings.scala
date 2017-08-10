@@ -2,7 +2,7 @@ package com.thenetcircle.event_bus.sink
 
 import akka.kafka.ProducerSettings
 import com.thenetcircle.event_bus.driver.{ KafkaKey, KafkaValue }
-import com.thenetcircle.event_bus.stage.redis.RedisConnectionSettings
+import com.thenetcircle.event_bus.alpakka.redis.RedisConnectionSettings
 
 sealed trait SinkSettings
 

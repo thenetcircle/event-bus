@@ -2,7 +2,7 @@ package com.thenetcircle.event_bus.source
 
 import akka.kafka.ConsumerSettings
 import com.thenetcircle.event_bus.driver.{ KafkaKey, KafkaValue }
-import com.thenetcircle.event_bus.stage.redis.RedisConnectionSettings
+import com.thenetcircle.event_bus.alpakka.redis.RedisConnectionSettings
 
 sealed trait SourceSettings
 

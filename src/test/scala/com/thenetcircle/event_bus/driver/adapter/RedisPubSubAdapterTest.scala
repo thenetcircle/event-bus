@@ -1,7 +1,7 @@
 package com.thenetcircle.event_bus.driver.adapter
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.stage.redis.{ IncomingMessage, OutgoingMessage }
+import com.thenetcircle.event_bus.alpakka.redis.{ IncomingMessage, OutgoingMessage }
 import com.thenetcircle.event_bus.{ EventSource, RawEvent, TestCase }
 
 class RedisPubSubAdapterTest extends TestCase {
