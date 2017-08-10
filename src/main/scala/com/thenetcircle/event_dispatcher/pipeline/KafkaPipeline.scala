@@ -1,14 +1,12 @@
 package com.thenetcircle.event_dispatcher.pipeline
 
-import java.util.concurrent.atomic.AtomicInteger
-
-import akka.{ Done, NotUsed }
 import akka.kafka.ConsumerMessage.{ CommittableOffset, CommittableOffsetBatch }
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.scaladsl.{ Consumer, Producer }
 import akka.kafka.{ AutoSubscription, ConsumerSettings, ProducerSettings, Subscriptions }
 import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, MergeHub, Sink, Source }
 import akka.stream.{ FlowShape, Graph }
+import akka.{ Done, NotUsed }
 import com.thenetcircle.event_dispatcher.driver.adapter.{ KafkaSinkAdapter, KafkaSourceAdapter }
 import com.thenetcircle.event_dispatcher.driver.extractor.Extractor
 import com.thenetcircle.event_dispatcher.driver.{ KafkaKey, KafkaValue }
@@ -16,11 +14,6 @@ import com.thenetcircle.event_dispatcher.{ Event, EventCommitter, EventFmt }
 import org.apache.kafka.clients.producer.ProducerRecord
 
 import scala.concurrent.Future
-
-trait PipelineSettings {
-  def name: String
-  def withName(name: String): PipelineSettings
-}
 
 case class KafkaPipelineSettings(
     consumerSettings: ConsumerSettings[KafkaKey, KafkaValue],
@@ -30,14 +23,7 @@ case class KafkaPipelineSettings(
   def withName(name: String): KafkaPipelineSettings = copy(name = name)
 }
 
-class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) {
-
-  type In = Event
-  type Out = Event
-
-  private val pipelineName = pipelineSettings.name
-  private val inletId = new AtomicInteger(0)
-  private val outletId = new AtomicInteger(0)
+class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline(pipelineSettings) {
 
   /**
    * If the function `f` throws an exception or if the `Future` is completed
@@ -84,10 +70,12 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) {
 
     Consumer
       .committableSource(pipelineSettings.consumerSettings, subscription)
-      .map(msg => {
-        KafkaSourceAdapter.fit(msg.record).addContext("committableOffset", msg.committableOffset)
+      .map[Event](msg => {
+        val rawEvent = KafkaSourceAdapter.fit(msg.record).addContext("kafkaCommittableOffset", msg.committableOffset)
+        extractor
+          .extract(rawEvent)
+          .withCommitter(msg.committableOffset.commitScaladsl())
       })
-      .map(extractor.extract)
   }
 
   def batchCommit(parallelism: Int = 3, batchMax: Int = 20): Graph[FlowShape[Out, Out], NotUsed] =
@@ -98,8 +86,8 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) {
       val output = builder.add(Flow[Out])
       val commitSink =
         Flow[Out]
-          .filter(_.rawEvent.hasContext("committableOffset"))
-          .map(_.rawEvent.context("committableOffset").asInstanceOf[CommittableOffset])
+          .filter(_.rawEvent.hasContext("kafkaCommittableOffset"))
+          .map(_.rawEvent.context("kafkaCommittableOffset").asInstanceOf[CommittableOffset])
           .batch(max = batchMax, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
             batch.updated(elem)
           }

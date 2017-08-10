@@ -1,9 +1,7 @@
 package com.thenetcircle.event_dispatcher.pipeline
 
-import java.util.concurrent.atomic.AtomicInteger
-
+import akka.NotUsed
 import akka.stream.scaladsl.{ BroadcastHub, Keep, MergeHub, Sink, Source }
-import com.thenetcircle.event_dispatcher.Event
 
 case class StraightPipelineSettings(
     name: String = "DefaultStraightPipeline"
@@ -11,10 +9,7 @@ case class StraightPipelineSettings(
   def withName(name: String): StraightPipelineSettings = copy(name = name)
 }
 
-class StraightPipeline(pipelineSettings: StraightPipelineSettings) {
-
-  type In = Event
-  type Out = Event
+class StraightPipeline(pipelineSettings: StraightPipelineSettings) extends Pipeline(pipelineSettings) {
 
   private val (sink, source) =
     MergeHub
@@ -22,12 +17,8 @@ class StraightPipeline(pipelineSettings: StraightPipelineSettings) {
       .toMat(BroadcastHub.sink[Out](bufferSize = 256))(Keep.both)
       .run()
 
-  private val pipelineName = pipelineSettings.name
-  private val inletId = new AtomicInteger(0)
-  private val outletId = new AtomicInteger(0)
+  def inlet(): Sink[In, NotUsed] = sink.named(s"$pipelineName-inlet-${inletId.getAndIncrement()}")
 
-  def inlet(): Sink[In, _] = sink.named(s"$pipelineName-inlet-${inletId.getAndIncrement()}")
-
-  def outlet(): Source[Out, _] = source.named(s"$pipelineName-outlet-${outletId.getAndIncrement()}")
+  def outlet(): Source[Out, NotUsed] = source.named(s"$pipelineName-outlet-${outletId.getAndIncrement()}")
 
 }

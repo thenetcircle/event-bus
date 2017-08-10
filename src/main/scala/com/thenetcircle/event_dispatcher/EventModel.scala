@@ -51,7 +51,10 @@ case class Event(
     format: EventFmt,
     committer: EventCommitter = EventCommitter.DefaultEventCommitter
 ) {
-  def withCommitter(committer: EventCommitter): Event = copy(committer = committer)
+  def withCommitter(committerBuilder: => Future[_]): Event =
+    copy(committer = new EventCommitter {
+      override def commit(): Future[_] = committerBuilder
+    })
 }
 
 case class BizData(
