@@ -8,15 +8,16 @@ object Dependencies {
   // Libraries
   private val akkaBase = Seq(
     "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion,
-    "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test
+    "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
   )
   private val log = Seq(
     "ch.qos.logback" % "logback-core" % "1.2.2",
     "ch.qos.logback" % "logback-classic" % "1.2.3"
   )
   private val test = Seq(
-    "org.scalatest" %% "scalatest" % "3.0.1" % Test
+    "org.scalatest" %% "scalatest" % "3.0.1" % Test,
+    "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test,
+    "com.typesafe.akka" %% "akka-http-testkit" % "10.0.9" % Test
   )
 
   private val base = akkaBase ++ log ++ test
