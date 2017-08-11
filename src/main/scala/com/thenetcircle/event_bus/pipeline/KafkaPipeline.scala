@@ -46,21 +46,16 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
     extends Pipeline(pipelineSettings) {
 
   // Build ProducerSettings
-  private var _kps =
-    ProducerSettings(system, Some(new ByteArraySerializer), Some(new ByteArraySerializer))
-      .withBootstrapServers(pipelineSettings.bootstrapServers)
-  for ((k, v) <- pipelineSettings.producerClientSettings) _kps = _kps.withProperty(k, v)
-  private val kafkaProducerSettings: ProducerSettings[KafkaKey, KafkaValue] = _kps
+  private val kafkaProducerSettings: ProducerSettings[KafkaKey, KafkaValue] = {
+    var _kps =
+      ProducerSettings(system, Some(new ByteArraySerializer), Some(new ByteArraySerializer))
+        .withBootstrapServers(pipelineSettings.bootstrapServers)
+    for ((k, v) <- pipelineSettings.producerClientSettings) _kps = _kps.withProperty(k, v)
+    _kps
+  }
 
-  /**
-   * If the function `f` throws an exception or if the `Future` is completed
-   * with failure and the supervision decision is [[akka.stream.Supervision.Stop]]
-   * the stream will be completed with failure.
-   *
-   * If the function `f` throws an exception or if the `Future` is completed
-   * with failure and the supervision decision is [[akka.stream.Supervision.Resume]] or
-   * [[akka.stream.Supervision.Restart]] the element is dropped and the stream continues.
-   */
+  // Predefine producer
+  // TODO Supervision
   private val producerFlow: Sink[In, Future[Done]] =
     Flow[In]
       .map(event => (KafkaSinkAdapter.unfit(Extractor.deExtract(event)), event.committer))
@@ -70,28 +65,41 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       .mapAsync(kafkaProducerSettings.parallelism)(_.message.passThrough.get.commit())
       .toMat(Sink.ignore)(Keep.right)
 
-  lazy private val sink =
+  /**
+   * Get a new inlet of the pipeline, Which will create a new producer internally
+   * One inlet can be shared to different streams as a sink
+   *
+   * @param perProducerBufferSize Buffer space used per producer. Default value is 16.
+   */
+  def inlet(perProducerBufferSize: Int = 16): Sink[In, NotUsed] =
     MergeHub
-      .source[In](perProducerBufferSize = 16)
+      .source[In](perProducerBufferSize)
       .to(producerFlow)
       .run()
+      .named(s"$pipelineName-inlet-${inletId.getAndIncrement()}")
 
-  def inlet(): Sink[In, NotUsed] = sink.named(s"$pipelineName-inlet-${inletId.getAndIncrement()}")
-
+  /**
+   * Get outlet of the pipeline
+   * While will create a new consumer to connect to kafka subscribing the topics you appointed
+   * It will expose multiple sources for each topic and partition pair
+   * You need to take care of the sources manually either parallel send to sink or flatten to linear to somewhere else
+   */
   def outlet[Fmt <: EventFmt](
       groupId: String,
       topics: Option[Set[String]] = None,
       topicPattern: Option[String] = None,
       consumerClientSettings: Map[String, String] = Map.empty
-  )(implicit extractor: Extractor[Fmt]): Source[Out, Consumer.Control] = {
+  )(implicit extractor: Extractor[Fmt]): Source[Source[Event, NotUsed], Consumer.Control] = {
     require(topics.isDefined || topicPattern.isDefined, "The outlet of KafkaPipeline needs to subscribe topics")
 
     // Build ConsumerSettings
-    var _kcs = ConsumerSettings(system, Some(new ByteArrayDeserializer), Some(new ByteArrayDeserializer))
-      .withBootstrapServers(pipelineSettings.bootstrapServers)
-      .withGroupId(groupId)
-    for ((k, v) <- consumerClientSettings) _kcs = _kcs.withProperty(k, v)
-    val kafkaConsumerSettings: ConsumerSettings[KafkaKey, KafkaValue] = _kcs
+    val kafkaConsumerSettings: ConsumerSettings[KafkaKey, KafkaValue] = {
+      var _kcs = ConsumerSettings(system, Some(new ByteArrayDeserializer), Some(new ByteArrayDeserializer))
+        .withBootstrapServers(pipelineSettings.bootstrapServers)
+        .withGroupId(groupId)
+      for ((k, v) <- consumerClientSettings) _kcs = _kcs.withProperty(k, v)
+      _kcs
+    }
 
     val outletName = s"${pipelineSettings.name}-outlet-${outletId.getAndIncrement()}"
 
@@ -101,17 +109,30 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       Subscriptions.topicPattern(topicPattern.get)
     }
 
+    val consumerName = s"$pipelineName-outlet-${outletId.getAndIncrement()}"
+
     Consumer
       .committablePartitionedSource(kafkaConsumerSettings, subscription)
-      .flatMapMerge(3, _._2)
-      .map[Event](msg => {
-        val rawEvent = KafkaSourceAdapter.fit(msg.record).addContext("kafkaCommittableOffset", msg.committableOffset)
-        extractor
-          .extract(rawEvent)
-          .withCommitter(msg.committableOffset.commitScaladsl())
-      })
+      .map {
+        case (topicPartition, source) =>
+          source
+            .map(msg => {
+              val rawEvent =
+                KafkaSourceAdapter.fit(msg.record).addContext("kafkaCommittableOffset", msg.committableOffset)
+              extractor
+                .extract(rawEvent)
+                .withCommitter(msg.committableOffset.commitScaladsl)
+            })
+            .named(s"$consumerName-subsource-${topicPartition.topic()}-${topicPartition.partition().toString}")
+      }
+      .named(consumerName)
   }
 
+  /**
+   * After you processed the events from outlet, You need to commit it
+   * so the offset on Kafka will be updated on specific topic and partition.
+   * You can either use this flow for batchCommit(recommended) or call the committer of the Event to commit only one Event
+   */
   def batchCommit(parallelism: Int = 3, batchMax: Int = 20): Graph[FlowShape[Out, Out], NotUsed] =
     GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
