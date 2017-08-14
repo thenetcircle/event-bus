@@ -25,7 +25,6 @@ import com.thenetcircle.event_bus.{ Event, EventFormat }
 
 trait PipelineSettings {
   def name: String
-  def withName(name: String): PipelineSettings
 }
 
 trait RightPortSettings

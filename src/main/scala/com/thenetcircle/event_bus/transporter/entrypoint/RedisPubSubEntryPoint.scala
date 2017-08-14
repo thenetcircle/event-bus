@@ -23,7 +23,7 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.alpakka.redis.scaladsl.RedisSource
 import com.thenetcircle.event_bus.alpakka.redis.{ DefaultRedisSourceSettings, RedisConnectionSettings }
 import com.thenetcircle.event_bus.extractor.Extractor
-import com.thenetcircle.event_bus.{ Event, EventFormat, EventSourceType }
+import com.thenetcircle.event_bus._
 
 import scala.collection.immutable
 
@@ -65,14 +65,16 @@ class RedisPubSubEntryPoint(settings: RedisPubSubEntryPointSettings) extends Ent
     redisSource
       .map(msg => {
 
-        val body: ByteString = msg.data
+        val data: ByteString = msg.data
+        val (metadata, channel, priority) = extractor.extract(data)
 
         Event(
-          metadata = extractor.extract(body),
-          body = body,
-          channel = msg.channel,
+          metadata = metadata,
+          body = EventBody[EventFormat.DefaultFormat](data),
+          channel = channel.getOrElse(msg.channel),
           sourceType = EventSourceType.Redis,
-          format = EventFormat.TncActivityStreams()
+          priority = priority.getOrElse(EventPriority.Normal),
+          context = Map("patternMatched" -> msg.patternMatched)
         )
 
       })

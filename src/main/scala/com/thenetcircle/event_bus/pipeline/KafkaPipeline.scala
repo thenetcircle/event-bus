@@ -39,9 +39,7 @@ case class KafkaPipelineSettings(
     bootstrapServers: String,
     producerClientSettings: Map[String, String] = Map.empty,
     dispatcher: Option[String] = None
-) extends PipelineSettings {
-  def withName(name: String): KafkaPipelineSettings = copy(name = name)
-}
+) extends PipelineSettings
 
 /**
  * @param perProducerBufferSize Buffer space used per producer. Default value is 16.

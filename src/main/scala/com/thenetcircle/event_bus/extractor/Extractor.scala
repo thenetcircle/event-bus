@@ -18,16 +18,30 @@
 package com.thenetcircle.event_bus.extractor
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.{ EventFormat, EventMetaData }
+import com.thenetcircle.event_bus.{ EventFormat, EventMetaData, EventPriority }
 import io.jvm.uuid.UUID
 
 trait Extractor[Fmt <: EventFormat] {
-  def extract(body: ByteString): EventMetaData
-  def genUUID(): String = UUID.random.toString
+
+  /**
+   * Extract metadata from data accroding to Format
+   *
+   * @return (EventMetaData, Option[Channel], Option[EventPriority])
+   */
+  def extract(data: ByteString): (EventMetaData, Option[String], Option[EventPriority])
+
 }
 
 object Extractor {
 
-  implicit val tncActivityStreamsExtractor: Extractor[EventFormat.TncActivityStreams] = new TncActivityStreamsExtractor
+  implicit val defaultFormatExtractor: Extractor[EventFormat.DefaultFormat] =
+    new TNCActivityStreamsExtractor with Extractor[EventFormat.DefaultFormat]
+
+  /**
+   * Generate a UUID
+   *
+   * @return String
+   */
+  def genUUID(): String = UUID.random.toString
 
 }

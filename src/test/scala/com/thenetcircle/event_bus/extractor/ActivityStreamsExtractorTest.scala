@@ -75,7 +75,7 @@ class ActivityStreamsExtractorTest extends TestCase {
   }
 
   test("extrator") {
-    val extractor = new TncActivityStreamsExtractor
+    val extractor = new TNCActivityStreamsExtractor
     val rawEvent = RawEvent(
       body = ByteString(json),
       channel = "",

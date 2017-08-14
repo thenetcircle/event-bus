@@ -21,27 +21,9 @@ import akka.util.ByteString
 
 import scala.concurrent.Future
 
-case class RawEvent(
-    body: ByteString,
-    channel: String,
-    context: Map[String, Any],
-    source: EventSourceType
-) {
-  def hasContext(key: String): Boolean = context.isDefinedAt(key)
-  def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))
-}
-
-case class BizData(
-    sessionId: Option[String] = None,
-    provider: Option[String] = None,
-    category: Option[String] = None,
-    actorId: Option[String] = None,
-    actorType: Option[String] = None
-)
-
 sealed trait EventFormat
 object EventFormat {
-  case class TncActivityStreams() extends EventFormat
+  trait DefaultFormat extends EventFormat
 }
 
 trait EventCommitter {
@@ -64,6 +46,8 @@ object EventPriority {
   case object Low extends EventPriority
 }
 
+case class EventBody[+T](data: ByteString)
+
 case class EventMetaData(
     uuid: String,
     name: String,
@@ -74,10 +58,9 @@ case class EventMetaData(
 
 case class Event(
     metadata: EventMetaData,
-    body: ByteString,
+    body: EventBody[EventFormat],
     channel: String,
     sourceType: EventSourceType,
-    format: EventFormat,
     priority: EventPriority = EventPriority.Normal,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
