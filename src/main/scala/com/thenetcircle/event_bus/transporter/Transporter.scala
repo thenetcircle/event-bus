@@ -1,16 +1,31 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ *     Beineng Ma <baineng.ma@gmail.com>
+ */
+
 package com.thenetcircle.event_bus.transporter
+
 import akka.NotUsed
-import akka.stream.scaladsl.{ GraphDSL, MergePreferred, RunnableGraph }
-import akka.stream.{ ClosedShape, Graph, SinkShape, SourceShape }
-import com.thenetcircle.event_bus.Event
+import akka.stream.scaladsl.{ GraphDSL, MergePreferred, Partition, RunnableGraph }
+import akka.stream._
+import com.thenetcircle.event_bus.{ Event, EventPriority, EventSourceType }
 
-case class TransporterSettings(name: String)
+class Transporter(settings: TransporterSettings)(implicit materializer: Materializer) {
 
-class Transporter(
-    entryPoints: Set[Graph[SourceShape[Event], NotUsed]],
-    pipelineIn: Graph[SinkShape[Event], NotUsed],
-    settings: TransporterSettings
-) {
+  private val entryPoints = settings.entryPoints
+  private val pipeline = settings.pipeline
 
   lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
@@ -19,14 +34,22 @@ class Transporter(
 
         val merge = builder.add(MergePreferred[Event](entryPoints.size))
 
+        // high priority and fallback events to partition 0, others go to 1
+        val partition = builder.add(
+          Partition[Event](2,
+                           e =>
+                             if (e.priority == EventPriority.High || e.sourceType == EventSourceType.Fallback) 0 else 1)
+        )
+
         var i = 0
         entryPoints foreach { ep =>
-          // TODO high priority and fallback events goes to preferred channel
-          ep ~> merge.in(i)
+          ep.port ~> partition
+          partition.out(0) ~> merge.preferred
+          partition.out(1) ~> merge.in(i)
           i = i + 1
         }
 
-        merge.out ~> pipelineIn
+        merge.out ~> pipeline.leftPort
 
         ClosedShape
       }
@@ -35,4 +58,8 @@ class Transporter(
 
   def run(): Unit = stream.run()
 
+}
+
+object Transporter {
+  def apply(settings: TransporterSettings)(implicit materializer: Materializer): Transporter = new Transporter(settings)
 }

@@ -15,16 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter.entrypoint
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import com.thenetcircle.event_bus.extractor.Extractor
-import com.thenetcircle.event_bus.{ Event, EventFormat }
+package com.thenetcircle.event_bus.pipeline
 
-trait EntryPointSettings
+import com.typesafe.config.Config
 
-abstract class EntryPoint(settings: EntryPointSettings) {
+class PipelineFactory(config: Config) {}
 
-  def port[Fmt <: EventFormat](implicit extractor: Extractor[Fmt]): Source[Event, NotUsed]
+object PipelineFactory {
+
+  private val pipelines = Map.empty[String, Pipeline]
+
+  def getPipeline(name: String): Pipeline = ???
 
 }

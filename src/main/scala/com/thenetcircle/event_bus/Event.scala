@@ -57,6 +57,13 @@ object EventSourceType {
   case object Fallback extends EventSourceType
 }
 
+sealed trait EventPriority
+object EventPriority {
+  case object High extends EventPriority
+  case object Normal extends EventPriority
+  case object Low extends EventPriority
+}
+
 case class EventMetaData(
     uuid: String,
     name: String,
@@ -71,6 +78,7 @@ case class Event(
     channel: String,
     sourceType: EventSourceType,
     format: EventFormat,
+    priority: EventPriority = EventPriority.Normal,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
 ) {

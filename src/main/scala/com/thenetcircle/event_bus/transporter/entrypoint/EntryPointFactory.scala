@@ -15,11 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.transporter.entrypoint
+import sun.misc.ObjectInputFilter.Config
 
-package object pipeline {
+object EntryPointFactory {
 
-  type KafkaKey = Array[Byte]
-  type KafkaValue = Array[Byte]
+  def createEntryPoint(config: Config): EntryPoint = ???
 
 }

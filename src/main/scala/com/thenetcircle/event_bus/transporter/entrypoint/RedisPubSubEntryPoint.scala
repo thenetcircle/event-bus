@@ -47,11 +47,11 @@ case class RedisPubSubEntryPointSettings(
 
 }
 
-class RedisPubSubEntryPoint(settings: RedisPubSubEntryPointSettings) extends EntryPoint {
+class RedisPubSubEntryPoint(settings: RedisPubSubEntryPointSettings) extends EntryPoint(settings) {
 
   val entryPointName: String = settings.name
 
-  def getSource[Fmt <: EventFormat]()(implicit extractor: Extractor[Fmt]): Source[Event, NotUsed] = {
+  def port[Fmt <: EventFormat](implicit extractor: Extractor[Fmt]): Source[Event, NotUsed] = {
 
     val redisSource = RedisSource(
       DefaultRedisSourceSettings(
@@ -70,6 +70,7 @@ class RedisPubSubEntryPoint(settings: RedisPubSubEntryPointSettings) extends Ent
         Event(
           metadata = extractor.extract(body),
           body = body,
+          channel = msg.channel,
           sourceType = EventSourceType.Redis,
           format = EventFormat.TncActivityStreams()
         )
