@@ -21,50 +21,14 @@ import akka.util.ByteString
 
 import scala.concurrent.Future
 
-sealed trait EventFmt
-object EventFmt {
-  case class Plain() extends EventFmt
-  case class Json() extends EventFmt
-  case class ActivityStreams() extends EventFmt
-}
-
-sealed trait EventSource
-object EventSource {
-  object Redis extends EventSource
-  object AMQP extends EventSource
-  object Kafka extends EventSource
-  object Http extends EventSource
-}
-
 case class RawEvent(
     body: ByteString,
     channel: String,
     context: Map[String, Any],
-    source: EventSource
+    source: EventSourceType
 ) {
   def hasContext(key: String): Boolean = context.isDefinedAt(key)
   def addContext(key: String, value: Any): RawEvent = copy(context = context + (key -> value))
-}
-
-trait EventCommitter[+A] {
-  def commit(): Future[A]
-}
-
-/**
- * deliveredTimes?
- */
-case class Event(
-    uuid: String,
-    timestamp: Long,
-    rawEvent: RawEvent,
-    bizData: BizData,
-    format: EventFmt,
-    committer: Option[EventCommitter[_]] = None
-) {
-  def withCommitter[A](committerBuilder: => Future[A]): Event =
-    copy(committer = Some(new EventCommitter[A] {
-      override def commit(): Future[A] = committerBuilder
-    }))
 }
 
 case class BizData(
@@ -74,3 +38,50 @@ case class BizData(
     actorId: Option[String] = None,
     actorType: Option[String] = None
 )
+
+sealed trait EventFormat
+object EventFormat {
+  case class TncActivityStreams() extends EventFormat
+}
+
+trait EventCommitter {
+  def commit(): Future[Any]
+}
+
+sealed trait EventSourceType
+object EventSourceType {
+  case object Redis extends EventSourceType
+  case object AMQP extends EventSourceType
+  case object Kafka extends EventSourceType
+  case object Http extends EventSourceType
+  case object Fallback extends EventSourceType
+}
+
+case class EventMetaData(
+    uuid: String,
+    name: String,
+    timestamp: Long,
+    publisher: String,
+    trigger: Tuple2[String, String]
+)
+
+case class Event(
+    metadata: EventMetaData,
+    body: ByteString,
+    channel: String,
+    sourceType: EventSourceType,
+    format: EventFormat,
+    context: Map[String, Any] = Map.empty,
+    committer: Option[EventCommitter] = None
+) {
+
+  def withCommitter[T](committerBuilder: => Future[T]): Event =
+    copy(committer = Some(new EventCommitter {
+      override def commit(): Future[T] = committerBuilder
+    }))
+
+  def hasContext(key: String): Boolean = context.isDefinedAt(key)
+
+  def addContext(key: String, value: Any): Event = copy(context = context + (key -> value))
+
+}

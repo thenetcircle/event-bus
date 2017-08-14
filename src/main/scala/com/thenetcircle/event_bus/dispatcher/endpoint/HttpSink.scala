@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.sink
+package com.thenetcircle.event_bus.dispatcher.endpoint
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -36,10 +36,10 @@ case class HttpSinkSettings(
     headers: immutable.Seq[HttpHeader] = Nil,
     entity: RequestEntity = HttpEntity.Empty,
     protocol: HttpProtocol = HttpProtocols.`HTTP/1.1`
-)
+) extends EndPointSettings
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
-class HttpSink(settings: HttpSinkSettings)(implicit val system: ActorSystem) {
+class HttpSink(settings: HttpSinkSettings)(implicit val system: ActorSystem) extends EndPoint {
 
   private val connectionPool = Http().cachedHostConnectionPool[Event](
     settings.host,

@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.driver.adapter
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.alpakka.redis.{ IncomingMessage, OutgoingMessage }
-import com.thenetcircle.event_bus.{ EventSource, RawEvent, TestCase }
+import com.thenetcircle.event_bus.{ EventEntryPoint$, RawEvent, TestCase }
 
 class RedisPubSubAdapterTest extends TestCase {
 
@@ -29,7 +29,7 @@ class RedisPubSubAdapterTest extends TestCase {
     Map(
       "patternMatched" -> Some("test-*")
     ),
-    EventSource.Redis
+    EventEntryPoint.Redis
   )
 
   test("reid pub-sub source adapter") {

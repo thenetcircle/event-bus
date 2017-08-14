@@ -15,11 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.driver.extractor
+package com.thenetcircle.event_bus.extractor
 
 import java.text.SimpleDateFormat
 
-import com.thenetcircle.event_bus.{ BizData, Event, EventFmt, RawEvent }
+import com.thenetcircle.event_bus._
 import spray.json._
 
 case class ActivityObject(
@@ -87,7 +87,7 @@ object ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val fatActivityFormat = jsonFormat15(FatActivity)
 }
 
-class ActivityStreamsExtractor extends Extractor[EventFmt.ActivityStreams] {
+class TncActivityStreamsExtractor extends Extractor[EventFormat.TncActivityStreams] {
 
   import ActivityStreamsProtocol._
 
@@ -115,7 +115,7 @@ class ActivityStreamsExtractor extends Extractor[EventFmt.ActivityStreams] {
       actorType = actor.objectType
     )
 
-    Event(genUUID(), timestamp, rawEvent, bizData, EventFmt.ActivityStreams())
+    Event(genUUID(), timestamp, rawEvent, bizData, EventFormat.ActivityStreams())
   }
 
 }

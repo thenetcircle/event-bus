@@ -57,10 +57,10 @@ class KafkaPipelineTest extends AkkaTestCase {
               ByteString(s"test-body$i"),
               s"test-channel$i",
               Map("uid" -> i),
-              EventSource.Http
+              EventSourceType.Http
             ),
             BizData(),
-            EventFmt.Plain()
+            EventFormat.Plain()
         )
       )
       .runWith(plInlet)

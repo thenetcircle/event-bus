@@ -26,9 +26,9 @@ import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, MergeHub, Sink, S
 import akka.stream.{ FlowShape, Graph, Materializer }
 import akka.{ Done, NotUsed }
 import com.thenetcircle.event_bus.driver.adapter.{ KafkaSinkAdapter, KafkaSourceAdapter }
-import com.thenetcircle.event_bus.driver.extractor.Extractor
+import com.thenetcircle.event_bus.extractor.Extractor
 import com.thenetcircle.event_bus.driver.{ KafkaKey, KafkaValue }
-import com.thenetcircle.event_bus.{ Event, EventFmt }
+import com.thenetcircle.event_bus.{ Event, EventFormat$ }
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
 
 import scala.concurrent.Future
@@ -84,7 +84,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
    * It will expose multiple sources for each topic and partition pair
    * You need to take care of the sources manually either parallel send to sink or flatten to linear to somewhere else
    */
-  def outlet[Fmt <: EventFmt](
+  def outlet[Fmt <: EventFormat](
       groupId: String,
       topics: Option[Set[String]] = None,
       topicPattern: Option[String] = None,

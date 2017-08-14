@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.driver.adapter
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.driver.{ KafkaKey, KafkaValue }
-import com.thenetcircle.event_bus.{ EventSource, RawEvent, TestCase }
+import com.thenetcircle.event_bus.{ EventEntryPoint$, RawEvent, TestCase }
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 
@@ -36,7 +36,7 @@ class KafkaAdapterTest extends TestCase {
       "offset" -> 10,
       "timestamp" -> -1
     ),
-    EventSource.Kafka
+    EventEntryPoint.Kafka
   )
 
   test("kafka source adapter") {

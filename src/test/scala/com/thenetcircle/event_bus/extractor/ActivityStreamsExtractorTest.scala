@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.driver.extractor
+package com.thenetcircle.event_bus.extractor
 
 import java.text.SimpleDateFormat
 
@@ -75,12 +75,12 @@ class ActivityStreamsExtractorTest extends TestCase {
   }
 
   test("extrator") {
-    val extractor = new ActivityStreamsExtractor
+    val extractor = new TncActivityStreamsExtractor
     val rawEvent = RawEvent(
       body = ByteString(json),
       channel = "",
       context = Map.empty[String, Any],
-      source = EventSource.Http
+      source = EventSourceType.Http
     )
 
     val event = extractor.extract(rawEvent)
@@ -97,7 +97,7 @@ class ActivityStreamsExtractorTest extends TestCase {
         actorId = Some("1008646"),
         actorType = Some("user")
       ),
-      format = EventFmt.ActivityStreams()
+      format = EventFormat.TncActivityStreams()
     )
 
     event.timestamp shouldEqual expectedEvent.timestamp

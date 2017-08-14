@@ -21,7 +21,7 @@ import akka.stream.alpakka.amqp.IncomingMessage
 import akka.util.ByteString
 import com.rabbitmq.client.AMQP.BasicProperties
 import com.rabbitmq.client.Envelope
-import com.thenetcircle.event_bus.{ EventSource, RawEvent, TestCase }
+import com.thenetcircle.event_bus.{ EventEntryPoint$, RawEvent, TestCase }
 
 class AMQPAdapterTest extends TestCase {
 
@@ -34,7 +34,7 @@ class AMQPAdapterTest extends TestCase {
       "envelope" -> envelope,
       "properties" -> properties
     ),
-    EventSource.AMQP
+    EventEntryPoint.AMQP
   )
 
   test("adapt") {

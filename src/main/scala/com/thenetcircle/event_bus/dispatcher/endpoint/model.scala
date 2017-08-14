@@ -15,19 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.sink
+package com.thenetcircle.event_bus.dispatcher.endpoint
 
-import akka.kafka.ProducerSettings
-import com.thenetcircle.event_bus.driver.{ KafkaKey, KafkaValue }
-import com.thenetcircle.event_bus.alpakka.redis.RedisConnectionSettings
-
-sealed trait SinkSettings
-
-final case class RedisPubSubSinkSettings(
-    connectionSettings: RedisConnectionSettings
-) extends SinkSettings
-
-final case class KafkaSinkSettings(
-    producerSettings: ProducerSettings[KafkaKey, KafkaValue],
-    name: String = "DefaultKafkaSink"
-) extends SinkSettings
+trait EndPointSettings
+trait EndPoint

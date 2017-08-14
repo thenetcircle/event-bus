@@ -15,22 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.driver.extractor
+package com.thenetcircle.event_bus
 
-import com.thenetcircle.event_bus.{ Event, EventFmt, RawEvent }
-import io.jvm.uuid.UUID
+package object pipeline {
 
-trait Extractor[Fmt <: EventFmt] {
-  def extract(rawEvent: RawEvent): Event
-  def genUUID(): String = UUID.random.toString
-}
-
-object Extractor {
-
-  def deExtract(event: Event): RawEvent = event.rawEvent
-
-  implicit val plainExtractor: Extractor[EventFmt.Plain] = new PlainExtractor
-
-  implicit val defaultActivityStreamsExtractor: Extractor[EventFmt.ActivityStreams] = new ActivityStreamsExtractor
+  type KafkaKey = Array[Byte]
+  type KafkaValue = Array[Byte]
 
 }

@@ -15,24 +15,34 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.sink
+package com.thenetcircle.event_bus.dispatcher.endpoint
 
 import akka.NotUsed
 import akka.stream.scaladsl.{ Flow, Keep, Sink }
 import akka.util.ByteString
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.driver.adapter.RedisPubSubSinkAdapter
-import com.thenetcircle.event_bus.driver.extractor.Extractor
-import com.thenetcircle.event_bus.alpakka.redis.DefaultRedisSinkSettings
 import com.thenetcircle.event_bus.alpakka.redis.scaladsl.RedisSink
+import com.thenetcircle.event_bus.alpakka.redis.{ DefaultRedisSinkSettings, OutgoingMessage, RedisConnectionSettings }
 
-object RedisPubSubSink {
-  def apply(settings: RedisPubSubSinkSettings): Sink[Event, NotUsed] = {
+case class RedisPubSubSinkSettings(
+    name: String,
+    connectionSettings: RedisConnectionSettings
+) extends EndPointSettings
+
+class RedisPubSubEndpoint(settings: RedisPubSubSinkSettings) {
+
+  val endPointName: String = settings.name
+
+  def getSink(): Sink[Event, NotUsed] = {
+
     val redisSink = RedisSink[ByteString](DefaultRedisSinkSettings(settings.connectionSettings))
 
     Flow[Event]
-      .map(Extractor.deExtract)
-      .map(RedisPubSubSinkAdapter.unfit)
+      .map(event => {
+        OutgoingMessage(event.channel, event.body)
+      })
       .toMat(redisSink)(Keep.right)
+      .named(endPointName)
+
   }
 }

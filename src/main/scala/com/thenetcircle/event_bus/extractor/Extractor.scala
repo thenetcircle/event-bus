@@ -15,11 +15,19 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.extractor
 
-package object driver {
+import akka.util.ByteString
+import com.thenetcircle.event_bus.{ EventFormat, EventMetaData }
+import io.jvm.uuid.UUID
 
-  type KafkaKey = Array[Byte]
-  type KafkaValue = Array[Byte]
+trait Extractor[Fmt <: EventFormat] {
+  def extract(body: ByteString): EventMetaData
+  def genUUID(): String = UUID.random.toString
+}
+
+object Extractor {
+
+  implicit val tncActivityStreamsExtractor: Extractor[EventFormat.TncActivityStreams] = new TncActivityStreamsExtractor
 
 }

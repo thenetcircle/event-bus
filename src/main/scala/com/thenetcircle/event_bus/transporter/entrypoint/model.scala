@@ -15,14 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.driver.adapter
+package com.thenetcircle.event_bus.transporter.entrypoint
 
-import com.thenetcircle.event_bus.RawEvent
-
-trait SourceAdapter[In] {
-  def fit(message: In): RawEvent
-}
-
-trait SinkAdapter[Out] {
-  def unfit(event: RawEvent): Out
-}
+trait EntryPointSettings
+trait EntryPoint
