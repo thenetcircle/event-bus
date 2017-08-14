@@ -27,11 +27,10 @@ import akka.stream.{ FlowShape, Graph, Materializer }
 import akka.util.ByteString
 import akka.{ Done, NotUsed }
 import com.thenetcircle.event_bus.extractor.Extractor
-import com.thenetcircle.event_bus.{ Event, EventFormat, EventSourceType }
+import com.thenetcircle.event_bus._
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
-
 import scala.concurrent.Future
 
 case class KafkaPipelineSettings(
@@ -113,7 +112,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       _kcs
     }
 
-    val outletName = s"${pipelineSettings.name}-outlet-${pipelineOutId.getAndIncrement()}"
+    val outletName = s"${pipelineSettings.name}-outlet-${rightPortId.getAndIncrement()}"
 
     var subscription: AutoSubscription = if (_topics.isDefined) {
       Subscriptions.topics(_topics.get)
@@ -121,7 +120,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       Subscriptions.topicPattern(_topicPattern.get)
     }
 
-    val consumerName = s"$pipelineName-outlet-${pipelineOutId.getAndIncrement()}"
+    val consumerName = s"$pipelineName-outlet-${rightPortId.getAndIncrement()}"
 
     Consumer
       .committablePartitionedSource(kafkaConsumerSettings, subscription)
@@ -170,7 +169,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
     val topic: String = event.channel
     val timestamp: Long = event.metadata.timestamp
     val key: KafkaKey = getKeyFromEvent(event)
-    val value: KafkaValue = event.body.toArray
+    val value: KafkaValue = event.body.data.toArray
 
     new ProducerRecord[KafkaKey, KafkaValue](topic, null, timestamp.asInstanceOf[java.lang.Long], key, value)
   }
@@ -178,16 +177,17 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
   private def getKeyFromEvent(event: Event): KafkaKey =
     ByteString(s"${event.metadata.trigger._1}#${event.metadata.trigger._2}").toArray
 
-  private def getEventFromConsumerRecord(
+  private def getEventFromConsumerRecord[Fmt <: EventFormat](
       record: ConsumerRecord[KafkaKey, KafkaValue]
-  )(implicit extractor: Extractor[_]): Event = {
-    val body = ByteString(record.value())
+  )(implicit extractor: Extractor[Fmt]): Event = {
+    val data = ByteString(record.value())
+    val (metadata, channel, priority) = extractor.extract(data)
     Event(
-      metadata = extractor.extract(body),
-      body = body,
-      channel = record.topic(),
+      metadata = metadata,
+      body = EventBody[Fmt](data),
+      channel = channel.getOrElse(record.topic()),
       sourceType = EventSourceType.Kafka,
-      format = EventFormat.TncActivityStreams()
+      priority = priority.getOrElse(EventPriority.Normal)
     )
   }
 
