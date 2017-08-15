@@ -17,76 +17,77 @@
 
 package com.thenetcircle.event_bus.pipeline
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.{ CommittableOffset, CommittableOffsetBatch }
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.scaladsl.{ Consumer, Producer }
 import akka.kafka.{ AutoSubscription, ConsumerSettings, ProducerSettings, Subscriptions }
-import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, Sink, Source }
+import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, MergeHub, Sink, Source }
 import akka.stream.{ FlowShape, Graph, Materializer }
 import akka.util.ByteString
-import akka.{ Done, NotUsed }
-import com.thenetcircle.event_bus.extractor.Extractor
 import com.thenetcircle.event_bus._
+import com.thenetcircle.event_bus.extractor.Extractor
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
-import scala.concurrent.Future
-
-case class KafkaPipelineSettings(
-    name: String,
-    bootstrapServers: String,
-    producerClientSettings: Map[String, String] = Map.empty,
-    dispatcher: Option[String] = None
-) extends PipelineSettings
 
 /**
  * @param perProducerBufferSize Buffer space used per producer. Default value is 16.
  */
-case class KafkaPipelineInSettings(
-    perProducerBufferSize: Int = 16
-) extends PipelineInSettings
+case class KafkaPipelineSettings(
+    name: String,
+    bootstrapServers: String,
+    producerClientSettings: Map[String, String] = Map.empty,
+    perProducerBufferSize: Int = 16,
+    dispatcher: Option[String] = None
+) extends PipelineSettings
 
-case class KafkaPipelineOutSettings(
+case class KafkaRightPortSettings(
     groupId: String,
     topics: Option[Set[String]] = None,
     topicPattern: Option[String] = None,
     consumerClientSettings: Map[String, String] = Map.empty
-) extends PipelineOutSettings
+) extends RightPortSettings
 
 class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: ActorSystem, materializer: Materializer)
     extends Pipeline(pipelineSettings) {
 
   import KafkaPipeline._
 
+  // Build ProducerSettings
+  private val kafkaProducerSettings: ProducerSettings[Key, Value] = {
+    var _kps =
+      ProducerSettings(system, Some(new ByteArraySerializer), Some(new ByteArraySerializer))
+        .withBootstrapServers(pipelineSettings.bootstrapServers)
+    for ((k, v) <- pipelineSettings.producerClientSettings) _kps = _kps.withProperty(k, v)
+    _kps
+  }
+
+  private val kafkaProducer = Flow[Event]
+    .map(
+      event =>
+        Message(
+          getProducerRecordFromEvent(event),
+          event.committer
+      )
+    )
+    .via(Producer.flow(kafkaProducerSettings))
+    .filter(_.message.passThrough.isDefined)
+    .mapAsync(kafkaProducerSettings.parallelism)(_.message.passThrough.get.commit())
+    .toMat(Sink.ignore)(Keep.right)
+
+  private lazy val _leftPort =
+    MergeHub
+      .source(pipelineSettings.perProducerBufferSize)
+      .toMat(kafkaProducer)(Keep.left)
+      .run()
+
   /**
    * Get a new inlet of the pipeline, Which will create a new producer internally
    * One inlet can be shared to different streams as a sink
    */
-  def getPipelineIn(settings: KafkaPipelineInSettings): Sink[Event, Future[Done]] = {
-
-    // Build ProducerSettings
-    val kafkaProducerSettings: ProducerSettings[KafkaKey, KafkaValue] = {
-      var _kps =
-        ProducerSettings(system, Some(new ByteArraySerializer), Some(new ByteArraySerializer))
-          .withBootstrapServers(pipelineSettings.bootstrapServers)
-      for ((k, v) <- pipelineSettings.producerClientSettings) _kps = _kps.withProperty(k, v)
-      _kps
-    }
-
-    Flow[Event]
-      .map(
-        event =>
-          Message(
-            getProducerRecordFromEvent(event),
-            event.committer
-        )
-      )
-      .via(Producer.flow(kafkaProducerSettings))
-      .filter(_.message.passThrough.isDefined)
-      .mapAsync(kafkaProducerSettings.parallelism)(_.message.passThrough.get.commit())
-      .toMat(Sink.ignore)(Keep.right)
-  }
+  def leftPort: Sink[Event, NotUsed] = _leftPort.named(s"$pipelineName-leftport-${leftPortId.getAndIncrement()}")
 
   /**
    * Get outlet of the pipeline
@@ -94,21 +95,21 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
    * It will expose multiple sources for each topic and partition pair
    * You need to take care of the sources manually either parallel send to sink or flatten to linear to somewhere else
    */
-  def getPipelineOut[Fmt <: EventFormat](
-      settings: KafkaPipelineOutSettings
+  def rightPort[Fmt <: EventFormat](
+      portSettings: KafkaRightPortSettings
   )(implicit extractor: Extractor[Fmt]): Source[Source[Event, NotUsed], Consumer.Control] = {
 
-    val _topics = settings.topics
-    val _topicPattern = settings.topicPattern
+    val _topics = portSettings.topics
+    val _topicPattern = portSettings.topicPattern
 
     require(_topics.isDefined || _topicPattern.isDefined, "The outlet of KafkaPipeline needs to subscribe topics")
 
     // Build ConsumerSettings
-    val kafkaConsumerSettings: ConsumerSettings[KafkaKey, KafkaValue] = {
+    val kafkaConsumerSettings: ConsumerSettings[Key, Value] = {
       var _kcs = ConsumerSettings(system, Some(new ByteArrayDeserializer), Some(new ByteArrayDeserializer))
         .withBootstrapServers(pipelineSettings.bootstrapServers)
-        .withGroupId(settings.groupId)
-      for ((k, v) <- settings.consumerClientSettings) _kcs = _kcs.withProperty(k, v)
+        .withGroupId(portSettings.groupId)
+      for ((k, v) <- portSettings.consumerClientSettings) _kcs = _kcs.withProperty(k, v)
       _kcs
     }
 
@@ -165,20 +166,20 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       FlowShape[Event, Event](broadcast.in, output.out)
     }
 
-  private def getProducerRecordFromEvent(event: Event): ProducerRecord[KafkaKey, KafkaValue] = {
+  private def getProducerRecordFromEvent(event: Event): ProducerRecord[Key, Value] = {
     val topic: String = event.channel
     val timestamp: Long = event.metadata.timestamp
-    val key: KafkaKey = getKeyFromEvent(event)
-    val value: KafkaValue = event.body.data.toArray
+    val key: Key = getKeyFromEvent(event)
+    val value: Value = event.body.data.toArray
 
-    new ProducerRecord[KafkaKey, KafkaValue](topic, null, timestamp.asInstanceOf[java.lang.Long], key, value)
+    new ProducerRecord[Key, Value](topic, null, timestamp.asInstanceOf[java.lang.Long], key, value)
   }
 
-  private def getKeyFromEvent(event: Event): KafkaKey =
+  private def getKeyFromEvent(event: Event): Key =
     ByteString(s"${event.metadata.trigger._1}#${event.metadata.trigger._2}").toArray
 
   private def getEventFromConsumerRecord[Fmt <: EventFormat](
-      record: ConsumerRecord[KafkaKey, KafkaValue]
+      record: ConsumerRecord[Key, Value]
   )(implicit extractor: Extractor[Fmt]): Event = {
     val data = ByteString(record.value())
     val (metadata, channel, priority) = extractor.extract(data)
@@ -195,8 +196,8 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
 
 object KafkaPipeline {
 
-  type KafkaKey = Array[Byte]
-  type KafkaValue = Array[Byte]
+  type Key = Array[Byte]
+  type Value = Array[Byte]
 
   def apply(pipelineSettings: KafkaPipelineSettings)(implicit system: ActorSystem,
                                                      materializer: Materializer): KafkaPipeline =
