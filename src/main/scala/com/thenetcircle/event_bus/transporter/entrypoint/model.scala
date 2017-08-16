@@ -16,17 +16,17 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
-import akka.NotUsed
 import akka.stream.scaladsl.Source
+import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.extractor.Extractor
-import com.thenetcircle.event_bus.{ Event, EventFormat }
 
 trait EntryPointSettings
 
-abstract class EntryPoint[T: Extractor](settings: EntryPointSettings) {
+abstract class EntryPoint(
+    settings: EntryPointSettings
+)(implicit val extractor: Extractor[DefaultFormat]) {
 
-  val extractor: Extractor[T] = implicitly[Extractor[T]]
-
-  def port[Fmt <: EventFormat](implicit extractor: Extractor[Fmt]): Source[Event, NotUsed]
+  def port: Source[Source[Event, _], _]
 
 }

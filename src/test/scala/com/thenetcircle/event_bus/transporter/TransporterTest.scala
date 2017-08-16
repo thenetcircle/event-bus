@@ -15,15 +15,6 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter.entrypoint
+package com.thenetcircle.event_bus.transporter
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.typesafe.config.Config
-
-object EntryPointFactory {
-
-  def createEntryPoint(config: Config)(implicit system: ActorSystem, materializer: Materializer): EntryPoint =
-    new HttpEntryPoint(HttpEntryPointSettings("127.0.0.1", 8888))
-
-}
+class TransporterTest {}

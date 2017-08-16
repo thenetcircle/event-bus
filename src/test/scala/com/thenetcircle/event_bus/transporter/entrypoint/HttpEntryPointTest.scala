@@ -16,14 +16,21 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+import com.thenetcircle.event_bus.AkkaTestCase
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.typesafe.config.Config
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
-object EntryPointFactory {
+class HttpEntryPointTest extends AkkaTestCase {
 
-  def createEntryPoint(config: Config)(implicit system: ActorSystem, materializer: Materializer): EntryPoint =
-    new HttpEntryPoint(HttpEntryPointSettings("127.0.0.1", 8888))
+  test("create HttpEntryPoint") {
+    val hep = new HttpEntryPoint(
+      HttpEntryPointSettings("127.0.0.1", 8888)
+    )
+
+    val port = hep.port.runForeach(s => s.runForeach(println))
+
+    Await.ready(_system.whenTerminated, Duration.Inf)
+  }
 
 }

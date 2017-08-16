@@ -32,6 +32,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
 
+import scala.concurrent.Future
+
 /**
  * @param perProducerBufferSize Buffer space used per producer. Default value is 16.
  */
@@ -55,6 +57,8 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
 
   import KafkaPipeline._
 
+  implicit val ec = system.dispatcher
+
   // Build ProducerSettings
   private val kafkaProducerSettings: ProducerSettings[Key, Value] = {
     var _kps =
@@ -74,7 +78,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
     )
     .via(Producer.flow(kafkaProducerSettings))
     .filter(_.message.passThrough.isDefined)
-    .mapAsync(kafkaProducerSettings.parallelism)(_.message.passThrough.get.commit())
+    .mapAsync(kafkaProducerSettings.parallelism)(result => Future { result.message.passThrough.get.commit() })
     .toMat(Sink.ignore)(Keep.right)
 
   private lazy val _leftPort =
@@ -131,7 +135,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
             .map(msg => {
               getEventFromConsumerRecord(msg.record)
                 .addContext("kafkaCommittableOffset", msg.committableOffset)
-                .withCommitter(msg.committableOffset.commitScaladsl)
+                .withCommitter(() => msg.committableOffset.commitScaladsl)
             })
             .named(s"$consumerName-subsource-${topicPartition.topic()}-${topicPartition.partition().toString}")
       }
@@ -182,13 +186,13 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       record: ConsumerRecord[Key, Value]
   )(implicit extractor: Extractor[Fmt]): Event = {
     val data = ByteString(record.value())
-    val (metadata, channel, priority) = extractor.extract(data)
+    val extractedData = extractor.extract(data)
     Event(
-      metadata = metadata,
-      body = EventBody[Fmt](data),
-      channel = channel.getOrElse(record.topic()),
+      metadata = extractedData.metadata,
+      body = EventBody(data, extractor.dataFormat),
+      channel = extractedData.channel.getOrElse(record.topic()),
       sourceType = EventSourceType.Kafka,
-      priority = priority.getOrElse(EventPriority.Normal)
+      priority = extractedData.priority.getOrElse(EventPriority.Normal)
     )
   }
 

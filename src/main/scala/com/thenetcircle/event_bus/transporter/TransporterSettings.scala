@@ -17,20 +17,25 @@
 
 package com.thenetcircle.event_bus.transporter
 
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import com.thenetcircle.event_bus.pipeline.{ Pipeline, PipelineFactory }
 import com.thenetcircle.event_bus.transporter.entrypoint.{ EntryPoint, EntryPointFactory }
 import com.typesafe.config.Config
 
+import scala.collection.JavaConverters._
+
 object TransporterSettings {
   def apply(
       config: Config
-  ): TransporterSettings = {
+  )(implicit system: ActorSystem, materializer: Materializer): TransporterSettings = {
 
     val name = config.getString("name")
 
-    val entryPoints: Set[EntryPoint] =
-      for (_ec <- config.getConfigList("entry_points"))
+    val entryPoints: Set[EntryPoint] = {
+      for (_ec <- config.getConfigList("entry_points").asScala)
         yield EntryPointFactory.createEntryPoint(_ec)
+    }.toSet
 
     val pipelineName = config.getString("pipeline")
     val pipeline = PipelineFactory.getPipeline(pipelineName)

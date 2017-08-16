@@ -17,19 +17,11 @@
 
 package com.thenetcircle.event_bus.pipeline
 
-import akka.kafka.{ ConsumerSettings, ProducerSettings }
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.driver.{ KafkaKey, KafkaValue }
-import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
-
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 
 class KafkaPipelineTest extends AkkaTestCase {
 
-  val producerSettings = ProducerSettings[KafkaKey, KafkaValue](
+  /*val producerSettings = ProducerSettings[KafkaKey, KafkaValue](
     _system,
     Some(new ByteArraySerializer),
     Some(new ByteArraySerializer)
@@ -66,6 +58,6 @@ class KafkaPipelineTest extends AkkaTestCase {
       .runWith(plInlet)
 
     Await.ready(_system.whenTerminated, Duration.Inf)
-  }
+  }*/
 
 }

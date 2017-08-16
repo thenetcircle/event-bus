@@ -21,7 +21,8 @@ import akka.util.ByteString
 
 sealed trait EventFormat
 object EventFormat {
-  trait DefaultFormat extends EventFormat
+  type DefaultFormat = DefaultFormat.type
+  object DefaultFormat extends EventFormat
 }
 
 trait EventCommitter {
@@ -44,7 +45,10 @@ object EventPriority {
   case object Low extends EventPriority
 }
 
-case class EventBody[+T](data: ByteString)
+case class EventBody[+Fmt](
+    data: ByteString,
+    format: Fmt
+)
 
 case class EventMetaData(
     uuid: String,
@@ -66,7 +70,7 @@ case class Event(
 
   def withCommitter(commitFunction: () => Unit): Event =
     copy(committer = Some(new EventCommitter {
-      override val commit: () => Unit = commitFunction
+      override def commit(): Unit = commitFunction()
     }))
 
   def hasContext(key: String): Boolean = context.isDefinedAt(key)

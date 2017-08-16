@@ -18,8 +18,8 @@
 package com.thenetcircle.event_bus.transporter
 
 import akka.NotUsed
-import akka.stream.scaladsl.{ GraphDSL, MergePreferred, Partition, RunnableGraph }
 import akka.stream._
+import akka.stream.scaladsl.{ GraphDSL, MergePreferred, Partition, RunnableGraph }
 import com.thenetcircle.event_bus.{ Event, EventPriority, EventSourceType }
 
 class Transporter(settings: TransporterSettings)(implicit materializer: Materializer) {
@@ -43,7 +43,7 @@ class Transporter(settings: TransporterSettings)(implicit materializer: Material
 
         var i = 0
         entryPoints foreach { ep =>
-          ep.port ~> partition
+          // ep.port ~> partition
           partition.out(0) ~> merge.preferred
           partition.out(1) ~> merge.in(i)
           i = i + 1
@@ -61,5 +61,6 @@ class Transporter(settings: TransporterSettings)(implicit materializer: Material
 }
 
 object Transporter {
-  def apply(settings: TransporterSettings)(implicit materializer: Materializer): Transporter = new Transporter(settings)
+  def apply(settings: TransporterSettings)(implicit materializer: Materializer): Transporter =
+    new Transporter(settings)
 }
