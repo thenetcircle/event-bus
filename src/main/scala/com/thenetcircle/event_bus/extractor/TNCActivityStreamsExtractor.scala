@@ -61,7 +61,7 @@ case class TNCContext(
 case class TNCObject(
     id: Option[String],
     objectType: Option[String],
-    attachments: List[TNCContext]
+    attachments: Option[List[TNCContext]]
 )
 
 case class TNCActivity(

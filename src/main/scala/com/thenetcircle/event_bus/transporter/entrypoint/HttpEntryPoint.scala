@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.IncomingConnection
-import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.http.scaladsl.model.{ HttpEntity, HttpRequest, HttpResponse, StatusCodes }
 import akka.stream.scaladsl.Source
 import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler }
 import akka.stream.{ Attributes, Materializer, Outlet, SourceShape }
@@ -47,7 +47,7 @@ class HttpEntryPoint(settings: HttpEntryPointSettings)(implicit system: ActorSys
     val out: Outlet[Event] = Outlet("outlet")
     override def shape: SourceShape[Event] = SourceShape(out)
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) with OutHandler {
+      new GraphStageLogic(shape) {
 
         private val maxBufferSize = perConnectionBufferSize
         private var buffer = mutable.Queue.empty[Event]
@@ -60,24 +60,31 @@ class HttpEntryPoint(settings: HttpEntryPointSettings)(implicit system: ActorSys
               data.onComplete {
                 case Success(entity) =>
                   val body = entity.data
-                  val extractedData = extractor.extract(body)
-                  val event = Event(
-                    extractedData.metadata,
-                    EventBody(body, extractor.dataFormat),
-                    extractedData.channel.getOrElse(""),
-                    EventSourceType.Http,
-                    extractedData.priority.getOrElse(EventPriority.Normal),
-                    Map.empty
-                  ).withCommitter(() => {
-                    responsePromise.success(HttpResponse())
-                  })
+                  try {
+                    val extractedData = extractor.extract(body)
 
-                  if (isAvailable(out))
-                    push(out, event)
-                  else if (buffer.size >= maxBufferSize)
-                    responsePromise.failure(new Exception("buffer size exceed the maximum number."))
-                  else
-                    buffer.enqueue(event)
+                    val event = Event(
+                      extractedData.metadata,
+                      EventBody(body, extractor.dataFormat),
+                      extractedData.channel.getOrElse(""),
+                      EventSourceType.Http,
+                      extractedData.priority.getOrElse(EventPriority.Normal),
+                      Map.empty
+                    ).withCommitter(() => {
+                      responsePromise.success(HttpResponse())
+                    })
+
+                    if (isAvailable(out)) {
+                      push(out, event)
+                    } else if (buffer.size >= maxBufferSize) {
+                      responsePromise.failure(new Exception("buffer size exceed the maximum number."))
+                    } else {
+                      buffer.enqueue(event)
+                    }
+                  } catch {
+                    case e: Throwable =>
+                      responsePromise.success(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(e.getMessage)))
+                  }
 
                 case Failure(e) => responsePromise.failure(e)
               }
@@ -92,9 +99,12 @@ class HttpEntryPoint(settings: HttpEntryPointSettings)(implicit system: ActorSys
           connection.handleWithAsyncHandler(handler)(materializer)
         }
 
-        override def onPull(): Unit =
-          if (buffer.nonEmpty)
-            push(out, buffer.dequeue())
+        setHandler(out, new OutHandler {
+          override def onPull(): Unit =
+            if (buffer.nonEmpty)
+              push(out, buffer.dequeue())
+        })
+
       }
   }
 

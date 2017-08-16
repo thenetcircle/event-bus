@@ -28,7 +28,13 @@ class HttpEntryPointTest extends AkkaTestCase {
       HttpEntryPointSettings("127.0.0.1", 8888)
     )
 
-    val port = hep.port.runForeach(s => s.runForeach(println))
+    val port = hep.port.runForeach(
+      s =>
+        s.runForeach(event => {
+          println(event.toString)
+          event.committer.get.commit()
+        })
+    )
 
     Await.ready(_system.whenTerminated, Duration.Inf)
   }
