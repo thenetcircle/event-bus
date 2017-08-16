@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.{ EventMetaData, EventPriority }
+import com.thenetcircle.event_bus.EventMetaData
 import spray.json._
 
 /*case class ActivityObject(
@@ -81,7 +81,7 @@ object TNCActivityStreamsProtocol extends DefaultJsonProtocol {
 class TNCActivityStreamsExtractor {
   import TNCActivityStreamsProtocol._
 
-  def extract(data: ByteString): (EventMetaData, Option[String], Option[EventPriority]) = {
+  def extract(data: ByteString): ExtractedData = {
 
     val jsonAst = data.utf8String.parseJson
     val tncActivity = jsonAst.convertTo[TNCActivity]
@@ -99,10 +99,8 @@ class TNCActivityStreamsExtractor {
     }
     val actor = tncActivity.actor
 
-    (
-      EventMetaData(uuid, name, timestamp, publisher, actor.id.get -> actor.objectType.get),
-      None,
-      None
+    ExtractedData(
+      metadata = EventMetaData(uuid, name, timestamp, publisher, actor.id.get -> actor.objectType.get)
     )
 
   }

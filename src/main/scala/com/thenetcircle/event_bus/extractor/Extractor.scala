@@ -21,14 +21,23 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.{ EventFormat, EventMetaData, EventPriority }
 import io.jvm.uuid.UUID
 
+case class ExtractedData(
+    metadata: EventMetaData,
+    channel: Option[String] = None,
+    priority: Option[EventPriority] = None
+) {
+  def withChannel(channel: String): ExtractedData = copy(channel = Some(channel))
+  def withPriority(priority: EventPriority): ExtractedData = copy(priority = Some(priority))
+}
+
 trait Extractor[Fmt <: EventFormat] {
 
   /**
    * Extract metadata from data accroding to Format
    *
-   * @return (EventMetaData, Option[Channel], Option[EventPriority])
+   * @return ExtractedData
    */
-  def extract(data: ByteString): (EventMetaData, Option[String], Option[EventPriority])
+  def extract(data: ByteString): ExtractedData
 
 }
 

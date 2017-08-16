@@ -16,96 +16,83 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
-import akka.{Done, NotUsed}
+
+import akka.{ Done, NotUsed }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.IncomingConnection
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import akka.stream.scaladsl.{Flow, GraphDSL, MergeHub, Source}
-import akka.http.scaladsl.model.HttpMethods._
-import akka.stream.stage.{GraphStage, GraphStageLogic, OutHandler}
-import akka.stream.{Attributes, Outlet, OverflowStrategy, SourceShape}
+import akka.http.scaladsl.model.{ HttpRequest, HttpResponse }
+import akka.stream.scaladsl.{ Flow, GraphDSL, MergeHub, Source }
+import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import akka.stream.{ Attributes, Outlet, OverflowStrategy, SourceShape }
+import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.extractor.Extractor
-import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.thenetcircle.event_bus._
 
 import scala.concurrent.duration._
 import scala.collection.mutable
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.{ Await, Future, Promise }
+import scala.util.{ Failure, Success }
 
 case class HttpEntryPointSettings(
     interface: String,
     port: Int
 ) extends EntryPointSettings
 
-class HttpEntryPoint[T: Extractor](settings: HttpEntryPointSettings) extends EntryPoint(settings) {
-
-  val extractor: Extractor[T] = implicitly[Extractor[T]]
-
-  class HttpEntryPointShape(connection: IncomingConnection) extends GraphStage[SourceShape[Event]] {
-
-    val out: Outlet[Event] = Outlet("outlet")
-
-    override def shape: SourceShape[Event] = SourceShape(out)
-
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) {
-
-        private val buffer = mutable.Queue.empty[Event]
-
-        override def preStart(): Unit =
-          connection.handleWithSyncHandler { request =>
-            response
-          }
-
-        setHandler(out, new OutHandler {
-          override def onPull(): Unit =
-            if (buffer.nonEmpty)
-              push(out, buffer.dequeue())
-        })
-      }
-  }
+class HttpEntryPoint[T <: EventFormat](settings: HttpEntryPointSettings) extends EntryPoint[T](settings) {
 
   val serverSource: Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
     Http().bind(interface = settings.interface, port = settings.port)
 
-  val a = serverSource.map( connection =>
-    Source.fromGraph(GraphDSL.create(){ implicit builder =>
-      val flow = Flow[HttpRequest]
+  val a = serverSource.map(
+    connection =>
+      Source.fromGraph(GraphDSL.create() { implicit builder =>
+        val flow = Flow[HttpRequest]
 
-      SourceShape()
-    })
+        SourceShape()
+      })
   )
 
-  lazy val bindingFuture: Future[Http.ServerBinding] =
-    serverSource
-      .runForeach { connection =>
-        val handler: HttpRequest => Future[HttpResponse] = {
-          case r: HttpRequest =>
-        }
+  private class HttpEntryPointGraph(connection: IncomingConnection) extends GraphStage[SourceShape[Event]] {
+    val out: Outlet[Event] = Outlet("outlet")
+    override def shape: SourceShape[Event] = SourceShape(out)
+    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+      new GraphStageLogic(shape) with OutHandler {
 
-        Flow[HttpRequest].map()
-        connection.handleWithAsyncHandler(handler)
+        private var buffer = mutable.Queue.empty[Event]
+
+        override def preStart(): Unit =
+          connection.handleWithAsyncHandler { request =>
+            val responsePromise = Promise[HttpResponse]
+            val data = request.entity.toStrict(3.seconds)
+
+            data.onComplete {
+              case Success(entity) =>
+                val body = entity.data
+                val extractedData = extractor.extract(body)
+                val event = Event(
+                  extractedData.metadata,
+                  EventBody[T](body),
+                  extractedData.channel.getOrElse(""),
+                  EventSourceType.Http,
+                  extractedData.priority.getOrElse(EventPriority.Normal),
+                  Map.empty
+                ).withCommitter(() => {
+                  responsePromise.success(HttpResponse())
+                })
+
+                buffer.enqueue(event)
+
+              case Failure(e) => responsePromise.failure(e)
+            }
+
+            responsePromise.future
+          }
+
+        override def onPull(): Unit =
+          if (buffer.nonEmpty)
+            push(out, buffer.dequeue())
       }
-
-  val mergehub = MergeHub.source(16)
-
-  Source.fromPublisher()
-
-  override def port: Source[Source[Event, NotUsed], NotUsed] = ???
-
-  private def getEventFromRequest(request: HttpRequest, response: Promise[HttpResponse]): Event = {
-    val committer = () => {
-      response.success(HttpResponse()).future
-    }
-
-    val data = request.entity.toStrict(3.seconds)
-
-    data.onComplete( d =>
-    val (metadata, channel, priority) = extractor.extract(d)
-
-    Event(
-    )
-      )
-
   }
 
+  override def port: Source[Source[Event, NotUsed], NotUsed] = ???
 }

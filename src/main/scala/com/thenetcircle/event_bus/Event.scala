@@ -19,15 +19,13 @@ package com.thenetcircle.event_bus
 
 import akka.util.ByteString
 
-import scala.concurrent.Future
-
 sealed trait EventFormat
 object EventFormat {
   trait DefaultFormat extends EventFormat
 }
 
 trait EventCommitter {
-  def commit(): Future[Any]
+  def commit(): Unit
 }
 
 sealed trait EventSourceType
@@ -66,9 +64,9 @@ case class Event(
     committer: Option[EventCommitter] = None
 ) {
 
-  def withCommitter[T](committerBuilder: => Future[T]): Event =
+  def withCommitter(commitFunction: () => Unit): Event =
     copy(committer = Some(new EventCommitter {
-      override def commit(): Future[T] = committerBuilder
+      override val commit: () => Unit = commitFunction
     }))
 
   def hasContext(key: String): Boolean = context.isDefinedAt(key)

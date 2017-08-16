@@ -23,7 +23,9 @@ import com.thenetcircle.event_bus.{ Event, EventFormat }
 
 trait EntryPointSettings
 
-abstract class EntryPoint(settings: EntryPointSettings) {
+abstract class EntryPoint[T: Extractor](settings: EntryPointSettings) {
+
+  val extractor: Extractor[T] = implicitly[Extractor[T]]
 
   def port[Fmt <: EventFormat](implicit extractor: Extractor[Fmt]): Source[Event, NotUsed]
 
