@@ -22,10 +22,12 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.IncomingConnection
 import akka.http.scaladsl.model.{ HttpEntity, HttpRequest, HttpResponse, StatusCodes }
-import akka.stream.scaladsl.Source
-import akka.stream.stage.{ GraphStage, GraphStageLogic, OutHandler }
-import akka.stream.{ Attributes, Materializer, Outlet, SourceShape }
+import akka.stream._
+import akka.stream.scaladsl.{ Flow, Source }
+import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus._
+import com.thenetcircle.event_bus.extractor.Extractor
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -42,76 +44,85 @@ class HttpEntryPoint(settings: HttpEntryPointSettings)(implicit system: ActorSys
 
   implicit val ec = system.dispatcher
 
-  private class HttpEntryPointGraph(connection: IncomingConnection, perConnectionBufferSize: Int = 16)
-      extends GraphStage[SourceShape[Event]] {
-    val out: Outlet[Event] = Outlet("outlet")
-    override def shape: SourceShape[Event] = SourceShape(out)
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) {
-
-        private val maxBufferSize = perConnectionBufferSize
-        private var buffer = mutable.Queue.empty[Event]
-
-        override def preStart(): Unit = {
-          val requestProcessor = getAsyncCallback[(HttpRequest, Promise[HttpResponse])] {
-            case (request, responsePromise) =>
-              val data = request.entity.toStrict(3.seconds)(materializer)
-
-              data.onComplete {
-                case Success(entity) =>
-                  val body = entity.data
-                  try {
-                    val extractedData = extractor.extract(body)
-
-                    val event = Event(
-                      extractedData.metadata,
-                      EventBody(body, extractor.dataFormat),
-                      extractedData.channel.getOrElse(""),
-                      EventSourceType.Http,
-                      extractedData.priority.getOrElse(EventPriority.Normal),
-                      Map.empty
-                    ).withCommitter(() => {
-                      responsePromise.success(HttpResponse())
-                    })
-
-                    if (isAvailable(out)) {
-                      push(out, event)
-                    } else if (buffer.size >= maxBufferSize) {
-                      responsePromise.failure(new Exception("buffer size exceed the maximum number."))
-                    } else {
-                      buffer.enqueue(event)
-                    }
-                  } catch {
-                    case e: Throwable =>
-                      responsePromise.success(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(e.getMessage)))
-                  }
-
-                case Failure(e) => responsePromise.failure(e)
-              }
-          }
-
-          val handler = (request: HttpRequest) => {
-            val responsePromise = Promise[HttpResponse]
-            requestProcessor.invoke((request, responsePromise))
-            responsePromise.future
-          }
-
-          connection.handleWithAsyncHandler(handler)(materializer)
-        }
-
-        setHandler(out, new OutHandler {
-          override def onPull(): Unit =
-            if (buffer.nonEmpty)
-              push(out, buffer.dequeue())
-        })
-
-      }
-  }
-
   val serverSource: Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
     Http().bind(interface = settings.interface, port = settings.port)
 
   override val port: Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
     serverSource.map(connection => Source.fromGraph(new HttpEntryPointGraph(connection)))
+
+}
+
+object HttpEntryPoint {
+
+  private class ConnectionHandler()(implicit extractor: Extractor[EventFormat])
+      extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
+    val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
+    val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
+    val out1: Outlet[Event] = Outlet("outlet-event")
+
+    override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] = new FanOutShape2(in, out0, out1)
+
+    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+      new GraphStageLogic(shape) {
+
+        setHandler(
+          in,
+          new InHandler {
+            override def onPush(): Unit = {
+              val request = grab(in)
+              val (response, event) = requestPreprocess(request)
+
+              push(out0, response)
+
+              if (event.isDefined)
+                push(out1, event)
+            }
+          }
+        )
+
+        setHandler(out0, new OutHandler {
+          override def onPull() = ???
+        })
+
+        setHandler(out1, new OutHandler {
+          override def onPull() = ???
+        })
+
+        def requestPreprocess(request: HttpRequest): (Future[HttpResponse], Option[Event]) = {
+          val responsePromise = Promise[HttpResponse]
+          var event: Option[Event] = None
+          val data = request.entity.toStrict(3.seconds)
+
+          data.onComplete {
+            case Success(entity) =>
+              val body = entity.data
+              try {
+                val extractedData = extractor.extract(body)
+                event = Some(
+                  Event(
+                    extractedData.metadata,
+                    EventBody(body, extractor.dataFormat),
+                    extractedData.channel.getOrElse(""),
+                    EventSourceType.Http,
+                    extractedData.priority.getOrElse(EventPriority.Normal),
+                    Map.empty
+                  ).withCommitter(() => {
+                    responsePromise.success(HttpResponse())
+                  })
+                )
+              } catch {
+                case e: Throwable =>
+                  responsePromise.success(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(e.getMessage)))
+              }
+
+            case Failure(e) =>
+              responsePromise.success(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(e.getMessage)))
+          }
+
+          (responsePromise.future, event)
+        }
+
+      }
+  }
 
 }
