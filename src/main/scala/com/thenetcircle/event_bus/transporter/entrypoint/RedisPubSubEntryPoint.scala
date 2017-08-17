@@ -26,7 +26,7 @@ case class RedisPubSubEntryPointSettings(
     channels: Seq[String] = Seq.empty,
     patterns: Seq[String] = Seq.empty,
     bufferSize: Int = 10
-) extends EntryPointSettings {
+) {
 
   def withBufferSize(bufferSize: Int): RedisPubSubEntryPointSettings =
     copy(bufferSize = bufferSize)

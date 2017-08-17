@@ -18,15 +18,7 @@
 package com.thenetcircle.event_bus.transporter.entrypoint
 import akka.stream.scaladsl.Source
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.extractor.Extractor
 
-trait EntryPointSettings
-
-abstract class EntryPoint(
-    settings: EntryPointSettings
-)(implicit val extractor: Extractor[DefaultFormat]) {
-
+trait EntryPoint {
   def port: Source[Source[Event, _], _]
-
 }

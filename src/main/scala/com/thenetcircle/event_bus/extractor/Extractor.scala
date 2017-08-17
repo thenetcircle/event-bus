@@ -19,10 +19,13 @@ package com.thenetcircle.event_bus.extractor
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.{ EventFormat, EventMetaData, EventPriority }
+import com.thenetcircle.event_bus.{ EventBody, EventFormat, EventMetaData, EventPriority }
 import io.jvm.uuid.UUID
 
+import scala.concurrent.{ ExecutionContext, Future }
+
 case class ExtractedData(
+    body: EventBody[EventFormat],
     metadata: EventMetaData,
     channel: Option[String] = None,
     priority: Option[EventPriority] = None
@@ -38,7 +41,7 @@ trait Extractor[+Fmt <: EventFormat] {
    *
    * @return ExtractedData
    */
-  def extract(data: ByteString): ExtractedData
+  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedData]
 
   def dataFormat: Fmt
 
@@ -49,6 +52,9 @@ object Extractor {
   implicit val defaultFormatExtractor: Extractor[DefaultFormat] =
     new TNCActivityStreamsExtractor with Extractor[DefaultFormat] {
       override val dataFormat: DefaultFormat = DefaultFormat
+
+      override def getEventBody(data: ByteString): EventBody[DefaultFormat] =
+        EventBody(data, DefaultFormat)
     }
 
   /**

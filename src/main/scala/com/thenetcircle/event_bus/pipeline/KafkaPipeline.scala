@@ -28,7 +28,6 @@ import akka.stream.{ FlowShape, Graph, Materializer }
 import akka.util.ByteString
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.extractor.Extractor
-import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
 
@@ -130,11 +129,23 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
       .map {
         case (topicPartition, source) =>
           source
-            .map(msg => {
-              getEventFromConsumerRecord(msg.record)
-                .addContext("kafkaCommittableOffset", msg.committableOffset)
-                .withCommitter(() => msg.committableOffset.commitScaladsl)
-            })
+            .mapAsync(3) { msg =>
+              val record = msg.record
+              extractor.extract(ByteString(record.value())).map(ed => (ed, record.topic(), msg.committableOffset))
+            }
+            .map {
+              case (extractedData, topic, committableOffset) =>
+                val event = Event(
+                  metadata = extractedData.metadata,
+                  body = extractedData.body,
+                  channel = extractedData.channel.getOrElse(topic),
+                  sourceType = EventSourceType.Kafka,
+                  priority = extractedData.priority.getOrElse(EventPriority.Normal)
+                )
+                event
+                  .addContext("kafkaCommittableOffset", committableOffset)
+                  .withCommitter(() => committableOffset.commitScaladsl)
+            }
             .named(s"$consumerName-subsource-${topicPartition.topic()}-${topicPartition.partition().toString}")
       }
       .named(consumerName)
@@ -179,20 +190,6 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
 
   private def getKeyFromEvent(event: Event): Key =
     ByteString(s"${event.metadata.trigger._1}#${event.metadata.trigger._2}").toArray
-
-  private def getEventFromConsumerRecord[Fmt <: EventFormat](
-      record: ConsumerRecord[Key, Value]
-  )(implicit extractor: Extractor[Fmt]): Event = {
-    val data = ByteString(record.value())
-    val extractedData = extractor.extract(data)
-    Event(
-      metadata = extractedData.metadata,
-      body = EventBody(data, extractor.dataFormat),
-      channel = extractedData.channel.getOrElse(record.topic()),
-      sourceType = EventSourceType.Kafka,
-      priority = extractedData.priority.getOrElse(EventPriority.Normal)
-    )
-  }
 
 }
 

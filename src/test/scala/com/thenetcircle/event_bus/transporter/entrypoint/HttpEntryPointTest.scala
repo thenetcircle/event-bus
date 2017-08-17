@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.transporter.entrypoint
 import com.thenetcircle.event_bus.AkkaTestCase
+import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -24,8 +25,8 @@ import scala.concurrent.duration.Duration
 class HttpEntryPointTest extends AkkaTestCase {
 
   test("create HttpEntryPoint") {
-    val hep = new HttpEntryPoint(
-      HttpEntryPointSettings("127.0.0.1", 8888)
+    val hep = HttpEntryPoint[DefaultFormat](
+      HttpEntryPointSettings("test", "127.0.0.1", 8888)
     )
 
     val port = hep.port.runForeach(
