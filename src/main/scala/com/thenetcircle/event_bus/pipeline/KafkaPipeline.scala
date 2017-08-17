@@ -32,8 +32,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
 
-import scala.concurrent.Future
-
 /**
  * @param perProducerBufferSize Buffer space used per producer. Default value is 16.
  */
@@ -78,7 +76,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
     )
     .via(Producer.flow(kafkaProducerSettings))
     .filter(_.message.passThrough.isDefined)
-    .mapAsync(kafkaProducerSettings.parallelism)(result => Future { result.message.passThrough.get.commit() })
+    .mapAsync(kafkaProducerSettings.parallelism)(_.message.passThrough.get.commit())
     .toMat(Sink.ignore)(Keep.right)
 
   private lazy val _leftPort =

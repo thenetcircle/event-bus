@@ -131,9 +131,12 @@ object HttpEntryPoint {
                   EventSourceType.Http,
                   extractedData.priority.getOrElse(EventPriority.Normal),
                   Map.empty
-                ).withCommitter(() => {
-                  responsePromise.success(HttpResponse(entity = HttpEntity("event got consumer")))
-                })
+                ).withCommitter(
+                  () =>
+                    Future {
+                      responsePromise.success(HttpResponse(entity = HttpEntity("event got consumer")))
+                  }
+                )
               )
             } catch {
               case NonFatal(e) =>
