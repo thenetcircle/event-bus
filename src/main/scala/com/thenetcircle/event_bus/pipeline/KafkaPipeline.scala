@@ -31,7 +31,7 @@ import com.thenetcircle.event_bus.extractor.Extractor
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{ ByteArrayDeserializer, ByteArraySerializer }
 
-import scala.concurrent.Future
+import scala.concurrent.{ ExecutionContextExecutor, Future }
 
 case class KafkaPipelineSettings(
     name: String,
@@ -53,12 +53,12 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
 
   import KafkaPipeline._
 
-  // implicit val ec: ExecutionContextExecutor = system.dispatcher
+  implicit val ec: ExecutionContextExecutor = system.dispatcher
 
   /** Get a new inlet of the pipeline,
    * Which will create a new producer internally after the port got materialized
    */
-  override def leftPort: Sink[Event, Future[Done]] = {
+  def leftPort: Sink[Event, Future[Done]] = {
     // Build ProducerSettings
     val kafkaProducerSettings: ProducerSettings[Key, Value] = {
       var _kps =
@@ -88,9 +88,9 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
    * When the [[Source]] got materialized, Internally will create a new consumer to connect to Kafka Cluster to subscribe the topics you appointed
    * After each [[Event]] got processed, It needs to be commit, There are two ways to do that:
    * 1. Call the committer of the [[Event]] for committing the single [[Event]]a
-   * 2. Go through [[commitFlow]] flow after the processing stage (Recommended)
+   * 2. Go through [[commit]] flow after the processing stage (Recommended)
    */
-  override def rightPort(
+  def rightPort(
       portSettings: KafkaRightPortSettings
   )(implicit extractor: Extractor[EventFormat]): Source[Source[Event, NotUsed], Consumer.Control] = {
 
@@ -123,7 +123,9 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
           source
             .mapAsync(portSettings.extractorParallelism) { msg =>
               val record = msg.record
-              extractor.extract(ByteString(record.value())).map(ed => (ed, record.topic(), msg.committableOffset))
+              extractor
+                .extract(ByteString(record.value()))(ec)
+                .map(ed => (ed, record.topic(), msg.committableOffset))
             }
             .map {
               case (extractedData, topic, committableOffset) =>
@@ -136,16 +138,15 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(implicit system: Ac
                 )
                 event
                   .addContext("kafkaCommittableOffset", committableOffset)
-                  .withCommitter(() => committableOffset.commitScaladsl)
+                  .withCommitter(() => committableOffset.commitScaladsl())
             }
-            .named(s"$consumerName-topicPartition-${topicPartition.topic()}-${topicPartition.partition().toString}")
       }
       .named(consumerName)
   }
 
   /** Batch commit flow
    */
-  def commitFlow(parallelism: Int = 3, batchMax: Int = 20): Flow[Event, Event, NotUsed] =
+  def commit(parallelism: Int = 3, batchMax: Int = 20): Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 

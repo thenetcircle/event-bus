@@ -25,6 +25,9 @@ sealed trait EventFormat
 object EventFormat {
   type DefaultFormat = DefaultFormat.type
   object DefaultFormat extends EventFormat
+
+  type TestFormat = TestFormat.type
+  object TestFormat extends EventFormat
 }
 
 trait EventCommitter {

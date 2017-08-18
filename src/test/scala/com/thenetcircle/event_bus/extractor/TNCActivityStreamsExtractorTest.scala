@@ -17,9 +17,16 @@
 
 package com.thenetcircle.event_bus.extractor
 
-import com.thenetcircle.event_bus._
+import java.text.SimpleDateFormat
 
-class TNCActivityStreamsExtractorTest extends TestCase {
+import akka.util.ByteString
+import com.thenetcircle.event_bus.EventFormat.{ DefaultFormat, TestFormat }
+import com.thenetcircle.event_bus._
+import com.thenetcircle.event_bus.base.AsyncTestCase
+import org.scalatest.Succeeded
+import spray.json.{ DeserializationException, JsonParser }
+
+class TNCActivityStreamsExtractorTest extends AsyncTestCase {
 
   /*val json =
     """
@@ -50,56 +57,85 @@ class TNCActivityStreamsExtractorTest extends TestCase {
       |    "class": "dfEvent_User"
       |  }
       |}
-    """.stripMargin
+    """.stripMargin*/
 
-  test("json parser") {
-    import spray.json._
-    import ActivityStreamsProtocol._
+  private val defaultFormatExtractor: Extractor[DefaultFormat] =
+    new TNCActivityStreamsExtractor with Extractor[DefaultFormat] {
+      override val dataFormat: DefaultFormat = DefaultFormat
+      override def getEventBody(data: ByteString): EventBody[DefaultFormat] =
+        EventBody(data, DefaultFormat)
+    }
 
-    val jsonAst = json.parseJson
-    val activity = jsonAst.convertTo[FatActivity]
+  private val testFormatExtractor: Extractor[TestFormat] =
+    new TNCActivityStreamsExtractor with Extractor[TestFormat] {
+      override val dataFormat: TestFormat = TestFormat
+      override def getEventBody(data: ByteString): EventBody[TestFormat] =
+        EventBody(data, TestFormat)
+    }
 
-    activity.actor.id.get shouldEqual "1008646"
-    activity.id.get shouldEqual "user-1008646-1500290771-820"
-    activity.verb.get shouldEqual "user.login"
+  test("test invalid data") {
+    var data = ByteString(
+      """
+        |abc
+      """.stripMargin
+    )
+    recoverToSucceededIf[JsonParser.ParsingException] {
+      defaultFormatExtractor.extract(data)
+    }.map(r => assert(r == Succeeded))
 
-    val context = activity.context.get
-    context("ip") shouldEqual JsString("79.198.111.108")
-
-    val extra = activity.extra.get
-    extra("name") shouldEqual JsString("user.login")
-    extra("propagationStopped") shouldEqual JsBoolean(false)
+    data = ByteString(
+      """
+        |{
+        |  "verb": "user.login"
+        |}
+      """.stripMargin
+    )
+    // Object is missing required member 'actor'
+    recoverToSucceededIf[DeserializationException] {
+      defaultFormatExtractor.extract(data)
+    }.map(r => assert(r == Succeeded))
   }
 
-  test("extrator") {
-    val extractor = new TNCActivityStreamsExtractor
-    val rawEvent = RawEvent(
-      body = ByteString(json),
-      channel = "",
-      context = Map.empty[String, Any],
-      source = EventSourceType.Http
+  test("test valid data") {
+    val time = "2017-08-15T13:49:55Z"
+    var data = ByteString(
+      s"""
+        |{
+        |  "id": "123",
+        |  "verb": "user.login",
+        |  "actor": {"id": "123", "objectType": "user"},
+        |  "published": "$time"
+        |}
+      """.stripMargin
     )
+    defaultFormatExtractor.extract(data) map { d =>
+      inside(d) {
+        case ExtractedData(body, metadata, _, _) =>
+          body shouldEqual EventBody(data, DefaultFormat)
+          metadata shouldEqual EventMetaData("123",
+                                             "user.login",
+                                             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time).getTime,
+                                             "",
+                                             "123" -> "user")
+      }
+    }
+  }
 
-    val event = extractor.extract(rawEvent)
-    val expectedEvent = Event(
-      uuid = "test-uuid",
-      timestamp = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-        .parse("2017-07-17T13:26:11+02:00")
-        .getTime,
-      rawEvent = rawEvent,
-      bizData = BizData(
-        sessionId = Some("user-1008646-1500290771-820"),
-        provider = Some("COMM1"),
-        category = Some("user.login"),
-        actorId = Some("1008646"),
-        actorType = Some("user")
-      ),
-      format = EventFormat.TncActivityStreams()
+  test("test another data format") {
+    var data = ByteString(
+      s"""
+         |{
+         |  "verb": "user.login",
+         |  "actor": {"id": "123", "objectType": "user"}
+         |}
+      """.stripMargin
     )
-
-    event.timestamp shouldEqual expectedEvent.timestamp
-    event.rawEvent shouldEqual expectedEvent.rawEvent
-    event.bizData shouldEqual expectedEvent.bizData
-  }*/
+    testFormatExtractor.extract(data) map { d =>
+      inside(d) {
+        case ExtractedData(body, metadata, _, _) =>
+          body shouldEqual EventBody(data, TestFormat)
+      }
+    }
+  }
 
 }

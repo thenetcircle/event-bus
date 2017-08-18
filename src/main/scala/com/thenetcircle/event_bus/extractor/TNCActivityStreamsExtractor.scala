@@ -109,4 +109,5 @@ abstract class TNCActivityStreamsExtractor {
   }
 
   def getEventBody(data: ByteString): EventBody[EventFormat]
+
 }

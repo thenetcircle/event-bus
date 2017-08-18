@@ -112,12 +112,15 @@ object HttpEntryPoint {
         )
 
         setHandler(out0, new OutHandler {
-          override def onPull(): Unit = {}
+          override def onPull(): Unit =
+            if (!hasBeenPulled(in))
+              pull(in)
         })
 
         setHandler(out1, new OutHandler {
           override def onPull(): Unit =
-            pull(in)
+            if (!hasBeenPulled(in))
+              pull(in)
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {

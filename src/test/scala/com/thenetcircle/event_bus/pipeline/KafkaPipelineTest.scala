@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.pipeline
 
-import com.thenetcircle.event_bus._
+import com.thenetcircle.event_bus.base.AkkaTestCase
 
 class KafkaPipelineTest extends AkkaTestCase {
 

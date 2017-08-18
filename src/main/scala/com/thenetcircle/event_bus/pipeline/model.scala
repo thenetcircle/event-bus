@@ -19,9 +19,8 @@ package com.thenetcircle.event_bus.pipeline
 
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.stream.scaladsl.{ Sink, Source }
-import com.thenetcircle.event_bus.{ Event, EventFormat }
-import com.thenetcircle.event_bus.extractor.Extractor
+import akka.stream.scaladsl.Sink
+import com.thenetcircle.event_bus.Event
 
 trait PipelineSettings {
   def name: String
@@ -37,12 +36,8 @@ abstract class Pipeline(pipelineSettings: PipelineSettings) {
 
   def leftPort: Sink[Event, _]
 
-  def rightPort(portSettings: RightPortSettings)(
+  /*def rightPort(portSettings: RightPortSettings)(
       implicit extractor: Extractor[EventFormat]
-  ): Source[Source[Event, _], _]
-
-  /*def rightPort[Fmt <: EventFormat](portSettings: RightPortSettings)(
-      implicit extractor: Extractor[Fmt]
   ): Source[Source[Event, _], _]*/
 
 }
