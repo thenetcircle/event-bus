@@ -20,11 +20,11 @@ package com.thenetcircle.event_bus.extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.EventFormat.{ DefaultFormat, TestFormat }
+import com.thenetcircle.event_bus.EventFormat.{DefaultFormat, TestFormat}
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.base.AsyncTestCase
 import org.scalatest.Succeeded
-import spray.json.{ DeserializationException, JsonParser }
+import spray.json.{DeserializationException, JsonParser}
 
 class TNCActivityStreamsExtractorTest extends AsyncTestCase {
 
@@ -112,11 +112,14 @@ class TNCActivityStreamsExtractorTest extends AsyncTestCase {
       inside(d) {
         case ExtractedData(body, metadata, _, _) =>
           body shouldEqual EventBody(data, DefaultFormat)
-          metadata shouldEqual EventMetaData("123",
-                                             "user.login",
-                                             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time).getTime,
-                                             "",
-                                             "123" -> "user")
+          metadata shouldEqual EventMetaData(
+            "123",
+            "user.login",
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
+              .parse(time)
+              .getTime,
+            "",
+            "123" -> "user")
       }
     }
   }

@@ -19,4 +19,8 @@ package com.thenetcircle.event_bus.base
 
 import org.scalatest._
 
-trait AsyncTestCase extends AsyncFunSuiteLike with Matchers with BeforeAndAfterAll with Inside {}
+trait AsyncTestCase
+    extends AsyncFunSuiteLike
+    with Matchers
+    with BeforeAndAfterAll
+    with Inside {}
