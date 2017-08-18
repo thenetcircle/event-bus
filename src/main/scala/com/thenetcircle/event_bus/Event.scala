@@ -36,18 +36,18 @@ trait EventCommitter {
 
 sealed trait EventSourceType
 object EventSourceType {
-  case object Redis extends EventSourceType
-  case object AMQP extends EventSourceType
-  case object Kafka extends EventSourceType
-  case object Http extends EventSourceType
+  case object Redis    extends EventSourceType
+  case object AMQP     extends EventSourceType
+  case object Kafka    extends EventSourceType
+  case object Http     extends EventSourceType
   case object Fallback extends EventSourceType
 }
 
 sealed trait EventPriority
 object EventPriority {
-  case object High extends EventPriority
+  case object High   extends EventPriority
   case object Normal extends EventPriority
-  case object Low extends EventPriority
+  case object Low    extends EventPriority
 }
 
 case class EventBody[+Fmt](
@@ -80,6 +80,7 @@ case class Event(
 
   def hasContext(key: String): Boolean = context.isDefinedAt(key)
 
-  def addContext(key: String, value: Any): Event = copy(context = context + (key -> value))
+  def addContext(key: String, value: Any): Event =
+    copy(context = context + (key -> value))
 
 }

@@ -19,10 +19,15 @@ package com.thenetcircle.event_bus.extractor
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.{ EventBody, EventFormat, EventMetaData, EventPriority }
+import com.thenetcircle.event_bus.{
+  EventBody,
+  EventFormat,
+  EventMetaData,
+  EventPriority
+}
 import io.jvm.uuid.UUID
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 case class ExtractedData(
     body: EventBody[EventFormat],
@@ -30,18 +35,21 @@ case class ExtractedData(
     channel: Option[String] = None,
     priority: Option[EventPriority] = None
 ) {
-  def withChannel(channel: String): ExtractedData = copy(channel = Some(channel))
-  def withPriority(priority: EventPriority): ExtractedData = copy(priority = Some(priority))
+  def withChannel(channel: String): ExtractedData =
+    copy(channel = Some(channel))
+  def withPriority(priority: EventPriority): ExtractedData =
+    copy(priority = Some(priority))
 }
 
 trait Extractor[+Fmt <: EventFormat] {
 
   /**
-   * Extract metadata from data accroding to Format
-   *
-   * @return ExtractedData
-   */
-  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedData]
+    * Extract metadata from data accroding to Format
+    *
+    * @return ExtractedData
+    */
+  def extract(data: ByteString)(
+      implicit executor: ExecutionContext): Future[ExtractedData]
 
   def dataFormat: Fmt
 
@@ -60,10 +68,10 @@ object Extractor {
     }
 
   /**
-   * Generate a UUID
-   *
-   * @return String
-   */
+    * Generate a UUID
+    *
+    * @return String
+    */
   def genUUID(): String = UUID.random.toString
 
 }

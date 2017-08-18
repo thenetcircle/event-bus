@@ -20,10 +20,10 @@ package com.thenetcircle.event_bus.extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.{ EventBody, EventFormat, EventMetaData }
+import com.thenetcircle.event_bus.{EventBody, EventFormat, EventMetaData}
 import spray.json._
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 /*case class ActivityObject(
     // attachments: List[ActivityObject],
@@ -75,17 +75,18 @@ case class TNCActivity(
 )
 
 object TNCActivityStreamsProtocol extends DefaultJsonProtocol {
-  implicit val tncContextFormat = jsonFormat2(TNCContext)
-  implicit val tncObjectFormat = jsonFormat3(TNCObject)
+  implicit val tncContextFormat  = jsonFormat2(TNCContext)
+  implicit val tncObjectFormat   = jsonFormat3(TNCObject)
   implicit val tncActivityFormat = jsonFormat5(TNCActivity)
 }
 
 abstract class TNCActivityStreamsExtractor {
   import TNCActivityStreamsProtocol._
 
-  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedData] = Future {
+  def extract(data: ByteString)(
+      implicit executor: ExecutionContext): Future[ExtractedData] = Future {
 
-    val jsonAst = data.utf8String.parseJson
+    val jsonAst     = data.utf8String.parseJson
     val tncActivity = jsonAst.convertTo[TNCActivity]
 
     val uuid = tncActivity.id.getOrElse(Extractor.genUUID())
@@ -97,13 +98,17 @@ abstract class TNCActivityStreamsExtractor {
     }
     val publisher = tncActivity.provider match {
       case Some(o) => o.id.getOrElse("")
-      case None => ""
+      case None    => ""
     }
     val actor = tncActivity.actor
 
     ExtractedData(
       body = getEventBody(data),
-      metadata = EventMetaData(uuid, name, timestamp, publisher, actor.id.get -> actor.objectType.get)
+      metadata = EventMetaData(uuid,
+                               name,
+                               timestamp,
+                               publisher,
+                               actor.id.get -> actor.objectType.get)
     )
 
   }

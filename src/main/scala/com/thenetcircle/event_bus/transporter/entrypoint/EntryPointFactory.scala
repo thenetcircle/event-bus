@@ -23,7 +23,8 @@ import com.typesafe.config.Config
 
 object EntryPointFactory {
 
-  def createEntryPoint(config: Config)(implicit system: ActorSystem, materializer: Materializer): EntryPoint =
+  def createEntryPoint(config: Config)(implicit system: ActorSystem,
+                                       materializer: Materializer): EntryPoint =
     new HttpEntryPoint(HttpEntryPointSettings("test", "127.0.0.1", 8888))
 
 }

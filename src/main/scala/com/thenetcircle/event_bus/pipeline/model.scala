@@ -31,8 +31,8 @@ trait RightPortSettings
 abstract class Pipeline(pipelineSettings: PipelineSettings) {
 
   protected val pipelineName: String = pipelineSettings.name
-  protected val leftPortId = new AtomicInteger(0)
-  protected val rightPortId = new AtomicInteger(0)
+  protected val leftPortId           = new AtomicInteger(0)
+  protected val rightPortId          = new AtomicInteger(0)
 
   def leftPort: Sink[Event, _]
 

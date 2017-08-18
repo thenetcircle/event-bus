@@ -18,17 +18,22 @@
 package com.thenetcircle.event_bus.transporter.entrypoint
 import java.text.SimpleDateFormat
 
-import akka.http.scaladsl.model.{ HttpEntity, HttpRequest, HttpResponse, StatusCodes }
+import akka.http.scaladsl.model.{
+  HttpEntity,
+  HttpRequest,
+  HttpResponse,
+  StatusCodes
+}
 import akka.stream.ClosedShape
-import akka.stream.scaladsl.{ GraphDSL, RunnableGraph }
-import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph}
+import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.base.AkkaTestCase
-import com.thenetcircle.event_bus.{ Event, EventBody, EventMetaData }
+import com.thenetcircle.event_bus.{Event, EventBody, EventMetaData}
 
-import scala.concurrent.duration.{ Duration, _ }
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.{Await, Future}
 
 class HttpEntryPointTest extends AkkaTestCase {
 
@@ -51,21 +56,24 @@ class HttpEntryPointTest extends AkkaTestCase {
   test("test ConnectionHandler") {
 
     val source = TestSource.probe[HttpRequest]
-    val sink1 = TestSink.probe[Future[HttpResponse]]
-    val sink2 = TestSink.probe[Event]
+    val sink1  = TestSink.probe[Future[HttpResponse]]
+    val sink2  = TestSink.probe[Event]
 
     val (pub, sub1, sub2) =
       RunnableGraph
-        .fromGraph(GraphDSL.create(source, sink1, sink2)((_, _, _)) { implicit builder => (p1, p2, p3) =>
-          import GraphDSL.Implicits._
+        .fromGraph(GraphDSL.create(source, sink1, sink2)((_, _, _)) {
+          implicit builder => (p1, p2, p3) =>
+            import GraphDSL.Implicits._
 
-          val handler = builder.add(new HttpEntryPoint.ConnectionHandler())
+            val handler = builder.add(new HttpEntryPoint.ConnectionHandler())
 
-          p1 ~> handler.in
-          handler.out0 ~> p2
-          handler.out1 ~> p3
+            // format: off
+            p1 ~> handler.in
+                  handler.out0 ~> p2
+                  handler.out1 ~> p3
+            // format: on
 
-          ClosedShape
+            ClosedShape
         })
         .run()
 
@@ -105,11 +113,13 @@ class HttpEntryPointTest extends AkkaTestCase {
     pub.sendNext(HttpRequest(entity = HttpEntity(data)))
 
     var event = sub2.expectNext()
-    event.metadata shouldEqual EventMetaData("123",
-                                             "user.login",
-                                             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time).getTime,
-                                             "",
-                                             "123" -> "user")
+    event.metadata shouldEqual EventMetaData(
+      "123",
+      "user.login",
+      new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time).getTime,
+      "",
+      "123" -> "user"
+    )
     event.body shouldEqual EventBody(ByteString(data), DefaultFormat)
     event.committer.foreach(_.commit())
 

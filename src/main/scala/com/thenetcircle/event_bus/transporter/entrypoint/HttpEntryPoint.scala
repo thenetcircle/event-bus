@@ -20,16 +20,21 @@ package com.thenetcircle.event_bus.transporter.entrypoint
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ HttpEntity, HttpRequest, HttpResponse, StatusCodes }
+import akka.http.scaladsl.model.{
+  HttpEntity,
+  HttpRequest,
+  HttpResponse,
+  StatusCodes
+}
 import akka.stream._
-import akka.stream.scaladsl.{ Flow, GraphDSL, Source }
+import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.extractor.{ ExtractedData, Extractor }
+import com.thenetcircle.event_bus.extractor.{ExtractedData, Extractor}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ ExecutionContextExecutor, Future, Promise }
-import scala.util.{ Failure, Success }
+import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.util.{Failure, Success}
 
 case class HttpEntryPointSettings(
     name: String,
@@ -39,28 +44,39 @@ case class HttpEntryPointSettings(
 
 class HttpEntryPoint(
     settings: HttpEntryPointSettings
-)(implicit system: ActorSystem, materializer: Materializer, extractor: Extractor[EventFormat])
+)(implicit system: ActorSystem,
+  materializer: Materializer,
+  extractor: Extractor[EventFormat])
     extends EntryPoint {
 
-  private val serverSource: Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
+  private val serverSource
+    : Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
     Http().bind(interface = settings.interface, port = settings.port)
 
-  override val port: Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
+  override val port
+    : Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
     serverSource
       .map(connection => {
 
-        Source.fromGraph(GraphDSL.create() { implicit builder =>
-          import GraphDSL.Implicits._
+        Source.fromGraph(GraphDSL.create() {
+          implicit builder =>
+            import GraphDSL.Implicits._
 
-          val handlerFlowShape = builder.add(connection.flow)
-          val connectionHandler = builder.add(new HttpEntryPoint.ConnectionHandler())
+            val requestFlow = builder.add(connection.flow)
+            val connectionHandler =
+              builder.add(new HttpEntryPoint.ConnectionHandler())
+            val unpackFlow = Flow[Future[HttpResponse]].mapAsync(1)(identity)
 
-          handlerFlowShape.out ~> connectionHandler.in
+            // ----- work flow -----
+            // format: off
+            
+            requestFlow.out ~> connectionHandler.in
 
-          connectionHandler.out0 ~>
-          Flow[Future[HttpResponse]].mapAsync(1)(identity) ~> handlerFlowShape
+                               connectionHandler.out0 ~> unpackFlow ~> requestFlow
+            
+            // format: on
 
-          SourceShape(connectionHandler.out1)
+            SourceShape(connectionHandler.out1)
         })
 
       })
@@ -78,27 +94,29 @@ object HttpEntryPoint {
     new HttpEntryPoint(settings)
 
   /** A stage with one inlet and two outlets, When [[HttpRequest]] come in inlet
-   *  Will create a [[Future]] of [[HttpResponse]] to outlet0 and a [[Event]] to outlet1
-   *  After the [[Event]] got committed, The Future of HttpResponse will be completed
-   *
-   *  {{{
-   *                              +------------+
-   *             In[HttpRequest] ~~>           |
-   *                              |           ~~> Out1[Event]
-   *  Out0[Future[HttpResponse]] <~~           |
-   *                              +------------+
-   *  }}}
-   */
-  final class ConnectionHandler()(implicit materializer: Materializer, extractor: Extractor[EventFormat])
+    *  Will create a [[Future]] of [[HttpResponse]] to outlet0 and a [[Event]] to outlet1
+    *  After the [[Event]] got committed, The Future of HttpResponse will be completed
+    *
+    *  {{{
+    *                              +------------+
+    *             In[HttpRequest] ~~>           |
+    *                              |           ~~> Out1[Event]
+    *  Out0[Future[HttpResponse]] <~~           |
+    *                              +------------+
+    *  }}}
+    */
+  final class ConnectionHandler()(implicit materializer: Materializer,
+                                  extractor: Extractor[EventFormat])
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     implicit val _ec: ExecutionContextExecutor = materializer.executionContext
 
-    val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
+    val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
     val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
-    val out1: Outlet[Event] = Outlet("outlet-event")
+    val out1: Outlet[Event]                = Outlet("outlet-event")
 
-    override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] = new FanOutShape2(in, out0, out1)
+    override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
+      new FanOutShape2(in, out0, out1)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) {
@@ -125,25 +143,30 @@ object HttpEntryPoint {
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
           val responsePromise = Promise[HttpResponse]
-          val strictEntity = request.entity.toStrict(3.seconds)(materializer)
-          val result = strictEntity.flatMap(entity => extractor.extract(entity.data))
+          val strictEntity    = request.entity.toStrict(3.seconds)(materializer)
+          val result =
+            strictEntity.flatMap(entity => extractor.extract(entity.data))
 
           result.onComplete {
             case Success(extractedData) =>
               getEventExtractCallback(responsePromise).invoke(extractedData)
             case Failure(e) =>
-              responsePromise.success(HttpResponse(StatusCodes.BadRequest, entity = HttpEntity(e.getMessage)))
+              responsePromise.success(
+                HttpResponse(StatusCodes.BadRequest,
+                             entity = HttpEntity(e.getMessage)))
           }
 
           responsePromise.future
         }
 
-        def getEventExtractCallback(responsePromise: Promise[HttpResponse]): AsyncCallback[ExtractedData] =
+        def getEventExtractCallback(responsePromise: Promise[HttpResponse])
+          : AsyncCallback[ExtractedData] =
           getAsyncCallback(extractedData => {
             val event = Event(
               extractedData.metadata,
               extractedData.body,
-              extractedData.channel.getOrElse(""),
+              extractedData.channel.getOrElse(
+                ChannelResolver.getChannel(extractedData.metadata)),
               EventSourceType.Http,
               extractedData.priority.getOrElse(EventPriority.Normal),
               Map.empty

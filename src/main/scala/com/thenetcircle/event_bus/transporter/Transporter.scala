@@ -19,13 +19,14 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.NotUsed
 import akka.stream._
-import akka.stream.scaladsl.{ GraphDSL, MergePreferred, Partition, RunnableGraph }
-import com.thenetcircle.event_bus.{ Event, EventPriority, EventSourceType }
+import akka.stream.scaladsl.{GraphDSL, MergePreferred, Partition, RunnableGraph}
+import com.thenetcircle.event_bus.{Event, EventPriority, EventSourceType}
 
-class Transporter(settings: TransporterSettings)(implicit materializer: Materializer) {
+class Transporter(settings: TransporterSettings)(
+    implicit materializer: Materializer) {
 
   private val entryPoints = settings.entryPoints
-  private val pipeline = settings.pipeline
+  private val pipeline    = settings.pipeline
 
   lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
@@ -36,9 +37,12 @@ class Transporter(settings: TransporterSettings)(implicit materializer: Material
 
         // high priority and fallback events to partition 0, others go to 1
         val partition = builder.add(
-          Partition[Event](2,
-                           e =>
-                             if (e.priority == EventPriority.High || e.sourceType == EventSourceType.Fallback) 0 else 1)
+          Partition[Event](
+            2,
+            e =>
+              if (e.priority == EventPriority.High || e.sourceType == EventSourceType.Fallback)
+                0
+              else 1)
         )
 
         var i = 0
@@ -61,6 +65,7 @@ class Transporter(settings: TransporterSettings)(implicit materializer: Material
 }
 
 object Transporter {
-  def apply(settings: TransporterSettings)(implicit materializer: Materializer): Transporter =
+  def apply(settings: TransporterSettings)(
+      implicit materializer: Materializer): Transporter =
     new Transporter(settings)
 }

@@ -35,7 +35,8 @@ case class HttpSinkSettings(
 ) extends EndPointSettings
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
-class HttpSink(settings: HttpSinkSettings)(implicit val system: ActorSystem) extends EndPoint {
+class HttpSink(settings: HttpSinkSettings)(implicit val system: ActorSystem)
+    extends EndPoint {
 
   /*private val connectionPool = Http().cachedHostConnectionPool[Event](
     settings.host,
