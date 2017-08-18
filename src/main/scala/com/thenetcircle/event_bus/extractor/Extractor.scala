@@ -51,10 +51,12 @@ object Extractor {
 
   implicit val defaultFormatExtractor: Extractor[DefaultFormat] =
     new TNCActivityStreamsExtractor with Extractor[DefaultFormat] {
+
       override val dataFormat: DefaultFormat = DefaultFormat
 
       override def getEventBody(data: ByteString): EventBody[DefaultFormat] =
         EventBody(data, DefaultFormat)
+
     }
 
   /**
