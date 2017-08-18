@@ -37,22 +37,16 @@ object TransporterSettings {
     val name = config.getString("name")
 
     val entryPoints: Set[EntryPoint] = {
-      for (_ec <- config.getConfigList("entry_points").asScala)
-        yield EntryPointFactory.createEntryPoint(_ec)
+      for (_config <- config.getConfigList("entry_points").asScala)
+        yield EntryPointFactory.createEntryPoint(_config)
     }.toSet
 
     val pipelineName = config.getString("pipeline")
     val pipeline     = PipelineFactory.getPipeline(pipelineName)
 
-    apply(name, entryPoints, pipeline)
+    TransporterSettings(name, entryPoints, pipeline)
 
   }
-
-  def apply(
-      name: String,
-      entryPoints: Set[EntryPoint],
-      pipeline: Pipeline
-  ): TransporterSettings = new TransporterSettings(name, entryPoints, pipeline)
 }
 
 final case class TransporterSettings(

@@ -70,9 +70,9 @@ class HttpEntryPoint(
             // ----- work flow -----
             // format: off
             
-            requestFlow.out ~> connectionHandler.in
+            requestFlow ~> connectionHandler.in
 
-                               connectionHandler.out0 ~> unpackFlow ~> requestFlow
+                           connectionHandler.out0 ~> unpackFlow ~> requestFlow
             
             // format: on
 

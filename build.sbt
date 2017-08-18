@@ -3,9 +3,9 @@ lazy val commonSettings = Seq(
 )
 
 lazy val eventBus = (project in file("."))
+  .enablePlugins(GitVersioning)
   .settings(
     name := "event-bus",
-    version := "2.0.1",
     commonSettings,
     libraryDependencies ++= Dependencies.rootDeps
   )
