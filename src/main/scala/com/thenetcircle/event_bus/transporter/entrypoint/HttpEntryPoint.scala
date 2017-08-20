@@ -121,24 +121,25 @@ object HttpEntryPoint {
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) {
 
+        def tryPullIn(): Unit =
+          if (!hasBeenPulled(in))
+            tryPull(in)
+
         setHandler(
           in,
           new InHandler {
-            override def onPush(): Unit =
+            override def onPush(): Unit = {
               push(out0, requestPreprocess(grab(in)))
+            }
           }
         )
 
         setHandler(out0, new OutHandler {
-          override def onPull(): Unit =
-            if (!hasBeenPulled(in))
-              pull(in)
+          override def onPull(): Unit = {}
         })
 
         setHandler(out1, new OutHandler {
-          override def onPull(): Unit =
-            if (!hasBeenPulled(in))
-              pull(in)
+          override def onPull(): Unit = tryPullIn()
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
@@ -151,9 +152,13 @@ object HttpEntryPoint {
             case Success(extractedData) =>
               getEventExtractCallback(responsePromise).invoke(extractedData)
             case Failure(e) =>
+              // TODO failed response message
               responsePromise.success(
                 HttpResponse(StatusCodes.BadRequest,
                              entity = HttpEntity(e.getMessage)))
+
+              if (isAvailable(out1))
+                tryPullIn()
           }
 
           responsePromise.future
