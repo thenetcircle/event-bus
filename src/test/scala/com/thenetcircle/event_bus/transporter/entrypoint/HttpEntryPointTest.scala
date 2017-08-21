@@ -56,7 +56,7 @@ class HttpEntryPointTest extends AkkaTestCase {
 
   test("test ConnectionHandler") {
 
-    val eventExtractor = EventExtractor(DefaultFormat)
+    implicit val eventExtractor = EventExtractor(DefaultFormat)
 
     val source = TestSource.probe[HttpRequest]
     val sink1  = TestSink.probe[Future[HttpResponse]]
@@ -69,7 +69,7 @@ class HttpEntryPointTest extends AkkaTestCase {
             import GraphDSL.Implicits._
 
             val handler =
-              builder.add(new HttpEntryPoint.ConnectionHandler(eventExtractor))
+              builder.add(new HttpEntryPoint.ConnectionHandler())
 
             // format: off
             p1 ~> handler.in

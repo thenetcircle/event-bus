@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -61,7 +62,7 @@ case class HttpEntryPointSettings(
 
 /** Abstraction Api of All EntryPoints */
 trait EntryPoint {
-  def port: Source[Source[Event, _], _]
+  def port: Source[Source[Event, NotUsed], _]
 }
 
 /** Create a new EntryPoint based on it's settings

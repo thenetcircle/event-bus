@@ -16,7 +16,10 @@
  */
 
 package com.thenetcircle.event_bus.transporter
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import com.thenetcircle.event_bus.EventFormat
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.transporter.entrypoint.{
   EntryPoint,
   EntryPointSettings
@@ -34,8 +37,12 @@ final case class TransporterEntryPoint(
 )
 
 object TransporterEntryPoint {
-  def apply(settings: TransporterEntryPointSettings): TransporterEntryPoint =
+  def apply(settings: TransporterEntryPointSettings)(
+      implicit system: ActorSystem,
+      materializer: Materializer): TransporterEntryPoint = {
+    implicit val eventExtractor = EventExtractor(settings.eventFormat)
     TransporterEntryPoint(settings, EntryPoint(settings.entryPointSettings))
+  }
 }
 
 final case class TransporterEntryPointSettings(
