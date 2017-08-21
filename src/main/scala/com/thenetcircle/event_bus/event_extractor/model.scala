@@ -24,16 +24,22 @@ import io.jvm.uuid.UUID
 
 import scala.concurrent.{ExecutionContext, Future}
 
+object ExtractedPriority {
+  val High   = 3
+  val Normal = 2
+  val Low    = 1
+}
+
 case class ExtractedData(
     body: EventBody,
     metadata: EventMetaData,
     channel: Option[String] = None,
-    priority: Option[Int] = None
+    priority: Int = ExtractedPriority.Normal
 ) {
   def withChannel(channel: String): ExtractedData =
     copy(channel = Some(channel))
   def withPriority(priority: Int): ExtractedData =
-    copy(priority = Some(priority))
+    copy(priority = priority)
 }
 
 trait EventExtractor {
