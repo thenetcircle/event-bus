@@ -33,13 +33,16 @@ object ExtractedPriority {
 case class ExtractedData(
     body: EventBody,
     metadata: EventMetaData,
-    channel: Option[String] = None,
-    priority: Int = ExtractedPriority.Normal
+    priority: Int = ExtractedPriority.Normal,
+    channel: Option[String] = None
 ) {
-  def withChannel(channel: String): ExtractedData =
-    copy(channel = Some(channel))
+
   def withPriority(priority: Int): ExtractedData =
     copy(priority = priority)
+
+  def withChannel(channel: String): ExtractedData =
+    copy(channel = Some(channel))
+
 }
 
 trait EventExtractor {
@@ -70,12 +73,15 @@ object EventExtractor {
   def genUUID(): String = UUID.random.toString
 
   def apply(format: EventFormat): EventExtractor = format match {
+
     case EventFormat.DefaultFormat =>
       new TNCActivityStreamsExtractor with EventExtractor
+
     case EventFormat.TestFormat =>
       new TNCActivityStreamsExtractor with EventExtractor {
         override val format: EventFormat = TestFormat
       }
+
   }
 
 }

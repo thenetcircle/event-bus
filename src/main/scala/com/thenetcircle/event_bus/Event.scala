@@ -24,14 +24,14 @@ import scala.concurrent.Future
 sealed trait EventFormat
 object EventFormat {
   type DefaultFormat = DefaultFormat.type
-  object DefaultFormat extends EventFormat
+  case object DefaultFormat extends EventFormat
 
   type TestFormat = TestFormat.type
-  object TestFormat extends EventFormat
+  case object TestFormat extends EventFormat
 
   def apply(formatString: String): EventFormat = formatString match {
-    case "default" => DefaultFormat
-    case "test"    => TestFormat
+    case "DefaultFormat" => DefaultFormat
+    case "TestFormat"    => TestFormat
   }
 }
 
@@ -47,10 +47,13 @@ object EventSourceType {
   case object Http  extends EventSourceType
 }
 
-object EventPriority {
-  val High   = 3
-  val Normal = 2
-  val Low    = 1
+object EventPriority extends Enumeration {
+  type EventPriority = Value
+  val Urgent = Value(6)
+  val High   = Value(5)
+  val Medium = Value(4)
+  val Normal = Value(3)
+  val Low    = Value(2)
 }
 
 case class EventBody(
@@ -71,7 +74,7 @@ case class Event(
     body: EventBody,
     channel: String,
     sourceType: EventSourceType,
-    priority: Int = EventPriority.Normal,
+    priority: EventPriority.EventPriority = EventPriority.Normal,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
 ) {
@@ -80,6 +83,12 @@ case class Event(
     copy(committer = Some(new EventCommitter {
       override def commit(): Future[Any] = commitFunction()
     }))
+
+  def withPlusPriority(plusPriority: Int): Event =
+    withPriority(EventPriority(priority.id + plusPriority))
+
+  def withPriority(priority: EventPriority.EventPriority): Event =
+    copy(priority = priority)
 
   def hasContext(key: String): Boolean = context.isDefinedAt(key)
 

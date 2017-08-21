@@ -21,17 +21,13 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{
-  Flow,
   GraphDSL,
   MergePrioritized,
   Partition,
   RunnableGraph
 }
-import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.pipeline.Pipeline
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
-
-import scala.collection.immutable
+import com.thenetcircle.event_bus.{Event, EventPriority}
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[TransporterEntryPoint],
@@ -44,34 +40,26 @@ class Transporter(settings: TransporterSettings,
       .create() { implicit builder =>
         import GraphDSL.Implicits._
 
-        // TODO combine event priorities
-        val priorities = immutable.IndexedSeq(6, 5, 4, 3, 2)
+        // IndexedSeq(6, 5, 4, 3, 2)
+        val priorities = EventPriority.values.toIndexedSeq.reverse.map(_.id)
 
         entryPoints foreach {
-          tep =>
+          tep: TransporterEntryPoint =>
             val entryPointSettings = tep.settings
+
+            val etpSource =
+              tep.entryPoint.port
+                .flatMapMerge(entryPointSettings.maxParallelSources, identity)
+                .map(_.withPlusPriority(tep.settings.priority))
 
             val mergePrioritizedShape =
               builder.add(MergePrioritized[Event](priorities))
 
             val partitionShape =
-              builder.add(Partition[(EntryPoint, Event)](priorities.size, {
-                case (entryPoint, event) =>
-                  priorities.indexOf(
-                    entryPointSettings.priority + event.priority)
-              }))
-
-            val buffer =
-              Flow[Event].buffer(entryPointSettings.bufferSize,
-                                 OverflowStrategy.backpressure)
-
-            val etpSource =
-              tep.entryPoint.port
-                .flatMapMerge(entryPointSettings.maxParallelSources, identity)
-                .map((tep.entryPoint, _))
-
-            // TODO remove this with combined event pirority
-            val transformerFlow = Flow[(EntryPoint, Event)].map(_._2)
+              builder.add(
+                Partition[Event](priorities.size,
+                                 event =>
+                                   priorities.indexOf(event.priority.id)))
 
             // format: off
 
@@ -79,14 +67,14 @@ class Transporter(settings: TransporterSettings,
 
             for (i <- priorities.indices) {
 
-                         partitionShape.out(i) ~> transformerFlow ~> mergePrioritizedShape.in(i)
+                         partitionShape.out(i) ~> mergePrioritizedShape.in(i)
 
             }
 
             // format: on
 
             // Here will create a new pipeline producer
-            mergePrioritizedShape.out ~> buffer ~> pipeline.leftPort
+            mergePrioritizedShape.out ~> pipeline.leftPort
         }
 
         ClosedShape

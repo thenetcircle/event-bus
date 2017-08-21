@@ -171,7 +171,8 @@ object HttpEntryPoint {
               extractedData.channel.getOrElse(
                 ChannelResolver.getChannel(extractedData.metadata)),
               EventSourceType.Http,
-              extractedData.priority.getOrElse(EventPriority.Normal),
+              // TODO improve priority here and in KafkaPipeline, Since 1 is not defined
+              EventPriority(extractedData.priority),
               Map.empty
             ).withCommitter(
               () =>

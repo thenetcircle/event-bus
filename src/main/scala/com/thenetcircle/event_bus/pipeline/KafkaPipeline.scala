@@ -153,8 +153,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
                   sourceType = EventSourceType.Kafka,
-                  priority =
-                    extractedData.priority.getOrElse(EventPriority.Normal)
+                  priority = EventPriority(extractedData.priority)
                 )
                 event
                   .addContext("kafkaCommittableOffset", committableOffset)
