@@ -41,10 +41,10 @@ import scala.util.{Failure, Success}
 
 class HttpEntryPoint(
     settings: HttpEntryPointSettings
-)(implicit system: ActorSystem, materializer: Materializer)
+)(implicit system: ActorSystem,
+  materializer: Materializer,
+  eventExtractor: EventExtractor)
     extends EntryPoint {
-
-  private val eventExtractor = EventExtractor(settings.eventFormat)
 
   private val serverSource
     : Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
@@ -61,7 +61,7 @@ class HttpEntryPoint(
 
             val requestFlow = builder.add(connection.flow)
             val connectionHandler =
-              builder.add(new HttpEntryPoint.ConnectionHandler(eventExtractor))
+              builder.add(new HttpEntryPoint.ConnectionHandler())
             val unpackFlow = Flow[Future[HttpResponse]].mapAsync(1)(identity)
 
             // ----- work flow -----
@@ -87,7 +87,8 @@ object HttpEntryPoint {
 
   def apply(settings: HttpEntryPointSettings)(
       implicit system: ActorSystem,
-      materializer: Materializer): HttpEntryPoint =
+      materializer: Materializer,
+      eventExtractor: EventExtractor): HttpEntryPoint =
     new HttpEntryPoint(settings)
 
   /** A stage with one inlet and two outlets, When [[HttpRequest]] come in inlet
@@ -102,8 +103,8 @@ object HttpEntryPoint {
     *                              +------------+
     *  }}}
     */
-  final class ConnectionHandler(extractor: EventExtractor)(
-      implicit materializer: Materializer)
+  final class ConnectionHandler()(implicit materializer: Materializer,
+                                  eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     implicit val _ec: ExecutionContextExecutor = materializer.executionContext
@@ -143,7 +144,7 @@ object HttpEntryPoint {
           val responsePromise = Promise[HttpResponse]
           val strictEntity    = request.entity.toStrict(3.seconds)(materializer)
           val result =
-            strictEntity.flatMap(entity => extractor.extract(entity.data))
+            strictEntity.flatMap(entity => eventExtractor.extract(entity.data))
 
           result.onComplete {
             case Success(extractedData) =>

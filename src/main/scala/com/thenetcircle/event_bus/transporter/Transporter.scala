@@ -20,58 +20,98 @@ package com.thenetcircle.event_bus.transporter
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, MergePreferred, Partition, RunnableGraph}
+import akka.stream.scaladsl.{
+  Flow,
+  GraphDSL,
+  MergePrioritized,
+  Partition,
+  RunnableGraph
+}
+import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.pipeline.Pipeline
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
-import com.thenetcircle.event_bus.{Event, EventPriority}
 
-class Transporter(settings: TransporterSettings)(implicit system: ActorSystem) {
+import scala.collection.immutable
 
-  implicit private val materializer = settings.materializerSettings match {
-    case Some(_settings) => ActorMaterializer(_settings)
-    case None            => ActorMaterializer()
-  }
+class Transporter(settings: TransporterSettings,
+                  entryPoints: Vector[TransporterEntryPoint],
+                  pipeline: Pipeline)(implicit system: ActorSystem,
+                                      materializer: Materializer) {
 
-  private val entryPoints = settings.entryPointsSettings.map(EntryPoint(_))
-  private val pipeline    = Pipeline(settings.pipelineName)
-
+  // TODO draw a graph in comments
   lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
       .create() { implicit builder =>
         import GraphDSL.Implicits._
 
-        val merge = builder.add(MergePreferred[Event](entryPoints.size))
+        // TODO combine event priorities
+        val priorities = immutable.IndexedSeq(6, 5, 4, 3, 2)
 
-        // high priority and fallback events to partition 0, others go to 1
-        val partition = builder.add(
-          Partition[Event](2,
-                           e =>
-                             if (e.priority == EventPriority.High)
-                               0
-                             else 1)
-        )
+        entryPoints foreach {
+          tep =>
+            val entryPointSettings = tep.settings
 
-        var i = 0
-        entryPoints foreach { ep =>
-          // ep.port ~> partition
-          partition.out(0) ~> merge.preferred
-          partition.out(1) ~> merge.in(i)
-          i = i + 1
+            val mergePrioritizedShape =
+              builder.add(MergePrioritized[Event](priorities))
+
+            val partitionShape =
+              builder.add(Partition[(EntryPoint, Event)](priorities.size, {
+                case (entryPoint, event) =>
+                  priorities.indexOf(
+                    entryPointSettings.priority + event.priority)
+              }))
+
+            val buffer =
+              Flow[Event].buffer(entryPointSettings.bufferSize,
+                                 OverflowStrategy.backpressure)
+
+            val etpSource =
+              tep.entryPoint.port
+                .flatMapMerge(entryPointSettings.maxParallelSources, identity)
+                .map((tep.entryPoint, _))
+
+            // TODO remove this with combined event pirority
+            val transformerFlow = Flow[(EntryPoint, Event)].map(_._2)
+
+            // format: off
+
+            etpSource ~> partitionShape
+
+            for (i <- priorities.indices) {
+
+                         partitionShape.out(i) ~> transformerFlow ~> mergePrioritizedShape.in(i)
+
+            }
+
+            // format: on
+
+            // Here will create a new pipeline producer
+            mergePrioritizedShape.out ~> buffer ~> pipeline.leftPort
         }
-
-        merge.out ~> pipeline.leftPort
 
         ClosedShape
       }
       .named(settings.name)
   )
 
+  // TODO add a transporter controller as a materialized value
   def run(): Unit = stream.run()
 
 }
 
 object Transporter {
   def apply(settings: TransporterSettings)(
-      implicit system: ActorSystem): Transporter =
-    new Transporter(settings)
+      implicit system: ActorSystem): Transporter = {
+
+    implicit val materializer = settings.materializerSettings match {
+      case Some(_settings) => ActorMaterializer(_settings)
+      case None            => ActorMaterializer()
+    }
+
+    val entryPoints =
+      settings.transportEntryPointsSettings.map(TransporterEntryPoint(_))
+    val pipeline = Pipeline(settings.pipelineName)
+
+    new Transporter(settings, entryPoints, pipeline)
+  }
 }

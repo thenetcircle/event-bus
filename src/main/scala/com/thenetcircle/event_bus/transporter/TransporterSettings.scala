@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
+import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -26,16 +27,47 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.collection.JavaConverters._
 
 object TransporterSettings extends StrictLogging {
+
+  // TODO adjust these default values when doing stress testing
+  val defaultBufferSizePerEntryPoint         = 100
+  val defaultMaxParallelSourcesPerEntryPoint = 100
+
   def apply(config: Config)(implicit system: ActorSystem): TransporterSettings = {
 
     val name = config.getString("name")
 
-    val entryPointsSettings: Vector[EntryPointSettings] = {
-      for (_config <- config.getConfigList("entry_points_settings").asScala)
-        yield EntryPointSettings(_config)
+    val transportEntryPointsSettings: Vector[TransporterEntryPointSettings] = {
+      for (epConfig <- config.getConfigList("entry-points-settings").asScala)
+        yield {
+          val priority =
+            if (epConfig.hasPath("priority")) epConfig.getInt("priority")
+            else TransporterEntryPointPriority.Normal
+
+          val bufferSize =
+            if (epConfig.hasPath("buffer-size")) epConfig.getInt("buffer-size")
+            else defaultBufferSizePerEntryPoint
+
+          val maxParallelSources =
+            if (epConfig.hasPath("max-parallel-sources"))
+              epConfig.getInt("max-parallel-sources")
+            else defaultMaxParallelSourcesPerEntryPoint
+
+          val eventFormat =
+            if (epConfig.hasPath("format"))
+              EventFormat(epConfig.getString("format"))
+            else EventFormat.DefaultFormat
+
+          TransporterEntryPointSettings(
+            priority,
+            bufferSize,
+            maxParallelSources,
+            eventFormat,
+            EntryPointSettings(epConfig)
+          )
+        }
     }.toVector
 
-    val pipelineName = config.getString("pipeline_name")
+    val pipelineName = config.getString("pipeline-name")
 
     val materializerSettings: Option[ActorMaterializerSettings] = try {
       if (config.hasPath("materializer")) {
@@ -53,7 +85,7 @@ object TransporterSettings extends StrictLogging {
     }
 
     TransporterSettings(name,
-                        entryPointsSettings,
+                        transportEntryPointsSettings,
                         pipelineName,
                         materializerSettings)
 
@@ -62,7 +94,7 @@ object TransporterSettings extends StrictLogging {
 
 final case class TransporterSettings(
     name: String,
-    entryPointsSettings: Vector[EntryPointSettings],
+    transportEntryPointsSettings: Vector[TransporterEntryPointSettings],
     pipelineName: String,
     materializerSettings: Option[ActorMaterializerSettings]
 )

@@ -19,19 +19,11 @@ package com.thenetcircle.event_bus.transporter.entrypoint
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.typesafe.config.{Config, ConfigException}
 
-object EntryPointPriority {
-  val High   = 3
-  val Normal = 2
-  val Low    = 1
-}
-
-sealed trait EntryPointSettings {
-  def priority: Int
-  def eventFormat: EventFormat
-}
+sealed trait EntryPointSettings
 
 object EntryPointSettings {
 
@@ -51,11 +43,7 @@ object EntryPointSettings {
         HttpEntryPointSettings(
           config.getString("name"),
           config.getString("interface"),
-          config.getInt("port"),
-          if (config.hasPath("priority")) config.getInt("priority")
-          else EntryPointPriority.Normal,
-          if (config.hasPath("format")) EventFormat(config.getString("format"))
-          else EventFormat.DefaultFormat
+          config.getInt("port")
         )
       case _ =>
         throw new IllegalArgumentException("""EntryPoint "type" is not set!""")
@@ -68,9 +56,7 @@ object EntryPointSettings {
 case class HttpEntryPointSettings(
     name: String,
     interface: String,
-    port: Int,
-    priority: Int,
-    eventFormat: EventFormat
+    port: Int
 ) extends EntryPointSettings
 
 /** Abstraction Api of All EntryPoints */
@@ -84,7 +70,8 @@ object EntryPoint {
 
   def apply(settings: EntryPointSettings)(
       implicit system: ActorSystem,
-      materializer: Materializer): EntryPoint = settings match {
+      materializer: Materializer,
+      eventExtractor: EventExtractor): EntryPoint = settings match {
     case s: HttpEntryPointSettings =>
       HttpEntryPoint(s)
   }
