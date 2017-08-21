@@ -18,15 +18,22 @@
 package com.thenetcircle.event_bus.transporter
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, MergePreferred, Partition, RunnableGraph}
-import com.thenetcircle.event_bus.{Event, EventPriority, EventSourceType}
+import com.thenetcircle.event_bus.pipeline.Pipeline
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
+import com.thenetcircle.event_bus.{Event, EventPriority}
 
-class Transporter(settings: TransporterSettings)(
-    implicit materializer: Materializer) {
+class Transporter(settings: TransporterSettings)(implicit system: ActorSystem) {
 
-  private val entryPoints = settings.entryPoints
-  private val pipeline    = settings.pipeline
+  implicit private val materializer = settings.materializerSettings match {
+    case Some(_settings) => ActorMaterializer(_settings)
+    case None            => ActorMaterializer()
+  }
+
+  private val entryPoints = settings.entryPointsSettings.map(EntryPoint(_))
+  private val pipeline    = Pipeline(settings.pipelineName)
 
   lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
@@ -37,12 +44,11 @@ class Transporter(settings: TransporterSettings)(
 
         // high priority and fallback events to partition 0, others go to 1
         val partition = builder.add(
-          Partition[Event](
-            2,
-            e =>
-              if (e.priority == EventPriority.High || e.sourceType == EventSourceType.Fallback)
-                0
-              else 1)
+          Partition[Event](2,
+                           e =>
+                             if (e.priority == EventPriority.High)
+                               0
+                             else 1)
         )
 
         var i = 0
@@ -66,6 +72,6 @@ class Transporter(settings: TransporterSettings)(
 
 object Transporter {
   def apply(settings: TransporterSettings)(
-      implicit materializer: Materializer): Transporter =
+      implicit system: ActorSystem): Transporter =
     new Transporter(settings)
 }

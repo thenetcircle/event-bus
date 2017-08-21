@@ -16,9 +16,77 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.typesafe.config.{Config, ConfigException}
 
+object EntryPointPriority {
+  val High   = 3
+  val Normal = 2
+  val Low    = 1
+}
+
+sealed trait EntryPointSettings {
+  def priority: Int
+  def eventFormat: EventFormat
+}
+
+object EntryPointSettings {
+
+  /** Get EntryPoint Settings From Config
+    * And based on their "type" field
+    *
+    * @throws ConfigException
+    *             if config incorrect
+    * @throws IllegalArgumentException
+    *             if "type" didn't match any predefined types
+    */
+  def apply(config: Config): EntryPointSettings = {
+    var entryPointType = config.getString("type")
+
+    entryPointType.toUpperCase() match {
+      case "HTTP" =>
+        HttpEntryPointSettings(
+          config.getString("name"),
+          config.getString("interface"),
+          config.getInt("port"),
+          if (config.hasPath("priority")) config.getInt("priority")
+          else EntryPointPriority.Normal,
+          if (config.hasPath("format")) EventFormat(config.getString("format"))
+          else EventFormat.DefaultFormat
+        )
+      case _ =>
+        throw new IllegalArgumentException("""EntryPoint "type" is not set!""")
+    }
+  }
+
+}
+
+/** Http EntryPoint Settings */
+case class HttpEntryPointSettings(
+    name: String,
+    interface: String,
+    port: Int,
+    priority: Int,
+    eventFormat: EventFormat
+) extends EntryPointSettings
+
+/** Abstraction Api of All EntryPoints */
 trait EntryPoint {
   def port: Source[Source[Event, _], _]
+}
+
+/** Create a new EntryPoint based on it's settings
+  */
+object EntryPoint {
+
+  def apply(settings: EntryPointSettings)(
+      implicit system: ActorSystem,
+      materializer: Materializer): EntryPoint = settings match {
+    case s: HttpEntryPointSettings =>
+      HttpEntryPoint(s)
+  }
+
 }

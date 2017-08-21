@@ -7,5 +7,5 @@ lazy val eventBus = (project in file("."))
   .settings(
     name := "event-bus",
     commonSettings,
-    libraryDependencies ++= Dependencies.rootDeps
+    libraryDependencies ++= Dependencies.eventBusDeps
   )

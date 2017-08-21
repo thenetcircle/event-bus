@@ -30,14 +30,15 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.base.AkkaTestCase
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.{Event, EventBody, EventMetaData}
 
-import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class HttpEntryPointTest extends AkkaTestCase {
 
-  test("online test") {
+  /*test("online test") {
     val hep = HttpEntryPoint[DefaultFormat](
       HttpEntryPointSettings("test", "127.0.0.1", 8888)
     )
@@ -51,9 +52,11 @@ class HttpEntryPointTest extends AkkaTestCase {
     )
 
     Await.ready(_system.whenTerminated, Duration.Inf)
-  }
+  }*/
 
   test("test ConnectionHandler") {
+
+    val eventExtractor = EventExtractor(DefaultFormat)
 
     val source = TestSource.probe[HttpRequest]
     val sink1  = TestSink.probe[Future[HttpResponse]]
@@ -65,7 +68,8 @@ class HttpEntryPointTest extends AkkaTestCase {
           implicit builder => (p1, p2, p3) =>
             import GraphDSL.Implicits._
 
-            val handler = builder.add(new HttpEntryPoint.ConnectionHandler())
+            val handler =
+              builder.add(new HttpEntryPoint.ConnectionHandler(eventExtractor))
 
             // format: off
             p1 ~> handler.in

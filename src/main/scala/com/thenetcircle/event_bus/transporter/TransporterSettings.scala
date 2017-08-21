@@ -18,39 +18,51 @@
 package com.thenetcircle.event_bus.transporter
 
 import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.thenetcircle.event_bus.pipeline.{Pipeline, PipelineFactory}
-import com.thenetcircle.event_bus.transporter.entrypoint.{
-  EntryPoint,
-  EntryPointFactory
-}
+import akka.stream.ActorMaterializerSettings
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.JavaConverters._
 
-object TransporterSettings {
-  def apply(
-      config: Config
-  )(implicit system: ActorSystem,
-    materializer: Materializer): TransporterSettings = {
+object TransporterSettings extends StrictLogging {
+  def apply(config: Config)(implicit system: ActorSystem): TransporterSettings = {
 
     val name = config.getString("name")
 
-    val entryPoints: Set[EntryPoint] = {
-      for (_config <- config.getConfigList("entry_points").asScala)
-        yield EntryPointFactory.createEntryPoint(_config)
-    }.toSet
+    val entryPointsSettings: Vector[EntryPointSettings] = {
+      for (_config <- config.getConfigList("entry_points_settings").asScala)
+        yield EntryPointSettings(_config)
+    }.toVector
 
-    val pipelineName = config.getString("pipeline")
-    val pipeline     = PipelineFactory.getPipeline(pipelineName)
+    val pipelineName = config.getString("pipeline_name")
 
-    TransporterSettings(name, entryPoints, pipeline)
+    val materializerSettings: Option[ActorMaterializerSettings] = try {
+      if (config.hasPath("materializer")) {
+        val _mc = config.getConfig("materializer")
+        val _defaultMc =
+          system.settings.config.getConfig("akka.stream.materializer")
+        Some(ActorMaterializerSettings(_mc.withFallback(_defaultMc)))
+      } else {
+        None
+      }
+    } catch {
+      case _: Exception =>
+        logger.warn("Configured materializer is not correct.")
+        None
+    }
+
+    TransporterSettings(name,
+                        entryPointsSettings,
+                        pipelineName,
+                        materializerSettings)
 
   }
 }
 
 final case class TransporterSettings(
     name: String,
-    entryPoints: Set[EntryPoint],
-    pipeline: Pipeline
+    entryPointsSettings: Vector[EntryPointSettings],
+    pipelineName: String,
+    materializerSettings: Option[ActorMaterializerSettings]
 )

@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.extractor
+package com.thenetcircle.event_bus.event_extractor
 
 import java.text.SimpleDateFormat
 
@@ -59,19 +59,10 @@ class TNCActivityStreamsExtractorTest extends AsyncTestCase {
       |}
     """.stripMargin*/
 
-  private val defaultFormatExtractor: Extractor[DefaultFormat] =
-    new TNCActivityStreamsExtractor with Extractor[DefaultFormat] {
-      override val dataFormat: DefaultFormat = DefaultFormat
-      override def getEventBody(data: ByteString): EventBody[DefaultFormat] =
-        EventBody(data, DefaultFormat)
-    }
+  private val defaultFormatExtractor: EventExtractor = EventExtractor(
+    DefaultFormat)
 
-  private val testFormatExtractor: Extractor[TestFormat] =
-    new TNCActivityStreamsExtractor with Extractor[TestFormat] {
-      override val dataFormat: TestFormat = TestFormat
-      override def getEventBody(data: ByteString): EventBody[TestFormat] =
-        EventBody(data, TestFormat)
-    }
+  private val testFormatExtractor: EventExtractor = EventExtractor(TestFormat)
 
   test("test invalid data") {
     var data = ByteString(

@@ -30,24 +30,21 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.extractor.{ExtractedData, Extractor}
+import com.thenetcircle.event_bus.event_extractor.{
+  EventExtractor,
+  ExtractedData
+}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Success}
 
-case class HttpEntryPointSettings(
-    name: String,
-    interface: String,
-    port: Int
-)
-
 class HttpEntryPoint(
     settings: HttpEntryPointSettings
-)(implicit system: ActorSystem,
-  materializer: Materializer,
-  extractor: Extractor[EventFormat])
+)(implicit system: ActorSystem, materializer: Materializer)
     extends EntryPoint {
+
+  private val eventExtractor = EventExtractor(settings.eventFormat)
 
   private val serverSource
     : Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
@@ -64,7 +61,7 @@ class HttpEntryPoint(
 
             val requestFlow = builder.add(connection.flow)
             val connectionHandler =
-              builder.add(new HttpEntryPoint.ConnectionHandler())
+              builder.add(new HttpEntryPoint.ConnectionHandler(eventExtractor))
             val unpackFlow = Flow[Future[HttpResponse]].mapAsync(1)(identity)
 
             // ----- work flow -----
@@ -88,9 +85,9 @@ object HttpEntryPoint {
 
   val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
 
-  def apply[Fmt <: EventFormat: Extractor](
-      settings: HttpEntryPointSettings
-  )(implicit system: ActorSystem, materializer: Materializer): HttpEntryPoint =
+  def apply(settings: HttpEntryPointSettings)(
+      implicit system: ActorSystem,
+      materializer: Materializer): HttpEntryPoint =
     new HttpEntryPoint(settings)
 
   /** A stage with one inlet and two outlets, When [[HttpRequest]] come in inlet
@@ -105,8 +102,8 @@ object HttpEntryPoint {
     *                              +------------+
     *  }}}
     */
-  final class ConnectionHandler()(implicit materializer: Materializer,
-                                  extractor: Extractor[EventFormat])
+  final class ConnectionHandler(extractor: EventExtractor)(
+      implicit materializer: Materializer)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     implicit val _ec: ExecutionContextExecutor = materializer.executionContext

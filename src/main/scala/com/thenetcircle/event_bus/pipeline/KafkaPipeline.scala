@@ -32,7 +32,7 @@ import akka.stream.{FlowShape, Materializer}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.extractor.Extractor
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import org.apache.kafka.clients.producer.ProducerRecord
 import org.apache.kafka.common.serialization.{
   ByteArrayDeserializer,
@@ -106,7 +106,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
     */
   def rightPort(
       portSettings: KafkaRightPortSettings
-  )(implicit extractor: Extractor[EventFormat])
+  )(implicit extractor: EventExtractor)
     : Source[Source[Event, NotUsed], Consumer.Control] = {
 
     val _topics       = portSettings.topics

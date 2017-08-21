@@ -7,13 +7,14 @@ object Dependencies {
   lazy val akkaHttpVersion = "10.0.9"
 
   // Libraries
-  private val akkaBase = Seq(
-    "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-    "com.typesafe.akka" %% "akka-slf4j"  % akkaVersion
+  private val akkaStream = Seq(
+    "com.typesafe.akka" %% "akka-stream" % akkaVersion
   )
   private val log = Seq(
-    "ch.qos.logback" % "logback-core"    % "1.2.2",
-    "ch.qos.logback" % "logback-classic" % "1.2.3"
+    "com.typesafe.akka"          %% "akka-slf4j"     % akkaVersion,
+    "com.typesafe.scala-logging" %% "scala-logging"  % "3.7.2",
+    "ch.qos.logback"             % "logback-core"    % "1.2.2",
+    "ch.qos.logback"             % "logback-classic" % "1.2.3"
   )
   private val test = Seq(
     "org.scalatest"     %% "scalatest"           % "3.0.1"         % Test,
@@ -21,10 +22,10 @@ object Dependencies {
     "com.typesafe.akka" %% "akka-http-testkit"   % akkaHttpVersion % Test
   )
 
-  private val base = akkaBase ++ log ++ test
-
-  private val jsonParser    = "io.spray"    %% "spray-json" % "1.3.3"
-  private val uuidGenerater = "io.jvm.uuid" %% "scala-uuid" % "0.2.3"
+  private val misc = Seq(
+    "io.spray"    %% "spray-json" % "1.3.3",
+    "io.jvm.uuid" %% "scala-uuid" % "0.2.3"
+  )
 
   private val redisConnector = "com.github.etaty"   %% "rediscala"                % "1.8.0"
   private val httpConnector  = "com.typesafe.akka"  %% "akka-http"                % akkaHttpVersion
@@ -32,10 +33,7 @@ object Dependencies {
   private val kafkaConnector = "com.typesafe.akka"  %% "akka-stream-kafka"        % "0.16"
 
   // Apps
-  val rootDeps = base ++ Seq(
-    jsonParser,
-    uuidGenerater
-  ) ++ Seq(
+  val eventBusDeps = akkaStream ++ log ++ test ++ misc ++ Seq(
     redisConnector,
     amqpConnector,
     kafkaConnector,

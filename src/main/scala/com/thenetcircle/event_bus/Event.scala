@@ -28,6 +28,11 @@ object EventFormat {
 
   type TestFormat = TestFormat.type
   object TestFormat extends EventFormat
+
+  def apply(formatString: String): EventFormat = formatString match {
+    case "default" => DefaultFormat
+    case "test"    => TestFormat
+  }
 }
 
 trait EventCommitter {
@@ -36,23 +41,21 @@ trait EventCommitter {
 
 sealed trait EventSourceType
 object EventSourceType {
-  case object Redis    extends EventSourceType
-  case object AMQP     extends EventSourceType
-  case object Kafka    extends EventSourceType
-  case object Http     extends EventSourceType
-  case object Fallback extends EventSourceType
+  case object Redis extends EventSourceType
+  case object AMQP  extends EventSourceType
+  case object Kafka extends EventSourceType
+  case object Http  extends EventSourceType
 }
 
-sealed trait EventPriority
 object EventPriority {
-  case object High   extends EventPriority
-  case object Normal extends EventPriority
-  case object Low    extends EventPriority
+  val High   = 3
+  val Normal = 2
+  val Low    = 1
 }
 
-case class EventBody[+Fmt](
+case class EventBody(
     data: ByteString,
-    format: Fmt
+    format: EventFormat
 )
 
 case class EventMetaData(
@@ -65,10 +68,10 @@ case class EventMetaData(
 
 case class Event(
     metadata: EventMetaData,
-    body: EventBody[EventFormat],
+    body: EventBody,
     channel: String,
     sourceType: EventSourceType,
-    priority: EventPriority = EventPriority.Normal,
+    priority: Int = EventPriority.Normal,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
 ) {

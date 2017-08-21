@@ -15,33 +15,34 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.extractor
+package com.thenetcircle.event_bus.event_extractor
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.{
-  EventBody,
-  EventFormat,
-  EventMetaData,
-  EventPriority
-}
+import com.thenetcircle.event_bus.EventFormat.TestFormat
+import com.thenetcircle.event_bus.{EventBody, EventFormat, EventMetaData}
 import io.jvm.uuid.UUID
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class ExtractedData(
-    body: EventBody[EventFormat],
+    body: EventBody,
     metadata: EventMetaData,
     channel: Option[String] = None,
-    priority: Option[EventPriority] = None
+    priority: Option[Int] = None
 ) {
   def withChannel(channel: String): ExtractedData =
     copy(channel = Some(channel))
-  def withPriority(priority: EventPriority): ExtractedData =
+  def withPriority(priority: Int): ExtractedData =
     copy(priority = Some(priority))
 }
 
-trait Extractor[+Fmt <: EventFormat] {
+trait EventExtractor {
+
+  /**
+    * Format of the extracted data
+    * @return EventFormat
+    */
+  def format: EventFormat
 
   /**
     * Extract metadata from data accroding to Format
@@ -51,21 +52,9 @@ trait Extractor[+Fmt <: EventFormat] {
   def extract(data: ByteString)(
       implicit executor: ExecutionContext): Future[ExtractedData]
 
-  def dataFormat: Fmt
-
 }
 
-object Extractor {
-
-  implicit val defaultFormatExtractor: Extractor[DefaultFormat] =
-    new TNCActivityStreamsExtractor with Extractor[DefaultFormat] {
-
-      override val dataFormat: DefaultFormat = DefaultFormat
-
-      override def getEventBody(data: ByteString): EventBody[DefaultFormat] =
-        EventBody(data, DefaultFormat)
-
-    }
+object EventExtractor {
 
   /**
     * Generate a UUID
@@ -73,5 +62,14 @@ object Extractor {
     * @return String
     */
   def genUUID(): String = UUID.random.toString
+
+  def apply(format: EventFormat): EventExtractor = format match {
+    case EventFormat.DefaultFormat =>
+      new TNCActivityStreamsExtractor with EventExtractor
+    case EventFormat.TestFormat =>
+      new TNCActivityStreamsExtractor with EventExtractor {
+        override val format: EventFormat = TestFormat
+      }
+  }
 
 }

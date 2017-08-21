@@ -41,3 +41,13 @@ abstract class Pipeline(pipelineSettings: PipelineSettings) {
   ): Source[Source[Event, _], _]*/
 
 }
+
+object Pipeline {
+
+  private val pipelines = Map.empty[String, Pipeline]
+
+  def apply(pipelineSettings: PipelineSettings): Pipeline = ???
+
+  def apply(name: String): Pipeline = ???
+
+}
