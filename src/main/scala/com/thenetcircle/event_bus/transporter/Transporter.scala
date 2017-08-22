@@ -99,6 +99,7 @@ object Transporter {
 
     val entryPoints =
       settings.transportEntryPointsSettings.map(TransporterEntryPoint(_))
+
     val pipeline = Pipeline(settings.pipelineName)
 
     new Transporter(settings, entryPoints, pipeline)

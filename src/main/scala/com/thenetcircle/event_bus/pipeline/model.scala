@@ -19,44 +19,56 @@ package com.thenetcircle.event_bus.pipeline
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.event_extractor.EventExtractor
 
 trait PipelineSettings {
   def name: String
 }
+
 trait LeftPortSettings
 trait RightPortSettings
 trait BatchCommitSettings
 
-//https://stackoverflow.com/questions/4626904/scala-generic-method-overriding
-trait Pipeline[A, B, C] {
+trait LeftPortSettingsBuilder {
+  def getSettings[T <: LeftPortSettings]: T
+}
+
+trait RightPortSettingsBuilder {
+  def getSettings[T <: RightPortSettings]: T
+}
+
+trait BatchCommitSettingsBuilder {
+  def getSettings[T <: BatchCommitSettings]: T
+}
+
+trait Pipeline {
+
+  import Pipeline._
 
   protected val leftPortId  = new AtomicInteger(0)
   protected val rightPortId = new AtomicInteger(0)
 
-  def leftPort(leftPortSettings: A)(
-      implicit system: ActorSystem,
-      materializer: Materializer): Sink[Event, NotUsed]
-
-  def rightPort(rightPortsettings: B)(
-      implicit system: ActorSystem,
-      materializer: Materializer,
-      extractor: EventExtractor): Source[Source[Event, NotUsed], _]
-
-  def batchCommit(batchCommitSettings: C): Sink[Event, NotUsed]
+  def leftPort: LeftPort
+  def rightPort: RightPort
 
 }
 
 object Pipeline {
 
-  private val pipelines = Map.empty[String, Pipeline[_, _, _]]
+  trait LeftPort {
+    def port: Sink[Event, NotUsed]
+  }
 
-  def apply(pipelineSettings: PipelineSettings): Pipeline[_, _, _] = ???
+  trait RightPort {
+    def port: Source[Source[Event, NotUsed], _]
+    def commit: Sink[Event, NotUsed]
+  }
 
-  def apply(name: String): Pipeline[_, _, _] = ???
+  private val pipelines = Map.empty[String, Pipeline]
+
+  def apply(pipelineSettings: PipelineSettings): Pipeline = ???
+
+  def apply(name: String): Pipeline = ???
 
 }

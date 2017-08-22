@@ -37,7 +37,9 @@ import com.thenetcircle.event_bus.pipeline._
 import org.apache.kafka.clients.producer.ProducerRecord
 
 class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
+  pipeline =>
 
+  import Pipeline._
   import KafkaPipeline._
 
   private val pipelineName: String = pipelineSettings.name
@@ -48,46 +50,47 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
   // TODO: maybe we don't need system and materializer, just ExecutionContext is enough, EntryPoints are same
   def leftPort(settingsBuilder: LeftPortSettingsBuilder)(
       implicit system: ActorSystem,
-      materializer: Materializer): Sink[Event, NotUsed] = {
+      materializer: Materializer): Sink[Event, NotUsed] = new KafkaLeftPort()
 
-    val leftPortSettings = settingsBuilder.getSettings
+  private[this] class KafkaLeftPort(settings: KafkaLeftPortSettings)
+      extends LeftPort {
+    override val port: Sink[Event, NotUsed] = {
 
-    // Combine LeftPortSettings with PipelineSettings
-    val producerSettings: ProducerSettings[Key, Value] = {
-      var result = pipelineSettings.producerSettings
+      // Combine LeftPortSettings with PipelineSettings
+      val producerSettings: ProducerSettings[Key, Value] = {
+        var result = pipelineSettings.producerSettings
 
-      leftPortSettings.properties.foreach(properties =>
-        properties foreach {
-          case (key, value) =>
-            result = result.withProperty(key, value)
-      })
-      leftPortSettings.closeTimeout.foreach(s =>
-        result = result.withCloseTimeout(s))
-      leftPortSettings.produceParallelism.foreach(s =>
-        result = result.withParallelism(s))
-      leftPortSettings.dispatcher.foreach(s =>
-        result = result.withDispatcher(s))
+        settings.properties.foreach(properties =>
+          properties foreach {
+            case (key, value) =>
+              result = result.withProperty(key, value)
+        })
+        settings.closeTimeout.foreach(s => result = result.withCloseTimeout(s))
+        settings.produceParallelism.foreach(s =>
+          result = result.withParallelism(s))
+        settings.dispatcher.foreach(s => result = result.withDispatcher(s))
 
-      result
-    }
+        result
+      }
 
-    Flow[Event]
-      .map(
-        event =>
-          Message(
-            getProducerRecordFromEvent(event),
-            event.committer
+      Flow[Event]
+        .map(
+          event =>
+            Message(
+              getProducerRecordFromEvent(event),
+              event.committer
+          )
         )
-      )
-      // TODO: take care of Supervision of mapAsync
-      .via(Producer.flow(producerSettings))
-      .filter(_.message.passThrough.isDefined)
-      // TODO: also mapAsync here
-      .mapAsync(leftPortSettings.commitParallelism)(
-        _.message.passThrough.get.commit())
-      .toMat(Sink.ignore)(Keep.left)
-      .named(s"$pipelineName-leftport-${leftPortId.getAndIncrement()}")
+        // TODO: take care of Supervision of mapAsync
+        .via(Producer.flow(producerSettings))
+        .filter(_.message.passThrough.isDefined)
+        // TODO: also mapAsync here
+        .mapAsync(settings.commitParallelism)(
+          _.message.passThrough.get.commit())
+        .toMat(Sink.ignore)(Keep.left)
+        .named(s"$pipelineName-leftport-${leftPortId.getAndIncrement()}")
 
+    }
   }
 
   /** Get a new outlet of the [[KafkaPipeline]],
