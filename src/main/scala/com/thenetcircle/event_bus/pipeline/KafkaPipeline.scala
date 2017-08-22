@@ -39,21 +39,18 @@ import org.apache.kafka.common.serialization.{
   ByteArraySerializer
 }
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.Future
 
-class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
-    implicit system: ActorSystem,
-    materializer: Materializer)
+class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
     extends Pipeline(pipelineSettings) {
 
   import KafkaPipeline._
 
-  implicit val ec: ExecutionContextExecutor = system.dispatcher
-
   /** Get a new inlet of the pipeline,
     * Which will create a new producer internally after the port got materialized
     */
-  def leftPort: Sink[Event, Future[Done]] = {
+  def leftPort(implicit system: ActorSystem,
+               materializer: Materializer): Sink[Event, Future[Done]] = {
     // Build ProducerSettings
     val kafkaProducerSettings: ProducerSettings[Key, Value] = {
       var _kps =
@@ -91,7 +88,9 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
     */
   def rightPort(
       portSettings: KafkaRightPortSettings
-  )(implicit extractor: EventExtractor)
+  )(implicit system: ActorSystem,
+    materializer: Materializer,
+    extractor: EventExtractor)
     : Source[Source[Event, NotUsed], Consumer.Control] = {
 
     val _topics       = portSettings.topics
@@ -128,7 +127,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
             .mapAsync(portSettings.extractorParallelism) { msg =>
               val record = msg.record
               extractor
-                .extract(ByteString(record.value()))(ec)
+                .extract(ByteString(record.value()))
                 .map(ed => (ed, record.topic(), msg.committableOffset))
             }
             .map {
@@ -202,9 +201,7 @@ object KafkaPipeline {
   type Key   = Array[Byte]
   type Value = Array[Byte]
 
-  def apply(pipelineSettings: KafkaPipelineSettings)(
-      implicit system: ActorSystem,
-      materializer: Materializer): KafkaPipeline =
-    new KafkaPipeline(pipelineSettings)
+  def apply(settings: KafkaPipelineSettings): KafkaPipeline =
+    new KafkaPipeline(settings)
 
 }

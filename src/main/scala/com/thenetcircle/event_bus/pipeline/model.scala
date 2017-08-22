@@ -19,6 +19,8 @@ package com.thenetcircle.event_bus.pipeline
 
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import com.thenetcircle.event_bus.Event
 
@@ -49,7 +51,8 @@ abstract class Pipeline(pipelineSettings: PipelineSettings) {
   protected val leftPortId           = new AtomicInteger(0)
   protected val rightPortId          = new AtomicInteger(0)
 
-  def leftPort: Sink[Event, _]
+  def leftPort(implicit system: ActorSystem,
+               materializer: Materializer): Sink[Event, _]
 
   /*def rightPort(portSettings: RightPortSettings)(
       implicit extractor: Extractor[EventFormat]
