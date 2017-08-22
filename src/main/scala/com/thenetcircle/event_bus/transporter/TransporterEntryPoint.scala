@@ -25,12 +25,6 @@ import com.thenetcircle.event_bus.transporter.entrypoint.{
   EntryPointSettings
 }
 
-object TransporterEntryPointPriority {
-  val High   = 3
-  val Normal = 2
-  val Low    = 1
-}
-
 final case class TransporterEntryPoint(
     settings: TransporterEntryPointSettings,
     entryPoint: EntryPoint
@@ -46,8 +40,6 @@ object TransporterEntryPoint {
 }
 
 final case class TransporterEntryPointSettings(
-    priority: Int,
-    bufferSize: Int,
     maxParallelSources: Int,
     eventFormat: EventFormat,
     entryPointSettings: EntryPointSettings

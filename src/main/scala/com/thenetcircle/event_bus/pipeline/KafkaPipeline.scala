@@ -41,21 +41,6 @@ import org.apache.kafka.common.serialization.{
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class KafkaPipelineSettings(
-    name: String,
-    bootstrapServers: String,
-    producerClientSettings: Map[String, String] = Map.empty,
-    consumerClientSettings: Map[String, String] = Map.empty,
-    dispatcher: Option[String] = None
-) extends PipelineSettings
-
-case class KafkaRightPortSettings(
-    groupId: String,
-    topics: Option[Set[String]] = None,
-    topicPattern: Option[String] = None,
-    extractorParallelism: Int = 3
-) extends RightPortSettings
-
 class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
     implicit system: ActorSystem,
     materializer: Materializer)
@@ -153,7 +138,8 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)(
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
                   sourceType = EventSourceType.Kafka,
-                  priority = EventPriority(extractedData.priority)
+                  // TODO replace with kafka topic key
+                  priority = EventPriority(extractedData.priority.id)
                 )
                 event
                   .addContext("kafkaCommittableOffset", committableOffset)

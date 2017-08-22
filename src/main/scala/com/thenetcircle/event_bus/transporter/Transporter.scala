@@ -35,6 +35,8 @@ class Transporter(settings: TransporterSettings,
                                       materializer: Materializer) {
 
   // TODO draw a graph in comments
+  // TODO error handler
+  // TODO parallel and async
   lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
       .create() { implicit builder =>
@@ -44,13 +46,12 @@ class Transporter(settings: TransporterSettings,
         val priorities = EventPriority.values.toIndexedSeq.reverse.map(_.id)
 
         entryPoints foreach {
-          tep: TransporterEntryPoint =>
-            val entryPointSettings = tep.settings
+          transporterEntryPoint: TransporterEntryPoint =>
+            val entryPointSettings = transporterEntryPoint.settings
 
-            val etpSource =
-              tep.entryPoint.port
+            val entryPointSource =
+              transporterEntryPoint.entryPoint.port
                 .flatMapMerge(entryPointSettings.maxParallelSources, identity)
-                .map(_.withPlusPriority(tep.settings.priority))
 
             val mergePrioritizedShape =
               builder.add(MergePrioritized[Event](priorities))
@@ -63,7 +64,7 @@ class Transporter(settings: TransporterSettings,
 
             // format: off
 
-            etpSource ~> partitionShape
+            entryPointSource ~> partitionShape
 
             for (i <- priorities.indices) {
 

@@ -19,25 +19,27 @@ package com.thenetcircle.event_bus.event_extractor
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.TestFormat
+import com.thenetcircle.event_bus.event_extractor.ExtractedPriority.ExtractedPriority
 import com.thenetcircle.event_bus.{EventBody, EventFormat, EventMetaData}
 import io.jvm.uuid.UUID
 
 import scala.concurrent.{ExecutionContext, Future}
 
-object ExtractedPriority {
-  val High   = 3
-  val Normal = 2
-  val Low    = 1
+object ExtractedPriority extends Enumeration {
+  type ExtractedPriority = Value
+  val High   = Value(3, "High")
+  val Normal = Value(2, "Normal")
+  val Low    = Value(1, "Low")
 }
 
 case class ExtractedData(
     body: EventBody,
     metadata: EventMetaData,
-    priority: Int = ExtractedPriority.Normal,
+    priority: ExtractedPriority = ExtractedPriority.Normal,
     channel: Option[String] = None
 ) {
 
-  def withPriority(priority: Int): ExtractedData =
+  def withPriority(priority: ExtractedPriority): ExtractedData =
     copy(priority = priority)
 
   def withChannel(channel: String): ExtractedData =

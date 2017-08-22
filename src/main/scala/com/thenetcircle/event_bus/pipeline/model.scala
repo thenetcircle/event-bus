@@ -22,11 +22,26 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.stream.scaladsl.Sink
 import com.thenetcircle.event_bus.Event
 
-trait PipelineSettings {
+sealed trait PipelineSettings {
   def name: String
 }
 
-trait RightPortSettings
+case class KafkaPipelineSettings(
+    name: String,
+    bootstrapServers: String,
+    producerClientSettings: Map[String, String] = Map.empty,
+    consumerClientSettings: Map[String, String] = Map.empty,
+    dispatcher: Option[String] = None
+) extends PipelineSettings
+
+sealed trait RightPortSettings
+
+case class KafkaRightPortSettings(
+    groupId: String,
+    topics: Option[Set[String]] = None,
+    topicPattern: Option[String] = None,
+    extractorParallelism: Int = 3
+) extends RightPortSettings
 
 abstract class Pipeline(pipelineSettings: PipelineSettings) {
 

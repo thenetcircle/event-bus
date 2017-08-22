@@ -22,9 +22,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.typesafe.config.{Config, ConfigException}
 
-sealed trait EntryPointSettings
+sealed trait EntryPointSettings {
+  def name: String
+  def priority: EntryPointPriority
+}
 
 object EntryPointSettings {
 
@@ -41,8 +45,14 @@ object EntryPointSettings {
 
     entryPointType.toUpperCase() match {
       case "HTTP" =>
+        val priority =
+          if (config.hasPath("priority"))
+            EntryPointPriority(config.getInt("priority"))
+          else EntryPointPriority.Normal
+
         HttpEntryPointSettings(
           config.getString("name"),
+          priority,
           config.getString("interface"),
           config.getInt("port")
         )
@@ -56,6 +66,7 @@ object EntryPointSettings {
 /** Http EntryPoint Settings */
 case class HttpEntryPointSettings(
     name: String,
+    priority: EntryPointPriority,
     interface: String,
     port: Int
 ) extends EntryPointSettings
@@ -77,4 +88,11 @@ object EntryPoint {
       HttpEntryPoint(s)
   }
 
+}
+
+object EntryPointPriority extends Enumeration {
+  type EntryPointPriority = Value
+  val High   = Value(3, "High")
+  val Normal = Value(2, "Normal")
+  val Low    = Value(1, "Low")
 }

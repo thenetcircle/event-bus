@@ -29,7 +29,6 @@ import scala.collection.JavaConverters._
 object TransporterSettings extends StrictLogging {
 
   // TODO adjust these default values when doing stress testing
-  val defaultBufferSizePerEntryPoint         = 100
   val defaultMaxParallelSourcesPerEntryPoint = 100
 
   def apply(config: Config)(implicit system: ActorSystem): TransporterSettings = {
@@ -39,14 +38,6 @@ object TransporterSettings extends StrictLogging {
     val transportEntryPointsSettings: Vector[TransporterEntryPointSettings] = {
       for (epConfig <- config.getConfigList("entry-points-settings").asScala)
         yield {
-          val priority =
-            if (epConfig.hasPath("priority")) epConfig.getInt("priority")
-            else TransporterEntryPointPriority.Normal
-
-          val bufferSize =
-            if (epConfig.hasPath("buffer-size")) epConfig.getInt("buffer-size")
-            else defaultBufferSizePerEntryPoint
-
           val maxParallelSources =
             if (epConfig.hasPath("max-parallel-sources"))
               epConfig.getInt("max-parallel-sources")
@@ -58,8 +49,6 @@ object TransporterSettings extends StrictLogging {
             else EventFormat.DefaultFormat
 
           TransporterEntryPointSettings(
-            priority,
-            bufferSize,
             maxParallelSources,
             eventFormat,
             EntryPointSettings(epConfig)

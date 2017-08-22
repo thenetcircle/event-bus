@@ -49,11 +49,11 @@ object EventSourceType {
 
 object EventPriority extends Enumeration {
   type EventPriority = Value
-  val Urgent = Value(6)
-  val High   = Value(5)
-  val Medium = Value(4)
-  val Normal = Value(3)
-  val Low    = Value(2)
+  val Urgent = Value(6, "Urgent")
+  val High   = Value(5, "High")
+  val Medium = Value(4, "Medium")
+  val Normal = Value(3, "Normal")
+  val Low    = Value(2, "Low")
 }
 
 case class EventBody(

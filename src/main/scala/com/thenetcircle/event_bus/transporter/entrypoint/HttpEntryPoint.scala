@@ -34,6 +34,7 @@ import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
   ExtractedData
 }
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
@@ -61,7 +62,8 @@ class HttpEntryPoint(
 
             val requestFlow = builder.add(connection.flow)
             val connectionHandler =
-              builder.add(new HttpEntryPoint.ConnectionHandler())
+              builder.add(
+                new HttpEntryPoint.ConnectionHandler(settings.priority))
             val unpackFlow = Flow[Future[HttpResponse]].mapAsync(1)(identity)
 
             // ----- work flow -----
@@ -103,8 +105,9 @@ object HttpEntryPoint {
     *                              +------------+
     *  }}}
     */
-  final class ConnectionHandler()(implicit materializer: Materializer,
-                                  eventExtractor: EventExtractor)
+  final class ConnectionHandler(entryPointPriority: EntryPointPriority)(
+      implicit materializer: Materializer,
+      eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     implicit val _ec: ExecutionContextExecutor = materializer.executionContext
@@ -171,8 +174,8 @@ object HttpEntryPoint {
               extractedData.channel.getOrElse(
                 ChannelResolver.getChannel(extractedData.metadata)),
               EventSourceType.Http,
-              // TODO improve priority here and in KafkaPipeline, Since 1 is not defined
-              EventPriority(extractedData.priority),
+              // Event priority equals entry points' priority and extracted priority from the data
+              EventPriority(extractedData.priority.id + entryPointPriority.id),
               Map.empty
             ).withCommitter(
               () =>
