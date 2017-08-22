@@ -15,8 +15,9 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.pipeline
+package com.thenetcircle.event_bus.pipeline.kafka
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.ProducerMessage.Message
@@ -30,37 +31,44 @@ import akka.kafka.{
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Keep, Sink, Source}
 import akka.stream.{FlowShape, Materializer}
 import akka.util.ByteString
-import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.pipeline._
 import org.apache.kafka.clients.producer.ProducerRecord
-import org.apache.kafka.common.serialization.{
-  ByteArrayDeserializer,
-  ByteArraySerializer
-}
 
-import scala.concurrent.Future
-
-class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
-    extends Pipeline(pipelineSettings) {
+class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
 
   import KafkaPipeline._
 
-  /** Get a new inlet of the pipeline,
-    * Which will create a new producer internally after the port got materialized
+  private val pipelineName: String = pipelineSettings.name
+
+  /** Get a new inlet of the [[KafkaPipeline]],
+    * Which will create a new producer with a new connection to Kafka internally after the port got materialized
     */
-  def leftPort(implicit system: ActorSystem,
-               materializer: Materializer): Sink[Event, Future[Done]] = {
-    // Build ProducerSettings
-    val kafkaProducerSettings: ProducerSettings[Key, Value] = {
-      var _kps =
-        ProducerSettings(system,
-                         Some(new ByteArraySerializer),
-                         Some(new ByteArraySerializer))
-          .withBootstrapServers(pipelineSettings.bootstrapServers)
-      for ((k, v) <- pipelineSettings.producerClientSettings)
-        _kps = _kps.withProperty(k, v)
-      _kps
+  // TODO: maybe we don't need system and materializer, just ExecutionContext is enough, EntryPoints are same
+  def leftPort(settingsBuilder: LeftPortSettingsBuilder)(
+      implicit system: ActorSystem,
+      materializer: Materializer): Sink[Event, NotUsed] = {
+
+    val leftPortSettings = settingsBuilder.getSettings
+
+    // Combine LeftPortSettings with PipelineSettings
+    val producerSettings: ProducerSettings[Key, Value] = {
+      var result = pipelineSettings.producerSettings
+
+      leftPortSettings.properties.foreach(properties =>
+        properties foreach {
+          case (key, value) =>
+            result = result.withProperty(key, value)
+      })
+      leftPortSettings.closeTimeout.foreach(s =>
+        result = result.withCloseTimeout(s))
+      leftPortSettings.produceParallelism.foreach(s =>
+        result = result.withParallelism(s))
+      leftPortSettings.dispatcher.foreach(s =>
+        result = result.withDispatcher(s))
+
+      result
     }
 
     Flow[Event]
@@ -71,60 +79,80 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
             event.committer
         )
       )
-      .via(Producer.flow(kafkaProducerSettings))
+      // TODO: take care of Supervision of mapAsync
+      .via(Producer.flow(producerSettings))
       .filter(_.message.passThrough.isDefined)
-      .mapAsync(kafkaProducerSettings.parallelism)(
+      // TODO: also mapAsync here
+      .mapAsync(leftPortSettings.commitParallelism)(
         _.message.passThrough.get.commit())
-      .toMat(Sink.ignore)(Keep.right)
+      .toMat(Sink.ignore)(Keep.left)
       .named(s"$pipelineName-leftport-${leftPortId.getAndIncrement()}")
+
   }
 
   /** Get a new outlet of the [[KafkaPipeline]],
-    * Which will be expressed as a Source[Source[Event, _], _], Each (topic, partition) will be presented as a Source[Event, _]
-    * When the [[Source]] got materialized, Internally will create a new consumer to connect to Kafka Cluster to subscribe the topics you appointed
+    * Which will be expressed as a Source[Source[Event, NotUsed], _], Each (topic, partition) will be presented as a Source[Event, NotUsed]
+    * When the outlet got materialized, Internally will create a new consumer to connect to Kafka Cluster to subscribe the topics of settings
     * After each [[Event]] got processed, It needs to be commit, There are two ways to do that:
-    * 1. Call the committer of the [[Event]] for committing the single [[Event]]a
-    * 2. Go through [[commit]] flow after the processing stage (Recommended)
+    * 1. Call the committer of the [[Event]] for committing the single [[Event]]
+    * 2. Use [[batchCommit]] of this [[Pipeline]] (Recommended)
+    *
+    * @throws IllegalArgumentException
     */
   def rightPort(
-      portSettings: KafkaRightPortSettings
+      settingsBuilder: RightPortSettingsBuilder
   )(implicit system: ActorSystem,
     materializer: Materializer,
-    extractor: EventExtractor)
-    : Source[Source[Event, NotUsed], Consumer.Control] = {
+    extractor: EventExtractor): Source[Source[Event, NotUsed], _] = {
 
-    val _topics       = portSettings.topics
-    val _topicPattern = portSettings.topicPattern
-
-    require(_topics.isDefined || _topicPattern.isDefined,
-            "The outlet of KafkaPipeline needs to subscribe topics")
+    require(
+      rightPortSettings.topics.isDefined || rightPortSettings.topicPattern.isDefined,
+      "The outlet of KafkaPipeline needs to subscribe topics")
 
     // Build ConsumerSettings
     val kafkaConsumerSettings: ConsumerSettings[Key, Value] = {
-      var _kcs = ConsumerSettings(system,
-                                  Some(new ByteArrayDeserializer),
-                                  Some(new ByteArrayDeserializer))
-        .withBootstrapServers(pipelineSettings.bootstrapServers)
-        .withGroupId(portSettings.groupId)
-      for ((k, v) <- pipelineSettings.consumerClientSettings)
-        _kcs = _kcs.withProperty(k, v)
-      _kcs
+      var result =
+        pipelineSettings.consumerSettings.withGroupId(rightPortSettings.groupId)
+
+      rightPortSettings.dispatcher.foreach(s =>
+        result = result.withDispatcher(s))
+      rightPortSettings.properties.foreach(properties =>
+        properties foreach {
+          case (key, value) =>
+            result = result.withProperty(key, value)
+      })
+      rightPortSettings.pollInterval.foreach(s =>
+        result = result.withPollInterval(s))
+      rightPortSettings.pollTimeout.foreach(s =>
+        result = result.withPollTimeout(s))
+      rightPortSettings.stopTimeout.foreach(s =>
+        result = result.withStopTimeout(s))
+      rightPortSettings.closeTimeout.foreach(s =>
+        result = result.withCloseTimeout(s))
+      rightPortSettings.commitTimeout.foreach(s =>
+        result = result.withCommitTimeout(s))
+      rightPortSettings.wakeupTimeout.foreach(s =>
+        result = result.withWakeupTimeout(s))
+      rightPortSettings.maxWakeups.foreach(s =>
+        result = result.withMaxWakeups(s))
+
+      result
     }
 
-    var subscription: AutoSubscription = if (_topics.isDefined) {
-      Subscriptions.topics(_topics.get)
-    } else {
-      Subscriptions.topicPattern(_topicPattern.get)
-    }
+    var subscription: AutoSubscription =
+      if (rightPortSettings.topics.isDefined) {
+        Subscriptions.topics(rightPortSettings.topics.get)
+      } else {
+        Subscriptions.topicPattern(rightPortSettings.topicPattern.get)
+      }
 
-    val consumerName = s"$pipelineName-outlet-${rightPortId.getAndIncrement()}"
-
+    // TODO: maybe use one consumer for one partition
     Consumer
       .committablePartitionedSource(kafkaConsumerSettings, subscription)
       .map {
         case (topicPartition, source) =>
           source
-            .mapAsync(portSettings.extractorParallelism) { msg =>
+            .mapAsync(rightPortSettings.extractParallelism) { msg =>
               val record = msg.record
               extractor
                 .extract(ByteString(record.value()))
@@ -137,7 +165,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
                   sourceType = EventSourceType.Kafka,
-                  // TODO replace with kafka topic key
+                  // TODO: replace with kafka topic key
                   priority = EventPriority(extractedData.priority.id)
                 )
                 event
@@ -145,13 +173,13 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
                   .withCommitter(() => committableOffset.commitScaladsl())
             }
       }
-      .named(consumerName)
+      .named(s"$pipelineName-rightport-${rightPortId.getAndIncrement()}")
   }
 
   /** Batch commit flow
     */
-  def commit(parallelism: Int = 3,
-             batchMax: Int = 20): Flow[Event, Event, NotUsed] =
+  def batchCommit(settingsBuilder: BatchCommitSettingsBuilder)
+    : Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
@@ -162,12 +190,12 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
           .filter(_.hasContext("kafkaCommittableOffset"))
           .map(
             _.context("kafkaCommittableOffset").asInstanceOf[CommittableOffset])
-          .batch(max = batchMax,
+          .batch(max = batchCommitSettings.batchMax,
                  first => CommittableOffsetBatch.empty.updated(first)) {
             (batch, elem) =>
               batch.updated(elem)
           }
-          .mapAsync(parallelism)(_.commitScaladsl())
+          .mapAsync(batchCommitSettings.parallelism)(_.commitScaladsl())
           .to(Sink.ignore)
 
       /** --------- work flow --------- */
@@ -177,6 +205,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
       FlowShape[Event, Event](broadcast.in, output.out)
     })
 
+  // TODO: manually calculate partition, use key for metadata
   private def getProducerRecordFromEvent(
       event: Event): ProducerRecord[Key, Value] = {
     val topic: String   = event.channel

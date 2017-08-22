@@ -51,8 +51,7 @@ class HttpEntryPoint(
     : Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
     Http().bind(interface = settings.interface, port = settings.port)
 
-  override val port
-    : Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
+  val port: Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
     serverSource
       .map(connection => {
 

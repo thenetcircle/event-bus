@@ -16,56 +16,47 @@
  */
 
 package com.thenetcircle.event_bus.pipeline
-
 import java.util.concurrent.atomic.AtomicInteger
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
 
-sealed trait PipelineSettings {
+trait PipelineSettings {
   def name: String
 }
+trait LeftPortSettings
+trait RightPortSettings
+trait BatchCommitSettings
 
-case class KafkaPipelineSettings(
-    name: String,
-    bootstrapServers: String,
-    producerClientSettings: Map[String, String] = Map.empty,
-    consumerClientSettings: Map[String, String] = Map.empty,
-    dispatcher: Option[String] = None
-) extends PipelineSettings
+//https://stackoverflow.com/questions/4626904/scala-generic-method-overriding
+trait Pipeline[A, B, C] {
 
-sealed trait RightPortSettings
+  protected val leftPortId  = new AtomicInteger(0)
+  protected val rightPortId = new AtomicInteger(0)
 
-case class KafkaRightPortSettings(
-    groupId: String,
-    topics: Option[Set[String]] = None,
-    topicPattern: Option[String] = None,
-    extractorParallelism: Int = 3
-) extends RightPortSettings
+  def leftPort(leftPortSettings: A)(
+      implicit system: ActorSystem,
+      materializer: Materializer): Sink[Event, NotUsed]
 
-abstract class Pipeline(pipelineSettings: PipelineSettings) {
+  def rightPort(rightPortsettings: B)(
+      implicit system: ActorSystem,
+      materializer: Materializer,
+      extractor: EventExtractor): Source[Source[Event, NotUsed], _]
 
-  protected val pipelineName: String = pipelineSettings.name
-  protected val leftPortId           = new AtomicInteger(0)
-  protected val rightPortId          = new AtomicInteger(0)
-
-  def leftPort(implicit system: ActorSystem,
-               materializer: Materializer): Sink[Event, _]
-
-  /*def rightPort(portSettings: RightPortSettings)(
-      implicit extractor: Extractor[EventFormat]
-  ): Source[Source[Event, _], _]*/
+  def batchCommit(batchCommitSettings: C): Sink[Event, NotUsed]
 
 }
 
 object Pipeline {
 
-  private val pipelines = Map.empty[String, Pipeline]
+  private val pipelines = Map.empty[String, Pipeline[_, _, _]]
 
-  def apply(pipelineSettings: PipelineSettings): Pipeline = ???
+  def apply(pipelineSettings: PipelineSettings): Pipeline[_, _, _] = ???
 
-  def apply(name: String): Pipeline = ???
+  def apply(name: String): Pipeline[_, _, _] = ???
 
 }

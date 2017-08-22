@@ -31,8 +31,8 @@ import com.thenetcircle.event_bus.{Event, EventPriority}
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[TransporterEntryPoint],
-                  pipeline: Pipeline)(implicit system: ActorSystem,
-                                      materializer: Materializer) {
+                  pipeline: Pipeline[_, _, _])(implicit system: ActorSystem,
+                                               materializer: Materializer) {
 
   // TODO draw a graph in comments
   // TODO error handler
