@@ -203,7 +203,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
                     body = extractedData.body,
                     channel = extractedData.channel.getOrElse(topic),
                     sourceType = EventSourceType.Kafka,
-                    // TODO: replace with kafka topic key
+                    // TODO: replace to the data from key
                     priority = EventPriority(extractedData.priority.id)
                   )
                   event

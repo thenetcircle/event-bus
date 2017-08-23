@@ -34,8 +34,7 @@ sealed trait EntryPointSettings {
 
 object EntryPointSettings {
 
-  /** Get EntryPoint Settings From Config
-    * And based on their "type" field
+  /** Returns a [[EntryPointSettings]] from a TypeSafe [[Config]]
     *
     * @throws ConfigException
     *             if config incorrect

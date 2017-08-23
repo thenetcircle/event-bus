@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.dispatcher
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
+import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
@@ -31,16 +31,21 @@ object DispatcherSettings extends StrictLogging {
 
     val name = config.getString("name")
 
-    val entryPointsSettings: Vector[EntryPointSettings] = {
-      for (_config <- config.getConfigList("entry-points-settings").asScala)
-        yield EntryPointSettings(_config)
+    val endPointsSettings: Vector[EndPointSettings] = {
+      for (_config <- config.getConfigList("end-points-settings").asScala)
+        yield EndPointSettings(_config)
     }.toVector
 
     val pipelineConfig         = config.getConfig("pipeline")
     val pipelineName           = pipelineConfig.getString("name")
-    val pipelineLeftPortConfig = pipelineConfig.getConfig("left-port")
+    val pipelineLeftPortConfig = pipelineConfig.getConfig("right-port")
 
-    val commitParallelism = config.getInt("commit-parallelism")
+    // TODO: adjust these default values when doing stress testing
+    // TODO: use reference.conf to set up default value
+    val maxParallelSources =
+      if (config.hasPath("max-parallel-sources"))
+        config.getInt("max-parallel-sources")
+      else 100
 
     val materializerSettings: Option[ActorMaterializerSettings] = try {
       if (config.hasPath("materializer")) {
@@ -53,15 +58,15 @@ object DispatcherSettings extends StrictLogging {
       }
     } catch {
       case _: Exception =>
-        logger.warn("Configured materializer is not correct.")
+        logger.warn("Materializer configuration is not correct.")
         None
     }
 
     DispatcherSettings(name,
-                       entryPointsSettings,
+                       maxParallelSources,
+                       endPointsSettings,
                        pipelineName,
                        pipelineLeftPortConfig,
-                       commitParallelism,
                        materializerSettings)
 
   }
@@ -69,9 +74,9 @@ object DispatcherSettings extends StrictLogging {
 
 final case class DispatcherSettings(
     name: String,
-    entryPointsSettings: Vector[EntryPointSettings],
+    maxParallelSources: Int,
+    endPointsSettings: Vector[EndPointSettings],
     pipelineName: String,
-    pipelineLeftPortConfig: Config,
-    commitParallelism: Int,
+    pipelineRightPortConfig: Config,
     materializerSettings: Option[ActorMaterializerSettings]
 )

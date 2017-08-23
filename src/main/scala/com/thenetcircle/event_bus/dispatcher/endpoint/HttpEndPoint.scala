@@ -17,35 +17,22 @@
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
 
+import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.settings.ConnectionPoolSettings
-
-import scala.collection.immutable
-
-case class HttpSinkSettings(
-    host: String,
-    port: Int = 80,
-    poolSettings: Option[ConnectionPoolSettings],
-    method: HttpMethod = HttpMethods.GET,
-    uri: Uri = Uri./,
-    headers: immutable.Seq[HttpHeader] = Nil,
-    entity: RequestEntity = HttpEntity.Empty,
-    protocol: HttpProtocol = HttpProtocols.`HTTP/1.1`
-) extends EndPointSettings
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.Event
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
-class HttpSink(settings: HttpSinkSettings)(implicit val system: ActorSystem)
+class HttpEndPoint(val settings: HttpEndPointSettings)(
+    implicit val system: ActorSystem)
     extends EndPoint {
 
   /*private val connectionPool = Http().cachedHostConnectionPool[Event](
     settings.host,
     settings.port,
     settings.poolSettings.getOrElse(ConnectionPoolSettings(system))
-  )
+  )*/
 
-  def inlet(): Flow[Event, Event, NotUsed] =
-    Flow[Event]
-      .map(HttpRequest())*/
+  override val port: Flow[Event, Event, NotUsed] = ???
 
 }

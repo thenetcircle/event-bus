@@ -16,6 +16,37 @@
  */
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
+import akka.NotUsed
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.settings.ConnectionPoolSettings
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.Event
+import com.typesafe.config.Config
 
-trait EndPointSettings
-trait EndPoint
+import scala.collection.immutable
+
+sealed trait EndPointSettings {
+  def name: String
+}
+
+object EndPointSettings {
+  def apply(config: Config): EndPointSettings = ???
+}
+
+trait EndPoint {
+  val settings: EndPointSettings
+  def port: Flow[Event, Event, NotUsed]
+}
+
+object EndPoint {
+  def apply(settings: EndPointSettings): EndPoint = ???
+}
+
+case class HttpEndPointSettings(
+    name: String,
+    poolSettings: Option[ConnectionPoolSettings],
+    method: HttpMethod = HttpMethods.GET,
+    uri: Uri = Uri./,
+    headers: immutable.Seq[HttpHeader] = Nil,
+    protocol: HttpProtocol = HttpProtocols.`HTTP/1.1`
+) extends EndPointSettings
