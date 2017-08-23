@@ -214,6 +214,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
         .named(name)
     }
 
+    // TODO: maybe sink is better
     /** Batch commit flow */
     override lazy val committer: Flow[Event, Event, NotUsed] =
       Flow.fromGraph(GraphDSL.create() { implicit builder =>

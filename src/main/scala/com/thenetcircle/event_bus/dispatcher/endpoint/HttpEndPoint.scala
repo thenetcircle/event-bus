@@ -19,20 +19,29 @@ package com.thenetcircle.event_bus.dispatcher.endpoint
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
+
+import scala.collection.immutable
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
 class HttpEndPoint(val settings: HttpEndPointSettings)(
     implicit val system: ActorSystem)
     extends EndPoint {
 
-  /*private val connectionPool = Http().cachedHostConnectionPool[Event](
+  // TODO: check when it creates a new pool
+  private val connectionPool = Http().cachedHostConnectionPool[Event](
     settings.host,
     settings.port,
-    settings.poolSettings.getOrElse(ConnectionPoolSettings(system))
-  )*/
+    settings.poolSettings)
 
-  override val port: Flow[Event, Event, NotUsed] = ???
+  override val port: Flow[Event, Event, NotUsed] =
+    Flow[Event]
+      .map(event => {
+        settings.defaultRequest.withEntity(HttpEntity(event.body.data)) -> event
+      })
+      .via(connectionPool)
 
 }

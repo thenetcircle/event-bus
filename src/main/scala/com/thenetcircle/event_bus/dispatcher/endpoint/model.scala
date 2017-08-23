@@ -23,8 +23,6 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
 import com.typesafe.config.Config
 
-import scala.collection.immutable
-
 sealed trait EndPointSettings {
   def name: String
 }
@@ -44,9 +42,8 @@ object EndPoint {
 
 case class HttpEndPointSettings(
     name: String,
-    poolSettings: Option[ConnectionPoolSettings],
-    method: HttpMethod = HttpMethods.GET,
-    uri: Uri = Uri./,
-    headers: immutable.Seq[HttpHeader] = Nil,
-    protocol: HttpProtocol = HttpProtocols.`HTTP/1.1`
+    host: String,
+    poolSettings: ConnectionPoolSettings,
+    port: Int = 80,
+    defaultRequest: HttpRequest
 ) extends EndPointSettings
