@@ -1,0 +1,77 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ *     Beineng Ma <baineng.ma@gmail.com>
+ */
+
+package com.thenetcircle.event_bus.dispatcher
+
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializerSettings
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
+import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
+
+import scala.collection.JavaConverters._
+
+object DispatcherSettings extends StrictLogging {
+
+  def apply(config: Config)(implicit system: ActorSystem): DispatcherSettings = {
+
+    val name = config.getString("name")
+
+    val entryPointsSettings: Vector[EntryPointSettings] = {
+      for (_config <- config.getConfigList("entry-points-settings").asScala)
+        yield EntryPointSettings(_config)
+    }.toVector
+
+    val pipelineConfig         = config.getConfig("pipeline")
+    val pipelineName           = pipelineConfig.getString("name")
+    val pipelineLeftPortConfig = pipelineConfig.getConfig("left-port")
+
+    val commitParallelism = config.getInt("commit-parallelism")
+
+    val materializerSettings: Option[ActorMaterializerSettings] = try {
+      if (config.hasPath("materializer")) {
+        val _mc = config.getConfig("materializer")
+        val _defaultMc =
+          system.settings.config.getConfig("akka.stream.materializer")
+        Some(ActorMaterializerSettings(_mc.withFallback(_defaultMc)))
+      } else {
+        None
+      }
+    } catch {
+      case _: Exception =>
+        logger.warn("Configured materializer is not correct.")
+        None
+    }
+
+    DispatcherSettings(name,
+                       entryPointsSettings,
+                       pipelineName,
+                       pipelineLeftPortConfig,
+                       commitParallelism,
+                       materializerSettings)
+
+  }
+}
+
+final case class DispatcherSettings(
+    name: String,
+    entryPointsSettings: Vector[EntryPointSettings],
+    pipelineName: String,
+    pipelineLeftPortConfig: Config,
+    commitParallelism: Int,
+    materializerSettings: Option[ActorMaterializerSettings]
+)

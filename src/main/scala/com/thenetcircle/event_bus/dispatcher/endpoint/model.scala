@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.distributor.endpoint
+package com.thenetcircle.event_bus.dispatcher.endpoint
 
 trait EndPointSettings
 trait EndPoint
