@@ -19,56 +19,44 @@ package com.thenetcircle.event_bus.pipeline
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
-import com.thenetcircle.event_bus.Event
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Source}
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.{Event, EventFormat}
 
 trait PipelineSettings {
   def name: String
 }
-
 trait LeftPortSettings
-trait RightPortSettings
-trait BatchCommitSettings
-
-trait LeftPortSettingsBuilder {
-  def getSettings[T <: LeftPortSettings]: T
+trait RightPortSettings {
+  val eventFormat: EventFormat
 }
 
-trait RightPortSettingsBuilder {
-  def getSettings[T <: RightPortSettings]: T
-}
-
-trait BatchCommitSettingsBuilder {
-  def getSettings[T <: BatchCommitSettings]: T
-}
-
-trait Pipeline {
+abstract class Pipeline(pipelineSettings: PipelineSettings) {
 
   import Pipeline._
+
+  protected val pipelineName: String = pipelineSettings.name
 
   protected val leftPortId  = new AtomicInteger(0)
   protected val rightPortId = new AtomicInteger(0)
 
-  def leftPort: LeftPort
-  def rightPort: RightPort
+  def leftPort(leftPortSettings: LeftPortSettings): LeftPort
+  def rightPort(rightPortSettings: RightPortSettings)(
+      implicit materializer: Materializer,
+      extractor: EventExtractor): RightPort
 
 }
 
 object Pipeline {
 
   trait LeftPort {
-    def port: Sink[Event, NotUsed]
+    def port: Flow[Event, Event, NotUsed]
   }
 
   trait RightPort {
     def port: Source[Source[Event, NotUsed], _]
-    def commit: Sink[Event, NotUsed]
+    def committer: Flow[Event, Event, NotUsed]
   }
-
-  private val pipelines = Map.empty[String, Pipeline]
-
-  def apply(pipelineSettings: PipelineSettings): Pipeline = ???
-
-  def apply(name: String): Pipeline = ???
 
 }

@@ -69,7 +69,8 @@ class HttpEntryPointTest extends AkkaTestCase {
             import GraphDSL.Implicits._
 
             val handler =
-              builder.add(new HttpEntryPoint.ConnectionHandler())
+              builder.add(
+                new HttpEntryPoint.ConnectionHandler(EntryPointPriority.Normal))
 
             // format: off
             p1 ~> handler.in

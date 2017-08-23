@@ -19,22 +19,23 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.pipeline.{
-  BatchCommitSettings,
   LeftPortSettings,
   PipelineSettings,
   RightPortSettings
 }
 
 import scala.concurrent.duration.FiniteDuration
+import KafkaPipeline._
+import com.thenetcircle.event_bus.EventFormat
+import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 
 case class KafkaPipelineSettings(
     name: String,
-    producerSettings: ProducerSettings[KafkaPipeline.Key, KafkaPipeline.Value],
-    consumerSettings: ConsumerSettings[KafkaPipeline.Key, KafkaPipeline.Value]
+    producerSettings: ProducerSettings[Key, Value],
+    consumerSettings: ConsumerSettings[Key, Value]
 ) extends PipelineSettings
 
 case class KafkaLeftPortSettings(
-    commitParallelism: Int = 10,
     produceParallelism: Option[Int] = None,
     dispatcher: Option[String] = None,
     properties: Option[Map[String, String]] = None,
@@ -44,6 +45,9 @@ case class KafkaLeftPortSettings(
 case class KafkaRightPortSettings(
     groupId: String,
     extractParallelism: Int = 3,
+    commitParallelism: Int = 3,
+    commitBatchMax: Int = 20,
+    eventFormat: EventFormat = DefaultFormat,
     topics: Option[Set[String]] = None,
     topicPattern: Option[String] = None,
     dispatcher: Option[String] = None,
@@ -56,8 +60,3 @@ case class KafkaRightPortSettings(
     wakeupTimeout: Option[FiniteDuration] = None,
     maxWakeups: Option[Int] = None
 ) extends RightPortSettings
-
-case class KafkaBatchCommitSettings(
-    parallelism: Int = 3,
-    batchMax: Int = 20
-) extends BatchCommitSettings

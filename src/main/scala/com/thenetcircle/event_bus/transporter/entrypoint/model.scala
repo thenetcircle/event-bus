@@ -57,7 +57,8 @@ object EntryPointSettings {
           config.getInt("port")
         )
       case _ =>
-        throw new IllegalArgumentException("""EntryPoint "type" is not set!""")
+        throw new IllegalArgumentException(
+          """EntryPoint "type" is not correct!""")
     }
   }
 

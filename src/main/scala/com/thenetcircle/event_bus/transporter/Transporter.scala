@@ -21,18 +21,22 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{
+  Flow,
   GraphDSL,
   MergePrioritized,
   Partition,
-  RunnableGraph
+  RunnableGraph,
+  Sink
 }
-import com.thenetcircle.event_bus.pipeline.Pipeline
+import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
+import com.thenetcircle.event_bus.pipeline.PipelineFactory
 import com.thenetcircle.event_bus.{Event, EventPriority}
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[TransporterEntryPoint],
-                  pipeline: Pipeline[_, _, _])(implicit system: ActorSystem,
-                                               materializer: Materializer) {
+                  pipelineLeftPortBuilder: () => LeftPort)(
+    implicit system: ActorSystem,
+    materializer: Materializer) {
 
   // TODO draw a graph in comments
   // TODO error handler
@@ -62,6 +66,12 @@ class Transporter(settings: TransporterSettings,
                                  event =>
                                    priorities.indexOf(event.priority.id)))
 
+            val committer = Flow[Event]
+              .filter(_.committer.isDefined)
+              // TODO: take care of Supervision of mapAsync
+              .mapAsync(settings.commitParallelism)(_.committer.get.commit())
+              .to(Sink.ignore)
+
             // format: off
 
             entryPointSource ~> partitionShape
@@ -75,7 +85,7 @@ class Transporter(settings: TransporterSettings,
             // format: on
 
             // Here will create a new pipeline producer
-            mergePrioritizedShape.out ~> pipeline.leftPort
+            mergePrioritizedShape.out ~> pipelineLeftPortBuilder().port ~> committer
         }
 
         ClosedShape
@@ -100,8 +110,11 @@ object Transporter {
     val entryPoints =
       settings.transportEntryPointsSettings.map(TransporterEntryPoint(_))
 
-    val pipeline = Pipeline(settings.pipelineName)
+    val pipelineLeftPortBuilder = () => {
+      PipelineFactory.getLeftPort(settings.pipelineName,
+                                  settings.pipelineLeftPortConfig)
+    }
 
-    new Transporter(settings, entryPoints, pipeline)
+    new Transporter(settings, entryPoints, pipelineLeftPortBuilder)
   }
 }

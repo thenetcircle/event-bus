@@ -51,7 +51,8 @@ class HttpEntryPoint(
     : Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
     Http().bind(interface = settings.interface, port = settings.port)
 
-  val port: Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
+  override val port
+    : Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
     serverSource
       .map(connection => {
 
@@ -65,7 +66,7 @@ class HttpEntryPoint(
                 new HttpEntryPoint.ConnectionHandler(settings.priority))
             val unpackFlow = Flow[Future[HttpResponse]].mapAsync(1)(identity)
 
-            // ----- work flow -----
+            /** ----- work flow ----- */
             // format: off
             
             requestFlow ~> connectionHandler.in
@@ -92,17 +93,19 @@ object HttpEntryPoint {
       eventExtractor: EventExtractor): HttpEntryPoint =
     new HttpEntryPoint(settings)
 
-  /** A stage with one inlet and two outlets, When [[HttpRequest]] come in inlet
-    *  Will create a [[Future]] of [[HttpResponse]] to outlet0 and a [[Event]] to outlet1
-    *  After the [[Event]] got committed, The Future of HttpResponse will be completed
+  /** A stage with one inlet and two outlets,
     *
-    *  {{{
-    *                              +------------+
-    *             In[HttpRequest] ~~>           |
-    *                              |           ~~> Out1[Event]
-    *  Out0[Future[HttpResponse]] <~~           |
-    *                              +------------+
-    *  }}}
+    * After a [[HttpRequest]] come in inlet, It will create a [[Future]] of [[HttpResponse]] to outlet0
+    * and a [[Event]] to outlet1, Then after the [[Event]] got committed
+    * The Future of HttpResponse will also be completed
+    *
+    * {{{
+    *                             +------------+
+    *            In[HttpRequest] ~~>           |
+    *                             |           ~~> Out1[Event]
+    * Out0[Future[HttpResponse]] <~~           |
+    *                             +------------+
+    * }}}
     */
   final class ConnectionHandler(entryPointPriority: EntryPointPriority)(
       implicit materializer: Materializer,
@@ -121,6 +124,7 @@ object HttpEntryPoint {
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) {
 
+        // TODO: checks if out0 available
         def tryPullIn(): Unit =
           if (!hasBeenPulled(in))
             tryPull(in)
