@@ -28,19 +28,21 @@ import akka.stream.scaladsl.{
   RunnableGraph,
   Sink
 }
+import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
 import com.thenetcircle.event_bus.pipeline.PipelineFactory
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
 import com.thenetcircle.event_bus.{Event, EventPriority}
 
 class Transporter(settings: TransporterSettings,
-                  entryPoints: Vector[TransporterEntryPoint],
+                  entryPoints: Vector[EntryPoint],
                   pipelineLeftPortBuilder: () => LeftPort)(
     implicit system: ActorSystem,
     materializer: Materializer) {
 
-  // TODO draw a graph in comments
-  // TODO error handler
-  // TODO parallel and async
+  // TODO: draw a graph in comments
+  // TODO: error handler
+  // TODO: parallel and async
   lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
       .create() { implicit builder =>
@@ -50,11 +52,11 @@ class Transporter(settings: TransporterSettings,
         val priorities = EventPriority.values.toIndexedSeq.reverse.map(_.id)
 
         entryPoints foreach {
-          transporterEntryPoint: TransporterEntryPoint =>
-            val entryPointSettings = transporterEntryPoint.settings
+          entryPoint: EntryPoint =>
+            val entryPointSettings = entryPoint.settings
 
             val entryPointSource =
-              transporterEntryPoint.entryPoint.port
+              entryPoint.port
                 .flatMapMerge(entryPointSettings.maxParallelSources, identity)
 
             val mergePrioritizedShape =
@@ -108,7 +110,10 @@ object Transporter {
     }
 
     val entryPoints =
-      settings.transportEntryPointsSettings.map(TransporterEntryPoint(_))
+      settings.entryPointsSettings.map(s => {
+        implicit val exector = EventExtractor(s.eventFormat)
+        EntryPoint(s)
+      })
 
     val pipelineLeftPortBuilder = () => {
       PipelineFactory.getLeftPort(settings.pipelineName,

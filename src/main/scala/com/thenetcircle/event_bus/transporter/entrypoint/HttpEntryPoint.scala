@@ -41,7 +41,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Success}
 
 class HttpEntryPoint(
-    settings: HttpEntryPointSettings
+    val settings: HttpEntryPointSettings
 )(implicit system: ActorSystem,
   materializer: Materializer,
   eventExtractor: EventExtractor)
@@ -93,11 +93,8 @@ object HttpEntryPoint {
       eventExtractor: EventExtractor): HttpEntryPoint =
     new HttpEntryPoint(settings)
 
-  /** A stage with one inlet and two outlets,
-    *
-    * After a [[HttpRequest]] come in inlet, It will create a [[Future]] of [[HttpResponse]] to outlet0
-    * and a [[Event]] to outlet1, Then after the [[Event]] got committed
-    * The Future of HttpResponse will also be completed
+  /** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
+    * and a [[Event]] with a committer to complete the [[Future]]
     *
     * {{{
     *                             +------------+
@@ -106,6 +103,16 @@ object HttpEntryPoint {
     * Out0[Future[HttpResponse]] <~~           |
     *                             +------------+
     * }}}
+    *
+    * '''Emits when'''
+    *   a incoming [[HttpRequest]] successful transformed to a [[Event]],
+    *   the Future of [[HttpResponse]] will always emit to out0
+    *
+    * '''Backpressures when''' any of the outputs backpressure
+    *
+    * '''Completes when''' upstream completes
+    *
+    * '''Cancels when''' when any downstreams cancel
     */
   final class ConnectionHandler(entryPointPriority: EntryPointPriority)(
       implicit materializer: Materializer,

@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
-import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -28,32 +27,13 @@ import scala.collection.JavaConverters._
 
 object TransporterSettings extends StrictLogging {
 
-  // TODO adjust these default values when doing stress testing
-  val defaultMaxParallelSourcesPerEntryPoint = 100
-
   def apply(config: Config)(implicit system: ActorSystem): TransporterSettings = {
 
     val name = config.getString("name")
 
-    val transportEntryPointsSettings: Vector[TransporterEntryPointSettings] = {
-      for (epConfig <- config.getConfigList("entry-points-settings").asScala)
-        yield {
-          val maxParallelSources =
-            if (epConfig.hasPath("max-parallel-sources"))
-              epConfig.getInt("max-parallel-sources")
-            else defaultMaxParallelSourcesPerEntryPoint
-
-          val eventFormat =
-            if (epConfig.hasPath("format"))
-              EventFormat(epConfig.getString("format"))
-            else EventFormat.DefaultFormat
-
-          TransporterEntryPointSettings(
-            maxParallelSources,
-            eventFormat,
-            EntryPointSettings(epConfig)
-          )
-        }
+    val entryPointsSettings: Vector[EntryPointSettings] = {
+      for (_config <- config.getConfigList("entry-points-settings").asScala)
+        yield EntryPointSettings(_config)
     }.toVector
 
     val pipelineConfig         = config.getConfig("pipeline")
@@ -78,7 +58,7 @@ object TransporterSettings extends StrictLogging {
     }
 
     TransporterSettings(name,
-                        transportEntryPointsSettings,
+                        entryPointsSettings,
                         pipelineName,
                         pipelineLeftPortConfig,
                         commitParallelism,
@@ -89,7 +69,7 @@ object TransporterSettings extends StrictLogging {
 
 final case class TransporterSettings(
     name: String,
-    transportEntryPointsSettings: Vector[TransporterEntryPointSettings],
+    entryPointsSettings: Vector[EntryPointSettings],
     pipelineName: String,
     pipelineLeftPortConfig: Config,
     commitParallelism: Int,

@@ -20,7 +20,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.typesafe.config.{Config, ConfigException}
@@ -28,6 +28,8 @@ import com.typesafe.config.{Config, ConfigException}
 sealed trait EntryPointSettings {
   def name: String
   def priority: EntryPointPriority
+  def maxParallelSources: Int
+  def eventFormat: EventFormat
 }
 
 object EntryPointSettings {
@@ -50,9 +52,23 @@ object EntryPointSettings {
             EntryPointPriority(config.getInt("priority"))
           else EntryPointPriority.Normal
 
+        // TODO: adjust these default values when doing stress testing
+        // TODO: use reference.conf to set up default value
+        val maxParallelSources =
+          if (config.hasPath("max-parallel-sources"))
+            config.getInt("max-parallel-sources")
+          else 100
+
+        val eventFormat =
+          if (config.hasPath("format"))
+            EventFormat(config.getString("format"))
+          else EventFormat.DefaultFormat
+
         HttpEntryPointSettings(
           config.getString("name"),
           priority,
+          maxParallelSources,
+          eventFormat,
           config.getString("interface"),
           config.getInt("port")
         )
@@ -68,12 +84,15 @@ object EntryPointSettings {
 case class HttpEntryPointSettings(
     name: String,
     priority: EntryPointPriority,
+    maxParallelSources: Int,
+    eventFormat: EventFormat,
     interface: String,
     port: Int
 ) extends EntryPointSettings
 
 /** Abstraction Api of All EntryPoints */
 trait EntryPoint {
+  val settings: EntryPointSettings
   def port: Source[Source[Event, NotUsed], _]
 }
 
