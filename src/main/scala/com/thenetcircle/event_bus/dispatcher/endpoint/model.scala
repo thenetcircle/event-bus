@@ -43,7 +43,10 @@ object EndPoint {
 case class HttpEndPointSettings(
     name: String,
     host: String,
+    port: Int,
+    maxRetryTimes: Int,
+    expectedResponseData: String,
+    // TODO: set pool maxRetries to 1
     poolSettings: ConnectionPoolSettings,
-    port: Int = 80,
     defaultRequest: HttpRequest
 ) extends EndPointSettings

@@ -69,13 +69,18 @@ case class EventMetaData(
     trigger: Tuple2[String, String]
 )
 
+class EventContextValue {
+  def set[T](value: T) =
+  def get[T](): T = value
+}
+
 case class Event(
     metadata: EventMetaData,
     body: EventBody,
     channel: String,
     sourceType: EventSourceType,
     priority: EventPriority.EventPriority = EventPriority.Normal,
-    context: Map[String, Any] = Map.empty,
+    context: Map[String, EventContextValue] = Map.empty,
     committer: Option[EventCommitter] = None
 ) {
 
