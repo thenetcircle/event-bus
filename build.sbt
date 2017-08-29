@@ -7,19 +7,3 @@ lazy val eventBus = (project in file("."))
     Defaults.itSettings,
     libraryDependencies ++= Dependencies.eventBusDeps
   )
-
-lazy val benchmark = (project in file("benchmark"))
-  .enablePlugins(GatlingPlugin)
-  .settings(
-    name := "event-bus-benchmark",
-    scalaVersion := "2.11.8",
-    scalacOptions := Seq("-encoding",
-                         "UTF-8",
-                         "-target:jvm-1.8",
-                         "-deprecation",
-                         "-feature",
-                         "-unchecked",
-                         "-language:implicitConversions",
-                         "-language:postfixOps"),
-    libraryDependencies ++= Dependencies.benchmarkDeps
-  )
