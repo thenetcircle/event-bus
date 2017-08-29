@@ -55,10 +55,6 @@ class Transporter(settings: TransporterSettings,
           entryPoint: EntryPoint =>
             val entryPointSettings = entryPoint.settings
 
-            val entryPointSource =
-              entryPoint.port
-                .flatMapMerge(entryPointSettings.maxParallelSources, identity)
-
             val mergePrioritizedShape =
               builder.add(MergePrioritized[Event](priorities))
 
@@ -76,7 +72,7 @@ class Transporter(settings: TransporterSettings,
 
             // format: off
 
-            entryPointSource ~> partitionShape
+            entryPoint.port ~> partitionShape
 
             for (i <- priorities.indices) {
 

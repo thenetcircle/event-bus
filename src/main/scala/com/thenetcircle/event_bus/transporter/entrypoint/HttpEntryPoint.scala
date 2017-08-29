@@ -17,7 +17,6 @@
 
 package com.thenetcircle.event_bus.transporter.entrypoint
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{
@@ -41,46 +40,43 @@ import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Success}
 
 class HttpEntryPoint(
-    val settings: HttpEntryPointSettings
+    val settings: HttpEntryPointSettings,
+    httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
 )(implicit system: ActorSystem,
   materializer: Materializer,
   eventExtractor: EventExtractor)
     extends EntryPoint {
 
-  private val serverSource
-    : Source[Http.IncomingConnection, Future[Http.ServerBinding]] =
-    Http().bind(interface = settings.interface, port = settings.port)
+  override val port: Source[Event, _] =
+    httpBindSource
+      .flatMapMerge(
+        settings.maxConnections,
+        httpHandlerFlow => {
+          Source.fromGraph(GraphDSL.create() {
+            implicit builder =>
+              import GraphDSL.Implicits._
 
-  override val port
-    : Source[Source[Event, NotUsed], Future[Http.ServerBinding]] =
-    serverSource
-      .map(connection => {
-
-        Source.fromGraph(GraphDSL.create() {
-          implicit builder =>
-            import GraphDSL.Implicits._
-
-            val requestFlow = builder.add(connection.flow)
-            val connectionHandler =
-              builder.add(
+              val httpHandlerFlowShape = builder.add(httpHandlerFlow)
+              val connectionHandler = builder.add(
                 new HttpEntryPoint.ConnectionHandler(settings.priority))
-            val unpackFlow = Flow[Future[HttpResponse]].mapAsync(1)(identity)
+              val unpackFlow = Flow[Future[HttpResponse]].mapAsync(
+                settings.perConnectionParallelism)(identity)
 
-            /** ----- work flow ----- */
-            // format: off
+              /** ----- work flow ----- */
+              // format: off
+              // since Http().bind using join, The direction is a bit different
             
-            requestFlow ~> connectionHandler.in
+              httpHandlerFlowShape.out ~> connectionHandler.in
 
-                           connectionHandler.out0 ~> unpackFlow ~> requestFlow
+                                          connectionHandler.out0 ~> unpackFlow ~> httpHandlerFlowShape.in
             
-            // format: on
+              // format: on
 
-            SourceShape(connectionHandler.out1)
-        })
-
-      })
+              SourceShape(connectionHandler.out1)
+          })
+        }
+      )
       .named(s"entrypoint-${settings.name}")
-
 }
 
 object HttpEntryPoint {
@@ -90,8 +86,12 @@ object HttpEntryPoint {
   def apply(settings: HttpEntryPointSettings)(
       implicit system: ActorSystem,
       materializer: Materializer,
-      eventExtractor: EventExtractor): HttpEntryPoint =
-    new HttpEntryPoint(settings)
+      eventExtractor: EventExtractor): HttpEntryPoint = {
+    val serverSource = Http()
+      .bind(interface = settings.interface, port = settings.port)
+      .map(_.flow)
+    new HttpEntryPoint(settings, serverSource)
+  }
 
   /** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
     * and a [[Event]] with a committer to complete the [[Future]]
@@ -131,9 +131,8 @@ object HttpEntryPoint {
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) {
 
-        // TODO: checks if out0 available
         def tryPullIn(): Unit =
-          if (!hasBeenPulled(in))
+          if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1))
             tryPull(in)
 
         setHandler(
@@ -146,7 +145,7 @@ object HttpEntryPoint {
         )
 
         setHandler(out0, new OutHandler {
-          override def onPull(): Unit = {}
+          override def onPull(): Unit = tryPullIn()
         })
 
         setHandler(out1, new OutHandler {
@@ -198,6 +197,7 @@ object HttpEntryPoint {
           })
 
       }
+
   }
 
 }

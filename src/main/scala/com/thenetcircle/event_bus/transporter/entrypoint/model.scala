@@ -16,19 +16,17 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
+import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.{Config, ConfigException}
 
 sealed trait EntryPointSettings {
   def name: String
   def priority: EntryPointPriority
-  def maxParallelSources: Int
   def eventFormat: EventFormat
 }
 
@@ -53,10 +51,15 @@ object EntryPointSettings {
 
         // TODO: adjust these default values when doing stress testing
         // TODO: use reference.conf to set up default value
-        val maxParallelSources =
-          if (config.hasPath("max-parallel-sources"))
-            config.getInt("max-parallel-sources")
+        val maxConnections =
+          if (config.hasPath("max-connections"))
+            config.getInt("max-connections")
           else 100
+
+        val perConnectionParallelism =
+          if (config.hasPath("pre-connection-parallelism"))
+            config.getInt("pre-connection-parallelism")
+          else 3
 
         val eventFormat =
           if (config.hasPath("format"))
@@ -66,7 +69,8 @@ object EntryPointSettings {
         HttpEntryPointSettings(
           config.getString("name"),
           priority,
-          maxParallelSources,
+          maxConnections,
+          perConnectionParallelism,
           eventFormat,
           config.getString("interface"),
           config.getInt("port")
@@ -83,7 +87,8 @@ object EntryPointSettings {
 case class HttpEntryPointSettings(
     name: String,
     priority: EntryPointPriority,
-    maxParallelSources: Int,
+    maxConnections: Int,
+    perConnectionParallelism: Int,
     eventFormat: EventFormat,
     interface: String,
     port: Int
@@ -92,7 +97,7 @@ case class HttpEntryPointSettings(
 /** Abstraction Api of All EntryPoints */
 trait EntryPoint {
   val settings: EntryPointSettings
-  def port: Source[Source[Event, NotUsed], _]
+  def port: Source[Event, _]
 }
 
 /** Create a new EntryPoint based on it's settings

@@ -30,7 +30,7 @@ object Dependencies {
   private val redisConnector = "com.github.etaty"   %% "rediscala"                % "1.8.0"
   private val httpConnector  = "com.typesafe.akka"  %% "akka-http"                % akkaHttpVersion
   private val amqpConnector  = "com.lightbend.akka" %% "akka-stream-alpakka-amqp" % "0.10"
-  private val kafkaConnector = "com.typesafe.akka"  %% "akka-stream-kafka"        % "0.16"
+  private val kafkaConnector = "com.typesafe.akka"  %% "akka-stream-kafka"        % "0.17"
 
   // Apps
   val eventBusDeps = akkaStream ++ log ++ test ++ misc ++ Seq(

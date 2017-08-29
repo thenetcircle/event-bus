@@ -31,28 +31,33 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.base.AkkaTestCase
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
-import com.thenetcircle.event_bus.{Event, EventBody, EventMetaData}
+import com.thenetcircle.event_bus.{Event, EventBody, EventFormat, EventMetaData}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class HttpEntryPointTest extends AkkaTestCase {
 
-  /*test("online test") {
-    val hep = HttpEntryPoint[DefaultFormat](
-      HttpEntryPointSettings("test", "127.0.0.1", 8888)
+  test("online test") {
+    val settings = HttpEntryPointSettings(
+      "test-entrypoint",
+      EntryPointPriority.Normal,
+      3,
+      EventFormat.DefaultFormat,
+      "127.0.0.1",
+      8888
     )
 
-    val port = hep.port.runForeach(
-      s =>
-        s.runForeach(event => {
-          println(event.toString)
-          event.committer.get.commit()
-        })
-    )
+    implicit val ec = EventExtractor(EventFormat.DefaultFormat)
+    val hep         = HttpEntryPoint(settings)
+
+    val port = hep.port.runForeach(event => {
+      println(event.toString)
+      event.committer.foreach(_.commit())
+    })
 
     Await.ready(_system.whenTerminated, Duration.Inf)
-  }*/
+  }
 
   test("test ConnectionHandler") {
 
@@ -128,7 +133,10 @@ class HttpEntryPointTest extends AkkaTestCase {
     event.body shouldEqual EventBody(ByteString(data), DefaultFormat)
     event.committer.foreach(_.commit())
 
-    result = Await.result(sub1.expectNext(), 3.seconds)
+    sub2.request(1)
+    pub.sendNext(HttpRequest(entity = HttpEntity(data)))
+    sub2.expectNoMsg()
+
     result.status shouldEqual StatusCodes.OK
 
   }
