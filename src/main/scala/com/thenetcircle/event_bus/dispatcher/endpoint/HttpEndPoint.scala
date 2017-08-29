@@ -19,19 +19,12 @@ package com.thenetcircle.event_bus.dispatcher.endpoint
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.RequestEntityAcceptance.Expected
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.directives.BasicDirectives
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink}
-import akka.util.ByteString
+import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
 class HttpEndPoint(
@@ -41,8 +34,8 @@ class HttpEndPoint(
     extends EndPoint
     with StrictLogging {
 
-  override def port: Flow[Event, Event, NotUsed] =
-    Flow.fromGraph(GraphDSL.create() { implicit builder =>
+  override def port: Flow[Event, Event, NotUsed] = ???
+  /*Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
       val inlet = builder.add(Flow[Event])
@@ -104,20 +97,23 @@ class HttpEndPoint(
 
       FlowShape(inlet.in, outlet.out)
   })
-  
+
   private def checkResponseData(data: ByteString): Boolean =
     data.utf8String == settings.expectedResponseData
 
   private def eventPicker: Flow[(Try[HttpResponse], Event), Event, NotUsed] =
-    Flow[(Try[HttpResponse], Event)].map(_._2)
+    Flow[(Try[HttpResponse], Event)].map(_._2)*/
 
 }
 
 object HttpEndPoint {
 
   /** custom post method with idempotent set to true, it makes connectionPool retry if the requests failed */
-  val IPOST: HttpMethod =
-    HttpMethod.custom("POST", safe = false, idempotent = true, requestEntityAcceptance = Expected)
+  /*val IPOST: HttpMethod =
+    HttpMethod.custom("POST",
+                      safe = false,
+                      idempotent = true,
+                      requestEntityAcceptance = Expected)
 
   def apply(settings: HttpEndPointSettings)(
       implicit system: ActorSystem): HttpEndPoint = {
@@ -128,5 +124,5 @@ object HttpEndPoint {
       settings.poolSettings)
 
     new HttpEndPoint(settings, connectionPool)
-  }
+  }*/
 }

@@ -22,6 +22,11 @@ object Dependencies {
     "com.typesafe.akka" %% "akka-http-testkit"   % akkaHttpVersion % Test
   )
 
+  private val gatling = Seq(
+    "io.gatling.highcharts" % "gatling-charts-highcharts" % "2.2.5" % Test,
+    "io.gatling"            % "gatling-test-framework"    % "2.2.5" % Test
+  )
+
   private val misc = Seq(
     "io.spray"    %% "spray-json" % "1.3.3",
     "io.jvm.uuid" %% "scala-uuid" % "0.2.3"
@@ -39,4 +44,6 @@ object Dependencies {
     kafkaConnector,
     httpConnector
   )
+
+  val benchmarkDeps = gatling
 }

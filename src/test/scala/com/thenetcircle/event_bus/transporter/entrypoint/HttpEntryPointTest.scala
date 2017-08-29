@@ -25,7 +25,8 @@ import akka.http.scaladsl.model.{
   StatusCodes
 }
 import akka.stream.ClosedShape
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph}
+import akka.stream.scaladsl.{Flow, GraphDSL, Keep, RunnableGraph, Sink, Source}
+import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
@@ -38,11 +39,12 @@ import scala.concurrent.{Await, Future}
 
 class HttpEntryPointTest extends AkkaTestCase {
 
-  test("online test") {
+  /*test("online test") {
     val settings = HttpEntryPointSettings(
       "test-entrypoint",
       EntryPointPriority.Normal,
-      3,
+      1000,
+      10,
       EventFormat.DefaultFormat,
       "127.0.0.1",
       8888
@@ -57,6 +59,38 @@ class HttpEntryPointTest extends AkkaTestCase {
     })
 
     Await.ready(_system.whenTerminated, Duration.Inf)
+  }*/
+
+  test("test HttpEntryPoint") {
+    val settings = HttpEntryPointSettings(
+      "test-entrypoint",
+      EntryPointPriority.Normal,
+      1000,
+      10,
+      EventFormat.DefaultFormat,
+      "127.0.0.1",
+      8888
+    )
+
+    implicit val ec = EventExtractor(EventFormat.DefaultFormat)
+
+    val testin   = TestPublisher.probe[HttpRequest]()
+    val testout0 = TestSubscriber.probe[HttpResponse]()
+
+    val handler = Source.single(
+      Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(testout0),
+                                    Source.fromPublisher(testin)))
+    val hep      = new HttpEntryPoint(settings, handler)
+    val testout1 = hep.port.toMat(TestSink.probe[Event])(Keep.right).run()
+
+    testout0.request(1)
+    testout1.request(1)
+    testin.sendNext(HttpRequest())
+    testout1.expectNoMsg(100.millisecond)
+    var result = testout0.expectNext(100.millisecond)
+    result.status shouldEqual StatusCodes.BadRequest
+
+    // Await.ready(_system.whenTerminated, Duration.Inf)
   }
 
   test("test ConnectionHandler") {
@@ -67,7 +101,7 @@ class HttpEntryPointTest extends AkkaTestCase {
     val sink1  = TestSink.probe[Future[HttpResponse]]
     val sink2  = TestSink.probe[Event]
 
-    val (pub, sub1, sub2) =
+    val (testin, testout0, testout1) =
       RunnableGraph
         .fromGraph(GraphDSL.create(source, sink1, sink2)((_, _, _)) {
           implicit builder => (p1, p2, p3) =>
@@ -89,27 +123,27 @@ class HttpEntryPointTest extends AkkaTestCase {
 
     /**  ----  Bad Request Test ---- */
     // have to make demands first
-    sub1.request(1)
-    sub2.request(1)
-    pub.sendNext(HttpRequest())
-    var result = Await.result(sub1.expectNext(), 3.seconds)
+    testout0.request(1)
+    testout1.request(1)
+    testin.sendNext(HttpRequest())
+    var result = Await.result(testout0.expectNext(), 3.seconds)
     result.status shouldEqual StatusCodes.BadRequest
-    sub2.expectNoMsg(100.millisecond)
+    testout1.expectNoMsg(100.millisecond)
 
     /**  ----  Bad Request Test2 ---- */
-    sub1.request(1)
+    testout0.request(1)
     // sub2.request(1)
-    pub.sendNext(HttpRequest(entity = HttpEntity(s"""
+    testin.sendNext(HttpRequest(entity = HttpEntity(s"""
                                                     |{
                                                     |  "verb": "user.login"
                                                     |}
                                                     """)))
-    result = Await.result(sub1.expectNext(), 3.seconds)
+    result = Await.result(testout0.expectNext(), 3.seconds)
     result.status shouldEqual StatusCodes.BadRequest
-    sub2.expectNoMsg(100.millisecond)
+    testout1.expectNoMsg(100.millisecond)
 
     /**  ----  Good Request Test1 ---- */
-    sub1.request(1)
+    testout0.request(1)
     // sub2.request(1)
     val time = "2017-08-15T13:49:55Z"
     var data = s"""
@@ -120,9 +154,9 @@ class HttpEntryPointTest extends AkkaTestCase {
          |  "published": "$time"
          |}
       """.stripMargin
-    pub.sendNext(HttpRequest(entity = HttpEntity(data)))
+    testin.sendNext(HttpRequest(entity = HttpEntity(data)))
 
-    var event = sub2.expectNext()
+    var event = testout1.expectNext()
     event.metadata shouldEqual EventMetaData(
       "123",
       "user.login",
@@ -133,9 +167,9 @@ class HttpEntryPointTest extends AkkaTestCase {
     event.body shouldEqual EventBody(ByteString(data), DefaultFormat)
     event.committer.foreach(_.commit())
 
-    sub2.request(1)
-    pub.sendNext(HttpRequest(entity = HttpEntity(data)))
-    sub2.expectNoMsg()
+    testout1.request(1)
+    testin.sendNext(HttpRequest(entity = HttpEntity(data)))
+    testout1.expectNoMsg()
 
     result.status shouldEqual StatusCodes.OK
 

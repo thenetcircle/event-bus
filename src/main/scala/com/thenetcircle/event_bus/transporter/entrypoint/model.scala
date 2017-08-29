@@ -54,12 +54,12 @@ object EntryPointSettings {
         val maxConnections =
           if (config.hasPath("max-connections"))
             config.getInt("max-connections")
-          else 100
+          else 1000
 
         val perConnectionParallelism =
           if (config.hasPath("pre-connection-parallelism"))
             config.getInt("pre-connection-parallelism")
-          else 3
+          else 10
 
         val eventFormat =
           if (config.hasPath("format"))
