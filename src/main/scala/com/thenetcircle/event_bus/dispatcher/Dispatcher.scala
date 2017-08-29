@@ -30,13 +30,14 @@ class Dispatcher(
           builder.add(Balance[Event](endPoints.size))
 
         // format: off
-        
+
+        // TODO: this will lead to unordered commits, should balance by subsources
         source ~> balanceShape.in
 
-        for (i <- endPoints.indices) {
-          val committer = pipelineRightPort.committer.to(Sink.ignore)
+        for (i <- endPoints.indices) {          
+          val pipelineCommitter = pipelineRightPort.committer.to(Sink.ignore)
 
-                  balanceShape.out(i) ~> endPoints(i).port ~> committer
+                  balanceShape.out(i) ~> endPoints(i).port ~> pipelineCommitter
 
         }
 

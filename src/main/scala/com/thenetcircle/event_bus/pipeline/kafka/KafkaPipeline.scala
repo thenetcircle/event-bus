@@ -224,6 +224,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
         val output    = builder.add(Flow[Event])
         val commitSink =
           Flow[Event]
+          // TODO: use generics for event context
             .filter(_.hasContext("kafkaCommittableOffset"))
             .map(_.context("kafkaCommittableOffset")
               .asInstanceOf[CommittableOffset])
