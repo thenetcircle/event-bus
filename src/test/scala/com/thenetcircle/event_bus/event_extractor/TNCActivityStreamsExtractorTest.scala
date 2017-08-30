@@ -22,11 +22,89 @@ import java.text.SimpleDateFormat
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.{DefaultFormat, TestFormat}
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.base.AsyncTestCase
+import com.thenetcircle.event_bus.base.AsyncTestSpec
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 
-class TNCActivityStreamsExtractorTest extends AsyncTestCase {
+class TNCActivityStreamsExtractorTest extends AsyncTestSpec {
+
+  private val defaultFormatExtractor: EventExtractor = EventExtractor(
+    DefaultFormat)
+  private val testFormatExtractor: EventExtractor = EventExtractor(TestFormat)
+
+  behavior of "EventExtractor"
+
+  it should "be failed with non-json data" in {
+    var data = ByteString(
+      """
+        |abc
+      """.stripMargin
+    )
+    recoverToSucceededIf[JsonParser.ParsingException] {
+      defaultFormatExtractor.extract(data)
+    }.map(r => assert(r == Succeeded))
+
+  }
+
+  it should "be failed with unaccepted json data" in {
+    val data = ByteString(
+      """
+        |{
+        |  "verb": "user.login"
+        |}
+      """.stripMargin
+    )
+    // Object is missing required member 'actor'
+    recoverToSucceededIf[DeserializationException] {
+      defaultFormatExtractor.extract(data)
+    }.map(r => assert(r == Succeeded))
+  }
+
+  it should "be successful with valid data" in {
+    val time = "2017-08-15T13:49:55Z"
+    var data = ByteString(
+      s"""
+        |{
+        |  "id": "123",
+        |  "verb": "user.login",
+        |  "actor": {"id": "123", "objectType": "user"},
+        |  "published": "$time"
+        |}
+      """.stripMargin
+    )
+
+    defaultFormatExtractor.extract(data) map { d =>
+      inside(d) {
+        case ExtractedData(body, metadata, _, _) =>
+          body shouldEqual EventBody(data, DefaultFormat)
+          metadata shouldEqual EventMetaData(
+            "123",
+            "user.login",
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
+              .parse(time)
+              .getTime,
+            "",
+            "123" -> "user")
+      }
+    }
+  }
+
+  it should "be successful with valid data and specific format" in {
+    var data = ByteString(
+      s"""
+         |{
+         |  "verb": "user.login",
+         |  "actor": {"id": "123", "objectType": "user"}
+         |}
+      """.stripMargin
+    )
+    testFormatExtractor.extract(data) map { d =>
+      inside(d) {
+        case ExtractedData(body, metadata, _, _) =>
+          body shouldEqual EventBody(data, TestFormat)
+      }
+    }
+  }
 
   /*val json =
     """
@@ -58,78 +136,5 @@ class TNCActivityStreamsExtractorTest extends AsyncTestCase {
       |  }
       |}
     """.stripMargin*/
-
-  private val defaultFormatExtractor: EventExtractor = EventExtractor(
-    DefaultFormat)
-
-  private val testFormatExtractor: EventExtractor = EventExtractor(TestFormat)
-
-  test("test invalid data") {
-    var data = ByteString(
-      """
-        |abc
-      """.stripMargin
-    )
-    recoverToSucceededIf[JsonParser.ParsingException] {
-      defaultFormatExtractor.extract(data)
-    }.map(r => assert(r == Succeeded))
-
-    data = ByteString(
-      """
-        |{
-        |  "verb": "user.login"
-        |}
-      """.stripMargin
-    )
-    // Object is missing required member 'actor'
-    recoverToSucceededIf[DeserializationException] {
-      defaultFormatExtractor.extract(data)
-    }.map(r => assert(r == Succeeded))
-  }
-
-  test("test valid data") {
-    val time = "2017-08-15T13:49:55Z"
-    var data = ByteString(
-      s"""
-        |{
-        |  "id": "123",
-        |  "verb": "user.login",
-        |  "actor": {"id": "123", "objectType": "user"},
-        |  "published": "$time"
-        |}
-      """.stripMargin
-    )
-    defaultFormatExtractor.extract(data) map { d =>
-      inside(d) {
-        case ExtractedData(body, metadata, _, _) =>
-          body shouldEqual EventBody(data, DefaultFormat)
-          metadata shouldEqual EventMetaData(
-            "123",
-            "user.login",
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-              .parse(time)
-              .getTime,
-            "",
-            "123" -> "user")
-      }
-    }
-  }
-
-  test("test another data format") {
-    var data = ByteString(
-      s"""
-         |{
-         |  "verb": "user.login",
-         |  "actor": {"id": "123", "objectType": "user"}
-         |}
-      """.stripMargin
-    )
-    testFormatExtractor.extract(data) map { d =>
-      inside(d) {
-        case ExtractedData(body, metadata, _, _) =>
-          body shouldEqual EventBody(data, TestFormat)
-      }
-    }
-  }
 
 }

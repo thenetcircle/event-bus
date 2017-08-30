@@ -15,6 +15,12 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter
+package com.thenetcircle.event_bus.base
 
-class TransporterTest {}
+import org.scalatest._
+
+trait AsyncTestSpec
+    extends AsyncFlatSpecLike
+    with Matchers
+    with BeforeAndAfterAll
+    with Inside {}

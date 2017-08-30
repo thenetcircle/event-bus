@@ -36,14 +36,15 @@ import com.thenetcircle.event_bus.{Event, EventPriority}
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
-                  pipelineLeftPortBuilder: () => LeftPort)(
-    implicit system: ActorSystem,
-    materializer: Materializer) {
+                  pipelineLeftPortBuilder: () => LeftPort,
+                  committer: Sink[Event, NotUsed])(implicit system: ActorSystem,
+                                                   materializer: Materializer) {
 
   // TODO: draw a graph in comments
   // TODO: error handler
   // TODO: parallel and async
-  lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
+  // TODO: one entrypoint onely to one leftport of pipeline?
+  private lazy val stream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
     GraphDSL
       .create() { implicit builder =>
         import GraphDSL.Implicits._
@@ -52,23 +53,15 @@ class Transporter(settings: TransporterSettings,
         val priorities = EventPriority.values.toIndexedSeq.reverse.map(_.id)
 
         entryPoints foreach {
-          entryPoint: EntryPoint =>
-            val entryPointSettings = entryPoint.settings
-
-            val mergePrioritizedShape =
-              builder.add(MergePrioritized[Event](priorities))
-
+          entryPoint: EntryPoint => // for each EntryPoint
             val partitionShape =
               builder.add(
                 Partition[Event](priorities.size,
                                  event =>
-                                   priorities.indexOf(event.priority.id)))
+                                   priorities.indexOf(event.priority.id)).async)
 
-            val committer = Flow[Event]
-              .filter(_.committer.isDefined)
-              // TODO: take care of Supervision of mapAsync
-              .mapAsync(settings.commitParallelism)(_.committer.get.commit())
-              .to(Sink.ignore)
+            val mergePrioritizedShape =
+              builder.add(MergePrioritized[Event](priorities))
 
             // format: off
 
@@ -76,7 +69,7 @@ class Transporter(settings: TransporterSettings,
 
             for (i <- priorities.indices) {
 
-                         partitionShape.out(i) ~> mergePrioritizedShape.in(i)
+                               partitionShape.out(i) ~> mergePrioritizedShape.in(i)
 
             }
 
@@ -116,6 +109,12 @@ object Transporter {
                                   settings.pipelineLeftPortConfig)
     }
 
-    new Transporter(settings, entryPoints, pipelineLeftPortBuilder)
+    val committer = Flow[Event]
+      .filter(_.committer.isDefined)
+      // TODO: take care of Supervision of mapAsync
+      .mapAsync(settings.commitParallelism)(_.committer.get.commit())
+      .to(Sink.ignore)
+
+    new Transporter(settings, entryPoints, pipelineLeftPortBuilder, committer)
   }
 }

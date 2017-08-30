@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus
 
 import akka.util.ByteString
 
-import scala.collection.immutable.HashMap
 import scala.concurrent.Future
 
 sealed trait EventFormat
@@ -76,7 +75,7 @@ case class Event(
     channel: String,
     sourceType: EventSourceType,
     priority: EventPriority.EventPriority = EventPriority.Normal,
-    context: HashMap[String, Any] = HashMap.empty,
+    context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
 ) {
 

@@ -28,20 +28,22 @@ import com.thenetcircle.event_bus.Event
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
 class HttpEndPoint(
     val settings: HttpEndPointSettings,
     connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _])(
-    implicit val system: ActorSystem)
+    implicit val materializer: Materializer)
     extends EndPoint
     with StrictLogging {
 
+  implicit val ec: ExecutionContext = materializer.executionContext
+
   private val retryEngine =
-    new HttpEndPoint.RetryEngine[Event](settings.maxRetryTimes)
+    new HttpEndPoint.RetryEngine(settings.maxRetryTimes)
 
   private val sender =
     Flow[Event]
@@ -108,7 +110,7 @@ class HttpEndPoint(
 object HttpEndPoint {
 
   def apply(settings: HttpEndPointSettings)(
-      implicit system: ActorSystem): HttpEndPoint = {
+      implicit system: ActorSystem, materializer: Materializer): HttpEndPoint = {
     // TODO: check when it creates a new pool
     val connectionPool = Http().cachedHostConnectionPool[Event](
       settings.host,
@@ -118,8 +120,10 @@ object HttpEndPoint {
     new HttpEndPoint(settings, connectionPool)
   }
 
-  final class RetryEngine[T <: Event](maxRetryTimes: Int) extends GraphStage[RetryEngineShape[T, (Boolean, T), T, T, T]]
+  final class RetryEngine(maxRetryTimes: Int) extends GraphStage[RetryEngineShape[Event, (Boolean, Event), Event, Event, Event]]
   {
+    type T = Event
+
     val incoming: Inlet[T]                    = Inlet("incoming")
     val result: Inlet[(Boolean, T)] = Inlet("result")
     val ready: Outlet[T]   = Outlet("ready")

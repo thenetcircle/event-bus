@@ -17,9 +17,9 @@
 
 package com.thenetcircle.event_bus.pipeline
 
-import com.thenetcircle.event_bus.base.AkkaTestCase
+import com.thenetcircle.event_bus.base.AkkaTestSpec
 
-class KafkaPipelineTest extends AkkaTestCase {
+class KafkaPipelineSpec extends AkkaTestSpec {
 
   /*val producerSettings = ProducerSettings[KafkaKey, KafkaValue](
     _system,

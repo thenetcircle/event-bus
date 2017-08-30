@@ -23,10 +23,10 @@ import akka.testkit.{ImplicitSender, TestKit}
 
 import scala.concurrent.duration._
 
-abstract class AkkaTestCase(val _system: ActorSystem)
+abstract class AkkaTestSpec(val _system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
-    with TestCase {
+    with TestSpec {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1,
