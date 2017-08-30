@@ -40,7 +40,8 @@ object TransporterSettings extends StrictLogging {
     val pipelineName           = pipelineConfig.getString("name")
     val pipelineLeftPortConfig = pipelineConfig.getConfig("left-port")
 
-    val commitParallelism = config.getInt("commit-parallelism")
+    val transportParallelism = config.getInt("transport-parallelism")
+    val commitParallelism    = config.getInt("commit-parallelism")
 
     val materializerSettings: Option[ActorMaterializerSettings] = try {
       if (config.hasPath("materializer")) {
@@ -62,6 +63,7 @@ object TransporterSettings extends StrictLogging {
                         pipelineName,
                         pipelineLeftPortConfig,
                         commitParallelism,
+                        transportParallelism,
                         materializerSettings)
 
   }
@@ -73,5 +75,6 @@ final case class TransporterSettings(
     pipelineName: String,
     pipelineLeftPortConfig: Config,
     commitParallelism: Int,
+    transportParallelism: Int = 1,
     materializerSettings: Option[ActorMaterializerSettings]
 )

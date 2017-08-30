@@ -21,49 +21,49 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.base.{AkkaTestSpec, createTestEvent}
 import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.{
   EntryPoint,
   EntryPointPriority,
-  EntryPointSettings,
   HttpEntryPointSettings
 }
-import com.thenetcircle.event_bus.{Event, EventFormat, EventPriority}
+import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.ConfigFactory
 
 class TransporterSpec extends AkkaTestSpec {
 
   behavior of "Transporter"
 
-  it should "be delivered according to the priority" in {
-    val testSource = TestPublisher.probe[Event]()
-    val testSink   = TestSubscriber.probe[Event]()
+  it should "be delivered according to the priority of the EntryPoint" in {
+    val testSource1 = TestPublisher.probe[Event]()
+    val testSource2 = TestPublisher.probe[Event]()
+    val testSource3 = TestPublisher.probe[Event]()
+    val testSink    = TestSubscriber.probe[Event]()
 
-    val transporter = getTransporter(Vector(Source.fromPublisher(testSource)),
-                                     Sink.fromSubscriber(testSink))
+    val transporter = getTransporter(
+      Vector(
+        (EntryPointPriority.High, Source.fromPublisher(testSource1)),
+        (EntryPointPriority.Normal, Source.fromPublisher(testSource1)),
+        (EntryPointPriority.Low, Source.fromPublisher(testSource1))
+      ),
+      Sink.fromSubscriber(testSink)
+    )
     transporter.run()
 
-    val testEvent1 = createTestEvent(priority = EventPriority.Urgent)
-    val testEvent2 = createTestEvent(priority = EventPriority.High)
-    val testEvent3 = createTestEvent(priority = EventPriority.Medium)
-    val testEvent4 = createTestEvent(priority = EventPriority.Normal)
-    val testEvent5 = createTestEvent(priority = EventPriority.Low)
+    val testEvent1 = createTestEvent("testEvent1")
+    val testEvent2 = createTestEvent("testEvent2")
+    val testEvent3 = createTestEvent("testEvent3")
 
-    testSource.sendNext(testEvent5)
-    testSource.sendNext(testEvent3)
-    testSource.sendNext(testEvent2)
-    testSource.sendNext(testEvent4)
-    testSource.sendNext(testEvent1)
+    testSource1.sendNext(testEvent1)
+    testSource2.sendNext(testEvent2)
+    testSource3.sendNext(testEvent3)
 
-    testSink.request(5)
-    testSink.expectNext(testEvent1)
-    testSink.expectNext(testEvent2)
-    testSink.expectNext(testEvent3)
-    testSink.expectNext(testEvent4)
-    testSink.expectNext(testEvent5)
+    println(testSink.expectNext())
   }
 
-  private def getTransporter(sources: Vector[Source[Event, NotUsed]],
-                             committer: Sink[Event, NotUsed]): Transporter = {
+  private def getTransporter(
+      testSources: Vector[(EntryPointPriority, Source[Event, NotUsed])],
+      testSink: Sink[Event, NotUsed]): Transporter = {
     val entryPointSettings = HttpEntryPointSettings(
       "TestHttpEntryPoint",
       EntryPointPriority.Normal,
@@ -74,10 +74,13 @@ class TransporterSpec extends AkkaTestSpec {
       8888
     )
 
-    val testEntryPoints = sources.map(s =>
+    val testEntryPoints = testSources.map(_source =>
       new EntryPoint {
-        override val settings: EntryPointSettings = entryPointSettings
-        override def port: Source[Event, _]       = s
+        override val name: String                 = s"TestEntryPoint-${_source._1}"
+        override val eventFormat: EventFormat     = EventFormat.DefaultFormat
+        override val priority: EntryPointPriority = _source._1
+
+        override def port: Source[Event, _] = _source._2
     })
 
     val testPipelineLeftPort = new LeftPort {
@@ -90,13 +93,14 @@ class TransporterSpec extends AkkaTestSpec {
       "TestPipeline",
       ConfigFactory.empty(),
       1,
+      1,
       None
     )
 
     new Transporter(settings,
                     testEntryPoints,
                     () => testPipelineLeftPort,
-                    committer)
+                    testSink)
   }
 
 }

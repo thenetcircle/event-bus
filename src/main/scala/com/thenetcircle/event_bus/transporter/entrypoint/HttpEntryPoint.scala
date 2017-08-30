@@ -40,12 +40,16 @@ import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
 import scala.util.{Failure, Success}
 
 class HttpEntryPoint(
-    val settings: HttpEntryPointSettings,
+    settings: HttpEntryPointSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
 )(implicit system: ActorSystem,
   materializer: Materializer,
   eventExtractor: EventExtractor)
     extends EntryPoint {
+
+  override val name: String                 = settings.name
+  override val priority: EntryPointPriority = settings.priority
+  override val eventFormat: EventFormat     = settings.eventFormat
 
   override val port: Source[Event, _] =
     httpBindSource
@@ -87,10 +91,10 @@ object HttpEntryPoint {
       implicit system: ActorSystem,
       materializer: Materializer,
       eventExtractor: EventExtractor): HttpEntryPoint = {
-    val serverSource = Http()
+    val httpBindSource = Http()
       .bind(interface = settings.interface, port = settings.port)
       .map(_.flow)
-    new HttpEntryPoint(settings, serverSource)
+    new HttpEntryPoint(settings, httpBindSource)
   }
 
   /** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]

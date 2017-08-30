@@ -96,7 +96,11 @@ case class HttpEntryPointSettings(
 
 /** Abstraction Api of All EntryPoints */
 trait EntryPoint {
-  val settings: EntryPointSettings
+  val name: String
+  val priority: EntryPointPriority
+  val eventFormat: EventFormat
+
+  // TODO: add switcher as the materialized value
   def port: Source[Event, _]
 }
 
@@ -116,7 +120,7 @@ object EntryPoint {
 
 object EntryPointPriority extends Enumeration {
   type EntryPointPriority = Value
-  val High   = Value(3, "High")
-  val Normal = Value(2, "Normal")
+  val High   = Value(6, "High")
+  val Normal = Value(3, "Normal")
   val Low    = Value(1, "Low")
 }

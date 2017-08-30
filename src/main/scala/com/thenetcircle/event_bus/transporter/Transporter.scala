@@ -21,18 +21,22 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{
+  Balance,
   Flow,
   GraphDSL,
+  Merge,
   MergePrioritized,
-  Partition,
   RunnableGraph,
   Sink
 }
+import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
 import com.thenetcircle.event_bus.pipeline.PipelineFactory
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
-import com.thenetcircle.event_bus.{Event, EventPriority}
+import com.thenetcircle.event_bus.transporter.entrypoint.{
+  EntryPoint,
+  EntryPointPriority
+}
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
@@ -49,35 +53,45 @@ class Transporter(settings: TransporterSettings,
       .create() { implicit builder =>
         import GraphDSL.Implicits._
 
-        // IndexedSeq(6, 5, 4, 3, 2)
-        val priorities = EventPriority.values.toIndexedSeq.reverse.map(_.id)
+        val transportParallelism = settings.transportParallelism
+        val balancer             = builder.add(Balance[Event](transportParallelism))
+        val committerMerger      = builder.add(Merge[Event](transportParallelism))
 
-        entryPoints foreach {
-          entryPoint: EntryPoint => // for each EntryPoint
-            val partitionShape =
-              builder.add(
-                Partition[Event](priorities.size,
-                                 event =>
-                                   priorities.indexOf(event.priority.id)).async)
+        // IndexedSeq(6, 3, 1)
+        val priorities =
+          EntryPointPriority.values.toIndexedSeq.reverse.map(_.id)
+        val prioritizedChannel =
+          builder.add(MergePrioritized[Event](priorities))
 
-            val mergePrioritizedShape =
-              builder.add(MergePrioritized[Event](priorities))
+        /** --------------- Work Flow ---------------- */
+        // format: off
 
-            // format: off
+        for ((priorityId, priorityGroupedEntryPoints) <- entryPoints.groupBy(_.priority.id)) {
 
-            entryPoint.port ~> partitionShape
+          val targetChannel =
+            prioritizedChannel.in(priorities.indexOf(priorityId))
 
-            for (i <- priorities.indices) {
-
-                               partitionShape.out(i) ~> mergePrioritizedShape.in(i)
-
+          if (priorityGroupedEntryPoints.size > 1) {
+            val merge = builder.add(Merge[Event](priorityGroupedEntryPoints.size))
+            for (i <- priorityGroupedEntryPoints.indices) {
+              priorityGroupedEntryPoints(i).port ~> merge.in(i)
             }
+            merge.out ~> targetChannel
+          } else {
+            priorityGroupedEntryPoints(0).port ~> targetChannel
+          }
 
-            // format: on
-
-            // Here will create a new pipeline producer
-            mergePrioritizedShape.out ~> pipelineLeftPortBuilder().port ~> committer
         }
+
+        prioritizedChannel ~> balancer
+
+        for (i <- 0 until transportParallelism) {
+
+                              balancer.out(i) ~> pipelineLeftPortBuilder().port.async ~> committerMerger.in(i)
+
+        }
+
+                                                                                         committerMerger.out ~> committer.async
 
         ClosedShape
       }
@@ -109,6 +123,7 @@ object Transporter {
                                   settings.pipelineLeftPortConfig)
     }
 
+    // TODO: move into class
     val committer = Flow[Event]
       .filter(_.committer.isDefined)
       // TODO: take care of Supervision of mapAsync
