@@ -16,37 +16,49 @@
  */
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
-import akka.NotUsed
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.settings.ConnectionPoolSettings
+
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigException}
 
-sealed trait EndPointSettings {
+trait EndPoint {
+  val name: String
+  def port: Flow[Event, Event, _]
+}
+
+object EndPoint {
+  def apply(settings: EndPointSettings)(implicit system: ActorSystem,
+                                        materializer: Materializer): EndPoint =
+    settings match {
+      case s: HttpEndPointSettings => HttpEndPoint(s)
+    }
+}
+
+trait EndPointSettings {
   def name: String
 }
 
 object EndPointSettings {
-  def apply(config: Config): EndPointSettings = ???
-}
 
-trait EndPoint {
-  val settings: EndPointSettings
-  def port: Flow[Event, Event, NotUsed]
-}
+  /** Returns a [[EndPointSettings]] from a TypeSafe [[Config]]
+    *
+    * @throws ConfigException
+    *             if config incorrect
+    * @throws IllegalArgumentException
+    *             if "type" didn't match any predefined types
+    */
+  def apply(config: Config)(implicit system: ActorSystem): EndPointSettings = {
+    var endPointType = config.getString("type")
 
-object EndPoint {
-  def apply(settings: EndPointSettings): EndPoint = ???
-}
+    endPointType.toUpperCase() match {
+      case "HTTP" =>
+        HttpEndPointSettings(config)
 
-case class HttpEndPointSettings(
-    name: String,
-    host: String,
-    port: Int,
-    maxRetryTimes: Int,
-    expectedResponseData: String,
-    // TODO: set pool maxRetries to 1
-    poolSettings: ConnectionPoolSettings,
-    defaultRequest: HttpRequest
-) extends EndPointSettings
+      case _ =>
+        throw new IllegalArgumentException(
+          """EndPoint "type" is not correct!""")
+    }
+  }
+}

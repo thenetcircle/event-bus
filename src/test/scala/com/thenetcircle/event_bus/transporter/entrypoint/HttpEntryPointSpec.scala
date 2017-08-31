@@ -24,6 +24,7 @@ import akka.http.scaladsl.model.{
   HttpResponse,
   StatusCodes
 }
+import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.ClosedShape
 import akka.stream.scaladsl.{Flow, GraphDSL, Keep, RunnableGraph, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
@@ -125,6 +126,7 @@ class HttpEntryPointSpec extends AkkaTestSpec {
       1000,
       10,
       EventFormat.DefaultFormat,
+      ServerSettings(actorSystem),
       "127.0.0.1",
       8888
     )

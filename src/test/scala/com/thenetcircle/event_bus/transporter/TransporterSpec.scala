@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.transporter
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.NotUsed
+import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
@@ -162,6 +163,7 @@ class TransporterSpec extends AkkaTestSpec {
       100,
       10,
       EventFormat.DefaultFormat,
+      ServerSettings(actorSystem),
       "localhost",
       8888
     )

@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -24,76 +25,12 @@ import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.Entr
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.{Config, ConfigException}
 
-sealed trait EntryPointSettings {
-  def name: String
-  def priority: EntryPointPriority
-  def eventFormat: EventFormat
+object EntryPointPriority extends Enumeration {
+  type EntryPointPriority = Value
+  val High   = Value(6, "High")
+  val Normal = Value(3, "Normal")
+  val Low    = Value(1, "Low")
 }
-
-object EntryPointSettings {
-
-  /** Returns a [[EntryPointSettings]] from a TypeSafe [[Config]]
-    *
-    * @throws ConfigException
-    *             if config incorrect
-    * @throws IllegalArgumentException
-    *             if "type" didn't match any predefined types
-    */
-  def apply(config: Config): EntryPointSettings = {
-    var entryPointType = config.getString("type")
-
-    entryPointType.toUpperCase() match {
-      case "HTTP" =>
-        // TODO: move to HttpEntryPointSettingsFactory
-        val priority =
-          if (config.hasPath("priority"))
-            EntryPointPriority(config.getInt("priority"))
-          else EntryPointPriority.Normal
-
-        // TODO: adjust these default values when doing stress testing
-        // TODO: use reference.conf to set up default value
-        val maxConnections =
-          if (config.hasPath("max-connections"))
-            config.getInt("max-connections")
-          else 1000
-
-        val perConnectionParallelism =
-          if (config.hasPath("pre-connection-parallelism"))
-            config.getInt("pre-connection-parallelism")
-          else 10
-
-        val eventFormat =
-          if (config.hasPath("format"))
-            EventFormat(config.getString("format"))
-          else EventFormat.DefaultFormat
-
-        HttpEntryPointSettings(
-          config.getString("name"),
-          priority,
-          maxConnections,
-          perConnectionParallelism,
-          eventFormat,
-          config.getString("interface"),
-          config.getInt("port")
-        )
-      case _ =>
-        throw new IllegalArgumentException(
-          """EntryPoint "type" is not correct!""")
-    }
-  }
-
-}
-
-/** Http EntryPoint Settings */
-case class HttpEntryPointSettings(
-    name: String,
-    priority: EntryPointPriority,
-    maxConnections: Int,
-    perConnectionParallelism: Int,
-    eventFormat: EventFormat,
-    interface: String,
-    port: Int
-) extends EntryPointSettings
 
 /** Abstraction Api of All EntryPoints */
 trait EntryPoint {
@@ -119,9 +56,31 @@ object EntryPoint {
 
 }
 
-object EntryPointPriority extends Enumeration {
-  type EntryPointPriority = Value
-  val High   = Value(6, "High")
-  val Normal = Value(3, "Normal")
-  val Low    = Value(1, "Low")
+trait EntryPointSettings {
+  def name: String
+  def priority: EntryPointPriority
+  def eventFormat: EventFormat
+}
+
+object EntryPointSettings {
+
+  /** Returns a [[EntryPointSettings]] from a TypeSafe [[Config]]
+    *
+    * @throws ConfigException
+    *             if config incorrect
+    * @throws IllegalArgumentException
+    *             if "type" didn't match any predefined types
+    */
+  def apply(config: Config)(implicit system: ActorSystem): EntryPointSettings = {
+    var entryPointType = config.getString("type")
+
+    entryPointType.toUpperCase() match {
+      case "HTTP" =>
+        HttpEntryPointSettings(config)
+
+      case _ =>
+        throw new IllegalArgumentException(
+          """EntryPoint "type" is not correct!""")
+    }
+  }
 }

@@ -90,8 +90,13 @@ object HttpEntryPoint {
       materializer: Materializer,
       eventExtractor: EventExtractor): HttpEntryPoint = {
     val httpBindSource = Http()
-      .bind(interface = settings.interface, port = settings.port)
+      .bind(
+        interface = settings.interface,
+        port = settings.port,
+        settings = settings.serverSettings
+      )
       .map(_.flow)
+
     new HttpEntryPoint(settings, httpBindSource)
   }
 

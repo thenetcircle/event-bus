@@ -40,7 +40,10 @@ class HttpEndPoint(
     extends EndPoint
     with StrictLogging {
 
-  implicit val ec: ExecutionContext = materializer.executionContext
+  override val name: String = settings.name
+
+  implicit val executionContext: ExecutionContext =
+    materializer.executionContext
 
   private val retryEngine =
     new HttpEndPoint.RetryEngine(settings.maxRetryTimes)
@@ -115,7 +118,7 @@ object HttpEndPoint {
     val connectionPool = Http().cachedHostConnectionPool[Event](
       settings.host,
       settings.port,
-      settings.poolSettings)
+      settings.connectionPoolSettings)
 
     new HttpEndPoint(settings, connectionPool)
   }

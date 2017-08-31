@@ -43,20 +43,17 @@ object TransporterSettings extends StrictLogging {
     val transportParallelism = config.getInt("transport-parallelism")
     val commitParallelism    = config.getInt("commit-parallelism")
 
-    val materializerSettings: Option[ActorMaterializerSettings] = try {
+    val materializerSettings: Option[ActorMaterializerSettings] =
       if (config.hasPath("materializer")) {
-        val _mc = config.getConfig("materializer")
-        val _defaultMc =
-          system.settings.config.getConfig("akka.stream.materializer")
-        Some(ActorMaterializerSettings(_mc.withFallback(_defaultMc)))
+        Some(
+          ActorMaterializerSettings(
+            config
+              .getConfig("materializer")
+              .withFallback(system.settings.config
+                .getConfig("akka.stream.materializer"))))
       } else {
         None
       }
-    } catch {
-      case _: Exception =>
-        logger.warn("Configured materializer is not correct.")
-        None
-    }
 
     TransporterSettings(name,
                         entryPointsSettings,

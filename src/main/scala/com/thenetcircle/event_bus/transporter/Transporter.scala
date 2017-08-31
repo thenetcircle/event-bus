@@ -117,10 +117,7 @@ object Transporter {
   def apply(settings: TransporterSettings)(
       implicit system: ActorSystem): Transporter = {
 
-    implicit val materializer = settings.materializerSettings match {
-      case Some(_settings) => ActorMaterializer(_settings)
-      case None            => ActorMaterializer()
-    }
+    implicit val materializer = ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
     val entryPoints =
       settings.entryPointsSettings.map(s => {
