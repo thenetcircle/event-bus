@@ -36,15 +36,13 @@ import com.thenetcircle.event_bus.event_extractor.{
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success}
 
 class HttpEntryPoint(
     settings: HttpEntryPointSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
-)(implicit system: ActorSystem,
-  materializer: Materializer,
-  eventExtractor: EventExtractor)
+)(implicit materializer: Materializer, eventExtractor: EventExtractor)
     extends EntryPoint {
 
   override val name: String                 = settings.name
@@ -123,7 +121,8 @@ object HttpEntryPoint {
       eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
-    implicit val _ec: ExecutionContextExecutor = materializer.executionContext
+    implicit val executionContext: ExecutionContext =
+      materializer.executionContext
 
     val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
     val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")

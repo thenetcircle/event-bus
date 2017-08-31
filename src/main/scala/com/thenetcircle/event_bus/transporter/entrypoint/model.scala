@@ -44,6 +44,7 @@ object EntryPointSettings {
 
     entryPointType.toUpperCase() match {
       case "HTTP" =>
+        // TODO: move to HttpEntryPointSettingsFactory
         val priority =
           if (config.hasPath("priority"))
             EntryPointPriority(config.getInt("priority"))

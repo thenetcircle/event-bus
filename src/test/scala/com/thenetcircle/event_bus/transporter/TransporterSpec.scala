@@ -16,8 +16,11 @@
  */
 
 package com.thenetcircle.event_bus.transporter
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.FlowShape
+import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.base.{AkkaTestSpec, createTestEvent}
 import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
@@ -30,40 +33,129 @@ import com.thenetcircle.event_bus.transporter.entrypoint.{
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.ConfigFactory
 
+import scala.concurrent.Future
+
 class TransporterSpec extends AkkaTestSpec {
 
   behavior of "Transporter"
 
   it should "be delivered according to the priority of the EntryPoint" in {
-    val testSource1 = TestPublisher.probe[Event]()
-    val testSource2 = TestPublisher.probe[Event]()
-    val testSource3 = TestPublisher.probe[Event]()
-    val testSink    = TestSubscriber.probe[Event]()
+    val eventsCount     = 20000
+    val testLowEvent    = createTestEvent("testEvent1")
+    val testNormalEvent = createTestEvent("testEvent2")
+    val testHighEvent   = createTestEvent("testEvent3")
 
-    val transporter = getTransporter(
+    val testPipelinePort = TestSubscriber.probe[Event]()
+
+    val testLowSource1 =
+      Source.fromIterator(() => Seq.fill(eventsCount)(testLowEvent).iterator)
+    val testLowSource2 =
+      Source.fromIterator(() => Seq.fill(eventsCount)(testLowEvent).iterator)
+
+    val testNormalSource1 =
+      Source.fromIterator(() => Seq.fill(eventsCount)(testNormalEvent).iterator)
+    val testNormalSource2 =
+      Source.fromIterator(() => Seq.fill(eventsCount)(testNormalEvent).iterator)
+
+    val testHighSource =
+      Source.fromIterator(() => Seq.fill(eventsCount)(testHighEvent).iterator)
+
+    getTransporter(
       Vector(
-        (EntryPointPriority.High, Source.fromPublisher(testSource1)),
-        (EntryPointPriority.Normal, Source.fromPublisher(testSource1)),
-        (EntryPointPriority.Low, Source.fromPublisher(testSource1))
+        (EntryPointPriority.Low, testLowSource1),
+        (EntryPointPriority.Low, testLowSource2),
+        (EntryPointPriority.High, testHighSource),
+        (EntryPointPriority.Normal, testNormalSource1),
+        (EntryPointPriority.Normal, testNormalSource2)
       ),
-      Sink.fromSubscriber(testSink)
-    )
-    transporter.run()
+      Vector(Sink.fromSubscriber(testPipelinePort))
+    ).run()
 
-    val testEvent1 = createTestEvent("testEvent1")
-    val testEvent2 = createTestEvent("testEvent2")
-    val testEvent3 = createTestEvent("testEvent3")
+    var collected = Seq.empty[Event]
+    for (_ <- 1 to eventsCount) {
+      collected :+= testPipelinePort.requestNext()
+    }
 
-    testSource1.sendNext(testEvent1)
-    testSource2.sendNext(testEvent2)
-    testSource3.sendNext(testEvent3)
+    val lows    = collected.count(_ == testLowEvent).toDouble
+    val normals = collected.count(_ == testNormalEvent).toDouble
+    val highs   = collected.count(_ == testHighEvent).toDouble
 
-    println(testSink.expectNext())
+    (highs / lows).round shouldEqual 6
+    (highs / normals).round shouldEqual 2
+    (normals / lows).round shouldEqual 3
+  }
+
+  it should "commit event after transported" in {
+    val testPublisher = TestPublisher.probe[Event]()
+
+    getTransporter(
+      Vector(
+        (EntryPointPriority.Normal, Source.fromPublisher(testPublisher))
+      ),
+      Vector(Sink.ignore),
+      commitParallelism = 10
+    ).run()
+
+    var result = new AtomicInteger(0)
+
+    val testEvent =
+      createTestEvent("TestEvent").withCommitter(() =>
+        Future { result.incrementAndGet() })
+    val count = 10000
+
+    for (_ <- 1 to count) {
+      testPublisher.sendNext(testEvent)
+    }
+
+    Thread.sleep(100)
+    result.get() shouldEqual count
+  }
+
+  it should "concurrently processing when transportParallelism greater than 1" in {
+    var result = new AtomicInteger(0)
+    val testEvent = createTestEvent("TestEvent").withCommitter(() =>
+      Future { result.incrementAndGet() })
+
+    val testCount = 10000
+    val testSource1 =
+      Source.fromIterator(() => Seq.fill(testCount)(testEvent).iterator)
+    val testSource2 =
+      Source.fromIterator(() => Seq.fill(testCount)(testEvent).iterator)
+    val testSource3 =
+      Source.fromIterator(() => Seq.fill(testCount)(testEvent).iterator)
+
+    val testSink1 = TestSubscriber.probe[Event]()
+    val testSink2 = TestSubscriber.probe[Event]()
+
+    getTransporter(
+      Vector(
+        (EntryPointPriority.High, testSource1),
+        (EntryPointPriority.Normal, testSource2),
+        (EntryPointPriority.Low, testSource3)
+      ),
+      Vector(Sink.fromSubscriber(testSink1), Sink.fromSubscriber(testSink2)),
+      commitParallelism = 10,
+      transportParallelism = 2
+    ).run()
+
+    var sink1Collected = Seq.empty[Event]
+    var sink2Collected = Seq.empty[Event]
+    for (_ <- 1 to (testCount / 2) * 3) {
+      sink1Collected :+= testSink1.requestNext()
+      sink2Collected :+= testSink2.requestNext()
+    }
+
+    sink1Collected.size shouldEqual sink2Collected.size
+
+    Thread.sleep(100)
+    result.get() shouldEqual 30000
   }
 
   private def getTransporter(
-      testSources: Vector[(EntryPointPriority, Source[Event, NotUsed])],
-      testSink: Sink[Event, NotUsed]): Transporter = {
+      testSources: Vector[(EntryPointPriority, Source[Event, _])],
+      testPipelinePort: Vector[Sink[Event, _]],
+      commitParallelism: Int = 1,
+      transportParallelism: Int = 1): Transporter = {
     val entryPointSettings = HttpEntryPointSettings(
       "TestHttpEntryPoint",
       EntryPointPriority.Normal,
@@ -84,7 +176,26 @@ class TransporterSpec extends AkkaTestSpec {
     })
 
     val testPipelineLeftPort = new LeftPort {
-      override def port: Flow[Event, Event, NotUsed] = Flow[Event].map(e => e)
+      var currentIndex = 0
+      override def port: Flow[Event, Event, NotUsed] = {
+        val flow = Flow.fromGraph(GraphDSL.create() { implicit builder =>
+          import GraphDSL.Implicits._
+
+          val inlet     = builder.add(Flow[Event])
+          val outlet    = builder.add(Flow[Event])
+          val broadcast = builder.add(Broadcast[Event](2))
+
+          // format: off
+          inlet ~> broadcast
+          broadcast.out(0) ~> testPipelinePort(currentIndex)
+          broadcast.out(1) ~> outlet
+          // format: on
+
+          FlowShape(inlet.in, outlet.out)
+        })
+        currentIndex += 1
+        flow
+      }
     }
 
     val settings = TransporterSettings(
@@ -92,15 +203,12 @@ class TransporterSpec extends AkkaTestSpec {
       Vector(entryPointSettings),
       "TestPipeline",
       ConfigFactory.empty(),
-      1,
-      1,
+      commitParallelism,
+      transportParallelism,
       None
     )
 
-    new Transporter(settings,
-                    testEntryPoints,
-                    () => testPipelineLeftPort,
-                    testSink)
+    new Transporter(settings, testEntryPoints, () => testPipelineLeftPort)
   }
 
 }

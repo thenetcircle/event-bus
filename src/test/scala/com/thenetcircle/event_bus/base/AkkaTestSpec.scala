@@ -21,6 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 abstract class AkkaTestSpec(val _system: ActorSystem)
@@ -34,6 +35,9 @@ abstract class AkkaTestSpec(val _system: ActorSystem)
   )
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
+
+  implicit val executionContext: ExecutionContext =
+    materializer.executionContext
 
   def this() = this(ActorSystem("beineng-test"))
 
