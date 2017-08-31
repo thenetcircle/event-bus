@@ -27,6 +27,7 @@ case class HttpEndPointSettings(
     host: String,
     port: Int,
     maxRetryTimes: Int,
+    // TODO: set to optional
     expectedResponseData: String,
     // TODO: set pool maxRetries to 1
     connectionPoolSettings: ConnectionPoolSettings,

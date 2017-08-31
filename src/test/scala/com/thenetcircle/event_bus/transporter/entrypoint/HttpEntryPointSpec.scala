@@ -31,7 +31,7 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.base.AkkaTestSpec
+import com.thenetcircle.event_bus.testkit.AkkaTestSpec
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.{Event, EventBody, EventFormat, EventMetaData}
 

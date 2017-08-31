@@ -34,9 +34,9 @@ import scala.util.{Failure, Success, Try}
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
 class HttpEndPoint(
-    val settings: HttpEndPointSettings,
-    connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _])(
-    implicit val materializer: Materializer)
+    settings: HttpEndPointSettings,
+    connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
+    fallbacker: Sink[Event, _])(implicit val materializer: Materializer)
     extends EndPoint
     with StrictLogging {
 
@@ -44,9 +44,6 @@ class HttpEndPoint(
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
-
-  private val retryEngine =
-    new HttpEndPoint.RetryEngine(settings.maxRetryTimes)
 
   private val sender =
     Flow[Event]
@@ -83,9 +80,6 @@ class HttpEndPoint(
       // TODO: take care of failed cases
       .mapAsync(1)(identity)
 
-  // TODO: complete fallbacker
-  private val fallbacker: Sink[Event, NotUsed] = Flow[Event].to(Sink.ignore)
-
   private def checkResponse(response: HttpResponse,
                             entity: HttpEntity.Strict): Boolean = {
     response.status
@@ -95,6 +89,9 @@ class HttpEndPoint(
   override def port: Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
+
+      val retryEngine =
+        builder.add(new HttpEndPoint.RetryEngine(settings.maxRetryTimes))
 
       /** --- work flow --- */
       // format: off
@@ -120,7 +117,10 @@ object HttpEndPoint {
       settings.port,
       settings.connectionPoolSettings)
 
-    new HttpEndPoint(settings, connectionPool)
+    // TODO: complete fallbacker
+    val fallbacker: Sink[Event, NotUsed] = Flow[Event].to(Sink.ignore)
+
+    new HttpEndPoint(settings, connectionPool, fallbacker)
   }
 
   final class RetryEngine(maxRetryTimes: Int) extends GraphStage[RetryEngineShape[Event, (Boolean, Event), Event, Event, Event]]
@@ -142,6 +142,8 @@ object HttpEndPoint {
 
         override def preStart(): Unit = tryPull(incoming)
 
+        def tryPullIncoming(): Unit = if (!hasBeenPulled(incoming)) tryPull(incoming)
+
         setHandler(incoming, new InHandler {
           override def onPush() = push(ready, grab(incoming))
         })
@@ -155,7 +157,7 @@ object HttpEndPoint {
                   if (event.hasContext(retryFieldName))
                     event.context(retryFieldName).asInstanceOf[Int]
                   else
-                    0
+                    0 // TODO: to be 1
 
                 if (retryTimes >= maxRetryTimes)
                   push(failed, event)
@@ -170,11 +172,11 @@ object HttpEndPoint {
         })
 
         setHandler(succeed, new OutHandler {
-          override def onPull() = tryPull(incoming)
+          override def onPull() = tryPullIncoming()
         })
 
         setHandler(failed, new OutHandler {
-          override def onPull() = tryPull(incoming)
+          override def onPull() = tryPullIncoming()
         })
       }
   }

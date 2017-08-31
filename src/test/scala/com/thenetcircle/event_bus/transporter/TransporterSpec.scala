@@ -23,7 +23,7 @@ import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.base.{AkkaTestSpec, createTestEvent}
+import com.thenetcircle.event_bus.testkit.{AkkaTestSpec, createTestEvent}
 import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.{

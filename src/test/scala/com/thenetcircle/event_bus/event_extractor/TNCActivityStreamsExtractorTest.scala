@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.{DefaultFormat, TestFormat}
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.base.AsyncTestSpec
+import com.thenetcircle.event_bus.testkit.AsyncTestSpec
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 

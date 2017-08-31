@@ -15,8 +15,12 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.base
+package com.thenetcircle.event_bus.testkit
 
 import org.scalatest._
 
-trait TestSpec extends FlatSpecLike with Matchers with BeforeAndAfterAll {}
+trait AsyncTestSpec
+    extends AsyncFlatSpecLike
+    with Matchers
+    with BeforeAndAfterAll
+    with Inside {}

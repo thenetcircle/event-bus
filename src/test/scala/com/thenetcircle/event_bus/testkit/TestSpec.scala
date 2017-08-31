@@ -15,21 +15,8 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.testkit
 
-import akka.util.ByteString
-import com.thenetcircle.event_bus.EventPriority.EventPriority
+import org.scalatest._
 
-package object base {
-  def createTestEvent(name: String = "TestEvent",
-                      time: Long = 111,
-                      sourceType: EventSourceType = EventSourceType.Http,
-                      priority: EventPriority = EventPriority.Normal): Event =
-    Event(
-      EventMetaData("uuid", name, time, "publisher", ("user", "222")),
-      EventBody(ByteString("body"), EventFormat.DefaultFormat),
-      "channel",
-      sourceType,
-      priority
-    )
-}
+trait TestSpec extends FlatSpecLike with Matchers with BeforeAndAfterAll {}
