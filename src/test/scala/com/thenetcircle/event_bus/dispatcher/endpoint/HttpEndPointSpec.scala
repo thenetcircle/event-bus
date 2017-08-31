@@ -56,6 +56,9 @@ class HttpEndPointSpec extends AkkaTestSpec {
       .run()
 
     val testEvent = createTestEvent()
+
+    sub.request(1)
+    pub.expectRequest()
     pub.sendNext(testEvent)
     sub.expectNext(testEvent)
   }

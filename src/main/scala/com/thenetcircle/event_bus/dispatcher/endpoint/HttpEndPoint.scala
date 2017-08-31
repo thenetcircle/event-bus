@@ -64,7 +64,7 @@ class HttpEndPoint(
               response.entity
                 .toStrict(3.seconds)
                 .map(entity =>
-                  if (checkResponse(response, entity)) {
+                  if (!checkResponse(response, entity)) {
                     logger.error(
                       s"Event  ${event.metadata.name} sent failed with unexpected response: ${entity.data}.")
                     (false, event)
@@ -138,45 +138,67 @@ object HttpEndPoint {
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) {
-        private val retryFieldName = "retry-times"
+        // private val retryFieldName = "retry-times"
+        private var retryingEvent: Option[(Int, T)] = None
 
-        override def preStart(): Unit = tryPull(incoming)
-
-        def tryPullIncoming(): Unit = if (!hasBeenPulled(incoming)) tryPull(incoming)
+        def clearRetryingEvent(): Unit = {
+          retryingEvent = None
+        }
 
         setHandler(incoming, new InHandler {
-          override def onPush() = push(ready, grab(incoming))
+          override def onPush() = {
+            println("push1")
+            push(ready, grab(incoming))
+          }
         })
 
         setHandler(result, new InHandler {
           override def onPush() = {
             grab(result) match {
-              case (true, event) => push(succeed, event)  // pull(incoming)
+              case (true, event) =>
+                retryingEvent = None
+                push(succeed, event)  // pull(incoming)
+
               case (false, event) =>
+                retryingEvent match {
+                  case Some((retryTimes, _)) if retryTimes >= maxRetryTimes =>
+                    retryingEvent = None
+                    push(failed, event)
+                  case _ =>
+                }
+
+
                 val retryTimes =
                   if (event.hasContext(retryFieldName))
                     event.context(retryFieldName).asInstanceOf[Int]
                   else
-                    0 // TODO: to be 1
+                    0
 
-                if (retryTimes >= maxRetryTimes)
+                if (retryTimes >= maxRetryTimes) {
+                  clearRetryingEvent()
                   push(failed, event)
-                else
-                  push(ready, event.addContext(retryFieldName, retryTimes + 1))
+                }
+                else {
+                  retryingEvent = retryingEvent match {
+                    case Some((retryTimes, event)) => Some((retryTimes + 1, event))
+                    case None => Some((1, event))
+                  }
+                  pull(result)
+                }
             }
           }
         })
 
         setHandler(ready, new OutHandler {
-          override def onPull() = tryPull(result)
-        })
-
-        setHandler(succeed, new OutHandler {
-          override def onPull() = tryPullIncoming()
+          override def onPull() = tryPull(incoming)
         })
 
         setHandler(failed, new OutHandler {
-          override def onPull() = tryPullIncoming()
+          override def onPull() = if (!hasBeenPulled(result)) tryPull(result)
+        })
+
+        setHandler(succeed, new OutHandler {
+          override def onPull() = if (!hasBeenPulled(result)) tryPull(result)
         })
       }
   }
