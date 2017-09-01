@@ -69,8 +69,8 @@ class HttpEndPoint(
         }
 
         if (!result) {
-          logger.error(
-            s"Event ${event.metadata.name} sent failed with unexpected data: ${entity.data.utf8String}.")
+          logger.warn(
+            s"Event ${event.metadata.name} sent failed with unexpected response: ${entity.data.utf8String}.")
           false
         } else {
           true
@@ -135,7 +135,7 @@ object HttpEndPoint {
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) with StageLogging {
-        val retryContextField: String = "retried-times"
+        val retryTimes: AtomicInteger = new AtomicInteger(0)
         val pending: AtomicInteger = new AtomicInteger(0)
         
         setHandler(incoming, new InHandler {
@@ -184,25 +184,25 @@ object HttpEndPoint {
             case Failure(ex) =>
               log.error(s"Parse response error: ${ex.getMessage}")
           }
+
           pending.decrementAndGet()
-          if (pending.get() == 0 && isClosed(incoming)) completeStage()
+          checkCompletion()
         }
 
         def failureHandler(event: T): Unit = {
-          val retryTimes = {
-            if (event.hasContext(retryContextField))
-              event.context(retryContextField).asInstanceOf[Int]
-            else 1
-          }
-
-          if (retryTimes >= maxRetryTimes) {
+          if (retryTimes.incrementAndGet() >= maxRetryTimes) {
+            log.error(s"Event sent failed after retried $maxRetryTimes times.")
             push(failed, event)
+            retryTimes.set(0)
           }
           else {
-            emit(ready, event.addContext(retryContextField, retryTimes + 1))
+            emit(ready, event)
             tryPull(result)
           }
         }
+
+        def checkCompletion(): Unit =
+          if (pending.get() == 0 && retryTimes.get() == 0 && isClosed(incoming)) completeStage()
       }
   }
 

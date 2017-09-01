@@ -67,7 +67,7 @@ class HttpEndPointSpec extends AkkaTestSpec {
     succeed.request(1)
     incoming.sendNext(testEvent)
     succeed.expectNoMsg(100.millisecond)
-    fallbacker.expectNext(testEvent.addContext("retried-times", 10))
+    fallbacker.expectNext(testEvent)
     fallbacker.expectNoMsg(100.millisecond)
     senderTimes shouldEqual 10
   }
@@ -153,10 +153,10 @@ class HttpEndPointSpec extends AkkaTestSpec {
     val okEvent = createTestEvent(body = "OK")
     val koEvent = createTestEvent(body = "KO")
 
-    val source1 = Source.fromIterator(() => Seq.fill(1000)(okEvent).iterator)
-    val source2 = Source.fromIterator(() => Seq.fill(15)(koEvent).iterator)
+    val source1 = Source.fromIterator(() => Seq.fill(100)(okEvent).iterator)
+    val source2 = Source.fromIterator(() => Seq.fill(10)(koEvent).iterator)
     val source3 = Source.fromIterator(() =>
-      (for (_ <- 1 to 500) yield koEvent :: okEvent :: Nil).flatten.iterator)
+      (for (_ <- 1 to 50) yield koEvent :: okEvent :: Nil).flatten.iterator)
 
     val sink1 =
       source1.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
@@ -168,23 +168,34 @@ class HttpEndPointSpec extends AkkaTestSpec {
 
     val sink3 =
       source3.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
-    // fallbacker.expectSubscription().request(1)
     val fallbackerSub3 = fallbacker.expectSubscription()
 
     fallbackerSub1.request(1)
-    for (i <- 1 to 1000) {
+    for (i <- 1 to 100) {
       sink1.request(1)
       sink1.expectNext(okEvent)
     }
+    fallbacker.expectComplete()
     sink1.expectComplete()
 
-    for (i <- 1 to 15) {
+    sink2.request(1)
+    for (i <- 1 to 10) {
       fallbackerSub2.request(1)
-      sink2.request(1)
-      sink2.expectNoMsg(100.millisecond)
       fallbacker.expectNext(koEvent)
     }
-    sink2.expectComplete()
+    fallbacker.expectComplete()
+
+    for (i <- 1 to 50) {
+      sink3.request(1)
+      fallbackerSub3.request(1)
+      sink3.expectNoMsg(100.millisecond)
+      fallbacker.expectNext(koEvent)
+
+      sink3.request(1)
+      fallbackerSub3.request(1)
+      sink3.expectNext(okEvent)
+      fallbacker.expectNoMsg(100.millisecond)
+    }
   }
 
   // TODO: test abnormal cases, like exception, cancel, error, complete etc...
