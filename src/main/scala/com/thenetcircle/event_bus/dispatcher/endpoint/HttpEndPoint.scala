@@ -17,13 +17,15 @@
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.stage._
 import com.thenetcircle.event_bus.Event
 import com.typesafe.scalalogging.StrictLogging
 
@@ -40,12 +42,12 @@ class HttpEndPoint(
     extends EndPoint
     with StrictLogging {
 
-  override val name: String = settings.name
-
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
-  private val sender =
+  override val name: String = settings.name
+
+  val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
     Flow[Event]
       .map(event => {
         settings.defaultRequest
@@ -53,37 +55,27 @@ class HttpEndPoint(
       })
       .via(connectionPool)
 
-  private val resChecker
-    : Flow[(Try[HttpResponse], Event), (Boolean, Event), NotUsed] =
-    Flow[(Try[HttpResponse], Event)]
-      .map {
-        case (responseTry, event) =>
-          responseTry match {
-            // if response succeed, checks the body
-            case Success(response) =>
-              response.entity
-                .toStrict(3.seconds)
-                .map(entity =>
-                  if (!checkResponse(response, entity)) {
-                    logger.error(
-                      s"Event  ${event.metadata.name} sent failed with unexpected response: ${entity.data}.")
-                    (false, event)
-                  } else {
-                    (true, event)
-                })
-            case Failure(ex) =>
-              logger.error(
-                s"Event ${event.metadata.name} sent failed with error: ${ex.getMessage}.")
-              Future.successful((false, event))
-          }
-      }
-      // TODO: take care of failed cases
-      .mapAsync(1)(identity)
+  def responseChecker(response: HttpResponse, event: Event): Future[Boolean] = {
+    response.entity
+    // TODO: failed cases?
+      .toStrict(3.seconds)
+      .map { entity =>
+        val result: Boolean = {
+          response.status.isSuccess() && (settings.expectedResponse match {
+            case Some(expectedResponse) =>
+              entity.data.utf8String == expectedResponse
+            case None => true
+          })
+        }
 
-  private def checkResponse(response: HttpResponse,
-                            entity: HttpEntity.Strict): Boolean = {
-    response.status
-      .isSuccess() && entity.data.utf8String == settings.expectedResponseData
+        if (!result) {
+          logger.error(
+            s"Event ${event.metadata.name} sent failed with unexpected data: ${entity.data.utf8String}.")
+          false
+        } else {
+          true
+        }
+      }
   }
 
   override def port: Flow[Event, Event, NotUsed] =
@@ -91,15 +83,17 @@ class HttpEndPoint(
       import GraphDSL.Implicits._
 
       val retryEngine =
-        builder.add(new HttpEndPoint.RetryEngine(settings.maxRetryTimes))
+        builder.add(
+          new HttpEndPoint.HttpRetryEngine(settings.maxRetryTimes,
+                                           responseChecker))
 
       /** --- work flow --- */
       // format: off
 
                    /** check if the result is expected, otherwise will retry */
 
-      retryEngine.ready ~> sender ~> resChecker ~> retryEngine.result
-                                                   retryEngine.failed ~> fallbacker
+      retryEngine.ready ~> sender ~>  retryEngine.result
+                                      retryEngine.failed ~> fallbacker
 
       // format on
 
@@ -123,70 +117,96 @@ object HttpEndPoint {
     new HttpEndPoint(settings, connectionPool, fallbacker)
   }
 
-  final class RetryEngine(maxRetryTimes: Int) extends GraphStage[RetryEngineShape[Event, (Boolean, Event), Event, Event, Event]]
+  final class HttpRetryEngine(
+    maxRetryTimes: Int,
+    responseChecker: (HttpResponse, Event) => Future[Boolean]
+  )(implicit executionContext: ExecutionContext) extends GraphStage[HttpRetryEngineShape[Event, (Try[HttpResponse], Event), Event, Event, Event]]
   {
     type T = Event
 
-    val incoming: Inlet[T]                    = Inlet("incoming")
-    val result: Inlet[(Boolean, T)] = Inlet("result")
-    val ready: Outlet[T]   = Outlet("ready")
-    val succeed: Outlet[T]   = Outlet("succeed")
-    val failed: Outlet[T]   = Outlet("failed")
+    val incoming: Inlet[T]          = Inlet("incoming")
+    val result: Inlet[(Try[HttpResponse], T)] = Inlet("result")
+    val ready: Outlet[T]            = Outlet("ready")
+    val succeed: Outlet[T]          = Outlet("succeed")
+    val failed: Outlet[T]           = Outlet("failed")
 
-    override def shape: RetryEngineShape[T, (Boolean, T), T, T, T] =
-      RetryEngineShape(incoming, result, ready, succeed, failed)
+    override def shape: HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T] =
+      HttpRetryEngineShape(incoming, result, ready, succeed, failed)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) {
-        private var retryTimes: Int = 0
-        def resetRetryTimes(): Unit = retryTimes = 0
-
+      new GraphStageLogic(shape) with StageLogging {
+        val retryContextField: String = "retried-times"
+        val pending: AtomicInteger = new AtomicInteger(0)
+        
         setHandler(incoming, new InHandler {
-          override def onPush() = {
-            println("push1")
-            push(ready, grab(incoming))
-            retryTimes += 1
+          override def onPush() = push(ready, grab(incoming))
+          override def onUpstreamFinish() = {
+            if (pending.get() == 0) completeStage()
           }
+        })
+
+        setHandler(ready, new OutHandler {
+          override def onPull() = tryPull(incoming)
         })
 
         setHandler(result, new InHandler {
           override def onPush() = {
             grab(result) match {
-              case (true, event) =>
-                resetRetryTimes()
-                push(succeed, event)  // pull(incoming)
+              case (responseTry, event) =>
+                responseTry match {
+                  case Success(response) =>
+                    pending.incrementAndGet()
+                    responseChecker(response, event).onComplete(getAsyncCallback(responseHandler(event)).invoke)
 
-              case (false, event) =>
-                if (retryTimes >= maxRetryTimes) {
-                  resetRetryTimes()
-                  push(failed, event)
-                }
-                else {
-                  tryPull(result)
-                  push(ready, event)
-                  retryTimes += 1
+                  case Failure(ex) =>
+                    log.error(
+                      s"Event ${event.metadata.name} sent failed with error: ${ex.getMessage}.")
+                    failureHandler(event)
                 }
             }
           }
         })
 
-        setHandler(ready, new OutHandler {
-          override def onPull() = if (retryTimes == 0) {
-            tryPull(incoming)
-          }
-        })
-
         setHandler(failed, new OutHandler {
-          override def onPull() = if (!hasBeenPulled(result)) tryPull(result)
+          override def onPull() = if (!hasBeenPulled(result) && isAvailable(succeed)) tryPull(result)
         })
 
         setHandler(succeed, new OutHandler {
-          override def onPull() = if (!hasBeenPulled(result)) tryPull(result)
+          override def onPull() = if (!hasBeenPulled(result) && isAvailable(failed)) tryPull(result)
         })
+
+        def responseHandler(event: T): (Try[Boolean]) => Unit = { result =>
+          result match {
+            case Success(true) =>
+              push(succeed, event)
+            case Success(false) =>
+              failureHandler(event)
+            case Failure(ex) =>
+              log.error(s"Parse response error: ${ex.getMessage}")
+          }
+          pending.decrementAndGet()
+          if (pending.get() == 0 && isClosed(incoming)) completeStage()
+        }
+
+        def failureHandler(event: T): Unit = {
+          val retryTimes = {
+            if (event.hasContext(retryContextField))
+              event.context(retryContextField).asInstanceOf[Int]
+            else 1
+          }
+
+          if (retryTimes >= maxRetryTimes) {
+            push(failed, event)
+          }
+          else {
+            emit(ready, event.addContext(retryContextField, retryTimes + 1))
+            tryPull(result)
+          }
+        }
       }
   }
 
-  final case class RetryEngineShape[Incoming, Result, Ready, Succeed, Failed](
+  final case class HttpRetryEngineShape[Incoming, Result, Ready, Succeed, Failed](
     incoming: Inlet[Incoming],
     result: Inlet[Result],
     ready: Outlet[Ready],
@@ -197,7 +217,7 @@ object HttpEndPoint {
     override val inlets:  Seq[Inlet[_]] = incoming :: result :: Nil
     override val outlets: Seq[Outlet[_]] = ready :: succeed :: failed :: Nil
 
-    override def deepCopy(): Shape = RetryEngineShape(incoming, result, ready, succeed, failed)
+    override def deepCopy(): Shape = HttpRetryEngineShape(incoming, result, ready, succeed, failed)
 
   }
 

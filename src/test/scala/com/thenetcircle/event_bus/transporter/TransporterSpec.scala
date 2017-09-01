@@ -74,7 +74,8 @@ class TransporterSpec extends AkkaTestSpec {
 
     var collected = Seq.empty[Event]
     for (_ <- 1 to eventsCount) {
-      collected :+= testPipelinePort.requestNext()
+      testPipelinePort.request(1)
+      collected :+= testPipelinePort.expectNext()
     }
 
     val lows    = collected.count(_ == testLowEvent).toDouble

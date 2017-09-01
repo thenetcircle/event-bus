@@ -24,10 +24,12 @@ package object testkit {
   def createTestEvent(name: String = "TestEvent",
                       time: Long = 111,
                       sourceType: EventSourceType = EventSourceType.Http,
-                      priority: EventPriority = EventPriority.Normal): Event =
+                      priority: EventPriority = EventPriority.Normal,
+                      body: String = "body",
+                      format: EventFormat = EventFormat.DefaultFormat): Event =
     Event(
       EventMetaData("uuid", name, time, "publisher", ("user", "222")),
-      EventBody(ByteString("body"), EventFormat.DefaultFormat),
+      EventBody(ByteString(body), format),
       "channel",
       sourceType,
       priority

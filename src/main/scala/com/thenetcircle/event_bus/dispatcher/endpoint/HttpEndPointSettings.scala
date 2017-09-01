@@ -27,11 +27,11 @@ case class HttpEndPointSettings(
     host: String,
     port: Int,
     maxRetryTimes: Int,
-    // TODO: set to optional
-    expectedResponseData: String,
     // TODO: set pool maxRetries to 1
     connectionPoolSettings: ConnectionPoolSettings,
-    defaultRequest: HttpRequest
+    defaultRequest: HttpRequest,
+    // TODO: set to optional
+    expectedResponse: Option[String] = None
 ) extends EndPointSettings
 
 object HttpEndPointSettings {
@@ -70,14 +70,19 @@ object HttpEndPointSettings {
       uri = requsetUri
     )
 
+    val expectedResponse =
+      if (config.hasPath("expected-response-data"))
+        Some(config.getString("expected-response-data"))
+      else None
+
     HttpEndPointSettings(
       config.getString("name"),
       config.getString("host"),
       config.getInt("port"),
       config.getInt("max-retry-times"),
-      config.getString("expected-response-data"),
       connectionPoolSettings,
-      defaultRequest
+      defaultRequest,
+      expectedResponse
     )
   }
 }

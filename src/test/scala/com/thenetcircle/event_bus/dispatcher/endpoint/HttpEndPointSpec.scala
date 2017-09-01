@@ -16,51 +16,208 @@
  */
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
-import akka.stream.scaladsl.{Flow, Keep, Sink}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
+import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.testkit.AkkaTestSpec
-import com.thenetcircle.event_bus.testkit.createTestEvent
+import com.thenetcircle.event_bus.testkit.{AkkaTestSpec, createTestEvent}
 
-import scala.util.Success
+import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 class HttpEndPointSpec extends AkkaTestSpec {
 
   behavior of "HttpEndPoint"
 
-  it must "delivery successfully to the target" in {
+  it must "delivery successfully to the target with proper HttpResponse" in {
+    val fallbacker = TestSubscriber.probe[Event]()
+    val endPoint =
+      createHttpEndPoint(fallbacker = Sink.fromSubscriber(fallbacker))()
+    val (incoming, succeed) = run(endPoint)
+
+    val testEvent = createTestEvent()
+
+    fallbacker.request(1)
+    succeed.request(1)
+    incoming.expectRequest()
+    incoming.sendNext(testEvent)
+    succeed.expectNext(testEvent)
+    fallbacker.expectNoMsg(100.millisecond)
+  }
+
+  it should "retry multiple times before goes to failed/fallbacker" in {
+    var senderTimes = 0
+    val sender = Flow[(HttpRequest, Event)].map {
+      case (_, event) =>
+        senderTimes += 1
+        (Failure(new Exception("failed response")), event)
+    }
+    val fallbacker = TestSubscriber.probe[Event]()
+    val endPoint = createHttpEndPoint(
+      fallbacker = Sink.fromSubscriber(fallbacker),
+      maxRetryTimes = 10
+    )(sender)
+    val (incoming, succeed) = run(endPoint)
+
+    val testEvent = createTestEvent()
+
+    fallbacker.request(1)
+    succeed.request(1)
+    incoming.sendNext(testEvent)
+    succeed.expectNoMsg(100.millisecond)
+    fallbacker.expectNext(testEvent.addContext("retried-times", 10))
+    fallbacker.expectNoMsg(100.millisecond)
+    senderTimes shouldEqual 10
+  }
+
+  it should "properly support multiple ports" in {
+    var senderTimes = 0
+    val sender = Flow[(HttpRequest, Event)].map {
+      case (_, event) =>
+        senderTimes += 1
+        (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
+    }
+
+    val fallbacker = TestSubscriber.probe[Event]()
+
+    val endPoint =
+      createHttpEndPoint(
+        fallbacker = Sink.fromSubscriber(fallbacker),
+        expectedResponse = Some("OK")
+      )(sender)
+
+    val (in1, out1) = run(endPoint)
+    fallbacker.expectSubscription().request(1)
+
+    val (in2, out2) = run(endPoint)
+    fallbacker.expectSubscription().request(1)
+
+    val (in3, out3) = run(endPoint)
+    fallbacker.expectSubscription().request(1)
+
+    val okEvent = createTestEvent(body = "OK")
+    val koEvent = createTestEvent(body = "KO")
+
+    out1.request(1)
+    out2.request(1)
+    out3.request(1)
+
+    in1.sendNext(okEvent)
+    out1.expectNext(okEvent)
+    out2.expectNoMsg(100.millisecond)
+    out3.expectNoMsg(100.millisecond)
+
+    in2.sendNext(okEvent)
+    out2.expectNext(okEvent)
+    out1.expectNoMsg(100.millisecond)
+    out3.expectNoMsg(100.millisecond)
+
+    in3.sendNext(okEvent)
+    out3.expectNext(okEvent)
+    out1.expectNoMsg(100.millisecond)
+    out2.expectNoMsg(100.millisecond)
+
+    fallbacker.expectNoMsg(100.millisecond)
+    senderTimes shouldEqual 3
+
+    out1.request(1)
+    out2.request(1)
+    out3.request(1)
+    in3.sendNext(koEvent)
+    out1.expectNoMsg(100.millisecond)
+    out2.expectNoMsg(100.millisecond)
+    out3.expectNoMsg(100.millisecond)
+
+    fallbacker.expectNext(koEvent)
+  }
+
+  it should "goes to the target if succeed after several tries" in {}
+
+  it must "support mixed requests" in {
+    var senderTimes = 0
+    val sender = Flow[(HttpRequest, Event)].map {
+      case (_, event) =>
+        senderTimes += 0
+        (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
+    }
+    val fallbacker = TestSubscriber.probe[Event]()
+    val endPoint =
+      createHttpEndPoint(
+        fallbacker = Sink.fromSubscriber(fallbacker),
+        maxRetryTimes = 10,
+        expectedResponse = Some("OK")
+      )(sender)
+
+    val okEvent = createTestEvent(body = "OK")
+    val koEvent = createTestEvent(body = "KO")
+
+    val source1 = Source.fromIterator(() => Seq.fill(1000)(okEvent).iterator)
+    val source2 = Source.fromIterator(() => Seq.fill(15)(koEvent).iterator)
+    val source3 = Source.fromIterator(() =>
+      (for (_ <- 1 to 500) yield koEvent :: okEvent :: Nil).flatten.iterator)
+
+    val sink1 =
+      source1.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
+    val fallbackerSub1 = fallbacker.expectSubscription()
+
+    val sink2 =
+      source2.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
+    val fallbackerSub2 = fallbacker.expectSubscription()
+
+    val sink3 =
+      source3.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
+    // fallbacker.expectSubscription().request(1)
+    val fallbackerSub3 = fallbacker.expectSubscription()
+
+    fallbackerSub1.request(1)
+    for (i <- 1 to 1000) {
+      sink1.request(1)
+      sink1.expectNext(okEvent)
+    }
+    sink1.expectComplete()
+
+    for (i <- 1 to 15) {
+      fallbackerSub2.request(1)
+      sink2.request(1)
+      sink2.expectNoMsg(100.millisecond)
+      fallbacker.expectNext(koEvent)
+    }
+    sink2.expectComplete()
+  }
+
+  // TODO: test abnormal cases, like exception, cancel, error, complete etc...
+
+  def run(endPoint: HttpEndPoint)
+    : (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
+    TestSource
+      .probe[Event]
+      .viaMat(endPoint.port)(Keep.left)
+      .toMat(TestSink.probe[Event])(Keep.both)
+      .run()
+
+  def createHttpEndPoint(
+      expectedResponse: Option[String] = None,
+      fallbacker: Sink[Event, _] = Sink.ignore,
+      maxRetryTimes: Int = 1,
+      defaultRequest: HttpRequest = HttpRequest(),
+      defaultResponse: Try[HttpResponse] = Success(HttpResponse())
+  )(sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _] =
+      Flow[(HttpRequest, Event)].map {
+        case (_, event) =>
+          (defaultResponse, event)
+      }): HttpEndPoint = {
     val endPointSettings = HttpEndPointSettings(
       "TestHttpEndPoint",
       "localhost",
       8888,
-      1,
-      expectedResponseData = "OK",
+      maxRetryTimes,
       ConnectionPoolSettings(actorSystem),
-      HttpRequest()
+      defaultRequest,
+      expectedResponse
     )
 
-    val sender = Flow[(HttpRequest, Event)].map {
-      case (request, event) => (Success(HttpResponse()), event)
-    }
-
-    val endPoint = new HttpEndPoint(endPointSettings, sender, Sink.ignore)
-
-    val testSource = TestSource.probe[Event]
-    val testSink   = TestSink.probe[Event]
-
-    val (pub, sub) = testSource
-      .viaMat(endPoint.port)(Keep.left)
-      .toMat(testSink)(Keep.both)
-      .run()
-
-    val testEvent = createTestEvent()
-
-    sub.request(1)
-    pub.expectRequest()
-    pub.sendNext(testEvent)
-    sub.expectNext(testEvent)
+    new HttpEndPoint(endPointSettings, sender, fallbacker)
   }
-
 }
