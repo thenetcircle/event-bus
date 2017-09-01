@@ -138,17 +138,14 @@ object HttpEndPoint {
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) {
-        // private val retryFieldName = "retry-times"
-        private var retryingEvent: Option[(Int, T)] = None
-
-        def clearRetryingEvent(): Unit = {
-          retryingEvent = None
-        }
+        private var retryTimes: Int = 0
+        def resetRetryTimes(): Unit = retryTimes = 0
 
         setHandler(incoming, new InHandler {
           override def onPush() = {
             println("push1")
             push(ready, grab(incoming))
+            retryTimes += 1
           }
         })
 
@@ -156,41 +153,27 @@ object HttpEndPoint {
           override def onPush() = {
             grab(result) match {
               case (true, event) =>
-                retryingEvent = None
+                resetRetryTimes()
                 push(succeed, event)  // pull(incoming)
 
               case (false, event) =>
-                retryingEvent match {
-                  case Some((retryTimes, _)) if retryTimes >= maxRetryTimes =>
-                    retryingEvent = None
-                    push(failed, event)
-                  case _ =>
-                }
-
-
-                val retryTimes =
-                  if (event.hasContext(retryFieldName))
-                    event.context(retryFieldName).asInstanceOf[Int]
-                  else
-                    0
-
                 if (retryTimes >= maxRetryTimes) {
-                  clearRetryingEvent()
+                  resetRetryTimes()
                   push(failed, event)
                 }
                 else {
-                  retryingEvent = retryingEvent match {
-                    case Some((retryTimes, event)) => Some((retryTimes + 1, event))
-                    case None => Some((1, event))
-                  }
-                  pull(result)
+                  tryPull(result)
+                  push(ready, event)
+                  retryTimes += 1
                 }
             }
           }
         })
 
         setHandler(ready, new OutHandler {
-          override def onPull() = tryPull(incoming)
+          override def onPull() = if (retryTimes == 0) {
+            tryPull(incoming)
+          }
         })
 
         setHandler(failed, new OutHandler {
