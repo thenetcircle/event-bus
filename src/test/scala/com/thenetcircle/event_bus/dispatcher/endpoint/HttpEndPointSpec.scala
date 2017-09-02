@@ -133,13 +133,48 @@ class HttpEndPointSpec extends AkkaTestSpec {
     fallbacker.expectNext(koEvent)
   }
 
-  it should "goes to the target if succeed after several tries" in {}
+  it should "goes to the target if succeed after several tries" in {
+    var senderTimes = 0
+    val sender = Flow[(HttpRequest, Event)].map {
+      case (_, event) =>
+        senderTimes += 1
+        val response = if (senderTimes > 5) {
+          Success(HttpResponse(entity = HttpEntity(event.body.data)))
+        } else {
+          Failure(new Exception("Let it retry"))
+        }
+        (response, event)
+    }
+    val fallbacker = TestSubscriber.probe[Event]()
+    val endPoint =
+      createHttpEndPoint(
+        fallbacker = Sink.fromSubscriber(fallbacker),
+        maxRetryTimes = 10,
+        expectedResponse = Some("OK")
+      )(sender)
+
+    val (testSource, testSink) = run(endPoint)
+    val testEvent              = createTestEvent(body = "OK")
+
+    testSink.request(1)
+    fallbacker.request(1)
+    testSource.sendNext(testEvent)
+    testSink.expectNext(testEvent)
+    fallbacker.expectNoMsg(100.microsecond)
+    senderTimes shouldEqual 6
+
+    testSink.request(1)
+    testSource.sendNext(testEvent)
+    testSink.expectNext(testEvent)
+    fallbacker.expectNoMsg(100.microsecond)
+    senderTimes shouldEqual 7
+  }
 
   it must "support mixed requests" in {
     var senderTimes = 0
     val sender = Flow[(HttpRequest, Event)].map {
       case (_, event) =>
-        senderTimes += 0
+        senderTimes += 1
         (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
     }
     val fallbacker = TestSubscriber.probe[Event]()
@@ -150,13 +185,13 @@ class HttpEndPointSpec extends AkkaTestSpec {
         expectedResponse = Some("OK")
       )(sender)
 
-    val okEvent = createTestEvent(body = "OK")
-    val koEvent = createTestEvent(body = "KO")
+    val okEvent = createTestEvent(name = "okEvent", body = "OK")
+    val koEvent = createTestEvent(name = "koEvent", body = "KO")
 
     val source1 = Source.fromIterator(() => Seq.fill(100)(okEvent).iterator)
     val source2 = Source.fromIterator(() => Seq.fill(10)(koEvent).iterator)
     val source3 = Source.fromIterator(() =>
-      (for (_ <- 1 to 50) yield koEvent :: okEvent :: Nil).flatten.iterator)
+      (for (_ <- 1 to 100) yield koEvent :: okEvent :: Nil).flatten.iterator)
 
     val sink1 =
       source1.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
@@ -185,17 +220,16 @@ class HttpEndPointSpec extends AkkaTestSpec {
     }
     fallbacker.expectComplete()
 
-    for (i <- 1 to 50) {
+    fallbackerSub3.request(1)
+    for (i <- 1 to 100) {
       sink3.request(1)
-      fallbackerSub3.request(1)
-      sink3.expectNoMsg(100.millisecond)
       fallbacker.expectNext(koEvent)
 
-      sink3.request(1)
       fallbackerSub3.request(1)
       sink3.expectNext(okEvent)
-      fallbacker.expectNoMsg(100.millisecond)
     }
+    sink3.expectComplete()
+    fallbacker.expectComplete()
   }
 
   // TODO: test abnormal cases, like exception, cancel, error, complete etc...

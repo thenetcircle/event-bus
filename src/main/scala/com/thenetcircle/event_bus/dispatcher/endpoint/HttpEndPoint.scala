@@ -57,7 +57,8 @@ class HttpEndPoint(
 
   def responseChecker(response: HttpResponse, event: Event): Future[Boolean] = {
     response.entity
-    // TODO: failed cases?
+    // TODO: timeout is too much?
+    // TODO: unify ExecutionContext
       .toStrict(3.seconds)
       .map { entity =>
         val result: Boolean = {
@@ -111,7 +112,7 @@ object HttpEndPoint {
       settings.port,
       settings.connectionPoolSettings)
 
-    // TODO: complete fallbacker
+    // TODO: implementation of fallbacker
     val fallbacker: Sink[Event, NotUsed] = Flow[Event].to(Sink.ignore)
 
     new HttpEndPoint(settings, connectionPool, fallbacker)
@@ -183,6 +184,7 @@ object HttpEndPoint {
               failureHandler(event)
             case Failure(ex) =>
               log.error(s"Parse response error: ${ex.getMessage}")
+              push(failed, event)
           }
 
           pending.decrementAndGet()
