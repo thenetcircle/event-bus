@@ -49,11 +49,13 @@ class HttpEndPoint(
 
   val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
     Flow[Event]
-      .map(event => {
-        settings.defaultRequest
-          .withEntity(HttpEntity(event.body.data)) -> event
-      })
+      .map(event => buildRequest(event) -> event)
       .via(connectionPool)
+
+  def buildRequest(event: Event): HttpRequest = {
+    settings.defaultRequest
+      .withEntity(HttpEntity(event.body.data))
+  }
 
   def responseChecker(response: HttpResponse, event: Event): Future[Boolean] = {
     response.entity
@@ -85,8 +87,8 @@ class HttpEndPoint(
 
       val retryEngine =
         builder.add(
-          new HttpEndPoint.HttpRetryEngine(settings.maxRetryTimes,
-                                           responseChecker))
+          new HttpEndPoint.HttpRetryEngine[Event](settings.maxRetryTimes,
+                                                  responseChecker))
 
       /** --- work flow --- */
       // format: off
@@ -118,13 +120,11 @@ object HttpEndPoint {
     new HttpEndPoint(settings, connectionPool, fallbacker)
   }
 
-  final class HttpRetryEngine(
+  final class HttpRetryEngine[T <: Event](
     maxRetryTimes: Int,
-    responseChecker: (HttpResponse, Event) => Future[Boolean]
-  )(implicit executionContext: ExecutionContext) extends GraphStage[HttpRetryEngineShape[Event, (Try[HttpResponse], Event), Event, Event, Event]]
+    responseChecker: (HttpResponse, T) => Future[Boolean]
+  )(implicit executionContext: ExecutionContext) extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]]
   {
-    type T = Event
-
     val incoming: Inlet[T]          = Inlet("incoming")
     val result: Inlet[(Try[HttpResponse], T)] = Inlet("result")
     val ready: Outlet[T]            = Outlet("ready")

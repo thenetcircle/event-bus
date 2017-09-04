@@ -23,18 +23,13 @@ import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.collection.JavaConverters._
-
 object DispatcherSettings extends StrictLogging {
 
   def apply(config: Config)(implicit system: ActorSystem): DispatcherSettings = {
 
     val name = config.getString("name")
 
-    val endPointsSettings: Vector[EndPointSettings] = {
-      for (_config <- config.getConfigList("end-points-settings").asScala)
-        yield EndPointSettings(_config)
-    }.toVector
+    val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
 
     val pipelineConfig         = config.getConfig("pipeline")
     val pipelineName           = pipelineConfig.getString("name")
@@ -47,24 +42,21 @@ object DispatcherSettings extends StrictLogging {
         config.getInt("max-parallel-sources")
       else 100
 
-    val materializerSettings: Option[ActorMaterializerSettings] = try {
+    val materializerSettings: Option[ActorMaterializerSettings] =
       if (config.hasPath("materializer")) {
-        val _mc = config.getConfig("materializer")
-        val _defaultMc =
-          system.settings.config.getConfig("akka.stream.materializer")
-        Some(ActorMaterializerSettings(_mc.withFallback(_defaultMc)))
+        Some(
+          ActorMaterializerSettings(
+            config
+              .getConfig("materializer")
+              .withFallback(system.settings.config
+                .getConfig("akka.stream.materializer"))))
       } else {
         None
       }
-    } catch {
-      case _: Exception =>
-        logger.warn("Materializer configuration is not correct.")
-        None
-    }
 
     DispatcherSettings(name,
                        maxParallelSources,
-                       endPointsSettings,
+                       endPointSettings,
                        pipelineName,
                        pipelineLeftPortConfig,
                        materializerSettings)
@@ -75,7 +67,7 @@ object DispatcherSettings extends StrictLogging {
 final case class DispatcherSettings(
     name: String,
     maxParallelSources: Int,
-    endPointsSettings: Vector[EndPointSettings],
+    endPointSettings: EndPointSettings,
     pipelineName: String,
     pipelineRightPortConfig: Config,
     materializerSettings: Option[ActorMaterializerSettings]
