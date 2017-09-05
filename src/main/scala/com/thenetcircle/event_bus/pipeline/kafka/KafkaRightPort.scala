@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.pipeline.kafka
+
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
@@ -42,7 +43,7 @@ private[kafka] final class KafkaRightPort(
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
-  override val port: Source[Source[Event, NotUsed], NotUsed] = {
+  override lazy val port: Source[Source[Event, NotUsed], NotUsed] = {
 
     require(settings.topics.isDefined || settings.topicPattern.isDefined,
             "The outlet of KafkaPipeline needs to subscribe topics")

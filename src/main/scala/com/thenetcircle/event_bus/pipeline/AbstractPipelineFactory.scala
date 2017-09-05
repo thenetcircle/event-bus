@@ -18,7 +18,9 @@
 package com.thenetcircle.event_bus.pipeline
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.typesafe.config.Config
+import net.ceedubs.ficus.readers.ValueReader
 
 trait AbstractPipelineFactory {
 
@@ -45,7 +47,7 @@ trait AbstractPipelineFactory {
     *
     * @param leftPortConfig the TypeSafe [[Config]]
     */
-  def getLeftPortSettings(leftPortConfig: Config): LeftPortSettings
+  def getLeftPortSettings(leftPortConfig: Config): LPS
 
   /** Returns a [[LeftPort]] of the [[Pipeline]] which has the pipelineName with the leftPortConfig
     *
@@ -61,7 +63,7 @@ trait AbstractPipelineFactory {
     *
     * @param rightPortConfig the TypeSafe [[Config]]
     */
-  def getRightPortSettings(rightPortConfig: Config): RightPortSettings
+  def getRightPortSettings(rightPortConfig: Config): RPS
 
   /** Returns a [[RightPort]] of the [[Pipeline]] which has the pipelineName with the rightPortConfig
     *
@@ -74,4 +76,14 @@ trait AbstractPipelineFactory {
       implicit system: ActorSystem,
       materializer: Materializer): Option[RightPort]
 
+}
+
+object AbstractPipelineFactory {
+  implicit val valueReader: ValueReader[AbstractPipelineFactory] =
+    ValueReader.relative(config =>
+      config.getString("factory").toUpperCase match {
+        case "KAFKA" => KafkaPipelineFactory
+        case f =>
+          throw new IllegalArgumentException(s"Unsupported Pipeline Factory $f")
+    })
 }

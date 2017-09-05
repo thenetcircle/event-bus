@@ -80,8 +80,7 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
       case None => createKafkaPipeline(pipelineName)
     }
 
-  override def getLeftPortSettings(
-      leftPortConfig: Config): KafkaLeftPortSettings = {
+  override def getLeftPortSettings(leftPortConfig: Config): LPS = {
     /*val properties: Option[Map[String, String]] = {
       if (leftPortConfig.hasPath("properties"))
         Some(
@@ -110,8 +109,7 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
       case None           => None
     }
 
-  override def getRightPortSettings(
-      rightPortConfig: Config): KafkaRightPortSettings = {
+  override def getRightPortSettings(rightPortConfig: Config): RPS = {
     KafkaRightPortSettings(
       groupId = rightPortConfig.as[String]("groupid"),
       extractParallelism = rightPortConfig.as[Int]("extract-parallelism"),

@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.pipeline.kafka
+
 import akka.NotUsed
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
@@ -37,7 +38,7 @@ private[kafka] final class KafkaLeftPort(
   import KafkaPipeline._
   import KafkaLeftPort._
 
-  override val port: Flow[Event, Event, NotUsed] = {
+  override lazy val port: Flow[Event, Event, NotUsed] = {
 
     // Combine LeftPortSettings with PipelineSettings
     val producerSettings: ProducerSettings[Key, Value] = {
