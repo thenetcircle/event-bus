@@ -126,7 +126,7 @@ class HttpEntryPointSpec extends AkkaTestSpec {
       1000,
       10,
       EventFormat.DefaultFormat,
-      ServerSettings(actorSystem),
+      ServerSettings(system),
       "127.0.0.1",
       8888
     )

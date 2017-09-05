@@ -16,16 +16,17 @@
  */
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
+
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.testkit.{AkkaTestSpec, createTestEvent}
+import com.thenetcircle.event_bus.testkit.AkkaTestSpec
+import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 class HttpEndPointSpec extends AkkaTestSpec {
 
@@ -241,28 +242,4 @@ class HttpEndPointSpec extends AkkaTestSpec {
       .viaMat(endPoint.port)(Keep.left)
       .toMat(TestSink.probe[Event])(Keep.both)
       .run()
-
-  def createHttpEndPoint(
-      expectedResponse: Option[String] = None,
-      fallbacker: Sink[Event, _] = Sink.ignore,
-      maxRetryTimes: Int = 1,
-      defaultRequest: HttpRequest = HttpRequest(),
-      defaultResponse: Try[HttpResponse] = Success(HttpResponse())
-  )(sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _] =
-      Flow[(HttpRequest, Event)].map {
-        case (_, event) =>
-          (defaultResponse, event)
-      }): HttpEndPoint = {
-    val endPointSettings = HttpEndPointSettings(
-      "TestHttpEndPoint",
-      "localhost",
-      8888,
-      maxRetryTimes,
-      ConnectionPoolSettings(actorSystem),
-      defaultRequest,
-      expectedResponse
-    )
-
-    new HttpEndPoint(endPointSettings, sender, fallbacker)
-  }
 }

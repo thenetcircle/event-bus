@@ -24,14 +24,14 @@ import akka.testkit.{ImplicitSender, TestKit}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaTestSpec(val actorSystem: ActorSystem)
-    extends TestKit(actorSystem)
+abstract class AkkaTestSpec(_system: ActorSystem)
+    extends TestKit(_system)
     with ImplicitSender
     with TestSpec {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
-    ActorMaterializerSettings(actorSystem).withInputBuffer(initialSize = 1,
-                                                           maxSize = 1)
+    ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1,
+                                                       maxSize = 1)
   )
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds

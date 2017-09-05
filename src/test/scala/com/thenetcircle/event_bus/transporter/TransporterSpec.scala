@@ -18,21 +18,12 @@
 package com.thenetcircle.event_bus.transporter
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.NotUsed
-import akka.http.scaladsl.settings.ServerSettings
-import akka.stream.FlowShape
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.testkit.{AkkaTestSpec, createTestEvent}
-import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
-import com.thenetcircle.event_bus.transporter.entrypoint.{
-  EntryPoint,
-  EntryPointPriority,
-  HttpEntryPointSettings
-}
-import com.thenetcircle.event_bus.{Event, EventFormat}
-import com.typesafe.config.ConfigFactory
+import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.testkit.AkkaTestSpec
+import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority
 
 import scala.concurrent.Future
 
@@ -61,7 +52,7 @@ class TransporterSpec extends AkkaTestSpec {
     val testHighSource =
       Source.fromIterator(() => Seq.fill(eventsCount)(testHighEvent).iterator)
 
-    getTransporter(
+    createTransporter(
       Vector(
         (EntryPointPriority.Low, testLowSource1),
         (EntryPointPriority.Low, testLowSource2),
@@ -90,7 +81,7 @@ class TransporterSpec extends AkkaTestSpec {
   it should "commit event after transported" in {
     val testPublisher = TestPublisher.probe[Event]()
 
-    getTransporter(
+    createTransporter(
       Vector(
         (EntryPointPriority.Normal, Source.fromPublisher(testPublisher))
       ),
@@ -129,7 +120,7 @@ class TransporterSpec extends AkkaTestSpec {
     val testSink1 = TestSubscriber.probe[Event]()
     val testSink2 = TestSubscriber.probe[Event]()
 
-    getTransporter(
+    createTransporter(
       Vector(
         (EntryPointPriority.High, testSource1),
         (EntryPointPriority.Normal, testSource2),
@@ -151,67 +142,6 @@ class TransporterSpec extends AkkaTestSpec {
 
     Thread.sleep(100)
     result.get() shouldEqual 30000
-  }
-
-  private def getTransporter(
-      testSources: Vector[(EntryPointPriority, Source[Event, _])],
-      testPipelinePort: Vector[Sink[Event, _]],
-      commitParallelism: Int = 1,
-      transportParallelism: Int = 1): Transporter = {
-    val entryPointSettings = HttpEntryPointSettings(
-      "TestHttpEntryPoint",
-      EntryPointPriority.Normal,
-      100,
-      10,
-      EventFormat.DefaultFormat,
-      ServerSettings(actorSystem),
-      "localhost",
-      8888
-    )
-
-    val testEntryPoints = testSources.map(_source =>
-      new EntryPoint {
-        override val name: String                 = s"TestEntryPoint-${_source._1}"
-        override val eventFormat: EventFormat     = EventFormat.DefaultFormat
-        override val priority: EntryPointPriority = _source._1
-
-        override def port: Source[Event, _] = _source._2
-    })
-
-    val testPipelineLeftPort = new LeftPort {
-      var currentIndex = 0
-      override def port: Flow[Event, Event, NotUsed] = {
-        val flow = Flow.fromGraph(GraphDSL.create() { implicit builder =>
-          import GraphDSL.Implicits._
-
-          val inlet     = builder.add(Flow[Event])
-          val outlet    = builder.add(Flow[Event])
-          val broadcast = builder.add(Broadcast[Event](2))
-
-          // format: off
-          inlet ~> broadcast
-          broadcast.out(0) ~> testPipelinePort(currentIndex)
-          broadcast.out(1) ~> outlet
-          // format: on
-
-          FlowShape(inlet.in, outlet.out)
-        })
-        currentIndex += 1
-        flow
-      }
-    }
-
-    val settings = TransporterSettings(
-      "TestTransporter",
-      Vector(entryPointSettings),
-      "TestPipeline",
-      ConfigFactory.empty(),
-      commitParallelism,
-      transportParallelism,
-      None
-    )
-
-    new Transporter(settings, testEntryPoints, () => testPipelineLeftPort)
   }
 
 }

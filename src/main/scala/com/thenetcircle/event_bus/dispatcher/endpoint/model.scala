@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
@@ -25,7 +26,7 @@ import com.typesafe.config.{Config, ConfigException}
 
 trait EndPoint {
   val name: String
-  def port: Flow[Event, Event, _]
+  def port: Flow[Event, Event, NotUsed]
 }
 
 object EndPoint {
