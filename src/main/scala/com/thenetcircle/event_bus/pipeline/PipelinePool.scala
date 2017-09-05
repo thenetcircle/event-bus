@@ -19,13 +19,12 @@ package com.thenetcircle.event_bus.pipeline
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable
 
 private[pipeline] final class PipelinePool(
     pipelineConfigList: Map[String, Config]) {
-
   private val cached = mutable.Map.empty[String, Pipeline]
 
   def getPipeline(pipelineName: String): Option[Pipeline] =
@@ -38,27 +37,17 @@ private[pipeline] final class PipelinePool(
 
   def getPipelineConfig(pipelineName: String): Option[Config] =
     pipelineConfigList.get(pipelineName)
-
 }
 
 private[pipeline] object PipelinePool {
   private var pool: Option[PipelinePool] = None
 
-  def initialize(system: ActorSystem): Unit = {
-    val config = system.settings.config.getConfig("eventbus.pipeline")
-    initialize(config)
-  }
+  def initialize(system: ActorSystem): Unit =
+    initialize(
+      system.settings.config.as[Map[String, Config]]("eventbus.pipeline"))
 
-  def initialize(config: Config): Unit = {
-    val settingsList = config
-      .entrySet()
-      .asScala
-      .map { entry =>
-        (entry.getKey, config.getConfig(entry.getKey))
-      }
-      .toMap
-    pool = Some(new PipelinePool(settingsList))
-  }
+  def initialize(pipelineConfigList: Map[String, Config]): Unit =
+    pool = Some(new PipelinePool(pipelineConfigList))
 
   def apply(): PipelinePool = pool match {
     case Some(_pool) => _pool

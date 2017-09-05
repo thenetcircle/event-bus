@@ -35,7 +35,7 @@ import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline._
 import org.apache.kafka.clients.producer.ProducerRecord
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.ExecutionContext
 
 class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
     extends Pipeline(pipelineSettings) {
@@ -84,7 +84,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
   }
 
   /** LeftPort Implementation */
-  protected class KafkaLeftPort(name: String, settings: KafkaLeftPortSettings)
+  final class KafkaLeftPort(name: String, settings: KafkaLeftPortSettings)
       extends LeftPort {
     override val port: Flow[Event, Event, NotUsed] = {
 
@@ -140,13 +140,13 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
   }
 
   /** RightPort Implementation */
-  protected class KafkaRightPort(name: String,
-                                 settings: KafkaRightPortSettings)(
+  final class KafkaRightPort(name: String, settings: KafkaRightPortSettings)(
       implicit materializer: Materializer,
       extractor: EventExtractor)
       extends RightPort {
 
-    implicit val _ec: ExecutionContextExecutor = materializer.executionContext
+    implicit val executionContext: ExecutionContext =
+      materializer.executionContext
 
     override val port: Source[Source[Event, NotUsed], _] = {
 
@@ -214,7 +214,6 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings)
         .named(name)
     }
 
-    // TODO: maybe sink is better
     /** Batch commit flow */
     override lazy val committer: Flow[Event, Event, NotUsed] =
       Flow.fromGraph(GraphDSL.create() { implicit builder =>

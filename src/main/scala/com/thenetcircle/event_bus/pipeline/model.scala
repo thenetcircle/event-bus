@@ -27,10 +27,6 @@ import com.thenetcircle.event_bus.{Event, EventFormat}
 trait PipelineSettings {
   def name: String
 }
-trait LeftPortSettings
-trait RightPortSettings {
-  val eventFormat: EventFormat
-}
 
 abstract class Pipeline(pipelineSettings: PipelineSettings) {
 
@@ -59,4 +55,9 @@ object Pipeline {
     def committer: Flow[Event, Event, NotUsed]
   }
 
+}
+
+trait LeftPortSettings
+trait RightPortSettings {
+  val eventFormat: EventFormat
 }
