@@ -29,6 +29,9 @@ import scala.concurrent.duration.FiniteDuration
 
 object KafkaPipelineFactory extends AbstractPipelineFactory {
 
+  type LPS = KafkaLeftPortSettings
+  type RPS = KafkaRightPortSettings
+
   val pipelinePool: PipelinePool = PipelinePool()
 
   override def getPipelineSettings(pipelineConfig: Config)(
@@ -67,7 +70,8 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getPipeline(pipelineName: String): Option[KafkaPipeline] =
+  override def getPipeline(pipelineName: String)(
+      implicit system: ActorSystem): Option[KafkaPipeline] =
     pipelinePool.getPipeline(pipelineName) match {
       case Some(pipeline: KafkaPipeline) => Some(pipeline)
       case Some(_) =>
@@ -99,9 +103,8 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getLeftPort(
-      pipelineName: String,
-      leftPortSettings: LeftPortSettings): Option[KafkaPipeline#KafkaLeftPort] =
+  override def getLeftPort(pipelineName: String, leftPortSettings: LPS)(
+      implicit system: ActorSystem): Option[KafkaLeftPort] =
     getPipeline(pipelineName) match {
       case Some(pipeline) => Some(pipeline.leftPort(leftPortSettings))
       case None           => None
@@ -133,17 +136,16 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getRightPort(
-      pipelineName: String,
-      rightPortSettings: RightPortSettings)(implicit materializer: Materializer)
-    : Option[KafkaPipeline#KafkaRightPort] =
+  override def getRightPort(pipelineName: String, rightPortSettings: RPS)(
+      implicit system: ActorSystem,
+      materializer: Materializer): Option[KafkaRightPort] =
     getPipeline(pipelineName) match {
       case Some(pipeline) => Some(pipeline.rightPort(rightPortSettings))
       case None           => None
     }
 
-  protected def createKafkaPipeline(
-      pipelineName: String): Option[KafkaPipeline] =
+  protected def createKafkaPipeline(pipelineName: String)(
+      implicit system: ActorSystem): Option[KafkaPipeline] =
     pipelinePool.getPipelineConfig(pipelineName) match {
       case Some(pipelineConfig) =>
         val pipeline = KafkaPipeline(getPipelineSettings(pipelineConfig))

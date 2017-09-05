@@ -30,7 +30,7 @@ import com.thenetcircle.event_bus.dispatcher.endpoint.{
   HttpEndPoint,
   HttpEndPointSettings
 }
-import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
+import com.thenetcircle.event_bus.pipeline.LeftPort
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.{

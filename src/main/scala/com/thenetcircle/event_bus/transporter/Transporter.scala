@@ -31,8 +31,8 @@ import akka.stream.scaladsl.{
 }
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
-import com.thenetcircle.event_bus.pipeline.Pipeline.LeftPort
-import com.thenetcircle.event_bus.pipeline.PipelineFactory
+import com.thenetcircle.event_bus.pipeline.LeftPort
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
 
 class Transporter(settings: TransporterSettings,
@@ -125,9 +125,16 @@ object Transporter {
         EntryPoint(s)
       })
 
+    // TODO: make factory configable
+    val pipelineFactory = KafkaPipelineFactory
     val pipelineLeftPortBuilder = () => {
-      PipelineFactory.getLeftPort(settings.pipelineName,
-                                  settings.pipelineLeftPortConfig)
+      val _leftPortSettings = pipelineFactory.getLeftPortSettings(settings.pipelineLeftPortConfig)
+      pipelineFactory.getLeftPort(settings.pipelineName, _leftPortSettings) match {
+        case Some(lp) => lp
+        case None =>
+          throw new IllegalArgumentException(
+            s"There is not LeftPort of ${settings.pipelineName} found according to the configuration ${_leftPortSettings}")
+      }
     }
 
     new Transporter(settings, entryPoints, pipelineLeftPortBuilder)

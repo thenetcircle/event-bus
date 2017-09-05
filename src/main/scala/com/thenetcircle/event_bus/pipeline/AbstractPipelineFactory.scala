@@ -18,10 +18,12 @@
 package com.thenetcircle.event_bus.pipeline
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import com.thenetcircle.event_bus.pipeline.Pipeline.{LeftPort, RightPort}
 import com.typesafe.config.Config
 
 trait AbstractPipelineFactory {
+
+  type LPS <: LeftPortSettings
+  type RPS <: RightPortSettings
 
   /** Creates [[PipelineSettings]] according to a TypeSafe [[Config]]
     *
@@ -36,7 +38,8 @@ trait AbstractPipelineFactory {
     *
     * @param pipelineName
     */
-  def getPipeline(pipelineName: String): Option[Pipeline]
+  def getPipeline(pipelineName: String)(
+      implicit system: ActorSystem): Option[Pipeline]
 
   /** Creates [[LeftPortSettings]] according to a TypeSafe [[Config]]
     *
@@ -51,8 +54,8 @@ trait AbstractPipelineFactory {
     *
     * @return [[LeftPort]]
     */
-  def getLeftPort(pipelineName: String,
-                  leftPortSettings: LeftPortSettings): Option[LeftPort]
+  def getLeftPort(pipelineName: String, leftPortSettings: LPS)(
+      implicit system: ActorSystem): Option[LeftPort]
 
   /** Creates [[RightPortSettings]] according to a TypeSafe [[Config]]
     *
@@ -67,7 +70,8 @@ trait AbstractPipelineFactory {
     *
     * @return [[RightPort]]
     */
-  def getRightPort(pipelineName: String, rightPortSettings: RightPortSettings)(
-      implicit materializer: Materializer): Option[RightPort]
+  def getRightPort(pipelineName: String, rightPortSettings: RPS)(
+      implicit system: ActorSystem,
+      materializer: Materializer): Option[RightPort]
 
 }

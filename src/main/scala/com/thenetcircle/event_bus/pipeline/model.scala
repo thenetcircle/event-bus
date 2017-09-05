@@ -21,43 +21,38 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
-import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.{Event, EventFormat}
 
 trait PipelineSettings {
   def name: String
 }
 
-abstract class Pipeline(pipelineSettings: PipelineSettings) {
+trait Pipeline {
 
-  import Pipeline._
-
-  protected val pipelineName: String = pipelineSettings.name
+  type LPS <: LeftPortSettings
+  type RPS <: RightPortSettings
 
   protected val leftPortId  = new AtomicInteger(0)
   protected val rightPortId = new AtomicInteger(0)
 
-  def leftPort(leftPortSettings: LeftPortSettings): LeftPort
-  def rightPort(rightPortSettings: RightPortSettings)(
-      implicit materializer: Materializer,
-      extractor: EventExtractor): RightPort
+  def leftPort(leftPortSettings: LPS): LeftPort
 
-}
-
-object Pipeline {
-
-  trait LeftPort {
-    def port: Flow[Event, Event, NotUsed]
-  }
-
-  trait RightPort {
-    def port: Source[Source[Event, NotUsed], _]
-    def committer: Flow[Event, Event, NotUsed]
-  }
+  def rightPort(rightPortSettings: RPS)(
+      implicit materializer: Materializer): RightPort
 
 }
 
 trait LeftPortSettings
+
+trait LeftPort {
+  def port: Flow[Event, Event, NotUsed]
+}
+
 trait RightPortSettings {
   val eventFormat: EventFormat
+}
+
+trait RightPort {
+  def port: Source[Source[Event, NotUsed], NotUsed]
+  def committer: Flow[Event, Event, NotUsed]
 }

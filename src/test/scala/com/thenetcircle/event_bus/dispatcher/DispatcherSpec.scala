@@ -22,7 +22,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
-import com.thenetcircle.event_bus.pipeline.Pipeline.RightPort
+import com.thenetcircle.event_bus.pipeline.RightPort
 import com.thenetcircle.event_bus.testkit.AkkaTestSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
 import com.typesafe.config.ConfigFactory
@@ -52,7 +52,7 @@ class DispatcherSpec extends AkkaTestSpec {
     val testCommitter = TestSubscriber.probe[Event]()
 
     val pipelineRightPort = new RightPort {
-      override def port: Source[Source[Event, NotUsed], _] =
+      override def port: Source[Source[Event, NotUsed], NotUsed] =
         Source[Source[Event, NotUsed]](
           Source.fromPublisher(testSource1) :: Source
             .fromPublisher(testSource2) :: Source

@@ -21,8 +21,8 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{RunnableGraph, Sink}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
-import com.thenetcircle.event_bus.pipeline.Pipeline.RightPort
-import com.thenetcircle.event_bus.pipeline.PipelineFactory
+import com.thenetcircle.event_bus.pipeline.RightPort
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 
 class Dispatcher(settings: DispatcherSettings,
                  pipelineRightPort: RightPort,
@@ -51,9 +51,17 @@ object Dispatcher {
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val pipelineRightPort = PipelineFactory.getRightPort(
-      settings.pipelineName,
-      settings.pipelineRightPortConfig)
+    val pipelineFactory = KafkaPipelineFactory
+    val pipelineRightPort = {
+      val _rightPortSettings =
+        pipelineFactory.getRightPortSettings(settings.pipelineRightPortConfig)
+      pipelineFactory.getRightPort(settings.pipelineName, _rightPortSettings) match {
+        case Some(p) => p
+        case None =>
+          throw new IllegalArgumentException(
+            s"There is not RightPort of ${settings.pipelineName} found according to the configuration ${_rightPortSettings}")
+      }
+    }
 
     val endPoint = EndPoint(settings.endPointSettings)
 
