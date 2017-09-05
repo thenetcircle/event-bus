@@ -25,6 +25,9 @@ object Dependencies {
     "io.spray"    %% "spray-json" % "1.3.3",
     "io.jvm.uuid" %% "scala-uuid" % "0.2.3"
   )
+  private val config = Seq(
+    "com.iheart" %% "ficus" % "1.4.2"
+  )
 
   private val redisConnector = "com.github.etaty"   %% "rediscala"                % "1.8.0"
   private val httpConnector  = "com.typesafe.akka"  %% "akka-http"                % akkaHttpVersion
@@ -32,7 +35,7 @@ object Dependencies {
   private val kafkaConnector = "com.typesafe.akka"  %% "akka-stream-kafka"        % "0.17"
 
   // Apps
-  val eventBusDeps = akkaStream ++ log ++ test ++ misc ++ Seq(
+  val eventBusDeps = akkaStream ++ log ++ test ++ misc ++ config ++ Seq(
     redisConnector,
     amqpConnector,
     kafkaConnector,
