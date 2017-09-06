@@ -31,6 +31,7 @@ import com.thenetcircle.event_bus.dispatcher.endpoint.{
   HttpEndPointSettings
 }
 import com.thenetcircle.event_bus.pipeline.LeftPort
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.{
@@ -134,15 +135,17 @@ object TestComponentBuilder {
 
     val settings = TransporterSettings(
       "TestTransporter",
-      Vector(entryPointSettings),
-      "TestPipeline",
-      ConfigFactory.empty(),
       commitParallelism,
       transportParallelism,
+      Vector(entryPointSettings),
+      KafkaPipelineFactory,
+      "TestPipeline",
+      ConfigFactory.empty(),
       None
     )
 
     new Transporter(settings, testEntryPoints, () => testPipelineLeftPort)
+
   }
 
   def createFlowFromSink(sink: Sink[Event, _]): Flow[Event, Event, NotUsed] =

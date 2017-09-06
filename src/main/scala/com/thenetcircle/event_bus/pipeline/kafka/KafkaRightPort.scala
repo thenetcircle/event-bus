@@ -43,7 +43,7 @@ private[kafka] final class KafkaRightPort(
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
-  override lazy val port: Source[Source[Event, NotUsed], NotUsed] = {
+  override val port: Source[Source[Event, NotUsed], NotUsed] = {
 
     require(settings.topics.isDefined || settings.topicPattern.isDefined,
             "The outlet of KafkaPipeline needs to subscribe topics")

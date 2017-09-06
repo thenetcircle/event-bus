@@ -20,8 +20,10 @@ package com.thenetcircle.event_bus.dispatcher
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
+import com.thenetcircle.event_bus.pipeline.AbstractPipelineFactory
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import net.ceedubs.ficus.Ficus._
 
 object DispatcherSettings extends StrictLogging {
 
@@ -31,9 +33,10 @@ object DispatcherSettings extends StrictLogging {
 
     val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
 
-    val pipelineConfig         = config.getConfig("pipeline")
-    val pipelineName           = pipelineConfig.getString("name")
-    val pipelineLeftPortConfig = pipelineConfig.getConfig("right-port")
+    val pipelineFactory =
+      config.as[AbstractPipelineFactory]("pipeline")
+    val pipelineName           = config.getString("pipeline.name")
+    val pipelineLeftPortConfig = config.getConfig("pipeline.rightport")
 
     // TODO: adjust these default values when doing stress testing
     // TODO: use reference.conf to set up default value
@@ -57,6 +60,7 @@ object DispatcherSettings extends StrictLogging {
     DispatcherSettings(name,
                        maxParallelSources,
                        endPointSettings,
+                       pipelineFactory,
                        pipelineName,
                        pipelineLeftPortConfig,
                        materializerSettings)
@@ -68,6 +72,7 @@ final case class DispatcherSettings(
     name: String,
     maxParallelSources: Int,
     endPointSettings: EndPointSettings,
+    pipelineFactory: AbstractPipelineFactory,
     pipelineName: String,
     pipelineRightPortConfig: Config,
     materializerSettings: Option[ActorMaterializerSettings]

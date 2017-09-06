@@ -23,6 +23,7 @@ import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
 import com.thenetcircle.event_bus.pipeline.RightPort
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.testkit.AkkaTestSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
 import com.typesafe.config.ConfigFactory
@@ -36,6 +37,7 @@ class DispatcherSpec extends AkkaTestSpec {
       name = "TestDispatcher",
       maxParallelSources = 10,
       endPointSettings = createHttpEndPointSettings(),
+      pipelineFactory = KafkaPipelineFactory,
       pipelineName = "TestPipeline",
       pipelineRightPortConfig = ConfigFactory.empty(),
       None

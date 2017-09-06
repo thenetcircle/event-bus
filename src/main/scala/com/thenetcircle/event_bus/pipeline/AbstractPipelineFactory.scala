@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.pipeline
+
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
@@ -23,9 +24,6 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
 trait AbstractPipelineFactory {
-
-  type LPS <: LeftPortSettings
-  type RPS <: RightPortSettings
 
   /** Creates [[PipelineSettings]] according to a TypeSafe [[Config]]
     *
@@ -47,32 +45,32 @@ trait AbstractPipelineFactory {
     *
     * @param leftPortConfig the TypeSafe [[Config]]
     */
-  def getLeftPortSettings(leftPortConfig: Config): LPS
+  def getLeftPortSettings(leftPortConfig: Config): LeftPortSettings
 
   /** Returns a [[LeftPort]] of the [[Pipeline]] which has the pipelineName with the leftPortConfig
     *
     * @param pipelineName uses for get a created [[Pipeline]] or create a new [[Pipeline]] based on predefined [[Config]]
-    * @param leftPortSettings the settings of the [[LeftPort]]
+    * @param leftPortConfig the [[Config]] of the [[LeftPort]]
     *
     * @return [[LeftPort]]
     */
-  def getLeftPort(pipelineName: String, leftPortSettings: LPS)(
+  def getLeftPort(pipelineName: String, leftPortConfig: Config)(
       implicit system: ActorSystem): Option[LeftPort]
 
   /** Creates [[RightPortSettings]] according to a TypeSafe [[Config]]
     *
     * @param rightPortConfig the TypeSafe [[Config]]
     */
-  def getRightPortSettings(rightPortConfig: Config): RPS
+  def getRightPortSettings(rightPortConfig: Config): RightPortSettings
 
   /** Returns a [[RightPort]] of the [[Pipeline]] which has the pipelineName with the rightPortConfig
     *
     * @param pipelineName uses for get a created [[Pipeline]] or create a new [[Pipeline]] based on predefined [[Config]]
-    * @param rightPortSettings the settings of the [[RightPort]]
+    * @param rightPortConfig the [[Config]] of the [[RightPort]]
     *
     * @return [[RightPort]]
     */
-  def getRightPort(pipelineName: String, rightPortSettings: RPS)(
+  def getRightPort(pipelineName: String, rightPortConfig: Config)(
       implicit system: ActorSystem,
       materializer: Materializer): Option[RightPort]
 
@@ -82,7 +80,7 @@ object AbstractPipelineFactory {
   implicit val valueReader: ValueReader[AbstractPipelineFactory] =
     ValueReader.relative(config =>
       config.getString("factory").toUpperCase match {
-        case "KAFKA" => KafkaPipelineFactory
+        case "KAFKAPIPELINEFACTORY" => KafkaPipelineFactory
         case f =>
           throw new IllegalArgumentException(s"Unsupported Pipeline Factory $f")
     })

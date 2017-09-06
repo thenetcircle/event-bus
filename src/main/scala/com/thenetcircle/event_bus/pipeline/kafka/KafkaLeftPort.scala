@@ -38,7 +38,7 @@ private[kafka] final class KafkaLeftPort(
   import KafkaPipeline._
   import KafkaLeftPort._
 
-  override lazy val port: Flow[Event, Event, NotUsed] = {
+  override val port: Flow[Event, Event, NotUsed] = {
 
     // Combine LeftPortSettings with PipelineSettings
     val producerSettings: ProducerSettings[Key, Value] = {

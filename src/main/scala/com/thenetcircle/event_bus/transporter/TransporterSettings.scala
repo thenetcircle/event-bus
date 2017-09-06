@@ -19,10 +19,7 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
-import com.thenetcircle.event_bus.pipeline.{
-  AbstractPipelineFactory,
-  LeftPortSettings
-}
+import com.thenetcircle.event_bus.pipeline.AbstractPipelineFactory
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -43,10 +40,11 @@ object TransporterSettings extends StrictLogging {
         yield EntryPointSettings(_config)
     }.toVector
 
-    val pipelineFactory = config.as[AbstractPipelineFactory]("pipeline")
-    val pipelineName    = config.getString("pipeline.name")
-    val pipelineLeftPortSettings =
-      pipelineFactory.getLeftPortSettings(config.getConfig("pipeline.leftport"))
+    val pipelineFactory =
+      config.as[AbstractPipelineFactory]("pipeline")
+    val pipelineName = config.getString("pipeline.name")
+    val pipelineLeftPortConfig =
+      config.getConfig("pipeline.leftport")
 
     val transportParallelism = config.getInt("transport-parallelism")
     val commitParallelism    = config.getInt("commit-parallelism")
@@ -69,7 +67,7 @@ object TransporterSettings extends StrictLogging {
                         entryPointsSettings,
                         pipelineFactory,
                         pipelineName,
-                        pipelineLeftPortSettings,
+                        pipelineLeftPortConfig,
                         materializerSettings)
 
   }
@@ -82,6 +80,6 @@ final case class TransporterSettings(
     entryPointsSettings: Vector[EntryPointSettings],
     pipelineFactory: AbstractPipelineFactory,
     pipelineName: String,
-    pipelineLeftPortSettings: LeftPortSettings,
+    pipelineLeftPortConfig: Config,
     materializerSettings: Option[ActorMaterializerSettings]
 )

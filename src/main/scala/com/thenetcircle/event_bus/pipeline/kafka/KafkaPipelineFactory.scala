@@ -29,9 +29,6 @@ import scala.concurrent.duration.FiniteDuration
 
 object KafkaPipelineFactory extends AbstractPipelineFactory {
 
-  type LPS = KafkaLeftPortSettings
-  type RPS = KafkaRightPortSettings
-
   val pipelinePool: PipelinePool = PipelinePool()
 
   override def getPipelineSettings(pipelineConfig: Config)(
@@ -80,7 +77,8 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
       case None => createKafkaPipeline(pipelineName)
     }
 
-  override def getLeftPortSettings(leftPortConfig: Config): LPS = {
+  override def getLeftPortSettings(
+      leftPortConfig: Config): KafkaLeftPortSettings = {
     /*val properties: Option[Map[String, String]] = {
       if (leftPortConfig.hasPath("properties"))
         Some(
@@ -102,14 +100,16 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getLeftPort(pipelineName: String, leftPortSettings: LPS)(
+  override def getLeftPort(pipelineName: String, leftPortConfig: Config)(
       implicit system: ActorSystem): Option[KafkaLeftPort] =
     getPipeline(pipelineName) match {
-      case Some(pipeline) => Some(pipeline.leftPort(leftPortSettings))
-      case None           => None
+      case Some(pipeline) =>
+        Some(pipeline.leftPort(getLeftPortSettings(leftPortConfig)))
+      case None => None
     }
 
-  override def getRightPortSettings(rightPortConfig: Config): RPS = {
+  override def getRightPortSettings(
+      rightPortConfig: Config): KafkaRightPortSettings = {
     KafkaRightPortSettings(
       groupId = rightPortConfig.as[String]("groupid"),
       extractParallelism = rightPortConfig.as[Int]("extract-parallelism"),
@@ -134,12 +134,13 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getRightPort(pipelineName: String, rightPortSettings: RPS)(
+  override def getRightPort(pipelineName: String, rightPortConfig: Config)(
       implicit system: ActorSystem,
       materializer: Materializer): Option[KafkaRightPort] =
     getPipeline(pipelineName) match {
-      case Some(pipeline) => Some(pipeline.rightPort(rightPortSettings))
-      case None           => None
+      case Some(pipeline) =>
+        Some(pipeline.rightPort(getRightPortSettings(rightPortConfig)))
+      case None => None
     }
 
   protected def createKafkaPipeline(pipelineName: String)(
