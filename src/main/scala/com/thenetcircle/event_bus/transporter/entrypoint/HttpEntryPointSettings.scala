@@ -41,7 +41,7 @@ object HttpEntryPointSettings {
       implicit system: ActorSystem): HttpEntryPointSettings = {
     val config: Config =
       _config.withFallback(
-        system.settings.config.getConfig("event-bus.http-entrypoint"))
+        system.settings.config.getConfig("event-bus.entrypoint.http"))
 
     val rootConfig =
       system.settings.config
