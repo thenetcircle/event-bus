@@ -80,7 +80,7 @@ object AbstractPipelineFactory {
   implicit val valueReader: ValueReader[AbstractPipelineFactory] =
     ValueReader.relative(config =>
       config.getString("factory").toUpperCase match {
-        case "KAFKAPIPELINEFACTORY" => KafkaPipelineFactory
+        case "KAFKA" => KafkaPipelineFactory
         case f =>
           throw new IllegalArgumentException(s"Unsupported Pipeline Factory $f")
     })

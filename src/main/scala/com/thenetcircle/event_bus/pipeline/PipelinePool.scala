@@ -39,12 +39,12 @@ private[pipeline] final class PipelinePool(
     pipelineConfigList.get(pipelineName)
 }
 
-private[pipeline] object PipelinePool {
+object PipelinePool {
   private var pool: Option[PipelinePool] = None
 
   def initialize(system: ActorSystem): Unit =
     initialize(
-      system.settings.config.as[Map[String, Config]]("eventbus.pipeline"))
+      system.settings.config.as[Map[String, Config]]("event-bus.pipeline"))
 
   def initialize(pipelineConfigList: Map[String, Config]): Unit =
     pool = Some(new PipelinePool(pipelineConfigList))

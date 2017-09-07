@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.testkit
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
+import com.thenetcircle.event_bus.pipeline.PipelinePool
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -43,5 +44,7 @@ abstract class AkkaTestSpec(_system: ActorSystem)
 
   override def afterAll(): Unit =
     TestKit.shutdownActorSystem(system)
+
+  PipelinePool.initialize(_system)
 
 }
