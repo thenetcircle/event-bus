@@ -20,7 +20,11 @@ package com.thenetcircle.event_bus.dispatcher
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
-import com.thenetcircle.event_bus.pipeline.AbstractPipelineFactory
+import com.thenetcircle.event_bus.pipeline.{
+  Pipeline,
+  PipelinePool,
+  RightPortSettings
+}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -33,10 +37,11 @@ object DispatcherSettings extends StrictLogging {
 
     val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
 
-    val pipelineFactory =
-      config.as[AbstractPipelineFactory]("pipeline")
-    val pipelineName           = config.getString("pipeline.name")
-    val pipelineLeftPortConfig = config.getConfig("pipeline.rightport")
+    val pipelineName    = config.as[String]("pipeline.name")
+    val pipelineFactory = PipelinePool().getPipelineFactory(pipelineName).get
+    val pipeline        = pipelineFactory.getPipeline(pipelineName).get
+    val rightPortSettings = pipelineFactory.getRightPortSettings(
+      config.as[Config]("pipeline.rightport"))
 
     // TODO: adjust these default values when doing stress testing
     // TODO: use reference.conf to set up default value
@@ -45,24 +50,23 @@ object DispatcherSettings extends StrictLogging {
         config.getInt("max-parallel-sources")
       else 100
 
-    val materializerSettings: Option[ActorMaterializerSettings] =
-      if (config.hasPath("materializer")) {
+    val materializerSettings: Option[ActorMaterializerSettings] = {
+      if (config.hasPath("materializer"))
         Some(
           ActorMaterializerSettings(
             config
               .getConfig("materializer")
               .withFallback(system.settings.config
                 .getConfig("akka.stream.materializer"))))
-      } else {
+      else
         None
-      }
+    }
 
     DispatcherSettings(name,
                        maxParallelSources,
                        endPointSettings,
-                       pipelineFactory,
-                       pipelineName,
-                       pipelineLeftPortConfig,
+                       pipeline,
+                       rightPortSettings,
                        materializerSettings)
 
   }
@@ -72,8 +76,7 @@ final case class DispatcherSettings(
     name: String,
     maxParallelSources: Int,
     endPointSettings: EndPointSettings,
-    pipelineFactory: AbstractPipelineFactory,
-    pipelineName: String,
-    pipelineRightPortConfig: Config,
+    pipeline: Pipeline,
+    rightPortSettings: RightPortSettings,
     materializerSettings: Option[ActorMaterializerSettings]
 )

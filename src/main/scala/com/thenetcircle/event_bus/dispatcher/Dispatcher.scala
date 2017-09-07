@@ -50,16 +50,8 @@ object Dispatcher {
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val pipelineRightPort = {
-      settings.pipelineFactory.getRightPort(
-        settings.pipelineName,
-        settings.pipelineRightPortConfig) match {
-        case Some(p) => p
-        case None =>
-          throw new IllegalArgumentException(
-            s"There is not RightPort of ${settings.pipelineName} found according to the configuration ${settings.pipelineRightPortConfig}")
-      }
-    }
+    val pipelineRightPort =
+      settings.pipeline.rightPort(settings.rightPortSettings)
 
     val endPoint = EndPoint(settings.endPointSettings)
 

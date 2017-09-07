@@ -175,8 +175,7 @@ object HttpEntryPoint {
                 HttpResponse(StatusCodes.BadRequest,
                              entity = HttpEntity(e.getMessage)))
 
-              if (isAvailable(out1))
-                tryPullIn()
+              tryPullIn()
           }
 
           responsePromise.future

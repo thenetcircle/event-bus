@@ -19,55 +19,51 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
-import com.thenetcircle.event_bus.pipeline.AbstractPipelineFactory
+import com.thenetcircle.event_bus.pipeline.{
+  LeftPortSettings,
+  Pipeline,
+  PipelinePool
+}
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
-import scala.collection.JavaConverters._
-
 object TransporterSettings extends StrictLogging {
-  def apply(system: ActorSystem): TransporterSettings =
-    apply(system.settings.config.getConfig("transporter"))(system)
-
   def apply(config: Config)(implicit system: ActorSystem): TransporterSettings = {
+    val name = config.as[String]("name")
 
-    val name = config.getString("name")
-
-    val entryPointsSettings: Vector[EntryPointSettings] = {
-      for (_config <- config.getConfigList("entrypoints-settings").asScala)
+    val entryPointsSettings: Vector[EntryPointSettings] =
+      for (_config <- config.as[Vector[Config]]("entrypoints"))
         yield EntryPointSettings(_config)
-    }.toVector
 
-    val pipelineFactory =
-      config.as[AbstractPipelineFactory]("pipeline")
-    val pipelineName = config.getString("pipeline.name")
-    val pipelineLeftPortConfig =
-      config.getConfig("pipeline.leftport")
+    val pipelineName    = config.as[String]("pipeline.name")
+    val pipelineFactory = PipelinePool().getPipelineFactory(pipelineName).get
+    val pipeline        = pipelineFactory.getPipeline(pipelineName).get
+    val leftPortSettings = pipelineFactory.getLeftPortSettings(
+      config.as[Config]("pipeline.leftport"))
 
-    val transportParallelism = config.getInt("transport-parallelism")
-    val commitParallelism    = config.getInt("commit-parallelism")
+    val transportParallelism = config.as[Int]("transport-parallelism")
+    val commitParallelism    = config.as[Int]("commit-parallelism")
 
-    val materializerSettings: Option[ActorMaterializerSettings] =
-      if (config.hasPath("materializer")) {
+    val materializerKey = "akka.stream.materializer"
+    val materializerSettings: Option[ActorMaterializerSettings] = {
+      if (config.hasPath(materializerKey))
         Some(
           ActorMaterializerSettings(
             config
-              .getConfig("materializer")
-              .withFallback(system.settings.config
-                .getConfig("akka.stream.materializer"))))
-      } else {
+              .getConfig(materializerKey)
+              .withFallback(system.settings.config.getConfig(materializerKey))))
+      else
         None
-      }
+    }
 
     TransporterSettings(name,
                         commitParallelism,
                         transportParallelism,
                         entryPointsSettings,
-                        pipelineFactory,
-                        pipelineName,
-                        pipelineLeftPortConfig,
+                        pipeline,
+                        leftPortSettings,
                         materializerSettings)
 
   }
@@ -78,8 +74,7 @@ final case class TransporterSettings(
     commitParallelism: Int,
     transportParallelism: Int = 1,
     entryPointsSettings: Vector[EntryPointSettings],
-    pipelineFactory: AbstractPipelineFactory,
-    pipelineName: String,
-    pipelineLeftPortConfig: Config,
+    pipeline: Pipeline,
+    leftPortSettings: LeftPortSettings,
     materializerSettings: Option[ActorMaterializerSettings]
 )

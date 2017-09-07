@@ -22,12 +22,10 @@ import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline._
 
-class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
+class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
+    extends Pipeline {
 
   val pipelineName: String = pipelineSettings.name
-
-  type LPS = KafkaLeftPortSettings
-  type RPS = KafkaRightPortSettings
 
   /** Returns a new [[LeftPort]] of the [[Pipeline]]
     *
@@ -35,10 +33,14 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
     *
     * @param leftPortSettings settings object, needs [[KafkaLeftPortSettings]]
     */
-  override def leftPort(leftPortSettings: LPS): KafkaLeftPort =
+  override def leftPort(leftPortSettings: LeftPortSettings): KafkaLeftPort = {
+    require(leftPortSettings.isInstanceOf[KafkaLeftPortSettings],
+            "KafkaPipeline only accpect KafkaLeftPortSettings.")
+
     new KafkaLeftPort(s"$pipelineName-leftport-${leftPortId.getAndIncrement()}",
                       pipelineSettings,
-                      leftPortSettings)
+                      leftPortSettings.asInstanceOf[KafkaLeftPortSettings])
+  }
 
   /** Returns a new [[RightPort]] of the [[Pipeline]]
     *
@@ -50,8 +52,11 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
     *
     * @param rightPortSettings settings object, needs [[KafkaRightPortSettings]]
     */
-  override def rightPort(rightPortSettings: RPS)(
+  override def rightPort(rightPortSettings: RightPortSettings)(
       implicit materializer: Materializer): KafkaRightPort = {
+
+    require(rightPortSettings.isInstanceOf[KafkaRightPortSettings],
+            "KafkaPipeline only accpect KafkaLeftPortSettings.")
 
     implicit val eventExtractor: EventExtractor = EventExtractor(
       rightPortSettings.eventFormat)
@@ -59,7 +64,7 @@ class KafkaPipeline(pipelineSettings: KafkaPipelineSettings) extends Pipeline {
     new KafkaRightPort(
       s"$pipelineName-rightport-${rightPortId.getAndIncrement()}",
       pipelineSettings,
-      rightPortSettings)
+      rightPortSettings.asInstanceOf[KafkaRightPortSettings])
   }
 
 }

@@ -125,13 +125,7 @@ object Transporter {
       })
 
     val pipelineLeftPortBuilder = () => {
-      settings.pipelineFactory.getLeftPort(settings.pipelineName, settings.pipelineLeftPortConfig) match {
-        case Some(lp) => lp
-        case None =>
-          throw new IllegalArgumentException(
-            s"There is not LeftPort of ${settings.pipelineName} found " +
-              s"according to the configuration ${settings.pipelineLeftPortConfig}")
-      }
+      settings.pipeline.leftPort(settings.leftPortSettings)
     }
 
     new Transporter(settings, entryPoints, pipelineLeftPortBuilder)

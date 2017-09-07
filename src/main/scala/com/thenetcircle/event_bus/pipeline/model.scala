@@ -29,15 +29,14 @@ trait PipelineSettings {
 
 trait Pipeline {
 
-  type LPS <: LeftPortSettings
-  type RPS <: RightPortSettings
+  val pipelineSettings: PipelineSettings
 
   protected val leftPortId  = new AtomicInteger(0)
   protected val rightPortId = new AtomicInteger(0)
 
-  def leftPort(leftPortSettings: LPS): LeftPort
+  def leftPort(leftPortSettings: LeftPortSettings): LeftPort
 
-  def rightPort(rightPortSettings: RPS)(
+  def rightPort(rightPortSettings: RightPortSettings)(
       implicit materializer: Materializer): RightPort
 
 }

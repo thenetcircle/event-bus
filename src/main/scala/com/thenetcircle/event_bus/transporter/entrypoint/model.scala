@@ -24,12 +24,25 @@ import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.{Config, ConfigException}
+import net.ceedubs.ficus.readers.ValueReader
 
 object EntryPointPriority extends Enumeration {
   type EntryPointPriority = Value
   val High   = Value(6, "High")
   val Normal = Value(3, "Normal")
   val Low    = Value(1, "Low")
+
+  def apply(name: String): EntryPointPriority = name.toUpperCase match {
+    case "HIGH"   => High
+    case "NORMAL" => Normal
+    case "LOW"    => Low
+  }
+
+  implicit val entryPointPriorityReader: ValueReader[EntryPointPriority] =
+    new ValueReader[EntryPointPriority] {
+      override def read(config: Config, path: String) =
+        EntryPointPriority(config.getString(path))
+    }
 }
 
 /** Abstraction Api of All EntryPoints */
@@ -83,4 +96,5 @@ object EntryPointSettings {
           """EntryPoint "type" is not correct!""")
     }
   }
+
 }

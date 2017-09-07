@@ -23,20 +23,29 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.collection.mutable
 
-private[pipeline] final class PipelinePool(
-    pipelineConfigList: Map[String, Config]) {
-  private val cached = mutable.Map.empty[String, Pipeline]
+final class PipelinePool(pipelineConfigList: Map[String, Config]) {
+  private val cached =
+    mutable.Map.empty[String, Pipeline]
 
-  def getPipeline(pipelineName: String): Option[Pipeline] =
+  private[pipeline] def getPipeline(pipelineName: String): Option[Pipeline] =
     cached.synchronized(cached.get(pipelineName))
 
-  def setPipeline(pipelineName: String, pipeline: Pipeline): Unit =
+  private[pipeline] def setPipeline(pipelineName: String,
+                                    pipeline: Pipeline): Unit =
     cached.synchronized {
       cached += (pipelineName -> pipeline)
     }
 
   def getPipelineConfig(pipelineName: String): Option[Config] =
     pipelineConfigList.get(pipelineName)
+
+  def getPipelineFactory(
+      pipelineName: String): Option[AbstractPipelineFactory] =
+    getPipelineConfig(pipelineName) match {
+      case Some(config) =>
+        AbstractPipelineFactory.getConcreteFactory(config.as[String]("type"))
+      case None => None
+    }
 }
 
 object PipelinePool {
@@ -46,8 +55,11 @@ object PipelinePool {
     initialize(
       system.settings.config.as[Map[String, Config]]("event-bus.pipeline"))
 
-  def initialize(pipelineConfigList: Map[String, Config]): Unit =
-    pool = Some(new PipelinePool(pipelineConfigList))
+  def initialize(pipelineConfigList: Map[String, Config]): Unit = pool match {
+    case None => pool = Some(new PipelinePool(pipelineConfigList))
+    case Some(_) =>
+      throw new Exception("PipelinePool can not be initialized twice.")
+  }
 
   def apply(): PipelinePool = pool match {
     case Some(_pool) => _pool

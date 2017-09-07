@@ -33,13 +33,14 @@ class DispatcherSpec extends AkkaTestSpec {
   behavior of "Dispatcher"
 
   it should "be properly delivered each port of endpoint and committer" in {
+
     val dispatcherSettings = DispatcherSettings(
       name = "TestDispatcher",
       maxParallelSources = 10,
       endPointSettings = createHttpEndPointSettings(),
-      pipelineFactory = KafkaPipelineFactory,
-      pipelineName = "TestPipeline",
-      pipelineRightPortConfig = ConfigFactory.empty(),
+      pipeline = KafkaPipelineFactory.getPipeline("TestPipeline").get,
+      rightPortSettings =
+        KafkaPipelineFactory.getRightPortSettings(ConfigFactory.empty()),
       None
     )
 

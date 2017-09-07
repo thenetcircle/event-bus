@@ -16,11 +16,13 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.settings.ServerSettings
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
 /** Http EntryPoint Settings */
 case class HttpEntryPointSettings(
@@ -35,54 +37,30 @@ case class HttpEntryPointSettings(
 ) extends EntryPointSettings
 
 object HttpEntryPointSettings {
-  def apply(config: Config)(
+  def apply(_config: Config)(
       implicit system: ActorSystem): HttpEntryPointSettings = {
+    val config: Config =
+      _config.withFallback(
+        system.settings.config.getConfig("event-bus.http-entrypoint"))
 
-    // TODO: custom client settings with system fallbacker?
-
-    val priority =
-      if (config.hasPath("priority"))
-        EntryPointPriority(config.getInt("priority"))
-      else EntryPointPriority.Normal
-
-    // TODO: adjust these default values when doing stress testing
-    // TODO: use reference.conf to set up default value
-    val maxConnections =
-      if (config.hasPath("max-connections"))
-        config.getInt("max-connections")
-      else 1000
-
-    val perConnectionParallelism =
-      if (config.hasPath("pre-connection-parallelism"))
-        config.getInt("pre-connection-parallelism")
-      else 10
-
-    val eventFormat =
-      if (config.hasPath("format"))
-        EventFormat(config.getString("format"))
-      else EventFormat.DefaultFormat
-
-    val systemServerSettings =
-      system.settings.config.getConfig("akka.server")
+    val rootConfig =
+      system.settings.config
     val serverSettings: ServerSettings =
-      if (config.hasPath("server")) {
-        ServerSettings(
-          config
-            .getConfig("server")
-            .withFallback(systemServerSettings))
+      if (config.hasPath("akka.http.server")) {
+        ServerSettings(config.withFallback(rootConfig))
       } else {
-        ServerSettings(systemServerSettings)
+        ServerSettings(rootConfig)
       }
 
     HttpEntryPointSettings(
-      config.getString("name"),
-      priority,
-      maxConnections,
-      perConnectionParallelism,
-      eventFormat,
+      config.as[String]("name"),
+      config.as[EntryPointPriority]("priority"),
+      config.as[Int]("max-connections"),
+      config.as[Int]("pre-connection-parallelism"),
+      config.as[EventFormat]("event-format"),
       serverSettings,
-      config.getString("interface"),
-      config.getInt("port")
+      config.as[String]("interface"),
+      config.as[Int]("port")
     )
   }
 }

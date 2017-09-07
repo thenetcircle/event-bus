@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus
 
 import akka.util.ByteString
+import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
 import scala.concurrent.Future
@@ -30,13 +31,18 @@ object EventFormat {
   type TestFormat = TestFormat.type
   case object TestFormat extends EventFormat
 
-  def apply(formatString: String): EventFormat = formatString match {
-    case "DefaultFormat" => DefaultFormat
-    case "TestFormat"    => TestFormat
-  }
+  def apply(formatString: String): EventFormat =
+    formatString.toUpperCase match {
+      case "DEFAULT" => DefaultFormat
+      case "TEST"    => TestFormat
+    }
 
-  implicit val valueReader: ValueReader[EventFormat] =
-    ValueReader.relative(config => apply(config.getString("")))
+  implicit val eventFormatReader: ValueReader[EventFormat] =
+    new ValueReader[EventFormat] {
+      override def read(config: Config, path: String) =
+        EventFormat(config.getString(path))
+    }
+
 }
 
 trait EventCommitter {

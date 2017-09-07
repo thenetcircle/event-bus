@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.actor.ActorSystem
 import akka.kafka.{ConsumerSettings, ProducerSettings}
-import akka.stream.Materializer
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.pipeline._
 import com.typesafe.config.Config
@@ -67,16 +66,6 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getPipeline(pipelineName: String)(
-      implicit system: ActorSystem): Option[KafkaPipeline] =
-    pipelinePool.getPipeline(pipelineName) match {
-      case Some(pipeline: KafkaPipeline) => Some(pipeline)
-      case Some(_) =>
-        throw new Exception(
-          s"""The type of pipeline "$pipelineName" is not correct""")
-      case None => createKafkaPipeline(pipelineName)
-    }
-
   override def getLeftPortSettings(
       leftPortConfig: Config): KafkaLeftPortSettings = {
     /*val properties: Option[Map[String, String]] = {
@@ -99,14 +88,6 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
       closeTimeout = leftPortConfig.as[Option[FiniteDuration]]("close-timeout")
     )
   }
-
-  override def getLeftPort(pipelineName: String, leftPortConfig: Config)(
-      implicit system: ActorSystem): Option[KafkaLeftPort] =
-    getPipeline(pipelineName) match {
-      case Some(pipeline) =>
-        Some(pipeline.leftPort(getLeftPortSettings(leftPortConfig)))
-      case None => None
-    }
 
   override def getRightPortSettings(
       rightPortConfig: Config): KafkaRightPortSettings = {
@@ -134,13 +115,14 @@ object KafkaPipelineFactory extends AbstractPipelineFactory {
     )
   }
 
-  override def getRightPort(pipelineName: String, rightPortConfig: Config)(
-      implicit system: ActorSystem,
-      materializer: Materializer): Option[KafkaRightPort] =
-    getPipeline(pipelineName) match {
-      case Some(pipeline) =>
-        Some(pipeline.rightPort(getRightPortSettings(rightPortConfig)))
-      case None => None
+  override def getPipeline(pipelineName: String)(
+      implicit system: ActorSystem): Option[KafkaPipeline] =
+    pipelinePool.getPipeline(pipelineName) match {
+      case Some(pipeline: KafkaPipeline) => Some(pipeline)
+      case Some(_) =>
+        throw new Exception(
+          s"""The type of pipeline "$pipelineName" is not correct""")
+      case None => createKafkaPipeline(pipelineName)
     }
 
   protected def createKafkaPipeline(pipelineName: String)(

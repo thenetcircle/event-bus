@@ -18,10 +18,8 @@
 package com.thenetcircle.event_bus.pipeline
 
 import akka.actor.ActorSystem
-import akka.stream.Materializer
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.typesafe.config.Config
-import net.ceedubs.ficus.readers.ValueReader
 
 trait AbstractPipelineFactory {
 
@@ -32,30 +30,11 @@ trait AbstractPipelineFactory {
   def getPipelineSettings(pipelineConfig: Config)(
       implicit system: ActorSystem): PipelineSettings
 
-  /** Returns a [[Pipeline]] from [[PipelinePool]],
-    * If did not existed, It creates a new [[Pipeline]] according to the predefined configuration
-    * and update the [[PipelinePool]]
-    *
-    * @param pipelineName
-    */
-  def getPipeline(pipelineName: String)(
-      implicit system: ActorSystem): Option[Pipeline]
-
   /** Creates [[LeftPortSettings]] according to a TypeSafe [[Config]]
     *
     * @param leftPortConfig the TypeSafe [[Config]]
     */
   def getLeftPortSettings(leftPortConfig: Config): LeftPortSettings
-
-  /** Returns a [[LeftPort]] of the [[Pipeline]] which has the pipelineName with the leftPortConfig
-    *
-    * @param pipelineName uses for get a created [[Pipeline]] or create a new [[Pipeline]] based on predefined [[Config]]
-    * @param leftPortConfig the [[Config]] of the [[LeftPort]]
-    *
-    * @return [[LeftPort]]
-    */
-  def getLeftPort(pipelineName: String, leftPortConfig: Config)(
-      implicit system: ActorSystem): Option[LeftPort]
 
   /** Creates [[RightPortSettings]] according to a TypeSafe [[Config]]
     *
@@ -63,25 +42,22 @@ trait AbstractPipelineFactory {
     */
   def getRightPortSettings(rightPortConfig: Config): RightPortSettings
 
-  /** Returns a [[RightPort]] of the [[Pipeline]] which has the pipelineName with the rightPortConfig
+  /** Returns a [[Pipeline]] from [[PipelinePool]],
+    * If did not existed, It creates a new [[Pipeline]] according to the predefined configuration
+    * and update the [[PipelinePool]]
     *
-    * @param pipelineName uses for get a created [[Pipeline]] or create a new [[Pipeline]] based on predefined [[Config]]
-    * @param rightPortConfig the [[Config]] of the [[RightPort]]
-    *
-    * @return [[RightPort]]
+    * @param pipelineName the predefined name of a specific pipeline
     */
-  def getRightPort(pipelineName: String, rightPortConfig: Config)(
-      implicit system: ActorSystem,
-      materializer: Materializer): Option[RightPort]
+  def getPipeline(pipelineName: String)(
+      implicit system: ActorSystem): Option[Pipeline]
 
 }
 
 object AbstractPipelineFactory {
-  implicit val valueReader: ValueReader[AbstractPipelineFactory] =
-    ValueReader.relative(config =>
-      config.getString("factory").toUpperCase match {
-        case "KAFKA" => KafkaPipelineFactory
-        case f =>
-          throw new IllegalArgumentException(s"Unsupported Pipeline Factory $f")
-    })
+  def getConcreteFactory(
+      pipelineType: String): Option[AbstractPipelineFactory] =
+    pipelineType.toUpperCase match {
+      case "KAFKA" => Some(KafkaPipelineFactory)
+      case _       => None
+    }
 }
