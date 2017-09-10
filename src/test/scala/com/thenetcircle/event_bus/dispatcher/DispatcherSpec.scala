@@ -22,11 +22,9 @@ import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
-import com.thenetcircle.event_bus.pipeline.RightPort
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
+import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.thenetcircle.event_bus.testkit.AkkaTestSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
-import com.typesafe.config.ConfigFactory
 
 class DispatcherSpec extends AkkaTestSpec {
 
@@ -34,7 +32,7 @@ class DispatcherSpec extends AkkaTestSpec {
 
   it should "be properly delivered each port of endpoint and committer" in {
 
-    val dispatcherSettings = DispatcherSettings(
+    /*val dispatcherSettings = DispatcherSettings(
       name = "TestDispatcher",
       maxParallelSources = 10,
       endPointSettings = createHttpEndPointSettings(),
@@ -42,7 +40,10 @@ class DispatcherSpec extends AkkaTestSpec {
       rightPortSettings =
         KafkaPipelineFactory.getRightPortSettings(ConfigFactory.empty()),
       None
-    )
+    )*/
+    val dispatcherSettings =
+      DispatcherSettings(
+        system.settings.config.getConfig("event-bus.test-dispatcher"))
 
     val testSource1 = TestPublisher.probe[Event]()
     val testSource2 = TestPublisher.probe[Event]()
@@ -54,8 +55,8 @@ class DispatcherSpec extends AkkaTestSpec {
 
     val testCommitter = TestSubscriber.probe[Event]()
 
-    val pipelineRightPort = new RightPort {
-      override def port: Source[Source[Event, NotUsed], NotUsed] =
+    val pipelineRightPort = new PipelineOutlet {
+      override def stream: Source[Source[Event, NotUsed], NotUsed] =
         Source[Source[Event, NotUsed]](
           Source.fromPublisher(testSource1) :: Source
             .fromPublisher(testSource2) :: Source

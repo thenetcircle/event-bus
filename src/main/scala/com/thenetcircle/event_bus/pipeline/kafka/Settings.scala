@@ -19,9 +19,9 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.pipeline.{
-  LeftPortSettings,
+  PipelineInletSettings,
   PipelineSettings,
-  RightPortSettings
+  PipelineOutletSettings
 }
 
 import scala.concurrent.duration.FiniteDuration
@@ -35,14 +35,14 @@ case class KafkaPipelineSettings(
     consumerSettings: ConsumerSettings[Key, Value]
 ) extends PipelineSettings
 
-case class KafkaLeftPortSettings(
+case class KafkaPipelineInletSettings(
     produceParallelism: Option[Int] = None,
     dispatcher: Option[String] = None,
     properties: Option[Map[String, String]] = None,
     closeTimeout: Option[FiniteDuration] = None
-) extends LeftPortSettings
+) extends PipelineInletSettings
 
-case class KafkaRightPortSettings(
+case class KafkaPipelineOutletSettings(
     groupId: String,
     extractParallelism: Int = 3,
     commitParallelism: Int = 3,
@@ -59,4 +59,4 @@ case class KafkaRightPortSettings(
     commitTimeout: Option[FiniteDuration] = None,
     wakeupTimeout: Option[FiniteDuration] = None,
     maxWakeups: Option[Int] = None
-) extends RightPortSettings
+) extends PipelineOutletSettings

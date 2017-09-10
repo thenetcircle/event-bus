@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.pipeline.kafka
 import akka.stream.Materializer
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline._
 
 class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
@@ -27,44 +28,48 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
 
   val pipelineName: String = pipelineSettings.name
 
-  /** Returns a new [[LeftPort]] of the [[Pipeline]]
+  override val pipelineType: PipelineType = PipelineType.Kafka
+
+  /** Returns a new [[PipelineInlet]] of the [[Pipeline]]
     *
     * Which will create a new producer with a new connection to Kafka internally after the port got materialized
     *
-    * @param leftPortSettings settings object, needs [[KafkaLeftPortSettings]]
+    * @param pipelineInletSettings settings object, needs [[KafkaPipelineInletSettings]]
     */
-  override def leftPort(leftPortSettings: LeftPortSettings): KafkaLeftPort = {
-    require(leftPortSettings.isInstanceOf[KafkaLeftPortSettings],
-            "KafkaPipeline only accpect KafkaLeftPortSettings.")
+  override def getNewInlet(
+      pipelineInletSettings: PipelineInletSettings): KafkaPipelineInlet = {
+    require(pipelineInletSettings.isInstanceOf[KafkaPipelineInletSettings],
+            "KafkaPipeline only accpect KafkaLPipelineInletSettings.")
 
-    new KafkaLeftPort(s"$pipelineName-leftport-${leftPortId.getAndIncrement()}",
-                      pipelineSettings,
-                      leftPortSettings.asInstanceOf[KafkaLeftPortSettings])
+    new KafkaPipelineInlet(
+      s"$pipelineName-inlet-${inletId.getAndIncrement()}",
+      pipelineSettings,
+      pipelineInletSettings.asInstanceOf[KafkaPipelineInletSettings])
   }
 
-  /** Returns a new [[RightPort]] of the [[Pipeline]]
+  /** Returns a new [[PipelineOutlet]] of the [[Pipeline]]
     *
     * Which will create a new consumer to the kafka Cluster after the port got materialized, It expressed as a Source[Source[Event, _], _]
     * Each (topic, partition) will be presented as a Source[Event, NotUsed]
     * After each [[Event]] got processed, It needs to be commit, There are two ways to do that:
     * 1. Call the committer of the [[Event]] for committing the single [[Event]]
-    * 2. Use the committer of the [[RightPort]] (Batched, Recommended)
+    * 2. Use the committer of the [[PipelineOutlet]] (Batched, Recommended)
     *
-    * @param rightPortSettings settings object, needs [[KafkaRightPortSettings]]
+    * @param pipelineOutletSettings settings object, needs [[KafkaPipelineOutletSettings]]
     */
-  override def rightPort(rightPortSettings: RightPortSettings)(
-      implicit materializer: Materializer): KafkaRightPort = {
+  override def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
+      implicit materializer: Materializer): KafkaPipelineOutlet = {
 
-    require(rightPortSettings.isInstanceOf[KafkaRightPortSettings],
-            "KafkaPipeline only accpect KafkaLeftPortSettings.")
+    require(pipelineOutletSettings.isInstanceOf[KafkaPipelineOutletSettings],
+            "KafkaPipeline only accpect KafkaPipelineOutletSettings.")
 
     implicit val eventExtractor: EventExtractor = EventExtractor(
-      rightPortSettings.eventFormat)
+      pipelineOutletSettings.eventFormat)
 
-    new KafkaRightPort(
-      s"$pipelineName-rightport-${rightPortId.getAndIncrement()}",
+    new KafkaPipelineOutlet(
+      s"$pipelineName-outlet-${outletId.getAndIncrement()}",
       pipelineSettings,
-      rightPortSettings.asInstanceOf[KafkaRightPortSettings])
+      pipelineOutletSettings.asInstanceOf[KafkaPipelineOutletSettings])
   }
 
 }

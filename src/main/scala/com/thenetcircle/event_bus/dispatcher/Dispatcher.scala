@@ -21,10 +21,10 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{RunnableGraph, Sink}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
-import com.thenetcircle.event_bus.pipeline.RightPort
+import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 
 class Dispatcher(settings: DispatcherSettings,
-                 pipelineRightPort: RightPort,
+                 pipelineOutlet: PipelineOutlet,
                  endPoint: EndPoint)(implicit materializer: Materializer) {
 
   // TODO: draw a graph in comments
@@ -32,10 +32,10 @@ class Dispatcher(settings: DispatcherSettings,
   // TODO: parallel and async
   // TODO: Mat value
   lazy val dispatchStream: RunnableGraph[_] =
-    pipelineRightPort.port
+    pipelineOutlet.stream
       .flatMapMerge(settings.maxParallelSources,
                     source => source.via(endPoint.port.async))
-      .via(pipelineRightPort.committer.async)
+      .via(pipelineOutlet.committer.async)
       .to(Sink.ignore)
 
   // TODO add a transporter controller as a materialized value
@@ -50,11 +50,11 @@ object Dispatcher {
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val pipelineRightPort =
-      settings.pipeline.rightPort(settings.rightPortSettings)
+    val pipelineOutlet =
+      settings.pipeline.getNewOutlet(settings.pipelineOutletSettings)
 
     val endPoint = EndPoint(settings.endPointSettings)
 
-    new Dispatcher(settings, pipelineRightPort, endPoint)
+    new Dispatcher(settings, pipelineOutlet, endPoint)
   }
 }

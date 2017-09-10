@@ -38,16 +38,15 @@ object HttpEndPointSettings {
   def apply(config: Config)(
       implicit system: ActorSystem): HttpEndPointSettings = {
 
-    val systemPollSettings =
-      system.settings.config.getConfig("akka.http.host-connection-pool")
+    val rootConfig =
+      system.settings.config
     val connectionPoolSettings: ConnectionPoolSettings =
-      if (config.hasPath("host-connection-pool")) {
+      if (config.hasPath("akka.http.host-connection-pool")) {
         ConnectionPoolSettings(
           config
-            .getConfig("host-connection-pool")
-            .withFallback(systemPollSettings))
+            .withFallback(rootConfig))
       } else {
-        ConnectionPoolSettings(systemPollSettings)
+        ConnectionPoolSettings(rootConfig)
       }
 
     val requestMethod = if (config.hasPath("request-method")) {

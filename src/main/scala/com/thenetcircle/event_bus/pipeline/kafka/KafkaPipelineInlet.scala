@@ -24,21 +24,21 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.pipeline.LeftPort
+import com.thenetcircle.event_bus.pipeline.PipelineInlet
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
 import org.apache.kafka.clients.producer.ProducerRecord
 
 /** LeftPort Implementation */
-private[kafka] final class KafkaLeftPort(
+private[kafka] final class KafkaPipelineInlet(
     name: String,
     pipelineSettings: KafkaPipelineSettings,
-    settings: KafkaLeftPortSettings)
-    extends LeftPort {
+    settings: KafkaPipelineInletSettings)
+    extends PipelineInlet {
 
   import KafkaPipeline._
-  import KafkaLeftPort._
+  import KafkaPipelineInlet._
 
-  override val port: Flow[Event, Event, NotUsed] = {
+  override val stream: Flow[Event, Event, NotUsed] = {
 
     // Combine LeftPortSettings with PipelineSettings
     val producerSettings: ProducerSettings[Key, Value] = {
@@ -73,7 +73,7 @@ private[kafka] final class KafkaLeftPort(
   }
 }
 
-object KafkaLeftPort {
+object KafkaPipelineInlet {
   // TODO: manually calculate partition, use key for metadata
   private def getProducerRecordFromEvent(
       event: Event): ProducerRecord[Key, Value] = {

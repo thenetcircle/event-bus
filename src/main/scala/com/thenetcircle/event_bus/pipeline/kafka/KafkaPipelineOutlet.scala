@@ -26,24 +26,24 @@ import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.{Event, EventPriority, EventSourceType}
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
-import com.thenetcircle.event_bus.pipeline.RightPort
+import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 
 import scala.concurrent.ExecutionContext
 
 /** RightPort Implementation */
-private[kafka] final class KafkaRightPort(
+private[kafka] final class KafkaPipelineOutlet(
     name: String,
     pipelineSettings: KafkaPipelineSettings,
-    settings: KafkaRightPortSettings)(implicit materializer: Materializer,
-                                      extractor: EventExtractor)
-    extends RightPort {
+    settings: KafkaPipelineOutletSettings)(implicit materializer: Materializer,
+                                           extractor: EventExtractor)
+    extends PipelineOutlet {
 
   import KafkaPipeline._
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
-  override val port: Source[Source[Event, NotUsed], NotUsed] = {
+  override val stream: Source[Source[Event, NotUsed], NotUsed] = {
 
     require(settings.topics.isDefined || settings.topicPattern.isDefined,
             "The outlet of KafkaPipeline needs to subscribe topics")

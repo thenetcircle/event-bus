@@ -68,7 +68,7 @@ object KafkaPipelineFactory extends PipelineFactory {
     }
 
     KafkaPipelineSettings(
-      pipelineConfig.getString("name"),
+      pipelineName,
       ProducerSettings[KafkaPipeline.Key, KafkaPipeline.Value](
         producerConfig,
         new ByteArraySerializer,
@@ -77,55 +77,6 @@ object KafkaPipelineFactory extends PipelineFactory {
         consumerConfig,
         new ByteArrayDeserializer,
         new ByteArrayDeserializer)
-    )
-  }
-
-  override def getLeftPortSettings(
-      leftPortConfig: Config): KafkaLeftPortSettings = {
-    /*val properties: Option[Map[String, String]] = {
-      if (leftPortConfig.hasPath("properties"))
-        Some(
-          leftPortConfig
-            .getObject("properties")
-            .unwrapped()
-            .asInstanceOf[java.util.Map[String, String]]
-            .asScala
-            .toMap)
-      else
-        None
-    }*/
-
-    KafkaLeftPortSettings(
-      produceParallelism = leftPortConfig.as[Option[Int]]("produce-parallelism"),
-      dispatcher = leftPortConfig.as[Option[String]]("dispatcher"),
-      properties = leftPortConfig.as[Option[Map[String, String]]]("properties"),
-      closeTimeout = leftPortConfig.as[Option[FiniteDuration]]("close-timeout")
-    )
-  }
-
-  override def getRightPortSettings(
-      rightPortConfig: Config): KafkaRightPortSettings = {
-    KafkaRightPortSettings(
-      groupId = rightPortConfig.as[String]("groupid"),
-      extractParallelism = rightPortConfig.as[Int]("extract-parallelism"),
-      commitParallelism = rightPortConfig.as[Int]("commit-parallelism"),
-      commitBatchMax = rightPortConfig.as[Int]("commit-batch-max"),
-      eventFormat = rightPortConfig
-        .as[Option[EventFormat]]("event-format")
-        .getOrElse(EventFormat.DefaultFormat),
-      topics = rightPortConfig.as[Option[Set[String]]]("topics"),
-      topicPattern = rightPortConfig.as[Option[String]]("topicPattern"),
-      dispatcher = rightPortConfig.as[Option[String]]("dispatcher"),
-      properties = rightPortConfig.as[Option[Map[String, String]]]("properties"),
-      pollInterval = rightPortConfig.as[Option[FiniteDuration]]("poll-interval"),
-      pollTimeout = rightPortConfig.as[Option[FiniteDuration]]("poll-timeout"),
-      stopTimeout = rightPortConfig.as[Option[FiniteDuration]]("stop-timeout"),
-      closeTimeout = rightPortConfig.as[Option[FiniteDuration]]("close-timeout"),
-      commitTimeout =
-        rightPortConfig.as[Option[FiniteDuration]]("commit-timeout"),
-      wakeupTimeout =
-        rightPortConfig.as[Option[FiniteDuration]]("wakeup-timeout"),
-      maxWakeups = rightPortConfig.as[Option[Int]]("max-wakeups")
     )
   }
 
@@ -145,6 +96,63 @@ object KafkaPipelineFactory extends PipelineFactory {
     val pipeline         = KafkaPipeline(pipelineSettings)
     addToCachedPipeline(pipelineName, pipeline)
     pipeline
+  }
+
+  override def getPipelineInletSettings(
+      pipelineInletConfig: Config): KafkaPipelineInletSettings = {
+    /*val properties: Option[Map[String, String]] = {
+      if (leftPortConfig.hasPath("properties"))
+        Some(
+          leftPortConfig
+            .getObject("properties")
+            .unwrapped()
+            .asInstanceOf[java.util.Map[String, String]]
+            .asScala
+            .toMap)
+      else
+        None
+    }*/
+
+    KafkaPipelineInletSettings(
+      produceParallelism =
+        pipelineInletConfig.as[Option[Int]]("produce-parallelism"),
+      dispatcher = pipelineInletConfig.as[Option[String]]("dispatcher"),
+      properties =
+        pipelineInletConfig.as[Option[Map[String, String]]]("properties"),
+      closeTimeout =
+        pipelineInletConfig.as[Option[FiniteDuration]]("close-timeout")
+    )
+  }
+
+  override def getPipelineOutletSettings(
+      pipelineOutletConfig: Config): KafkaPipelineOutletSettings = {
+    KafkaPipelineOutletSettings(
+      groupId = pipelineOutletConfig.as[String]("group-id"),
+      extractParallelism = pipelineOutletConfig.as[Int]("extract-parallelism"),
+      commitParallelism = pipelineOutletConfig.as[Int]("commit-parallelism"),
+      commitBatchMax = pipelineOutletConfig.as[Int]("commit-batch-max"),
+      eventFormat = pipelineOutletConfig
+        .as[Option[EventFormat]]("event-format")
+        .getOrElse(EventFormat.DefaultFormat),
+      topics = pipelineOutletConfig.as[Option[Set[String]]]("topics"),
+      topicPattern = pipelineOutletConfig.as[Option[String]]("topicPattern"),
+      dispatcher = pipelineOutletConfig.as[Option[String]]("dispatcher"),
+      properties =
+        pipelineOutletConfig.as[Option[Map[String, String]]]("properties"),
+      pollInterval =
+        pipelineOutletConfig.as[Option[FiniteDuration]]("poll-interval"),
+      pollTimeout =
+        pipelineOutletConfig.as[Option[FiniteDuration]]("poll-timeout"),
+      stopTimeout =
+        pipelineOutletConfig.as[Option[FiniteDuration]]("stop-timeout"),
+      closeTimeout =
+        pipelineOutletConfig.as[Option[FiniteDuration]]("close-timeout"),
+      commitTimeout =
+        pipelineOutletConfig.as[Option[FiniteDuration]]("commit-timeout"),
+      wakeupTimeout =
+        pipelineOutletConfig.as[Option[FiniteDuration]]("wakeup-timeout"),
+      maxWakeups = pipelineOutletConfig.as[Option[Int]]("max-wakeups")
+    )
   }
 
 }

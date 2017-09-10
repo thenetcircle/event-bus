@@ -23,7 +23,7 @@ import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
 import com.thenetcircle.event_bus.pipeline.{
   PipelineFactory,
   Pipeline,
-  RightPortSettings
+  PipelineOutletSettings
 }
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -37,12 +37,12 @@ object DispatcherSettings extends StrictLogging {
 
     val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
 
-    val pipelineName = config.as[String]("pipeline-name")
+    val pipelineName = config.as[String]("pipeline.name")
     val pipelineFactory =
       PipelineFactory.getConcreteFactoryByName(pipelineName)
     val pipeline = pipelineFactory.getPipeline(pipelineName)
-    val rightPortSettings = pipelineFactory.getRightPortSettings(
-      config.as[Config]("pipeline-rightport-settings"))
+    val pipelineOutletSettings = pipelineFactory.getPipelineOutletSettings(
+      config.as[Config]("pipeline.outlet-settings"))
 
     // TODO: adjust these default values when doing stress testing
     // TODO: use reference.conf to set up default value
@@ -68,7 +68,7 @@ object DispatcherSettings extends StrictLogging {
                        maxParallelSources,
                        endPointSettings,
                        pipeline,
-                       rightPortSettings,
+                       pipelineOutletSettings,
                        materializerSettings)
 
   }
@@ -79,6 +79,6 @@ final case class DispatcherSettings(
     maxParallelSources: Int,
     endPointSettings: EndPointSettings,
     pipeline: Pipeline,
-    rightPortSettings: RightPortSettings,
+    pipelineOutletSettings: PipelineOutletSettings,
     materializerSettings: Option[ActorMaterializerSettings]
 )

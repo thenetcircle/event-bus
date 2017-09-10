@@ -41,7 +41,7 @@ object PipelineConfigFactory {
 
   def initialize(system: ActorSystem): Unit =
     initialize(
-      system.settings.config.as[Map[String, Config]]("event-bus.pipeline"))
+      system.settings.config.as[Map[String, Config]]("event-bus.pipelines"))
 
   def initialize(allPipelineConfig: Map[String, Config]): Unit =
     factory = Some(new PipelineConfigFactory(allPipelineConfig))

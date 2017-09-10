@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
+import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
@@ -31,30 +32,31 @@ trait PipelineSettings {
 
 trait Pipeline {
 
+  val pipelineType: PipelineType
   val pipelineSettings: PipelineSettings
 
-  protected val leftPortId  = new AtomicInteger(0)
-  protected val rightPortId = new AtomicInteger(0)
+  protected val inletId  = new AtomicInteger(0)
+  protected val outletId = new AtomicInteger(0)
 
-  def leftPort(leftPortSettings: LeftPortSettings): LeftPort
+  def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet
 
-  def rightPort(rightPortSettings: RightPortSettings)(
-      implicit materializer: Materializer): RightPort
+  def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
+      implicit materializer: Materializer): PipelineOutlet
 
 }
 
-trait LeftPortSettings
+trait PipelineInletSettings
 
-trait LeftPort {
-  def port: Flow[Event, Event, NotUsed]
+trait PipelineInlet {
+  def stream: Flow[Event, Event, NotUsed]
 }
 
-trait RightPortSettings {
+trait PipelineOutletSettings {
   val eventFormat: EventFormat
 }
 
-trait RightPort {
-  def port: Source[Source[Event, NotUsed], NotUsed]
+trait PipelineOutlet {
+  def stream: Source[Source[Event, NotUsed], NotUsed]
   def committer: Flow[Event, Event, NotUsed]
 }
 

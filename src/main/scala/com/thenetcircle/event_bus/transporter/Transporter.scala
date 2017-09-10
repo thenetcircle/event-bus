@@ -31,12 +31,12 @@ import akka.stream.scaladsl.{
 }
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
-import com.thenetcircle.event_bus.pipeline.LeftPort
+import com.thenetcircle.event_bus.pipeline.PipelineInlet
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
-                  pipelineLeftPortBuilder: () => LeftPort)(
+                  pipelineInletGetter: () => PipelineInlet)(
     implicit system: ActorSystem,
     materializer: Materializer) {
 
@@ -90,7 +90,7 @@ class Transporter(settings: TransporterSettings,
 
           for (i <- 0 until transportParallelism) {
 
-                                balancer.out(i) ~> pipelineLeftPortBuilder().port.async ~> committerMerger.in(i)
+                                balancer.out(i) ~> pipelineInletGetter().stream.async ~> committerMerger.in(i)
 
           }
 
@@ -98,7 +98,7 @@ class Transporter(settings: TransporterSettings,
         }
         else {
 
-          prioritizedChannel ~> pipelineLeftPortBuilder().port.async ~> committer.async
+          prioritizedChannel ~> pipelineInletGetter().stream.async ~> committer.async
 
         }
 
@@ -124,10 +124,8 @@ object Transporter {
         EntryPoint(s)
       })
 
-    val pipelineLeftPortBuilder = () => {
-      settings.pipeline.leftPort(settings.leftPortSettings)
-    }
+    val pipelineInletGetter = () => settings.pipeline.getNewInlet(settings.pipelineInletSettings)
 
-    new Transporter(settings, entryPoints, pipelineLeftPortBuilder)
+    new Transporter(settings, entryPoints, pipelineInletGetter)
   }
 }

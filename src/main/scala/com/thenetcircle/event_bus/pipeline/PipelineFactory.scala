@@ -45,18 +45,6 @@ trait PipelineFactory {
   def getPipelineSettings(pipelineName: String)(
       implicit system: ActorSystem): PipelineSettings
 
-  /** Creates [[LeftPortSettings]] according to a TypeSafe [[Config]]
-    *
-    * @param leftPortConfig the TypeSafe [[Config]]
-    */
-  def getLeftPortSettings(leftPortConfig: Config): LeftPortSettings
-
-  /** Creates [[RightPortSettings]] according to a TypeSafe [[Config]]
-    *
-    * @param rightPortConfig the TypeSafe [[Config]]
-    */
-  def getRightPortSettings(rightPortConfig: Config): RightPortSettings
-
   /** Returns a [[Pipeline]] from [[PipelineConfigFactory]],
     * If did not existed, It creates a new [[Pipeline]] according to the predefined configuration
     * and update the [[PipelineConfigFactory]]
@@ -64,6 +52,20 @@ trait PipelineFactory {
     * @param pipelineName the predefined name of a specific pipeline
     */
   def getPipeline(pipelineName: String)(implicit system: ActorSystem): Pipeline
+
+  /** Creates [[PipelineInletSettings]] according to a TypeSafe [[Config]]
+    *
+    * @param pipelineInletConfig the TypeSafe [[Config]]
+    */
+  def getPipelineInletSettings(
+      pipelineInletConfig: Config): PipelineInletSettings
+
+  /** Creates [[PipelineOutletSettings]] according to a TypeSafe [[Config]]
+    *
+    * @param pipelineOutletConfig the TypeSafe [[Config]]
+    */
+  def getPipelineOutletSettings(
+      pipelineOutletConfig: Config): PipelineOutletSettings
 
 }
 
