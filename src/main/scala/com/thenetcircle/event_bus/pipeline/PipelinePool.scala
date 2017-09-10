@@ -38,14 +38,6 @@ final class PipelinePool(pipelineConfigList: Map[String, Config]) {
 
   def getPipelineConfig(pipelineName: String): Option[Config] =
     pipelineConfigList.get(pipelineName)
-
-  def getPipelineFactory(
-      pipelineName: String): Option[AbstractPipelineFactory] =
-    getPipelineConfig(pipelineName) match {
-      case Some(config) =>
-        AbstractPipelineFactory.getConcreteFactory(config.as[String]("type"))
-      case None => None
-    }
 }
 
 object PipelinePool {
@@ -55,11 +47,8 @@ object PipelinePool {
     initialize(
       system.settings.config.as[Map[String, Config]]("event-bus.pipeline"))
 
-  def initialize(pipelineConfigList: Map[String, Config]): Unit = pool match {
-    case None => pool = Some(new PipelinePool(pipelineConfigList))
-    case Some(_) =>
-      throw new Exception("PipelinePool can not be initialized twice.")
-  }
+  def initialize(pipelineConfigList: Map[String, Config]): Unit =
+    pool = Some(new PipelinePool(pipelineConfigList))
 
   def apply(): PipelinePool = pool match {
     case Some(_pool) => _pool

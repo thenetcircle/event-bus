@@ -21,8 +21,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
 import com.thenetcircle.event_bus.pipeline.{
+  AbstractPipelineFactory,
   Pipeline,
-  PipelinePool,
   RightPortSettings
 }
 import com.typesafe.config.Config
@@ -37,9 +37,10 @@ object DispatcherSettings extends StrictLogging {
 
     val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
 
-    val pipelineName    = config.as[String]("pipeline.name")
-    val pipelineFactory = PipelinePool().getPipelineFactory(pipelineName).get
-    val pipeline        = pipelineFactory.getPipeline(pipelineName).get
+    val pipelineName = config.as[String]("pipeline.name")
+    val pipelineFactory =
+      AbstractPipelineFactory.getConcreteFactoryByName(pipelineName)
+    val pipeline = pipelineFactory.getPipeline(pipelineName).get
     val rightPortSettings = pipelineFactory.getRightPortSettings(
       config.as[Config]("pipeline.rightport"))
 

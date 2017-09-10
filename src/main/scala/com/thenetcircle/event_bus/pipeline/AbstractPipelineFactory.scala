@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.pipeline
 import akka.actor.ActorSystem
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.typesafe.config.Config
+import net.ceedubs.ficus.Ficus._
 
 trait AbstractPipelineFactory {
 
@@ -54,10 +55,21 @@ trait AbstractPipelineFactory {
 }
 
 object AbstractPipelineFactory {
-  def getConcreteFactory(
-      pipelineType: String): Option[AbstractPipelineFactory] =
+  def getConcreteFactoryByName(pipelineName: String): AbstractPipelineFactory =
+    PipelinePool().getPipelineConfig(pipelineName) match {
+      case Some(config) =>
+        AbstractPipelineFactory.getConcreteFactoryByType(
+          config.as[String]("type"))
+      case None =>
+        throw new Exception(
+          s"""No matched pipeline factory of pipeline name "$pipelineName".""")
+    }
+
+  def getConcreteFactoryByType(pipelineType: String): AbstractPipelineFactory =
     pipelineType.toUpperCase match {
-      case "KAFKA" => Some(KafkaPipelineFactory)
-      case _       => None
+      case "KAFKA" => KafkaPipelineFactory
+      case _ =>
+        throw new Exception(
+          s"""No matched pipeline factory of pipeline type "$pipelineType".""")
     }
 }

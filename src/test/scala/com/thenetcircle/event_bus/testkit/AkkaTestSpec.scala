@@ -21,6 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.thenetcircle.event_bus.pipeline.PipelinePool
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -40,11 +41,14 @@ abstract class AkkaTestSpec(_system: ActorSystem)
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
-  def this() = this(ActorSystem("beineng-test"))
+  def this() =
+    this(
+      ActorSystem("eventbus-test", ConfigFactory.load("application-test.conf")))
+
+  override def beforeAll(): Unit =
+    PipelinePool.initialize(_system)
 
   override def afterAll(): Unit =
     TestKit.shutdownActorSystem(system)
-
-  PipelinePool.initialize(_system)
 
 }
