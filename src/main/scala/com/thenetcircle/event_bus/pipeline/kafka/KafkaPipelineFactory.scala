@@ -30,12 +30,11 @@ import org.apache.kafka.common.serialization.{
 
 import scala.concurrent.duration.FiniteDuration
 
-object KafkaPipelineFactory extends PipelineFactory {
+final class KafkaPipelineFactory(pipelineConfigFactory: PipelineConfigFactory)
+    extends PipelineFactory {
 
   override def getPipelineSettings(pipelineName: String)(
       implicit system: ActorSystem): KafkaPipelineSettings = {
-
-    val pipelineConfigFactory = PipelineConfigFactory()
 
     require(pipelineConfigFactory
               .getPipelineType(pipelineName)
@@ -155,4 +154,15 @@ object KafkaPipelineFactory extends PipelineFactory {
     )
   }
 
+}
+
+object KafkaPipelineFactory {
+  private var cached: Option[KafkaPipelineFactory] = None
+  def apply(): KafkaPipelineFactory = cached match {
+    case Some(factory) => factory
+    case None =>
+      val factory = new KafkaPipelineFactory(PipelineConfigFactory())
+      cached = Some(factory)
+      factory
+  }
 }

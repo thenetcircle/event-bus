@@ -27,10 +27,10 @@ class PipelineFactorySpec extends AkkaBaseSpec {
   it should "properly find concrete factory" in {
 
     PipelineFactory.getConcreteFactoryByName("TestPipeline") shouldBe a[
-      KafkaPipelineFactory.type]
+      KafkaPipelineFactory]
 
     PipelineFactory.getConcreteFactoryByType(PipelineType.Kafka) shouldBe a[
-      KafkaPipelineFactory.type]
+      KafkaPipelineFactory]
 
   }
 }

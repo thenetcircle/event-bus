@@ -81,7 +81,7 @@ object PipelineFactory {
 
   def getConcreteFactoryByType(pipelineType: PipelineType): PipelineFactory =
     pipelineType match {
-      case PipelineType.Kafka => KafkaPipelineFactory
+      case PipelineType.Kafka => KafkaPipelineFactory()
       case _ =>
         throw new Exception(
           s"""No matched pipeline factory of pipeline type "$pipelineType".""")
