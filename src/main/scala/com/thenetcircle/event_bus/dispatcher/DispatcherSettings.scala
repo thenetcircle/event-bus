@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
 import com.thenetcircle.event_bus.pipeline.{
-  AbstractPipelineFactory,
+  PipelineFactory,
   Pipeline,
   RightPortSettings
 }
@@ -37,12 +37,12 @@ object DispatcherSettings extends StrictLogging {
 
     val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
 
-    val pipelineName = config.as[String]("pipeline.name")
+    val pipelineName = config.as[String]("pipeline-name")
     val pipelineFactory =
-      AbstractPipelineFactory.getConcreteFactoryByName(pipelineName)
-    val pipeline = pipelineFactory.getPipeline(pipelineName).get
+      PipelineFactory.getConcreteFactoryByName(pipelineName)
+    val pipeline = pipelineFactory.getPipeline(pipelineName)
     val rightPortSettings = pipelineFactory.getRightPortSettings(
-      config.as[Config]("pipeline.rightport"))
+      config.as[Config]("pipeline-rightport-settings"))
 
     // TODO: adjust these default values when doing stress testing
     // TODO: use reference.conf to set up default value
@@ -51,14 +51,15 @@ object DispatcherSettings extends StrictLogging {
         config.getInt("max-parallel-sources")
       else 100
 
+    val materializerKey = "akka.stream.materializer"
     val materializerSettings: Option[ActorMaterializerSettings] = {
-      if (config.hasPath("materializer"))
+      if (config.hasPath(materializerKey))
         Some(
           ActorMaterializerSettings(
             config
-              .getConfig("materializer")
+              .getConfig(materializerKey)
               .withFallback(system.settings.config
-                .getConfig("akka.stream.materializer"))))
+                .getConfig(materializerKey))))
       else
         None
     }

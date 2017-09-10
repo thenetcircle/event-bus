@@ -38,7 +38,7 @@ class DispatcherSpec extends AkkaTestSpec {
       name = "TestDispatcher",
       maxParallelSources = 10,
       endPointSettings = createHttpEndPointSettings(),
-      pipeline = KafkaPipelineFactory.getPipeline("TestPipeline").get,
+      pipeline = KafkaPipelineFactory.getPipeline("TestPipeline"),
       rightPortSettings =
         KafkaPipelineFactory.getRightPortSettings(ConfigFactory.empty()),
       None

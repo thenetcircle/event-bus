@@ -22,6 +22,8 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.typesafe.config.Config
+import net.ceedubs.ficus.readers.ValueReader
 
 trait PipelineSettings {
   def name: String
@@ -54,4 +56,19 @@ trait RightPortSettings {
 trait RightPort {
   def port: Source[Source[Event, NotUsed], NotUsed]
   def committer: Flow[Event, Event, NotUsed]
+}
+
+object PipelineType extends Enumeration {
+  type PipelineType = Value
+  val Kafka = Value(1, "Kafka")
+
+  def apply(name: String): PipelineType = name.toUpperCase match {
+    case "KAFKA" => Kafka
+  }
+
+  implicit val pipelineTypeReader: ValueReader[PipelineType] =
+    new ValueReader[PipelineType] {
+      override def read(config: Config, path: String) =
+        apply(config.getString(path))
+    }
 }

@@ -138,7 +138,7 @@ object TestComponentBuilder {
       commitParallelism,
       transportParallelism,
       Vector(entryPointSettings),
-      KafkaPipelineFactory.getPipeline("TestPipeline").get,
+      KafkaPipelineFactory.getPipeline("TestPipeline"),
       KafkaPipelineFactory.getLeftPortSettings(ConfigFactory.empty()),
       None
     )

@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.testkit
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.pipeline.PipelinePool
+import com.thenetcircle.event_bus.pipeline.PipelineConfigFactory
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
@@ -46,7 +46,7 @@ abstract class AkkaTestSpec(_system: ActorSystem)
       ActorSystem("eventbus-test", ConfigFactory.load("application-test.conf")))
 
   override def beforeAll(): Unit =
-    PipelinePool.initialize(_system)
+    PipelineConfigFactory.initialize(_system)
 
   override def afterAll(): Unit =
     TestKit.shutdownActorSystem(system)

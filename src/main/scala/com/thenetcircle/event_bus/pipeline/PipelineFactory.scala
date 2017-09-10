@@ -18,17 +18,31 @@
 package com.thenetcircle.event_bus.pipeline
 
 import akka.actor.ActorSystem
+import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.typesafe.config.Config
-import net.ceedubs.ficus.Ficus._
 
-trait AbstractPipelineFactory {
+import scala.collection.mutable
 
-  /** Creates [[PipelineSettings]] according to a TypeSafe [[Config]]
+trait PipelineFactory {
+
+  protected val cached =
+    mutable.Map.empty[String, Pipeline]
+
+  protected def getCachedPipeline(pipelineName: String): Option[Pipeline] =
+    cached.synchronized(cached.get(pipelineName))
+
+  protected def addToCachedPipeline(pipelineName: String,
+                                    pipeline: Pipeline): Unit =
+    cached.synchronized {
+      cached += (pipelineName -> pipeline)
+    }
+
+  /** Creates [[PipelineSettings]] according to the predefined TypeSafe [[Config]]
     *
-    * @param pipelineConfig the TypeSafe [[Config]]
+    * @param pipelineName the predefined name of a pipeline
     */
-  def getPipelineSettings(pipelineConfig: Config)(
+  def getPipelineSettings(pipelineName: String)(
       implicit system: ActorSystem): PipelineSettings
 
   /** Creates [[LeftPortSettings]] according to a TypeSafe [[Config]]
@@ -43,31 +57,29 @@ trait AbstractPipelineFactory {
     */
   def getRightPortSettings(rightPortConfig: Config): RightPortSettings
 
-  /** Returns a [[Pipeline]] from [[PipelinePool]],
+  /** Returns a [[Pipeline]] from [[PipelineConfigFactory]],
     * If did not existed, It creates a new [[Pipeline]] according to the predefined configuration
-    * and update the [[PipelinePool]]
+    * and update the [[PipelineConfigFactory]]
     *
     * @param pipelineName the predefined name of a specific pipeline
     */
-  def getPipeline(pipelineName: String)(
-      implicit system: ActorSystem): Option[Pipeline]
+  def getPipeline(pipelineName: String)(implicit system: ActorSystem): Pipeline
 
 }
 
-object AbstractPipelineFactory {
-  def getConcreteFactoryByName(pipelineName: String): AbstractPipelineFactory =
-    PipelinePool().getPipelineConfig(pipelineName) match {
-      case Some(config) =>
-        AbstractPipelineFactory.getConcreteFactoryByType(
-          config.as[String]("type"))
+object PipelineFactory {
+  def getConcreteFactoryByName(pipelineName: String): PipelineFactory =
+    PipelineConfigFactory().getPipelineType(pipelineName) match {
+      case Some(pipelineType) =>
+        PipelineFactory.getConcreteFactoryByType(pipelineType)
       case None =>
         throw new Exception(
           s"""No matched pipeline factory of pipeline name "$pipelineName".""")
     }
 
-  def getConcreteFactoryByType(pipelineType: String): AbstractPipelineFactory =
-    pipelineType.toUpperCase match {
-      case "KAFKA" => KafkaPipelineFactory
+  def getConcreteFactoryByType(pipelineType: PipelineType): PipelineFactory =
+    pipelineType match {
+      case PipelineType.Kafka => KafkaPipelineFactory
       case _ =>
         throw new Exception(
           s"""No matched pipeline factory of pipeline type "$pipelineType".""")

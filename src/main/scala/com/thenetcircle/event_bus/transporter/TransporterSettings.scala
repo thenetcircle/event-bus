@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.transporter
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.pipeline.{
-  AbstractPipelineFactory,
+  PipelineFactory,
   LeftPortSettings,
   Pipeline
 }
@@ -39,8 +39,8 @@ object TransporterSettings extends StrictLogging {
 
     val pipelineName = config.as[String]("pipeline.name")
     val pipelineFactory =
-      AbstractPipelineFactory.getConcreteFactoryByName(pipelineName)
-    val pipeline = pipelineFactory.getPipeline(pipelineName).get
+      PipelineFactory.getConcreteFactoryByName(pipelineName)
+    val pipeline = pipelineFactory.getPipeline(pipelineName)
     val leftPortSettings = pipelineFactory.getLeftPortSettings(
       config.as[Config]("pipeline.leftport"))
 

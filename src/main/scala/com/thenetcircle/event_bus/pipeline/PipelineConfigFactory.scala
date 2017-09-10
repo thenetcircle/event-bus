@@ -18,40 +18,37 @@
 package com.thenetcircle.event_bus.pipeline
 
 import akka.actor.ActorSystem
+import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
-import scala.collection.mutable
-
-final class PipelinePool(pipelineConfigList: Map[String, Config]) {
-  private val cached =
-    mutable.Map.empty[String, Pipeline]
-
-  private[pipeline] def getPipeline(pipelineName: String): Option[Pipeline] =
-    cached.synchronized(cached.get(pipelineName))
-
-  private[pipeline] def setPipeline(pipelineName: String,
-                                    pipeline: Pipeline): Unit =
-    cached.synchronized {
-      cached += (pipelineName -> pipeline)
+final class PipelineConfigFactory(allPipelineConfig: Map[String, Config]) {
+  def getPipelineType(pipelineName: String): Option[PipelineType] =
+    allPipelineConfig.get(pipelineName) match {
+      case Some(config) => config.as[Option[PipelineType]]("type")
+      case None         => None
     }
 
   def getPipelineConfig(pipelineName: String): Option[Config] =
-    pipelineConfigList.get(pipelineName)
+    allPipelineConfig.get(pipelineName) match {
+      case Some(config) => config.as[Option[Config]]("settings")
+      case None         => None
+    }
 }
 
-object PipelinePool {
-  private var pool: Option[PipelinePool] = None
+object PipelineConfigFactory {
+  private var factory: Option[PipelineConfigFactory] = None
 
   def initialize(system: ActorSystem): Unit =
     initialize(
       system.settings.config.as[Map[String, Config]]("event-bus.pipeline"))
 
-  def initialize(pipelineConfigList: Map[String, Config]): Unit =
-    pool = Some(new PipelinePool(pipelineConfigList))
+  def initialize(allPipelineConfig: Map[String, Config]): Unit =
+    factory = Some(new PipelineConfigFactory(allPipelineConfig))
 
-  def apply(): PipelinePool = pool match {
-    case Some(_pool) => _pool
-    case None        => throw new Exception("PipelinePool doesn't initialized yet.")
+  def apply(): PipelineConfigFactory = factory match {
+    case Some(_factory) => _factory
+    case None =>
+      throw new Exception("PipelineConfigFactory doesn't initialized yet.")
   }
 }
