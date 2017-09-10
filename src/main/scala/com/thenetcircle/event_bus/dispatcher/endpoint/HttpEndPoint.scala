@@ -36,7 +36,7 @@ import scala.util.{Failure, Success, Try}
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
 class HttpEndPoint(
-    settings: HttpEndPointSettings,
+    val settings: HttpEndPointSettings,
     connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
     fallbacker: Sink[Event, _])(implicit val materializer: Materializer)
     extends EndPoint
@@ -44,8 +44,6 @@ class HttpEndPoint(
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
-
-  override val name: String = settings.name
 
   val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
     Flow[Event]

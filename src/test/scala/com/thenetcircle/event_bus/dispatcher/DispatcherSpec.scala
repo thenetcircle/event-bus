@@ -21,12 +21,16 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
+import com.thenetcircle.event_bus.dispatcher.endpoint.{
+  EndPoint,
+  EndPointSettings,
+  EndPointType
+}
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
-import com.thenetcircle.event_bus.testkit.AkkaTestSpec
+import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
 
-class DispatcherSpec extends AkkaTestSpec {
+class DispatcherSpec extends AkkaBaseSpec {
 
   behavior of "Dispatcher"
 
@@ -67,8 +71,11 @@ class DispatcherSpec extends AkkaTestSpec {
     }
 
     val endPoint = new EndPoint {
-      var currentIndex          = 0
-      override val name: String = "TestEndPoint"
+      var currentIndex = 0
+      override val settings: EndPointSettings = new EndPointSettings {
+        override val name         = "TestEndPoint"
+        override val endPointType = EndPointType.HTTP
+      }
       override def port: Flow[Event, Event, NotUsed] = {
         currentIndex += 1
         currentIndex match {

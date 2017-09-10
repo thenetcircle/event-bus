@@ -40,14 +40,10 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success}
 
 class HttpEntryPoint(
-    settings: HttpEntryPointSettings,
+    val settings: HttpEntryPointSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
 )(implicit materializer: Materializer, eventExtractor: EventExtractor)
     extends EntryPoint {
-
-  override val name: String                 = settings.name
-  override val priority: EntryPointPriority = settings.priority
-  override val eventFormat: EventFormat     = settings.eventFormat
 
   override val port: Source[Event, _] =
     httpBindSource

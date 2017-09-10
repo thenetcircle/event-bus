@@ -31,11 +31,15 @@ import net.ceedubs.ficus.Ficus._
 
 object DispatcherSettings extends StrictLogging {
 
-  def apply(config: Config)(implicit system: ActorSystem): DispatcherSettings = {
+  def apply(_config: Config)(implicit system: ActorSystem): DispatcherSettings = {
+    val config: Config =
+      _config.withFallback(
+        system.settings.config.getConfig("event-bus.dispatcher"))
 
-    val name = config.getString("name")
+    val name               = config.as[String]("name")
+    val maxParallelSources = config.as[Int]("max-parallel-sources")
 
-    val endPointSettings = EndPointSettings(config.getConfig("endpoint"))
+    val endPointSettings = EndPointSettings(config.as[Config]("endpoint"))
 
     val pipelineName = config.as[String]("pipeline.name")
     val pipelineFactory =
@@ -43,13 +47,6 @@ object DispatcherSettings extends StrictLogging {
     val pipeline = pipelineFactory.getPipeline(pipelineName)
     val pipelineOutletSettings = pipelineFactory.getPipelineOutletSettings(
       config.as[Config]("pipeline.outlet-settings"))
-
-    // TODO: adjust these default values when doing stress testing
-    // TODO: use reference.conf to set up default value
-    val maxParallelSources =
-      if (config.hasPath("max-parallel-sources"))
-        config.getInt("max-parallel-sources")
-      else 100
 
     val materializerKey = "akka.stream.materializer"
     val materializerSettings: Option[ActorMaterializerSettings] = {

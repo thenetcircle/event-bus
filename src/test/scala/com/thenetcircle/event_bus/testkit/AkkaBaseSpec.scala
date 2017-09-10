@@ -26,10 +26,10 @@ import com.typesafe.config.ConfigFactory
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaTestSpec(_system: ActorSystem)
+abstract class AkkaBaseSpec(_system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
-    with TestSpec {
+    with BaseSpec {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1,

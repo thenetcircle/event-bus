@@ -55,7 +55,7 @@ class Transporter(settings: TransporterSettings,
 
         val transportParallelism = settings.transportParallelism
 
-        val groupedEntryPoints = entryPoints.groupBy(_.priority.id)
+        val groupedEntryPoints = entryPoints.groupBy(_.settings.priority.id)
         // IndexedSeq(6, 3, 1)
         var priorities = (for ((_priorityId, _) <- groupedEntryPoints)
           yield _priorityId).toIndexedSeq

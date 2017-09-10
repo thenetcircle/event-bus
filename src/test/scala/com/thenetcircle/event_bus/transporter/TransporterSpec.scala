@@ -21,13 +21,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.testkit.AkkaTestSpec
+import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority
 
 import scala.concurrent.Future
 
-class TransporterSpec extends AkkaTestSpec {
+class TransporterSpec extends AkkaBaseSpec {
 
   behavior of "Transporter"
 

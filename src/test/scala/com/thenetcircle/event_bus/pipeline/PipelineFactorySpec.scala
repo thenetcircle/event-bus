@@ -15,8 +15,22 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.testkit
+package com.thenetcircle.event_bus.pipeline
 
-import org.scalatest._
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
+import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 
-trait TestSpec extends FlatSpecLike with Matchers with BeforeAndAfterAll {}
+class PipelineFactorySpec extends AkkaBaseSpec {
+
+  behavior of "PipelineFactory"
+
+  it should "properly find concrete factory" in {
+
+    PipelineFactory.getConcreteFactoryByName("TestPipeline") shouldBe a[
+      KafkaPipelineFactory.type]
+
+    PipelineFactory.getConcreteFactoryByType(PipelineType.Kafka) shouldBe a[
+      KafkaPipelineFactory.type]
+
+  }
+}

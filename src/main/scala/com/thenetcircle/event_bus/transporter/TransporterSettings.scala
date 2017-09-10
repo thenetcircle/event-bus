@@ -30,7 +30,12 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 object TransporterSettings extends StrictLogging {
-  def apply(config: Config)(implicit system: ActorSystem): TransporterSettings = {
+  def apply(_config: Config)(
+      implicit system: ActorSystem): TransporterSettings = {
+    val config: Config =
+      _config.withFallback(
+        system.settings.config.getConfig("event-bus.transporter"))
+
     val name = config.as[String]("name")
 
     val entryPointsSettings: Vector[EntryPointSettings] =
@@ -73,7 +78,7 @@ object TransporterSettings extends StrictLogging {
 final case class TransporterSettings(
     name: String,
     commitParallelism: Int,
-    transportParallelism: Int = 1,
+    transportParallelism: Int,
     entryPointsSettings: Vector[EntryPointSettings],
     pipeline: Pipeline,
     pipelineInletSettings: PipelineInletSettings,

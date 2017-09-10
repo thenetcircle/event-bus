@@ -22,23 +22,44 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointType.EndPointType
 import com.typesafe.config.{Config, ConfigException}
+import net.ceedubs.ficus.Ficus._
+import net.ceedubs.ficus.readers.ValueReader
+
+object EndPointType extends Enumeration {
+  type EndPointType = Value
+
+  val HTTP = Value(1, "HTTP")
+
+  def apply(name: String): EndPointType = name.toUpperCase match {
+    case "HTTP" => HTTP
+  }
+
+  implicit val entryPointTypeReader: ValueReader[EndPointType] =
+    new ValueReader[EndPointType] {
+      override def read(config: Config, path: String) =
+        apply(config.getString(path))
+    }
+}
 
 trait EndPoint {
-  val name: String
+  val settings: EndPointSettings
   def port: Flow[Event, Event, NotUsed]
 }
 
 object EndPoint {
   def apply(settings: EndPointSettings)(implicit system: ActorSystem,
                                         materializer: Materializer): EndPoint =
-    settings match {
-      case s: HttpEndPointSettings => HttpEndPoint(s)
+    settings.endPointType match {
+      case EndPointType.HTTP =>
+        HttpEndPoint(settings.asInstanceOf[HttpEndPointSettings])
     }
 }
 
 trait EndPointSettings {
-  def name: String
+  val name: String
+  val endPointType: EndPointType
 }
 
 object EndPointSettings {
@@ -51,10 +72,10 @@ object EndPointSettings {
     *             if "type" didn't match any predefined types
     */
   def apply(config: Config)(implicit system: ActorSystem): EndPointSettings = {
-    var endPointType = config.getString("type")
+    var endPointType = config.as[EndPointType]("type")
 
-    endPointType.toUpperCase() match {
-      case "HTTP" =>
+    endPointType match {
+      case EndPointType.HTTP =>
         HttpEndPointSettings(config)
 
       case _ =>

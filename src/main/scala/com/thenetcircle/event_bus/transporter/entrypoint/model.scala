@@ -22,8 +22,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointType.EntryPointType
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.{Config, ConfigException}
+import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
 
 object EntryPointPriority extends Enumeration {
@@ -45,11 +47,24 @@ object EntryPointPriority extends Enumeration {
     }
 }
 
+object EntryPointType extends Enumeration {
+  type EntryPointType = Value
+  val HTTP = Value(1, "HTTP")
+
+  def apply(name: String): EntryPointType = name.toUpperCase match {
+    case "HTTP" => HTTP
+  }
+
+  implicit val entryPointTypeReader: ValueReader[EntryPointType] =
+    new ValueReader[EntryPointType] {
+      override def read(config: Config, path: String) =
+        apply(config.getString(path))
+    }
+}
+
 /** Abstraction Api of All EntryPoints */
 trait EntryPoint {
-  val name: String
-  val priority: EntryPointPriority
-  val eventFormat: EventFormat
+  val settings: EntryPointSettings
 
   // TODO: add switcher as the materialized value
   def port: Source[Event, _]
@@ -62,17 +77,19 @@ object EntryPoint {
   def apply(settings: EntryPointSettings)(
       implicit system: ActorSystem,
       materializer: Materializer,
-      eventExtractor: EventExtractor): EntryPoint = settings match {
-    case s: HttpEntryPointSettings =>
-      HttpEntryPoint(s)
-  }
+      eventExtractor: EventExtractor): EntryPoint =
+    settings.entryPointType match {
+      case EntryPointType.HTTP =>
+        HttpEntryPoint(settings.asInstanceOf[HttpEntryPointSettings])
+    }
 
 }
 
 trait EntryPointSettings {
-  def name: String
-  def priority: EntryPointPriority
-  def eventFormat: EventFormat
+  val name: String
+  val priority: EntryPointPriority
+  val eventFormat: EventFormat
+  val entryPointType: EntryPointType
 }
 
 object EntryPointSettings {
@@ -85,10 +102,10 @@ object EntryPointSettings {
     *             if "type" didn't match any predefined types
     */
   def apply(config: Config)(implicit system: ActorSystem): EntryPointSettings = {
-    var entryPointType = config.getString("type")
+    var entryPointType = config.as[EntryPointType]("type")
 
-    entryPointType.toUpperCase() match {
-      case "HTTP" =>
+    entryPointType match {
+      case EntryPointType.HTTP =>
         HttpEntryPointSettings(config)
 
       case _ =>

@@ -15,11 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.pipeline
+package com.thenetcircle.event_bus.pipeline.kafka
 
-import com.thenetcircle.event_bus.testkit.AkkaTestSpec
+import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 
-class KafkaPipelineSpec extends AkkaTestSpec {
+class KafkaPipelineSpec extends AkkaBaseSpec {
 
   /*val producerSettings = ProducerSettings[KafkaKey, KafkaValue](
     _system,

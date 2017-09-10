@@ -34,11 +34,7 @@ import com.thenetcircle.event_bus.pipeline.PipelineInlet
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
-import com.thenetcircle.event_bus.transporter.entrypoint.{
-  EntryPoint,
-  EntryPointPriority,
-  HttpEntryPointSettings
-}
+import com.thenetcircle.event_bus.transporter.entrypoint._
 import com.typesafe.config.ConfigFactory
 
 import scala.util.{Success, Try}
@@ -116,9 +112,12 @@ object TestComponentBuilder {
 
     val testEntryPoints = testSources.map(_source =>
       new EntryPoint {
-        override val name: String                 = s"TestEntryPoint-${_source._1}"
-        override val eventFormat: EventFormat     = EventFormat.DefaultFormat
-        override val priority: EntryPointPriority = _source._1
+        override val settings: EntryPointSettings = new EntryPointSettings {
+          override val name           = s"TestEntryPoint-${_source._1}"
+          override val priority       = _source._1
+          override val entryPointType = EntryPointType.HTTP
+          override val eventFormat    = EventFormat.DefaultFormat
+        }
 
         override def port: Source[Event, _] = _source._2
     })

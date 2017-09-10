@@ -21,6 +21,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.settings.ServerSettings
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointType.EntryPointType
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
@@ -34,7 +35,9 @@ case class HttpEntryPointSettings(
     serverSettings: ServerSettings,
     interface: String,
     port: Int
-) extends EntryPointSettings
+) extends EntryPointSettings {
+  override val entryPointType: EntryPointType = EntryPointType.HTTP
+}
 
 object HttpEntryPointSettings {
   def apply(_config: Config)(

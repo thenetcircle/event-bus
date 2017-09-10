@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.dispatcher.endpoint
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
+import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointType.EndPointType
 import com.typesafe.config.Config
 
 case class HttpEndPointSettings(
@@ -32,11 +33,16 @@ case class HttpEndPointSettings(
     defaultRequest: HttpRequest,
     // TODO: set to optional
     expectedResponse: Option[String] = None
-) extends EndPointSettings
+) extends EndPointSettings {
+  override val endPointType: EndPointType = EndPointType.HTTP
+}
 
 object HttpEndPointSettings {
-  def apply(config: Config)(
+  def apply(_config: Config)(
       implicit system: ActorSystem): HttpEndPointSettings = {
+    val config: Config =
+      _config.withFallback(
+        system.settings.config.getConfig("event-bus.endpoint.http"))
 
     val rootConfig =
       system.settings.config
@@ -49,8 +55,8 @@ object HttpEndPointSettings {
         ConnectionPoolSettings(rootConfig)
       }
 
-    val requestMethod = if (config.hasPath("request-method")) {
-      config.getString("request-method").toUpperCase() match {
+    val requestMethod = if (config.hasPath("request.method")) {
+      config.getString("request.method").toUpperCase() match {
         case "POST" => HttpMethods.POST
         case "GET"  => HttpMethods.GET
         case unacceptedMethod =>
@@ -61,7 +67,7 @@ object HttpEndPointSettings {
       HttpMethods.POST
     }
     val requsetUri =
-      if (config.hasPath("request-uri")) Uri(config.getString("request-uri"))
+      if (config.hasPath("request.uri")) Uri(config.getString("request.uri"))
       else Uri./
 
     val defaultRequest: HttpRequest = HttpRequest(
@@ -76,8 +82,8 @@ object HttpEndPointSettings {
 
     HttpEndPointSettings(
       config.getString("name"),
-      config.getString("host"),
-      config.getInt("port"),
+      config.getString("request.host"),
+      config.getInt("request.port"),
       config.getInt("max-retry-times"),
       connectionPoolSettings,
       defaultRequest,
