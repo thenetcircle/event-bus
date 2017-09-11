@@ -18,9 +18,9 @@
 package com.thenetcircle.event_bus.pipeline
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 
-class PipelineConfigFactorySpec extends AkkaBaseSpec {
+class PipelineConfigPoolSpec extends AkkaBaseSpec {
 
-  behavior of "PipelineConfigFactory"
+  behavior of "PipelineConfigPool"
 
   it should "properly be initialized from system config" in {
     val testPipelineName = "TestPipeline"
