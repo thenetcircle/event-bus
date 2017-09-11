@@ -73,11 +73,11 @@ class Transporter(settings: TransporterSettings,
           if (_entryPoints.size > 1) {
             val merge = builder.add(Merge[Event](_entryPoints.size))
             for (i <- _entryPoints.indices) {
-              _entryPoints(i).port ~> merge.in(i)
+              _entryPoints(i).stream ~> merge.in(i)
             }
             merge.out ~> targetChannel
           } else {
-            _entryPoints(0).port ~> targetChannel
+            _entryPoints(0).stream ~> targetChannel
           }
 
         }

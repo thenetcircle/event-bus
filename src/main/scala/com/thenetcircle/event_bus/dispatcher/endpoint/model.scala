@@ -45,7 +45,7 @@ object EndPointType extends Enumeration {
 
 trait EndPoint {
   val settings: EndPointSettings
-  def port: Flow[Event, Event, NotUsed]
+  def stream: Flow[Event, Event, NotUsed]
 }
 
 object EndPoint {

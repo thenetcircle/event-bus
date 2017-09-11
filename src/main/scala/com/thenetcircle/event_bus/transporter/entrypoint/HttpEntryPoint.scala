@@ -45,7 +45,7 @@ class HttpEntryPoint(
 )(implicit materializer: Materializer, eventExtractor: EventExtractor)
     extends EntryPoint {
 
-  override val port: Source[Event, _] =
+  override val stream: Source[Event, _] =
     httpBindSource
       .flatMapMerge(
         settings.maxConnections,

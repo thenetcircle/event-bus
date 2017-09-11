@@ -27,7 +27,7 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
 trait PipelineSettings {
-  def name: String
+  val name: String
 }
 
 trait Pipeline {
@@ -48,6 +48,10 @@ trait Pipeline {
 trait PipelineInletSettings
 
 trait PipelineInlet {
+  val pipeline: Pipeline
+  val inletName: String
+  val inletSettings: PipelineInletSettings
+
   def stream: Flow[Event, Event, NotUsed]
 }
 
@@ -56,6 +60,10 @@ trait PipelineOutletSettings {
 }
 
 trait PipelineOutlet {
+  val pipeline: Pipeline
+  val outletName: String
+  val outletSettings: PipelineOutletSettings
+
   def stream: Source[Source[Event, NotUsed], NotUsed]
   def committer: Flow[Event, Event, NotUsed]
 }

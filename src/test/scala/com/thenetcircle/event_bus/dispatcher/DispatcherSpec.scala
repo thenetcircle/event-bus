@@ -20,13 +20,18 @@ package com.thenetcircle.event_bus.dispatcher
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.thenetcircle.event_bus.dispatcher.endpoint.{
   EndPoint,
   EndPointSettings,
   EndPointType
 }
-import com.thenetcircle.event_bus.pipeline.PipelineOutlet
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
+import com.thenetcircle.event_bus.pipeline.{
+  Pipeline,
+  PipelineOutlet,
+  PipelineOutletSettings
+}
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
 
@@ -59,7 +64,7 @@ class DispatcherSpec extends AkkaBaseSpec {
 
     val testCommitter = TestSubscriber.probe[Event]()
 
-    val pipelineRightPort = new PipelineOutlet {
+    val pipelineOutlet = new PipelineOutlet {
       override def stream: Source[Source[Event, NotUsed], NotUsed] =
         Source[Source[Event, NotUsed]](
           Source.fromPublisher(testSource1) :: Source
@@ -68,6 +73,14 @@ class DispatcherSpec extends AkkaBaseSpec {
 
       override def committer: Flow[Event, Event, NotUsed] =
         createFlowFromSink(Sink.fromSubscriber(testCommitter))
+
+      override val pipeline: Pipeline =
+        KafkaPipelineFactory().getPipeline("TestPipeline")
+      override val outletName: String = "TestOutlet"
+      override val outletSettings: PipelineOutletSettings =
+        new PipelineOutletSettings {
+          override val eventFormat: EventFormat = EventFormat.DefaultFormat
+        }
     }
 
     val endPoint = new EndPoint {
@@ -76,7 +89,7 @@ class DispatcherSpec extends AkkaBaseSpec {
         override val name         = "TestEndPoint"
         override val endPointType = EndPointType.HTTP
       }
-      override def port: Flow[Event, Event, NotUsed] = {
+      override def stream: Flow[Event, Event, NotUsed] = {
         currentIndex += 1
         currentIndex match {
           case 1 => createFlowFromSink(Sink.fromSubscriber(testSink1))
@@ -88,7 +101,7 @@ class DispatcherSpec extends AkkaBaseSpec {
     }
 
     val dispatcher =
-      new Dispatcher(dispatcherSettings, pipelineRightPort, endPoint)
+      new Dispatcher(dispatcherSettings, pipelineOutlet, endPoint)
 
     dispatcher.run()
 

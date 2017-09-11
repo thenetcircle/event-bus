@@ -67,7 +67,7 @@ trait EntryPoint {
   val settings: EntryPointSettings
 
   // TODO: add switcher as the materialized value
-  def port: Source[Event, _]
+  def stream: Source[Event, _]
 }
 
 /** Create a new EntryPoint based on it's settings

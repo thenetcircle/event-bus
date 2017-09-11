@@ -25,11 +25,11 @@ class PipelineConfigFactorySpec extends AkkaBaseSpec {
   it should "properly be initialized from system config" in {
     val testPipelineName = "TestPipeline"
 
-    val t = PipelineConfigFactory().getPipelineType(testPipelineName)
+    val t = PipelineConfigPool().getPipelineType(testPipelineName)
     t shouldBe defined
     t.get shouldEqual PipelineType.Kafka
 
-    val c = PipelineConfigFactory().getPipelineConfig(testPipelineName)
+    val c = PipelineConfigPool().getPipelineConfig(testPipelineName)
     c shouldBe defined
     c.get.getString("test-field") shouldEqual "test-field"
   }

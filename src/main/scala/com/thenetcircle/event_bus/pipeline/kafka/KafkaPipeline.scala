@@ -42,8 +42,8 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
             "KafkaPipeline only accpect KafkaLPipelineInletSettings.")
 
     new KafkaPipelineInlet(
+      this,
       s"$pipelineName-inlet-${inletId.getAndIncrement()}",
-      pipelineSettings,
       pipelineInletSettings.asInstanceOf[KafkaPipelineInletSettings])
   }
 
@@ -67,8 +67,8 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
       pipelineOutletSettings.eventFormat)
 
     new KafkaPipelineOutlet(
+      this,
       s"$pipelineName-outlet-${outletId.getAndIncrement()}",
-      pipelineSettings,
       pipelineOutletSettings.asInstanceOf[KafkaPipelineOutletSettings])
   }
 

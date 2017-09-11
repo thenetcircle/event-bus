@@ -30,9 +30,9 @@ import org.apache.kafka.clients.producer.ProducerRecord
 
 /** LeftPort Implementation */
 private[kafka] final class KafkaPipelineInlet(
-    name: String,
-    pipelineSettings: KafkaPipelineSettings,
-    settings: KafkaPipelineInletSettings)
+    val pipeline: KafkaPipeline,
+    val inletName: String,
+    val inletSettings: KafkaPipelineInletSettings)
     extends PipelineInlet {
 
   import KafkaPipeline._
@@ -41,21 +41,8 @@ private[kafka] final class KafkaPipelineInlet(
   override val stream: Flow[Event, Event, NotUsed] = {
 
     // Combine LeftPortSettings with PipelineSettings
-    val producerSettings: ProducerSettings[Key, Value] = {
-      var result = pipelineSettings.producerSettings
-
-      settings.properties.foreach(properties =>
-        properties foreach {
-          case (key, value) =>
-            result = result.withProperty(key, value)
-      })
-      settings.closeTimeout.foreach(s => result = result.withCloseTimeout(s))
-      settings.produceParallelism.foreach(s =>
-        result = result.withParallelism(s))
-      settings.dispatcher.foreach(s => result = result.withDispatcher(s))
-
-      result
-    }
+    val producerSettings: ProducerSettings[Key, Value] =
+      inletSettings.producerSettings
 
     Flow[Event]
       .map(
@@ -68,7 +55,7 @@ private[kafka] final class KafkaPipelineInlet(
       // TODO: take care of Supervision of mapAsync
       .via(Producer.flow(producerSettings))
       .map(_.message.passThrough)
-      .named(name)
+      .named(inletName)
 
   }
 }

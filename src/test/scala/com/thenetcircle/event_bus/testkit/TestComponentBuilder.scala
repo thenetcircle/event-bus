@@ -30,7 +30,11 @@ import com.thenetcircle.event_bus.dispatcher.endpoint.{
   HttpEndPoint,
   HttpEndPointSettings
 }
-import com.thenetcircle.event_bus.pipeline.PipelineInlet
+import com.thenetcircle.event_bus.pipeline.{
+  Pipeline,
+  PipelineInlet,
+  PipelineInletSettings
+}
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
@@ -119,7 +123,7 @@ object TestComponentBuilder {
           override val eventFormat    = EventFormat.DefaultFormat
         }
 
-        override def port: Source[Event, _] = _source._2
+        override def stream: Source[Event, _] = _source._2
     })
 
     val testPipelineLeftPort = new PipelineInlet {
@@ -130,6 +134,12 @@ object TestComponentBuilder {
         currentIndex += 1
         flow
       }
+
+      override val pipeline: Pipeline =
+        KafkaPipelineFactory().getPipeline("TestPipeline")
+      override val inletName: String = "TestPipelineInlet"
+      override val inletSettings: PipelineInletSettings =
+        new PipelineInletSettings {}
     }
 
     val settings = TransporterSettings(
@@ -138,7 +148,8 @@ object TestComponentBuilder {
       transportParallelism,
       Vector(entryPointSettings),
       KafkaPipelineFactory().getPipeline("TestPipeline"),
-      KafkaPipelineFactory().getPipelineInletSettings(ConfigFactory.empty()),
+      KafkaPipelineFactory().getPipelineInletSettings("TestPipeline",
+                                                      ConfigFactory.empty()),
       None
     )
 

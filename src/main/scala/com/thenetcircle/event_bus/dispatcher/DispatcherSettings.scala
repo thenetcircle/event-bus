@@ -46,6 +46,7 @@ object DispatcherSettings extends StrictLogging {
       PipelineFactory.getConcreteFactoryByName(pipelineName)
     val pipeline = pipelineFactory.getPipeline(pipelineName)
     val pipelineOutletSettings = pipelineFactory.getPipelineOutletSettings(
+      pipelineName,
       config.as[Config]("pipeline.outlet-settings"))
 
     val materializerKey = "akka.stream.materializer"

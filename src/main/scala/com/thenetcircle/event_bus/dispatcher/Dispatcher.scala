@@ -34,7 +34,7 @@ class Dispatcher(settings: DispatcherSettings,
   lazy val dispatchStream: RunnableGraph[_] =
     pipelineOutlet.stream
       .flatMapMerge(settings.maxParallelSources,
-                    source => source.via(endPoint.port.async))
+                    source => source.via(endPoint.stream.async))
       .via(pipelineOutlet.committer.async)
       .to(Sink.ignore)
 

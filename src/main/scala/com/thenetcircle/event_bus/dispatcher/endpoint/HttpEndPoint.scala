@@ -79,7 +79,7 @@ class HttpEndPoint(
       }
   }
 
-  override def port: Flow[Event, Event, NotUsed] =
+  override def stream: Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 

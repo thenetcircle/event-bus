@@ -18,28 +18,24 @@
 package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.kafka.{ConsumerSettings, ProducerSettings}
-import com.thenetcircle.event_bus.pipeline.{
-  PipelineInletSettings,
-  PipelineSettings,
-  PipelineOutletSettings
-}
-
-import scala.concurrent.duration.FiniteDuration
-import KafkaPipeline._
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
+import com.thenetcircle.event_bus.pipeline.{
+  PipelineInletSettings,
+  PipelineOutletSettings,
+  PipelineSettings
+}
+import com.typesafe.config.Config
 
 case class KafkaPipelineSettings(
     name: String,
-    producerSettings: ProducerSettings[Key, Value],
-    consumerSettings: ConsumerSettings[Key, Value]
+    defaultProducerConfig: Config,
+    defaultConsumerConfig: Config
 ) extends PipelineSettings
 
 case class KafkaPipelineInletSettings(
-    produceParallelism: Option[Int] = None,
-    dispatcher: Option[String] = None,
-    properties: Option[Map[String, String]] = None,
-    closeTimeout: Option[FiniteDuration] = None
+    producerSettings: ProducerSettings[Key, Value]
 ) extends PipelineInletSettings
 
 case class KafkaPipelineOutletSettings(
@@ -50,13 +46,5 @@ case class KafkaPipelineOutletSettings(
     eventFormat: EventFormat = DefaultFormat,
     topics: Option[Set[String]] = None,
     topicPattern: Option[String] = None,
-    dispatcher: Option[String] = None,
-    properties: Option[Map[String, String]] = None,
-    pollInterval: Option[FiniteDuration] = None,
-    pollTimeout: Option[FiniteDuration] = None,
-    stopTimeout: Option[FiniteDuration] = None,
-    closeTimeout: Option[FiniteDuration] = None,
-    commitTimeout: Option[FiniteDuration] = None,
-    wakeupTimeout: Option[FiniteDuration] = None,
-    maxWakeups: Option[Int] = None
+    consumerSettings: ConsumerSettings[Key, Value]
 ) extends PipelineOutletSettings

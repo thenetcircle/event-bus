@@ -32,10 +32,11 @@ import scala.concurrent.ExecutionContext
 
 /** RightPort Implementation */
 private[kafka] final class KafkaPipelineOutlet(
-    name: String,
-    pipelineSettings: KafkaPipelineSettings,
-    settings: KafkaPipelineOutletSettings)(implicit materializer: Materializer,
-                                           extractor: EventExtractor)
+    val pipeline: KafkaPipeline,
+    val outletName: String,
+    val outletSettings: KafkaPipelineOutletSettings)(
+    implicit materializer: Materializer,
+    extractor: EventExtractor)
     extends PipelineOutlet {
 
   import KafkaPipeline._
@@ -45,36 +46,19 @@ private[kafka] final class KafkaPipelineOutlet(
 
   override val stream: Source[Source[Event, NotUsed], NotUsed] = {
 
-    require(settings.topics.isDefined || settings.topicPattern.isDefined,
-            "The outlet of KafkaPipeline needs to subscribe topics")
+    require(
+      outletSettings.topics.isDefined || outletSettings.topicPattern.isDefined,
+      "The outlet of KafkaPipeline needs to subscribe topics")
 
     /** Build ConsumerSettings */
-    val kafkaConsumerSettings: ConsumerSettings[Key, Value] = {
-      var result =
-        pipelineSettings.consumerSettings.withGroupId(settings.groupId)
-
-      settings.dispatcher.foreach(s => result = result.withDispatcher(s))
-      settings.properties.foreach(properties =>
-        properties foreach {
-          case (key, value) =>
-            result = result.withProperty(key, value)
-      })
-      settings.pollInterval.foreach(s => result = result.withPollInterval(s))
-      settings.pollTimeout.foreach(s => result = result.withPollTimeout(s))
-      settings.stopTimeout.foreach(s => result = result.withStopTimeout(s))
-      settings.closeTimeout.foreach(s => result = result.withCloseTimeout(s))
-      settings.commitTimeout.foreach(s => result = result.withCommitTimeout(s))
-      settings.wakeupTimeout.foreach(s => result = result.withWakeupTimeout(s))
-      settings.maxWakeups.foreach(s => result = result.withMaxWakeups(s))
-
-      result
-    }
+    val kafkaConsumerSettings: ConsumerSettings[Key, Value] =
+      outletSettings.consumerSettings.withGroupId(outletSettings.groupId)
 
     var subscription: AutoSubscription =
-      if (settings.topics.isDefined) {
-        Subscriptions.topics(settings.topics.get)
+      if (outletSettings.topics.isDefined) {
+        Subscriptions.topics(outletSettings.topics.get)
       } else {
-        Subscriptions.topicPattern(settings.topicPattern.get)
+        Subscriptions.topicPattern(outletSettings.topicPattern.get)
       }
 
     // TODO: maybe use one consumer for one partition
@@ -83,7 +67,7 @@ private[kafka] final class KafkaPipelineOutlet(
       .map {
         case (topicPartition, source) =>
           source
-            .mapAsync(settings.extractParallelism) { msg =>
+            .mapAsync(outletSettings.extractParallelism) { msg =>
               val record = msg.record
               extractor
                 .extract(ByteString(record.value()))
@@ -105,7 +89,7 @@ private[kafka] final class KafkaPipelineOutlet(
             }
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
-      .named(name)
+      .named(outletName)
   }
 
   /** Batch commit flow */
@@ -121,12 +105,12 @@ private[kafka] final class KafkaPipelineOutlet(
           .filter(_.hasContext("kafkaCommittableOffset"))
           .map(_.context("kafkaCommittableOffset")
             .asInstanceOf[CommittableOffset])
-          .batch(max = settings.commitBatchMax,
+          .batch(max = outletSettings.commitBatchMax,
                  first => CommittableOffsetBatch.empty.updated(first)) {
             (batch, elem) =>
               batch.updated(elem)
           }
-          .mapAsync(settings.commitParallelism)(_.commitScaladsl())
+          .mapAsync(outletSettings.commitParallelism)(_.commitScaladsl())
           .to(Sink.ignore)
 
       /** --------- work flow --------- */

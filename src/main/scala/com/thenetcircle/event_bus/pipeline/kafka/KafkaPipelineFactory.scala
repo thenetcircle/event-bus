@@ -21,6 +21,7 @@ import akka.actor.ActorSystem
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.pipeline._
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.{
@@ -28,28 +29,30 @@ import org.apache.kafka.common.serialization.{
   ByteArraySerializer
 }
 
-import scala.concurrent.duration.FiniteDuration
-
-final class KafkaPipelineFactory(pipelineConfigFactory: PipelineConfigFactory)
+private[pipeline] class KafkaPipelineFactory(configPool: PipelineConfigPool)(
+    implicit system: ActorSystem)
     extends PipelineFactory {
 
-  override def getPipelineSettings(pipelineName: String)(
-      implicit system: ActorSystem): KafkaPipelineSettings = {
+  override def getPipelineSettings(
+      pipelineName: String): KafkaPipelineSettings = {
+    val pipelineTypeOption   = configPool.getPipelineType(pipelineName)
+    val pipelineConfigOption = configPool.getPipelineConfig(pipelineName)
 
-    require(pipelineConfigFactory
-              .getPipelineType(pipelineName)
-              .get == PipelineType.Kafka,
+    require(pipelineTypeOption.isDefined,
+            s"Type of pipeline $pipelineName doesn't defined")
+    require(pipelineConfigOption.isDefined,
+            s"Config of pipeline $pipelineName doesn't defined")
+    require(pipelineTypeOption.get == PipelineType.Kafka,
             "KafkaPipelineFactory can only handler Kafka Pipeline")
 
-    val pipelineConfig =
-      pipelineConfigFactory.getPipelineConfig(pipelineName).get
+    val pipelineConfig = pipelineConfigOption.get
 
     val originalProducerConfig =
       system.settings.config.getConfig("akka.kafka.producer")
-    val producerConfig = {
-      if (pipelineConfig.hasPath("akka.kafka.producer"))
+    val defaultProducerConfig = {
+      if (pipelineConfig.hasPath("producer"))
         pipelineConfig
-          .getConfig("akka.kafka.producer")
+          .getConfig("producer")
           .withFallback(originalProducerConfig)
       else
         originalProducerConfig
@@ -57,74 +60,66 @@ final class KafkaPipelineFactory(pipelineConfigFactory: PipelineConfigFactory)
 
     val originalConsumerConfig =
       system.settings.config.getConfig("akka.kafka.consumer")
-    val consumerConfig = {
-      if (pipelineConfig.hasPath("akka.kafka.consumer"))
+    val defaultConsumerConfig = {
+      if (pipelineConfig.hasPath("consumer"))
         pipelineConfig
-          .getConfig("akka.kafka.consumer")
+          .getConfig("consumer")
           .withFallback(originalConsumerConfig)
       else
         originalConsumerConfig
     }
 
-    KafkaPipelineSettings(
-      pipelineName,
-      ProducerSettings[KafkaPipeline.Key, KafkaPipeline.Value](
-        producerConfig,
-        new ByteArraySerializer,
-        new ByteArraySerializer),
-      ConsumerSettings[KafkaPipeline.Key, KafkaPipeline.Value](
-        consumerConfig,
-        new ByteArrayDeserializer,
-        new ByteArrayDeserializer)
-    )
+    KafkaPipelineSettings(pipelineName,
+                          defaultProducerConfig,
+                          defaultConsumerConfig)
   }
 
-  override def getPipeline(pipelineName: String)(
-      implicit system: ActorSystem): KafkaPipeline =
-    getCachedPipeline(pipelineName) match {
+  override def getPipeline(pipelineName: String): KafkaPipeline =
+    getCache(pipelineName) match {
       case Some(pipeline: KafkaPipeline) => pipeline
-      case Some(_) =>
-        throw new Exception(
-          s"""The type of pipeline "$pipelineName" is not correct""")
-      case None => createKafkaPipeline(pipelineName)
+      case None                          => createPipeline(pipelineName)
+      case Some(_: Pipeline)             => throw new Exception("Unexpected pipeline type.")
     }
 
-  protected def createKafkaPipeline(pipelineName: String)(
-      implicit system: ActorSystem): KafkaPipeline = {
+  protected def createPipeline(pipelineName: String): KafkaPipeline = {
     val pipelineSettings = getPipelineSettings(pipelineName)
     val pipeline         = KafkaPipeline(pipelineSettings)
-    addToCachedPipeline(pipelineName, pipeline)
+    addToCache(pipelineName, pipeline)
     pipeline
   }
 
   override def getPipelineInletSettings(
+      pipelineName: String,
       pipelineInletConfig: Config): KafkaPipelineInletSettings = {
-    /*val properties: Option[Map[String, String]] = {
-      if (leftPortConfig.hasPath("properties"))
-        Some(
-          leftPortConfig
-            .getObject("properties")
-            .unwrapped()
-            .asInstanceOf[java.util.Map[String, String]]
-            .asScala
-            .toMap)
+
+    val pipelineSettings = getPipelineSettings(pipelineName)
+    val producerConfig =
+      if (pipelineInletConfig.hasPath("producer"))
+        pipelineInletConfig
+          .getConfig("producer")
+          .withFallback(pipelineSettings.defaultProducerConfig)
       else
-        None
-    }*/
+        pipelineSettings.defaultProducerConfig
 
     KafkaPipelineInletSettings(
-      produceParallelism =
-        pipelineInletConfig.as[Option[Int]]("produce-parallelism"),
-      dispatcher = pipelineInletConfig.as[Option[String]]("dispatcher"),
-      properties =
-        pipelineInletConfig.as[Option[Map[String, String]]]("properties"),
-      closeTimeout =
-        pipelineInletConfig.as[Option[FiniteDuration]]("close-timeout")
+      producerSettings = ProducerSettings[Key, Value](producerConfig,
+                                                      new ByteArraySerializer,
+                                                      new ByteArraySerializer)
     )
   }
 
   override def getPipelineOutletSettings(
+      pipelineName: String,
       pipelineOutletConfig: Config): KafkaPipelineOutletSettings = {
+    val pipelineSettings = getPipelineSettings(pipelineName)
+    val consumerConfig =
+      if (pipelineOutletConfig.hasPath("consumer"))
+        pipelineOutletConfig
+          .getConfig("consumer")
+          .withFallback(pipelineSettings.defaultConsumerConfig)
+      else
+        pipelineSettings.defaultConsumerConfig
+
     KafkaPipelineOutletSettings(
       groupId = pipelineOutletConfig.as[String]("group-id"),
       extractParallelism = pipelineOutletConfig.as[Int]("extract-parallelism"),
@@ -135,22 +130,9 @@ final class KafkaPipelineFactory(pipelineConfigFactory: PipelineConfigFactory)
         .getOrElse(EventFormat.DefaultFormat),
       topics = pipelineOutletConfig.as[Option[Set[String]]]("topics"),
       topicPattern = pipelineOutletConfig.as[Option[String]]("topicPattern"),
-      dispatcher = pipelineOutletConfig.as[Option[String]]("dispatcher"),
-      properties =
-        pipelineOutletConfig.as[Option[Map[String, String]]]("properties"),
-      pollInterval =
-        pipelineOutletConfig.as[Option[FiniteDuration]]("poll-interval"),
-      pollTimeout =
-        pipelineOutletConfig.as[Option[FiniteDuration]]("poll-timeout"),
-      stopTimeout =
-        pipelineOutletConfig.as[Option[FiniteDuration]]("stop-timeout"),
-      closeTimeout =
-        pipelineOutletConfig.as[Option[FiniteDuration]]("close-timeout"),
-      commitTimeout =
-        pipelineOutletConfig.as[Option[FiniteDuration]]("commit-timeout"),
-      wakeupTimeout =
-        pipelineOutletConfig.as[Option[FiniteDuration]]("wakeup-timeout"),
-      maxWakeups = pipelineOutletConfig.as[Option[Int]]("max-wakeups")
+      consumerSettings = ConsumerSettings[Key, Value](consumerConfig,
+                                                      new ByteArrayDeserializer,
+                                                      new ByteArrayDeserializer)
     )
   }
 
@@ -158,11 +140,12 @@ final class KafkaPipelineFactory(pipelineConfigFactory: PipelineConfigFactory)
 
 object KafkaPipelineFactory {
   private var cached: Option[KafkaPipelineFactory] = None
-  def apply(): KafkaPipelineFactory = cached match {
-    case Some(factory) => factory
-    case None =>
-      val factory = new KafkaPipelineFactory(PipelineConfigFactory())
-      cached = Some(factory)
-      factory
-  }
+  def apply()(implicit system: ActorSystem): KafkaPipelineFactory =
+    cached match {
+      case Some(f) => f
+      case None =>
+        val f = new KafkaPipelineFactory(PipelineConfigPool())
+        cached = Some(f)
+        f
+    }
 }

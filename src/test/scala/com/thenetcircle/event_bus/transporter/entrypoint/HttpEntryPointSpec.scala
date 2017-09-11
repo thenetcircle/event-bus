@@ -138,7 +138,7 @@ class HttpEntryPointSpec extends AkkaBaseSpec {
       Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0),
                                     Source.fromPublisher(in)))
     val hep  = new HttpEntryPoint(settings, handler)
-    val out1 = hep.port.toMat(TestSink.probe[Event])(Keep.right).run()
+    val out1 = hep.stream.toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)
   }

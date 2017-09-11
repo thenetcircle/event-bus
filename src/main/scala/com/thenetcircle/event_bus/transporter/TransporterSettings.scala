@@ -47,6 +47,7 @@ object TransporterSettings extends StrictLogging {
       PipelineFactory.getConcreteFactoryByName(pipelineName)
     val pipeline = pipelineFactory.getPipeline(pipelineName)
     val pipelineInletSettings = pipelineFactory.getPipelineInletSettings(
+      pipelineName,
       config.as[Config]("pipeline.inlet-settings"))
 
     val transportParallelism = config.as[Int]("transport-parallelism")

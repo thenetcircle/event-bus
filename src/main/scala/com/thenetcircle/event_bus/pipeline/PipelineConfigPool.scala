@@ -22,7 +22,8 @@ import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
-final class PipelineConfigFactory(allPipelineConfig: Map[String, Config]) {
+private[pipeline] final class PipelineConfigPool(
+    allPipelineConfig: Map[String, Config]) {
   def getPipelineType(pipelineName: String): Option[PipelineType] =
     allPipelineConfig.get(pipelineName) match {
       case Some(config) => config.as[Option[PipelineType]]("type")
@@ -36,17 +37,17 @@ final class PipelineConfigFactory(allPipelineConfig: Map[String, Config]) {
     }
 }
 
-object PipelineConfigFactory {
-  private var factory: Option[PipelineConfigFactory] = None
+object PipelineConfigPool {
+  private var factory: Option[PipelineConfigPool] = None
 
   def initialize(system: ActorSystem): Unit =
     initialize(
       system.settings.config.as[Map[String, Config]]("event-bus.pipelines"))
 
   def initialize(allPipelineConfig: Map[String, Config]): Unit =
-    factory = Some(new PipelineConfigFactory(allPipelineConfig))
+    factory = Some(new PipelineConfigPool(allPipelineConfig))
 
-  def apply(): PipelineConfigFactory = factory match {
+  def apply(): PipelineConfigPool = factory match {
     case Some(_factory) => _factory
     case None =>
       throw new Exception("PipelineConfigFactory doesn't initialized yet.")

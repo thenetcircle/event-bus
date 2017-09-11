@@ -24,16 +24,15 @@ import com.typesafe.config.Config
 
 import scala.collection.mutable
 
-trait PipelineFactory {
+abstract class PipelineFactory(implicit system: ActorSystem) {
 
   protected val cached =
     mutable.Map.empty[String, Pipeline]
 
-  protected def getCachedPipeline(pipelineName: String): Option[Pipeline] =
+  protected def getCache(pipelineName: String): Option[Pipeline] =
     cached.synchronized(cached.get(pipelineName))
 
-  protected def addToCachedPipeline(pipelineName: String,
-                                    pipeline: Pipeline): Unit =
+  protected def addToCache(pipelineName: String, pipeline: Pipeline): Unit =
     cached.synchronized {
       cached += (pipelineName -> pipeline)
     }
@@ -42,36 +41,40 @@ trait PipelineFactory {
     *
     * @param pipelineName the predefined name of a pipeline
     */
-  def getPipelineSettings(pipelineName: String)(
-      implicit system: ActorSystem): PipelineSettings
+  def getPipelineSettings(pipelineName: String): PipelineSettings
 
-  /** Returns a [[Pipeline]] from [[PipelineConfigFactory]],
+  /** Returns a [[Pipeline]] from [[PipelineConfigPool]],
     * If did not existed, It creates a new [[Pipeline]] according to the predefined configuration
-    * and update the [[PipelineConfigFactory]]
+    * and update the [[PipelineConfigPool]]
     *
     * @param pipelineName the predefined name of a specific pipeline
     */
-  def getPipeline(pipelineName: String)(implicit system: ActorSystem): Pipeline
+  def getPipeline(pipelineName: String): Pipeline
 
   /** Creates [[PipelineInletSettings]] according to a TypeSafe [[Config]]
     *
+    * @param pipelineName
     * @param pipelineInletConfig the TypeSafe [[Config]]
     */
   def getPipelineInletSettings(
+      pipelineName: String,
       pipelineInletConfig: Config): PipelineInletSettings
 
   /** Creates [[PipelineOutletSettings]] according to a TypeSafe [[Config]]
     *
+    * @param pipelineName
     * @param pipelineOutletConfig the TypeSafe [[Config]]
     */
   def getPipelineOutletSettings(
+      pipelineName: String,
       pipelineOutletConfig: Config): PipelineOutletSettings
 
 }
 
 object PipelineFactory {
-  def getConcreteFactoryByName(pipelineName: String): PipelineFactory =
-    PipelineConfigFactory().getPipelineType(pipelineName) match {
+  def getConcreteFactoryByName(pipelineName: String)(
+      implicit system: ActorSystem): PipelineFactory =
+    PipelineConfigPool().getPipelineType(pipelineName) match {
       case Some(pipelineType) =>
         PipelineFactory.getConcreteFactoryByType(pipelineType)
       case None =>
@@ -79,7 +82,8 @@ object PipelineFactory {
           s"""No matched pipeline factory of pipeline name "$pipelineName".""")
     }
 
-  def getConcreteFactoryByType(pipelineType: PipelineType): PipelineFactory =
+  def getConcreteFactoryByType(pipelineType: PipelineType)(
+      implicit system: ActorSystem): PipelineFactory =
     pipelineType match {
       case PipelineType.Kafka => KafkaPipelineFactory()
       case _ =>

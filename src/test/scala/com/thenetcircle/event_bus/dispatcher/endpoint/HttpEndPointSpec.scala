@@ -195,15 +195,24 @@ class HttpEndPointSpec extends AkkaBaseSpec {
       (for (_ <- 1 to 100) yield koEvent :: okEvent :: Nil).flatten.iterator)
 
     val sink1 =
-      source1.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
+      source1
+        .via(endPoint.stream)
+        .toMat(TestSink.probe[Event])(Keep.right)
+        .run()
     val fallbackerSub1 = fallbacker.expectSubscription()
 
     val sink2 =
-      source2.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
+      source2
+        .via(endPoint.stream)
+        .toMat(TestSink.probe[Event])(Keep.right)
+        .run()
     val fallbackerSub2 = fallbacker.expectSubscription()
 
     val sink3 =
-      source3.via(endPoint.port).toMat(TestSink.probe[Event])(Keep.right).run()
+      source3
+        .via(endPoint.stream)
+        .toMat(TestSink.probe[Event])(Keep.right)
+        .run()
     val fallbackerSub3 = fallbacker.expectSubscription()
 
     fallbackerSub1.request(1)
@@ -239,7 +248,7 @@ class HttpEndPointSpec extends AkkaBaseSpec {
     : (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
     TestSource
       .probe[Event]
-      .viaMat(endPoint.port)(Keep.left)
+      .viaMat(endPoint.stream)(Keep.left)
       .toMat(TestSink.probe[Event])(Keep.both)
       .run()
 }
