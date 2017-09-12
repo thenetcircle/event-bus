@@ -20,9 +20,10 @@ package com.thenetcircle.event_bus.transporter
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.pipeline.{
+  Pipeline,
   PipelineFactory,
   PipelineInletSettings,
-  Pipeline
+  PipelinePool
 }
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
 import com.typesafe.config.Config
@@ -43,12 +44,10 @@ object TransporterSettings extends StrictLogging {
         yield EntryPointSettings(_config)
 
     val pipelineName = config.as[String]("pipeline.name")
-    val pipelineFactory =
-      PipelineFactory.getConcreteFactoryByName(pipelineName)
-    val pipeline = pipelineFactory.getPipeline(pipelineName)
-    val pipelineInletSettings = pipelineFactory.getPipelineInletSettings(
-      pipelineName,
-      config.as[Config]("pipeline.inlet-settings"))
+    val pipeline     = PipelinePool().getPipeline(pipelineName).get
+    val pipelineInletSettings = PipelineFactory
+      .getConcreteFactory(pipeline.pipelineType)
+      .createPipelineInletSettings(config.as[Config]("pipeline.inlet-settings"))
 
     val transportParallelism = config.as[Int]("transport-parallelism")
     val commitParallelism    = config.as[Int]("commit-parallelism")

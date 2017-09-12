@@ -22,70 +22,51 @@ import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.typesafe.config.Config
 
-import scala.collection.mutable
+abstract class PipelineFactory(implicit protected val system: ActorSystem) {
 
-abstract class PipelineFactory(implicit system: ActorSystem) {
-
-  protected val cached =
-    mutable.Map.empty[String, Pipeline]
-
-  protected def getCache(pipelineName: String): Option[Pipeline] =
-    cached.synchronized(cached.get(pipelineName))
-
-  protected def addToCache(pipelineName: String, pipeline: Pipeline): Unit =
-    cached.synchronized {
-      cached += (pipelineName -> pipeline)
-    }
-
-  /** Creates [[PipelineSettings]] according to the predefined TypeSafe [[Config]]
+  /** Creates a new [[Pipeline]]
     *
-    * @param pipelineName the predefined name of a pipeline
+    * @param pipelineSettings the settings of pipeline
     */
-  def getPipelineSettings(pipelineName: String): PipelineSettings
+  def createPipeline(pipelineSettings: PipelineSettings): Pipeline
 
-  /** Returns a [[Pipeline]] from [[PipelineConfigPool]],
-    * If did not existed, It creates a new [[Pipeline]] according to the predefined configuration
-    * and update the [[PipelineConfigPool]]
+  /** Creates [[PipelineSettings]] according to a TypeSafe [[Config]]
     *
-    * @param pipelineName the predefined name of a specific pipeline
+    * @param pipelineConfig the TypeSafe [[Config]]
     */
-  def getPipeline(pipelineName: String): Pipeline
+  def createPipelineSettings(pipelineConfig: Config): PipelineSettings
 
   /** Creates [[PipelineInletSettings]] according to a TypeSafe [[Config]]
     *
-    * @param pipelineName
     * @param pipelineInletConfig the TypeSafe [[Config]]
     */
-  def getPipelineInletSettings(
-      pipelineName: String,
+  def createPipelineInletSettings(
       pipelineInletConfig: Config): PipelineInletSettings
 
   /** Creates [[PipelineOutletSettings]] according to a TypeSafe [[Config]]
     *
-    * @param pipelineName
     * @param pipelineOutletConfig the TypeSafe [[Config]]
     */
-  def getPipelineOutletSettings(
-      pipelineName: String,
+  def createPipelineOutletSettings(
       pipelineOutletConfig: Config): PipelineOutletSettings
 
 }
 
 object PipelineFactory {
-  def getConcreteFactoryByName(pipelineName: String)(
+  /*def getConcreteFactoryByName(pipelineName: String)(
       implicit system: ActorSystem): PipelineFactory =
-    PipelineConfigPool().getPipelineType(pipelineName) match {
+    PipelinePool().getPipelineType(pipelineName) match {
       case Some(pipelineType) =>
         PipelineFactory.getConcreteFactoryByType(pipelineType)
       case None =>
         throw new Exception(
           s"""No matched pipeline factory of pipeline name "$pipelineName".""")
-    }
+    }*/
 
-  def getConcreteFactoryByType(pipelineType: PipelineType)(
+  def getConcreteFactory(pipelineType: PipelineType)(
       implicit system: ActorSystem): PipelineFactory =
     pipelineType match {
-      case PipelineType.Kafka => KafkaPipelineFactory()
+      case PipelineType.Kafka => KafkaPipelineFactory
       case _ =>
         throw new Exception(
           s"""No matched pipeline factory of pipeline type "$pipelineType".""")

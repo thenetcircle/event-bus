@@ -33,7 +33,8 @@ import com.thenetcircle.event_bus.dispatcher.endpoint.{
 import com.thenetcircle.event_bus.pipeline.{
   Pipeline,
   PipelineInlet,
-  PipelineInletSettings
+  PipelineInletSettings,
+  PipelinePool
 }
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
@@ -136,7 +137,7 @@ object TestComponentBuilder {
       }
 
       override val pipeline: Pipeline =
-        KafkaPipelineFactory().getPipeline("TestPipeline")
+        PipelinePool().getPipeline("TestPipeline").get
       override val inletName: String = "TestPipelineInlet"
       override val inletSettings: PipelineInletSettings =
         new PipelineInletSettings {}
@@ -147,9 +148,8 @@ object TestComponentBuilder {
       commitParallelism,
       transportParallelism,
       Vector(entryPointSettings),
-      KafkaPipelineFactory().getPipeline("TestPipeline"),
-      KafkaPipelineFactory().getPipelineInletSettings("TestPipeline",
-                                                      ConfigFactory.empty()),
+      PipelinePool().getPipeline("TestPipeline").get,
+      KafkaPipelineFactory.createPipelineInletSettings(ConfigFactory.empty()),
       None
     )
 

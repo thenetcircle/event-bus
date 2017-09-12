@@ -20,20 +20,20 @@ package com.thenetcircle.event_bus.dispatcher
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.thenetcircle.event_bus.dispatcher.endpoint.{
   EndPoint,
   EndPointSettings,
   EndPointType
 }
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.pipeline.{
   Pipeline,
   PipelineOutlet,
-  PipelineOutletSettings
+  PipelineOutletSettings,
+  PipelinePool
 }
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
+import com.thenetcircle.event_bus.{Event, EventFormat}
 
 class DispatcherSpec extends AkkaBaseSpec {
 
@@ -75,7 +75,7 @@ class DispatcherSpec extends AkkaBaseSpec {
         createFlowFromSink(Sink.fromSubscriber(testCommitter))
 
       override val pipeline: Pipeline =
-        KafkaPipelineFactory().getPipeline("TestPipeline")
+        PipelinePool().getPipeline("TestPipeline").get
       override val outletName: String = "TestOutlet"
       override val outletSettings: PipelineOutletSettings =
         new PipelineOutletSettings {

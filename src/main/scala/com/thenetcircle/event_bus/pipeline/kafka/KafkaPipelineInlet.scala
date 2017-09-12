@@ -41,8 +41,12 @@ private[kafka] final class KafkaPipelineInlet(
   override val stream: Flow[Event, Event, NotUsed] = {
 
     // Combine LeftPortSettings with PipelineSettings
-    val producerSettings: ProducerSettings[Key, Value] =
-      inletSettings.producerSettings
+    val producerSettings: ProducerSettings[Key, Value] = {
+      val s = pipeline.pipelineSettings.producerSettings
+      inletSettings.closeTimeout.foreach(s.withCloseTimeout(_))
+      inletSettings.parallelism.foreach(s.withParallelism(_))
+      s
+    }
 
     Flow[Event]
       .map(

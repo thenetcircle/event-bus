@@ -21,9 +21,10 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
 import com.thenetcircle.event_bus.pipeline.{
-  PipelineFactory,
   Pipeline,
-  PipelineOutletSettings
+  PipelineFactory,
+  PipelineOutletSettings,
+  PipelinePool
 }
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -42,12 +43,11 @@ object DispatcherSettings extends StrictLogging {
     val endPointSettings = EndPointSettings(config.as[Config]("endpoint"))
 
     val pipelineName = config.as[String]("pipeline.name")
-    val pipelineFactory =
-      PipelineFactory.getConcreteFactoryByName(pipelineName)
-    val pipeline = pipelineFactory.getPipeline(pipelineName)
-    val pipelineOutletSettings = pipelineFactory.getPipelineOutletSettings(
-      pipelineName,
-      config.as[Config]("pipeline.outlet-settings"))
+    val pipeline     = PipelinePool().getPipeline(pipelineName).get
+    val pipelineOutletSettings = PipelineFactory
+      .getConcreteFactory(pipeline.pipelineType)
+      .createPipelineOutletSettings(
+        config.as[Config]("pipeline.outlet-settings"))
 
     val materializerKey = "akka.stream.materializer"
     val materializerSettings: Option[ActorMaterializerSettings] = {

@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
-import com.thenetcircle.event_bus.pipeline.PipelineConfigPool
+import com.thenetcircle.event_bus.pipeline.PipelinePool$
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -27,7 +27,7 @@ class KafkaPipelineFactorySpec extends AkkaBaseSpec {
 
   val testPipelineName = "TestKafkaPipeline"
   val testKafkaPipelineFactory = new KafkaPipelineFactory(
-    new PipelineConfigPool(
+    new PipelinePool(
       Map[String, Config](
         testPipelineName -> ConfigFactory.parseString("""
                                                            |{
@@ -40,7 +40,7 @@ class KafkaPipelineFactorySpec extends AkkaBaseSpec {
 
   it can "get PipelineSettings from predefined config" in {
     val settings =
-      testKafkaPipelineFactory.getPipelineSettings(testPipelineName)
+      testKafkaPipelineFactory.createPipelineSettings(testPipelineName)
     settings.name shouldEqual testPipelineName
     /*settings.defaultProducerConfig shouldBe a[
       ProducerSettings[KafkaPipeline.Key, KafkaPipeline.Value]]
@@ -50,9 +50,9 @@ class KafkaPipelineFactorySpec extends AkkaBaseSpec {
 
   it can "get Pipeline from predefined config" in {
     val pipelineSettings =
-      testKafkaPipelineFactory.getPipelineSettings(testPipelineName)
+      testKafkaPipelineFactory.createPipelineSettings(testPipelineName)
     val pipeline =
-      testKafkaPipelineFactory.getPipeline(testPipelineName)
+      testKafkaPipelineFactory.createPipeline(testPipelineName)
 
     pipeline shouldBe a[KafkaPipeline]
     pipeline.pipelineSettings.name shouldEqual pipelineSettings.name

@@ -51,8 +51,20 @@ private[kafka] final class KafkaPipelineOutlet(
       "The outlet of KafkaPipeline needs to subscribe topics")
 
     /** Build ConsumerSettings */
-    val kafkaConsumerSettings: ConsumerSettings[Key, Value] =
-      outletSettings.consumerSettings.withGroupId(outletSettings.groupId)
+    val kafkaConsumerSettings: ConsumerSettings[Key, Value] = {
+      val result = pipeline.pipelineSettings.consumerSettings
+        .withGroupId(outletSettings.groupId)
+
+      outletSettings.pollInterval.foreach(result.withPollInterval(_))
+      outletSettings.pollTimeout.foreach(result.withPollTimeout(_))
+      outletSettings.stopTimeout.foreach(result.withStopTimeout(_))
+      outletSettings.closeTimeout.foreach(result.withCloseTimeout(_))
+      outletSettings.commitTimeout.foreach(result.withCommitTimeout(_))
+      outletSettings.wakeupTimeout.foreach(result.withWakeupTimeout(_))
+      outletSettings.maxWakeups.foreach(result.withMaxWakeups(_))
+
+      result
+    }
 
     var subscription: AutoSubscription =
       if (outletSettings.topics.isDefined) {
