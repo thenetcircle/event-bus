@@ -28,13 +28,13 @@ private[pipeline] final class PipelinePool(
     pool: Map[String, (PipelineType, PipelineSettings)])(
     implicit system: ActorSystem) {
 
-  protected val cached =
+  private val cached =
     mutable.Map.empty[String, Pipeline]
 
-  protected def getCache(pipelineName: String): Option[Pipeline] =
+  private def getCache(pipelineName: String): Option[Pipeline] =
     cached.synchronized(cached.get(pipelineName))
 
-  protected def addToCache(pipeline: Pipeline): Unit =
+  private def addToCache(pipeline: Pipeline): Unit =
     cached.synchronized {
       cached += (pipeline.pipelineSettings.name -> pipeline)
     }

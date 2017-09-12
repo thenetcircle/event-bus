@@ -17,45 +17,94 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
-import com.thenetcircle.event_bus.pipeline.PipelinePool$
+import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.ConfigFactory
+
+import scala.concurrent.duration.FiniteDuration
 
 class KafkaPipelineFactorySpec extends AkkaBaseSpec {
 
   behavior of "KafkaPipelineFactory"
 
-  val testPipelineName = "TestKafkaPipeline"
-  val testKafkaPipelineFactory = new KafkaPipelineFactory(
-    new PipelinePool(
-      Map[String, Config](
-        testPipelineName -> ConfigFactory.parseString("""
-                                                           |{
-                                                           |  type = Kafka
-                                                           |  settings {}
-                                                           |}
-                                                         """.stripMargin)
-      ))
-  )
-
-  it can "get PipelineSettings from predefined config" in {
-    val settings =
-      testKafkaPipelineFactory.createPipelineSettings(testPipelineName)
-    settings.name shouldEqual testPipelineName
-    /*settings.defaultProducerConfig shouldBe a[
-      ProducerSettings[KafkaPipeline.Key, KafkaPipeline.Value]]
-    settings.defaultConsumerConfig shouldBe a[
-      ConsumerSettings[KafkaPipeline.Key, KafkaPipeline.Value]]*/
+  it should "be singleton" in {
+    KafkaPipelineFactory() shouldEqual KafkaPipelineFactory()
+    new KafkaPipelineFactory() should not equal new KafkaPipelineFactory()
   }
 
-  it can "get Pipeline from predefined config" in {
-    val pipelineSettings =
-      testKafkaPipelineFactory.createPipelineSettings(testPipelineName)
-    val pipeline =
-      testKafkaPipelineFactory.createPipeline(testPipelineName)
+  it should "properly create PipelineSettings" in {
+    val config =
+      ConfigFactory.parseString(
+        """
+                                             |{
+                                             |  name = TestPipeline
+                                             |  producer {
+                                             |    close-timeout = 999s
+                                             |    use-dispatcher = "TestPipelineProducerDispatcher"
+                                             |  }
+                                             |  consumer {
+                                             |    poll-timeout = 999ms
+                                             |    max-wakeups = 999
+                                             |    use-dispatcher = "TestPipelineConsumerDispatcher"
+                                             |  }
+                                             |}
+                                           """.stripMargin)
 
-    pipeline shouldBe a[KafkaPipeline]
-    pipeline.pipelineSettings.name shouldEqual pipelineSettings.name
+    val settings = KafkaPipelineFactory().createPipelineSettings(config)
+
+    settings.name shouldEqual "TestPipeline"
+
+    settings.producerSettings.parallelism shouldEqual 100
+    settings.producerSettings.closeTimeout shouldEqual FiniteDuration(999, "s")
+    settings.producerSettings.dispatcher shouldEqual "TestPipelineProducerDispatcher"
+
+    settings.consumerSettings.stopTimeout shouldEqual FiniteDuration(30, "s")
+    settings.consumerSettings.pollTimeout shouldEqual FiniteDuration(999, "ms")
+    settings.consumerSettings.maxWakeups shouldEqual 999
+    settings.consumerSettings.dispatcher shouldEqual "TestPipelineConsumerDispatcher"
   }
 
+  it should "properly create PipelineInletSettings" in {
+    val config =
+      ConfigFactory.parseString("""
+          |{
+          |  close-timeout = 999ms
+          |  parallelism   = 10
+          |}
+        """.stripMargin)
+
+    val settings = KafkaPipelineFactory().createPipelineInletSettings(config)
+
+    settings.closeTimeout shouldEqual Some(FiniteDuration(999, "ms"))
+    settings.parallelism shouldEqual Some(10)
+  }
+
+  it should "properly create PipelineOutletSettings" in {
+    val config =
+      ConfigFactory.parseString("""
+                                  |{
+                                  |  group-id = "TestGroup"
+                                  |  extract-parallelism = 999
+                                  |  event-format = test
+                                  |  topics = ["a", "b"]
+                                  |  topicPattern = "event-*"
+                                  |  stop-timeout = 999s
+                                  |  wakeup-timeout = 999s
+                                  |}
+                                """.stripMargin)
+
+    val settings = KafkaPipelineFactory().createPipelineOutletSettings(config)
+
+    settings.groupId shouldEqual "TestGroup"
+    settings.extractParallelism shouldEqual 999
+    settings.eventFormat shouldEqual EventFormat.TestFormat
+    settings.topics shouldEqual Some(Set("a", "b"))
+    settings.topicPattern shouldEqual Some("event-*")
+    settings.stopTimeout shouldEqual Some(FiniteDuration(999, "s"))
+    settings.wakeupTimeout shouldEqual Some(FiniteDuration(999, "s"))
+
+    settings.commitParallelism shouldEqual 3
+    settings.commitBatchMax shouldEqual 20
+    settings.maxWakeups shouldBe empty
+  }
 }

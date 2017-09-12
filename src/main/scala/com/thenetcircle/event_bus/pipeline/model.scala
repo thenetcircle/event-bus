@@ -70,6 +70,7 @@ trait PipelineOutlet {
 
 object PipelineType extends Enumeration {
   type PipelineType = Value
+
   val Kafka = Value(1, "Kafka")
 
   def apply(name: String): PipelineType = name.toUpperCase match {

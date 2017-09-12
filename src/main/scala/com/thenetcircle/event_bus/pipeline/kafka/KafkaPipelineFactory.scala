@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
+import akka.actor.ActorSystem
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.pipeline._
@@ -30,7 +31,8 @@ import org.apache.kafka.common.serialization.{
 
 import scala.concurrent.duration.FiniteDuration
 
-object KafkaPipelineFactory extends PipelineFactory {
+class KafkaPipelineFactory(implicit system: ActorSystem)
+    extends PipelineFactory {
 
   override def createPipeline(
       pipelineSettings: PipelineSettings): KafkaPipeline =
@@ -75,7 +77,7 @@ object KafkaPipelineFactory extends PipelineFactory {
       pipelineInletConfig: Config): KafkaPipelineInletSettings = {
     val config = pipelineInletConfig.withFallback(
       system.settings.config
-        .as[Config]("event-bus.pipeline.default.kafka.inlet"))
+        .getConfig("event-bus.pipeline.default.kafka.inlet"))
 
     KafkaPipelineInletSettings(
       closeTimeout = config.as[Option[FiniteDuration]]("close-timeout"),
@@ -111,14 +113,14 @@ object KafkaPipelineFactory extends PipelineFactory {
 
 }
 
-/*object KafkaPipelineFactory {
+object KafkaPipelineFactory {
   private var cached: Option[KafkaPipelineFactory] = None
   def apply()(implicit system: ActorSystem): KafkaPipelineFactory =
     cached match {
       case Some(f) => f
       case None =>
-        val f = new KafkaPipelineFactory(PipelinePool())
+        val f = new KafkaPipelineFactory()
         cached = Some(f)
         f
     }
-}*/
+}

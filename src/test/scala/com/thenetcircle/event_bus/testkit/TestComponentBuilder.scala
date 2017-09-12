@@ -149,7 +149,7 @@ object TestComponentBuilder {
       transportParallelism,
       Vector(entryPointSettings),
       PipelinePool().getPipeline("TestPipeline").get,
-      KafkaPipelineFactory.createPipelineInletSettings(ConfigFactory.empty()),
+      KafkaPipelineFactory().createPipelineInletSettings(ConfigFactory.empty()),
       None
     )
 
