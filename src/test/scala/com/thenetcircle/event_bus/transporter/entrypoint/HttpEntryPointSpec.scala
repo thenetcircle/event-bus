@@ -32,14 +32,14 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.{Event, EventBody, EventFormat, EventMetaData}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class HttpEntryPointSpec extends AkkaBaseSpec {
+class HttpEntryPointSpec extends AkkaStreamSpec {
 
   implicit val eventExtractor = EventExtractor(DefaultFormat)
 

@@ -33,7 +33,7 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelinePool
 }
 import com.thenetcircle.event_bus.{Event, EventFormat}
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.{createTestEvent, createFlowFromSink}
 import com.thenetcircle.event_bus.transporter.entrypoint._
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
@@ -41,7 +41,7 @@ import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Future
 
-class TransporterSpec extends AkkaBaseSpec {
+class TransporterSpec extends AkkaStreamSpec {
 
   behavior of "Transporter"
 

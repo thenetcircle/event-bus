@@ -19,11 +19,11 @@ package com.thenetcircle.event_bus.transporter
 
 import com.thenetcircle.event_bus.pipeline.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineSettings
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.transporter.entrypoint.HttpEntryPointSettings
 import com.typesafe.config.ConfigFactory
 
-class TransporterSettingsSpec extends AkkaBaseSpec {
+class TransporterSettingsSpec extends AkkaStreamSpec {
   behavior of "TransporterSettings"
 
   it should "properly be parsed from typesafe Config" in {

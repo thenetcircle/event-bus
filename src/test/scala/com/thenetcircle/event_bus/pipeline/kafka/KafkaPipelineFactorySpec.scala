@@ -18,12 +18,12 @@
 package com.thenetcircle.event_bus.pipeline.kafka
 
 import com.thenetcircle.event_bus.EventFormat
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.duration.FiniteDuration
 
-class KafkaPipelineFactorySpec extends AkkaBaseSpec {
+class KafkaPipelineFactorySpec extends AkkaStreamSpec {
 
   behavior of "KafkaPipelineFactory"
 

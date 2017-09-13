@@ -23,13 +23,13 @@ import com.thenetcircle.event_bus.pipeline.kafka.{
   KafkaPipelineFactory,
   KafkaPipelineSettings
 }
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import org.apache.kafka.common.serialization.{
   ByteArrayDeserializer,
   ByteArraySerializer
 }
 
-class PipelinePoolSpec extends AkkaBaseSpec {
+class PipelinePoolSpec extends AkkaStreamSpec {
 
   behavior of "PipelinePool"
 

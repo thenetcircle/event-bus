@@ -31,12 +31,12 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelineOutletSettings,
   PipelinePool
 }
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.{createFlowFromSink, createTestEvent}
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.ConfigFactory
 
-class DispatcherSpec extends AkkaBaseSpec {
+class DispatcherSpec extends AkkaStreamSpec {
 
   behavior of "Dispatcher"
 

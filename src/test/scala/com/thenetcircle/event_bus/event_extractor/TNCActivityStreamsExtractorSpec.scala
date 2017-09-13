@@ -22,11 +22,11 @@ import java.text.SimpleDateFormat
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.{DefaultFormat, TestFormat}
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.testkit.AsyncBaseSpec
+import com.thenetcircle.event_bus.testkit.AsyncUnitSpec
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 
-class TNCActivityStreamsExtractorSpec extends AsyncBaseSpec {
+class TNCActivityStreamsExtractorSpec extends AsyncUnitSpec {
 
   private val defaultFormatExtractor: EventExtractor = EventExtractor(
     DefaultFormat)

@@ -23,10 +23,10 @@ import com.thenetcircle.event_bus.pipeline.kafka.{
   KafkaPipelineOutletSettings,
   KafkaPipelineSettings
 }
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
-class DispatcherSettingsSpec extends AkkaBaseSpec {
+class DispatcherSettingsSpec extends AkkaStreamSpec {
 
   behavior of "DispatcherSettings"
 

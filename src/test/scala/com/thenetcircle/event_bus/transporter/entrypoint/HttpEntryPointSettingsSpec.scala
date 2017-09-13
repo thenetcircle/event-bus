@@ -18,10 +18,10 @@
 package com.thenetcircle.event_bus.transporter.entrypoint
 
 import com.thenetcircle.event_bus.EventFormat
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
-class HttpEntryPointSettingsSpec extends AkkaBaseSpec {
+class HttpEntryPointSettingsSpec extends AkkaStreamSpec {
 
   behavior of "HttpEntryPointSettings"
 

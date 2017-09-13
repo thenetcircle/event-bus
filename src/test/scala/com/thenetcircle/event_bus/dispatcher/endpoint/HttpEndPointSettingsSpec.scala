@@ -18,10 +18,10 @@
 package com.thenetcircle.event_bus.dispatcher.endpoint
 
 import akka.http.scaladsl.model.{HttpMethods, Uri}
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
-class HttpEndPointSettingsSpec extends AkkaBaseSpec {
+class HttpEndPointSettingsSpec extends AkkaStreamSpec {
 
   behavior of "HttpEndPointSettings"
 

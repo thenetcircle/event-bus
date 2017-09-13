@@ -25,13 +25,13 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.createTestEvent
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class HttpEndPointSpec extends AkkaBaseSpec {
+class HttpEndPointSpec extends AkkaStreamSpec {
 
   behavior of "HttpEndPoint"
 
