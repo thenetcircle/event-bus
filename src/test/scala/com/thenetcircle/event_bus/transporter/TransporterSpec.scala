@@ -188,22 +188,6 @@ class TransporterSpec extends AkkaBaseSpec {
         override def stream: Source[Event, _] = _source._2
     })
 
-    val testPipelineLeftPort = new PipelineInlet {
-      var currentIndex = 0
-      override def stream: Flow[Event, Event, NotUsed] = {
-        val testPP = testPipelinePort(currentIndex)
-        val flow   = createFlowFromSink(testPP)
-        currentIndex += 1
-        flow
-      }
-
-      override val pipeline: Pipeline =
-        PipelinePool().getPipeline("TestPipeline").get
-      override val inletName: String = "TestPipelineInlet"
-      override val inletSettings: PipelineInletSettings =
-        new PipelineInletSettings {}
-    }
-
     val settings = TransporterSettings(
       "TestTransporter",
       commitParallelism,
@@ -214,8 +198,26 @@ class TransporterSpec extends AkkaBaseSpec {
       None
     )
 
-    new Transporter(settings, testEntryPoints, () => testPipelineLeftPort)
+    var currentPipelinePortIndex = 0
+    new Transporter(
+      settings,
+      testEntryPoints,
+      () => {
+        val testPP = testPipelinePort(currentPipelinePortIndex)
+        currentPipelinePortIndex += 1
 
+        new PipelineInlet {
+          override val pipeline: Pipeline =
+            PipelinePool().getPipeline("TestPipeline").get
+          override val inletName: String = "TestPipelineInlet"
+          override val inletSettings: PipelineInletSettings =
+            new PipelineInletSettings {}
+
+          override val stream: Flow[Event, Event, NotUsed] =
+            createFlowFromSink(testPP)
+        }
+      }
+    )
   }
 
 }

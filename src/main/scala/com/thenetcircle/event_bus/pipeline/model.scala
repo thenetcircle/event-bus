@@ -52,7 +52,7 @@ trait PipelineInlet {
   val inletName: String
   val inletSettings: PipelineInletSettings
 
-  def stream: Flow[Event, Event, NotUsed]
+  val stream: Flow[Event, Event, NotUsed]
 }
 
 trait PipelineOutletSettings {
@@ -64,8 +64,8 @@ trait PipelineOutlet {
   val outletName: String
   val outletSettings: PipelineOutletSettings
 
-  def stream: Source[Source[Event, NotUsed], NotUsed]
-  def committer: Flow[Event, Event, NotUsed]
+  val stream: Source[Source[Event, NotUsed], NotUsed]
+  val committer: Flow[Event, Event, NotUsed]
 }
 
 object PipelineType extends Enumeration {

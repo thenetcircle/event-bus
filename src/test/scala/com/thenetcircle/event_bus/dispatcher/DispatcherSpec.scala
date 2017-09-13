@@ -65,15 +65,6 @@ class DispatcherSpec extends AkkaBaseSpec {
     val testCommitter = TestSubscriber.probe[Event]()
 
     val pipelineOutlet = new PipelineOutlet {
-      override def stream: Source[Source[Event, NotUsed], NotUsed] =
-        Source[Source[Event, NotUsed]](
-          Source.fromPublisher(testSource1) :: Source
-            .fromPublisher(testSource2) :: Source
-            .fromPublisher(testSource3) :: Nil)
-
-      override def committer: Flow[Event, Event, NotUsed] =
-        createFlowFromSink(Sink.fromSubscriber(testCommitter))
-
       override val pipeline: Pipeline =
         PipelinePool().getPipeline("TestPipeline").get
       override val outletName: String = "TestOutlet"
@@ -81,6 +72,15 @@ class DispatcherSpec extends AkkaBaseSpec {
         new PipelineOutletSettings {
           override val eventFormat: EventFormat = EventFormat.DefaultFormat
         }
+
+      override val stream: Source[Source[Event, NotUsed], NotUsed] =
+        Source[Source[Event, NotUsed]](
+          Source.fromPublisher(testSource1) :: Source
+            .fromPublisher(testSource2) :: Source
+            .fromPublisher(testSource3) :: Nil)
+
+      override val committer: Flow[Event, Event, NotUsed] =
+        createFlowFromSink(Sink.fromSubscriber(testCommitter))
     }
 
     val endPoint = new EndPoint {
