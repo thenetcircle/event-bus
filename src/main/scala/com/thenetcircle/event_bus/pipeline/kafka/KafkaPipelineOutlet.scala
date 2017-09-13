@@ -26,9 +26,9 @@ import akka.stream.{FlowShape, Materializer}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
-import com.thenetcircle.event_bus.{Event, EventSourceType}
+import com.thenetcircle.event_bus.{Event, EventCommitter, EventSourceType}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /** RightPort Implementation */
 private[kafka] final class KafkaPipelineOutlet(
@@ -52,18 +52,18 @@ private[kafka] final class KafkaPipelineOutlet(
 
     /** Build ConsumerSettings */
     val kafkaConsumerSettings: ConsumerSettings[Key, Value] = {
-      val result = pipeline.pipelineSettings.consumerSettings
+      val _settings = pipeline.pipelineSettings.consumerSettings
         .withGroupId(outletSettings.groupId)
 
-      outletSettings.pollInterval.foreach(result.withPollInterval(_))
-      outletSettings.pollTimeout.foreach(result.withPollTimeout(_))
-      outletSettings.stopTimeout.foreach(result.withStopTimeout(_))
-      outletSettings.closeTimeout.foreach(result.withCloseTimeout(_))
-      outletSettings.commitTimeout.foreach(result.withCommitTimeout(_))
-      outletSettings.wakeupTimeout.foreach(result.withWakeupTimeout(_))
-      outletSettings.maxWakeups.foreach(result.withMaxWakeups(_))
+      outletSettings.pollInterval.foreach(_settings.withPollInterval)
+      outletSettings.pollTimeout.foreach(_settings.withPollTimeout)
+      outletSettings.stopTimeout.foreach(_settings.withStopTimeout)
+      outletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
+      outletSettings.commitTimeout.foreach(_settings.withCommitTimeout)
+      outletSettings.wakeupTimeout.foreach(_settings.withWakeupTimeout)
+      outletSettings.maxWakeups.foreach(_settings.withMaxWakeups)
 
-      result
+      _settings
     }
 
     var subscription: AutoSubscription =
@@ -87,15 +87,17 @@ private[kafka] final class KafkaPipelineOutlet(
             }
             .map {
               case (extractedData, topic, committableOffset) =>
-                val event = Event(
+                Event(
                   metadata = extractedData.metadata,
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
-                  sourceType = EventSourceType.Kafka
+                  sourceType = EventSourceType.Kafka,
+                  context = Map("kafkaCommittableOffset" -> committableOffset),
+                  committer = Some(new EventCommitter {
+                    override def commit(): Future[Any] =
+                      committableOffset.commitScaladsl()
+                  })
                 )
-                event
-                  .addContext("kafkaCommittableOffset", committableOffset)
-                  .withCommitter(() => committableOffset.commitScaladsl())
             }
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
@@ -111,10 +113,11 @@ private[kafka] final class KafkaPipelineOutlet(
       val output    = builder.add(Flow[Event])
       val commitSink =
         Flow[Event]
-        // TODO: use generics for event context
-          .filter(_.hasContext("kafkaCommittableOffset"))
-          .map(_.context("kafkaCommittableOffset")
-            .asInstanceOf[CommittableOffset])
+          .collect {
+            case e if e.hasContext("kafkaCommittableOffset") =>
+              e.context("kafkaCommittableOffset")
+                .asInstanceOf[CommittableOffset]
+          }
           .batch(max = outletSettings.commitBatchMax,
                  first => CommittableOffsetBatch.empty.updated(first)) {
             (batch, elem) =>

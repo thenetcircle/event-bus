@@ -67,6 +67,7 @@ case class EventMetaData(
     name: String,
     timestamp: Long,
     publisher: String,
+    /** format: triggerType: String -> triggerId: String */
     trigger: Tuple2[String, String]
 )
 
