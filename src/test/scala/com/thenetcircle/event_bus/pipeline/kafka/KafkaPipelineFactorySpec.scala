@@ -38,11 +38,11 @@ class KafkaPipelineFactorySpec extends AkkaBaseSpec {
         """
                                              |{
                                              |  name = TestPipeline
-                                             |  producer {
+                                             |  akka.kafka.producer {
                                              |    close-timeout = 999s
                                              |    use-dispatcher = "TestPipelineProducerDispatcher"
                                              |  }
-                                             |  consumer {
+                                             |  akka.kafka.consumer {
                                              |    poll-timeout = 999ms
                                              |    max-wakeups = 999
                                              |    use-dispatcher = "TestPipelineConsumerDispatcher"

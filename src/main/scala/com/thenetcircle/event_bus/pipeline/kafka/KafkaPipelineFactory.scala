@@ -43,9 +43,9 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
     val originalProducerConfig =
       system.settings.config.getConfig("akka.kafka.producer")
     val producerConfig = {
-      if (pipelineConfig.hasPath("producer"))
+      if (pipelineConfig.hasPath("akka.kafka.producer"))
         pipelineConfig
-          .getConfig("producer")
+          .getConfig("akka.kafka.producer")
           .withFallback(originalProducerConfig)
       else
         originalProducerConfig
@@ -54,9 +54,9 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
     val originalConsumerConfig =
       system.settings.config.getConfig("akka.kafka.consumer")
     val consumerConfig = {
-      if (pipelineConfig.hasPath("consumer"))
+      if (pipelineConfig.hasPath("akka.kafka.consumer"))
         pipelineConfig
-          .getConfig("consumer")
+          .getConfig("akka.kafka.consumer")
           .withFallback(originalConsumerConfig)
       else
         originalConsumerConfig

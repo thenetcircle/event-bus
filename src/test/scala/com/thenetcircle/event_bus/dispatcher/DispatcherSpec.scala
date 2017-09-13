@@ -32,8 +32,9 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelinePool
 }
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
-import com.thenetcircle.event_bus.{createTestEvent, createFlowFromSink}
+import com.thenetcircle.event_bus.{createFlowFromSink, createTestEvent}
 import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.typesafe.config.ConfigFactory
 
 class DispatcherSpec extends AkkaBaseSpec {
 
@@ -52,7 +53,23 @@ class DispatcherSpec extends AkkaBaseSpec {
     )*/
     val dispatcherSettings =
       DispatcherSettings(
-        system.settings.config.getConfig("event-bus.test-dispatcher"))
+        ConfigFactory.parseString("""
+            |{
+            |  name = TestDispatcher
+            |  max-parallel-sources = 10
+            |  endpoint {
+            |    type = http
+            |    name = TestDispatcher-TestEndPoint
+            |    request.host = localhost
+            |  }
+            |  pipeline {
+            |    name = TestPipeline
+            |    outlet-settings {
+            |      group-id = "TestDispatcher"
+            |    }
+            |  }
+            |}
+          """.stripMargin))
 
     val testSource1 = TestPublisher.probe[Event]()
     val testSource2 = TestPublisher.probe[Event]()
