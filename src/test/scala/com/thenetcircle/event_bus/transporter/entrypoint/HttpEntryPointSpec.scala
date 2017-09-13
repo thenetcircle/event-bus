@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+
 import java.text.SimpleDateFormat
 
 import akka.http.scaladsl.model.{

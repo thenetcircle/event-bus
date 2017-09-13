@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.transporter.entrypoint
+
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
 import com.typesafe.config.ConfigFactory

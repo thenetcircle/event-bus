@@ -17,16 +17,19 @@
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
+import akka.http.scaladsl.settings.ConnectionPoolSettings
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
-import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
+import com.thenetcircle.event_bus.createTestEvent
 
 import scala.concurrent.duration._
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class HttpEndPointSpec extends AkkaBaseSpec {
 
@@ -251,4 +254,41 @@ class HttpEndPointSpec extends AkkaBaseSpec {
       .viaMat(endPoint.stream)(Keep.left)
       .toMat(TestSink.probe[Event])(Keep.both)
       .run()
+
+  def createHttpEndPoint(
+      expectedResponse: Option[String] = None,
+      fallbacker: Sink[Event, _] = Sink.ignore,
+      maxRetryTimes: Int = 1,
+      defaultRequest: HttpRequest = HttpRequest(),
+      defaultResponse: Try[HttpResponse] = Success(HttpResponse())
+  )(sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _] =
+      Flow[(HttpRequest, Event)].map {
+        case (_, event) =>
+          (defaultResponse, event)
+      })(implicit system: ActorSystem,
+         materializer: Materializer): HttpEndPoint = {
+    val endPointSettings = createHttpEndPointSettings(
+      maxRetryTimes = maxRetryTimes,
+      defaultRequest = defaultRequest,
+      expectedResponse = expectedResponse
+    )
+    new HttpEndPoint(endPointSettings, sender, fallbacker)
+  }
+
+  def createHttpEndPointSettings(
+      name: String = "TestHttpEndPoint",
+      host: String = "localhost",
+      port: Int = 8888,
+      maxRetryTimes: Int = 10,
+      defaultRequest: HttpRequest = HttpRequest(),
+      expectedResponse: Option[String] = None
+  )(implicit system: ActorSystem): HttpEndPointSettings = HttpEndPointSettings(
+    name,
+    host,
+    port,
+    maxRetryTimes,
+    ConnectionPoolSettings(system),
+    defaultRequest,
+    expectedResponse
+  )
 }

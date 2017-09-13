@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.transporter
+
 import com.thenetcircle.event_bus.pipeline.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineSettings
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec

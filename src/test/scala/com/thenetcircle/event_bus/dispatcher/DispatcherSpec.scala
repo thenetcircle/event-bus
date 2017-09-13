@@ -32,7 +32,7 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelinePool
 }
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
-import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
+import com.thenetcircle.event_bus.{createTestEvent, createFlowFromSink}
 import com.thenetcircle.event_bus.{Event, EventFormat}
 
 class DispatcherSpec extends AkkaBaseSpec {

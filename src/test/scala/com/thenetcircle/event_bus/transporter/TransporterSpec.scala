@@ -16,14 +16,28 @@
  */
 
 package com.thenetcircle.event_bus.transporter
+
 import java.util.concurrent.atomic.AtomicInteger
 
-import akka.stream.scaladsl.{Sink, Source}
+import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.http.scaladsl.settings.ServerSettings
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
+import com.thenetcircle.event_bus.pipeline.{
+  Pipeline,
+  PipelineInlet,
+  PipelineInletSettings,
+  PipelinePool
+}
+import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.thenetcircle.event_bus.testkit.AkkaBaseSpec
-import com.thenetcircle.event_bus.testkit.TestComponentBuilder._
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority
+import com.thenetcircle.event_bus.{createTestEvent, createFlowFromSink}
+import com.thenetcircle.event_bus.transporter.entrypoint._
+import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Future
 
@@ -142,6 +156,66 @@ class TransporterSpec extends AkkaBaseSpec {
 
     Thread.sleep(100)
     result.get() shouldEqual 30000
+  }
+
+  def createTransporter(
+      testSources: Vector[(EntryPointPriority, Source[Event, _])],
+      testPipelinePort: Vector[Sink[Event, _]],
+      commitParallelism: Int = 1,
+      transportParallelism: Int = 1)(
+      implicit system: ActorSystem,
+      materializer: Materializer): Transporter = {
+    val entryPointSettings = HttpEntryPointSettings(
+      "TestHttpEntryPoint",
+      EntryPointPriority.Normal,
+      100,
+      10,
+      EventFormat.DefaultFormat,
+      ServerSettings(system),
+      "localhost",
+      8888
+    )
+
+    val testEntryPoints = testSources.map(_source =>
+      new EntryPoint {
+        override val settings: EntryPointSettings = new EntryPointSettings {
+          override val name           = s"TestEntryPoint-${_source._1}"
+          override val priority       = _source._1
+          override val entryPointType = EntryPointType.HTTP
+          override val eventFormat    = EventFormat.DefaultFormat
+        }
+
+        override def stream: Source[Event, _] = _source._2
+    })
+
+    val testPipelineLeftPort = new PipelineInlet {
+      var currentIndex = 0
+      override def stream: Flow[Event, Event, NotUsed] = {
+        val testPP = testPipelinePort(currentIndex)
+        val flow   = createFlowFromSink(testPP)
+        currentIndex += 1
+        flow
+      }
+
+      override val pipeline: Pipeline =
+        PipelinePool().getPipeline("TestPipeline").get
+      override val inletName: String = "TestPipelineInlet"
+      override val inletSettings: PipelineInletSettings =
+        new PipelineInletSettings {}
+    }
+
+    val settings = TransporterSettings(
+      "TestTransporter",
+      commitParallelism,
+      transportParallelism,
+      Vector(entryPointSettings),
+      PipelinePool().getPipeline("TestPipeline").get,
+      KafkaPipelineFactory().createPipelineInletSettings(ConfigFactory.empty()),
+      None
+    )
+
+    new Transporter(settings, testEntryPoints, () => testPipelineLeftPort)
+
   }
 
 }
