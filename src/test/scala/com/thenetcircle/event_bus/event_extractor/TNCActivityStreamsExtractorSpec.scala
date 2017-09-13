@@ -75,7 +75,7 @@ class TNCActivityStreamsExtractorSpec extends AsyncUnitSpec {
 
     defaultFormatExtractor.extract(data) map { d =>
       inside(d) {
-        case ExtractedData(body, metadata, _, _) =>
+        case ExtractedData(body, metadata, _) =>
           body shouldEqual EventBody(data, DefaultFormat)
           metadata shouldEqual EventMetaData(
             "123",
@@ -100,7 +100,7 @@ class TNCActivityStreamsExtractorSpec extends AsyncUnitSpec {
     )
     testFormatExtractor.extract(data) map { d =>
       inside(d) {
-        case ExtractedData(body, metadata, _, _) =>
+        case ExtractedData(body, metadata, _) =>
           body shouldEqual EventBody(data, TestFormat)
       }
     }

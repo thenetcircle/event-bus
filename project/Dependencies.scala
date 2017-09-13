@@ -17,7 +17,7 @@ object Dependencies {
     "ch.qos.logback"             % "logback-classic" % "1.2.3"
   )
   private val test = Seq(
-    "org.scalatest"     %% "scalatest"           % "3.0.1"         % Test,
+    "org.scalatest"     %% "scalatest"           % "3.0.1"         % "it,test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion     % Test,
     "com.typesafe.akka" %% "akka-http-testkit"   % akkaHttpVersion % Test
   )

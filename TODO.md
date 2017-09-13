@@ -6,11 +6,8 @@
 ### Pipeline
 #### KafkaPipeline
 
-- Event ack after produced
-- ConsumerGroup settings, And ack after Event got delivered
-- Separated streams of listened topics
-- Stream monitor and recover
-- Supervision of KafkaPipeline 
+- When Kafka delivery failed, Which will complete upstreams as well, Can be reproduced by create new topic
+- Add logs 
 
 ### Sink
 

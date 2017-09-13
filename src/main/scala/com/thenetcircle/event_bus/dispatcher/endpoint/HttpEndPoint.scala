@@ -138,14 +138,21 @@ object HttpEndPoint {
         val pending: AtomicInteger = new AtomicInteger(0)
         
         setHandler(incoming, new InHandler {
-          override def onPush() = push(ready, grab(incoming))
+          override def onPush() = {
+            log.info("incoming OnPush")
+            push(ready, grab(incoming))
+          }
           override def onUpstreamFinish() = {
+            log.info("incoming onUpstreamFinish")
             if (pending.get() == 0) completeStage()
           }
         })
 
         setHandler(ready, new OutHandler {
-          override def onPull() = tryPull(incoming)
+          override def onPull() = {
+            log.info("ready onPull")
+            tryPull(incoming)
+          }
         })
 
         setHandler(result, new InHandler {
@@ -154,6 +161,7 @@ object HttpEndPoint {
               case (responseTry, event) =>
                 responseTry match {
                   case Success(response) =>
+                    log.info("result onPush success")
                     pending.incrementAndGet()
                     responseChecker(response, event).onComplete(getAsyncCallback(responseHandler(event)).invoke)
 
@@ -167,16 +175,23 @@ object HttpEndPoint {
         })
 
         setHandler(failed, new OutHandler {
-          override def onPull() = if (!hasBeenPulled(result) && isAvailable(succeed)) tryPull(result)
+          override def onPull() = {
+            log.info("failed onPull")
+            if (!hasBeenPulled(result) && isAvailable(succeed)) tryPull(result)
+          }
         })
 
         setHandler(succeed, new OutHandler {
-          override def onPull() = if (!hasBeenPulled(result) && isAvailable(failed)) tryPull(result)
+          override def onPull() = {
+            log.info("succeed onPull")
+            if (!hasBeenPulled(result) && isAvailable(failed)) tryPull(result)
+          }
         })
 
         def responseHandler(event: T): (Try[Boolean]) => Unit = { result =>
           result match {
             case Success(true) =>
+              log.info("push succeed")
               push(succeed, event)
             case Success(false) =>
               failureHandler(event)
@@ -196,6 +211,7 @@ object HttpEndPoint {
             retryTimes.set(0)
           }
           else {
+            log.info("emit ready and pull result")
             emit(ready, event)
             tryPull(result)
           }

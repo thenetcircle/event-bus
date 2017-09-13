@@ -175,26 +175,4 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
     (in, out0, out1)
   }
 
-  /*test("online test") {
-    val settings = HttpEntryPointSettings(
-      "test-entrypoint",
-      EntryPointPriority.Normal,
-      1000,
-      10,
-      EventFormat.DefaultFormat,
-      "127.0.0.1",
-      8888
-    )
-
-    implicit val ec = EventExtractor(EventFormat.DefaultFormat)
-    val hep         = HttpEntryPoint(settings)
-
-    val port = hep.port.runForeach(event => {
-      println(event.toString)
-      event.committer.foreach(_.commit())
-    })
-
-    Await.ready(_system.whenTerminated, Duration.Inf)
-  }*/
-
 }
