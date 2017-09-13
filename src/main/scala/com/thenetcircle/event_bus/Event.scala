@@ -57,15 +57,6 @@ object EventSourceType {
   case object Http  extends EventSourceType
 }
 
-object EventPriority extends Enumeration {
-  type EventPriority = Value
-  val Urgent = Value(6, "Urgent")
-  val High   = Value(5, "High")
-  val Medium = Value(4, "Medium")
-  val Normal = Value(3, "Normal")
-  val Low    = Value(2, "Low")
-}
-
 case class EventBody(
     data: ByteString,
     format: EventFormat
@@ -84,7 +75,6 @@ case class Event(
     body: EventBody,
     channel: String,
     sourceType: EventSourceType,
-    priority: EventPriority.EventPriority = EventPriority.Normal,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
 ) {
@@ -93,12 +83,6 @@ case class Event(
     copy(committer = Some(new EventCommitter {
       override def commit(): Future[Any] = commitFunction()
     }))
-
-  def withPlusPriority(plusPriority: Int): Event =
-    withPriority(EventPriority(priority.id + plusPriority))
-
-  def withPriority(priority: EventPriority.EventPriority): Event =
-    copy(priority = priority)
 
   def hasContext(key: String): Boolean = context.isDefinedAt(key)
 

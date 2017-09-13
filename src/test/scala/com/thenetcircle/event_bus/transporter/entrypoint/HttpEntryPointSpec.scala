@@ -160,8 +160,7 @@ class HttpEntryPointSpec extends AkkaBaseSpec {
             import GraphDSL.Implicits._
 
             val handler =
-              builder.add(
-                new HttpEntryPoint.ConnectionHandler(EntryPointPriority.Normal))
+              builder.add(new HttpEntryPoint.ConnectionHandler())
 
             // format: off
             p1 ~> handler.in

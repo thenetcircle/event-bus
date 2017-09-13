@@ -19,14 +19,14 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
-import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.kafka.scaladsl.Consumer
-import akka.stream.{FlowShape, Materializer}
+import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
+import akka.stream.{FlowShape, Materializer}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.{Event, EventPriority, EventSourceType}
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
+import com.thenetcircle.event_bus.{Event, EventSourceType}
 
 import scala.concurrent.ExecutionContext
 
@@ -91,9 +91,7 @@ private[kafka] final class KafkaPipelineOutlet(
                   metadata = extractedData.metadata,
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
-                  sourceType = EventSourceType.Kafka,
-                  // TODO: replace to the data from key
-                  priority = EventPriority(extractedData.priority.id)
+                  sourceType = EventSourceType.Kafka
                 )
                 event
                   .addContext("kafkaCommittableOffset", committableOffset)

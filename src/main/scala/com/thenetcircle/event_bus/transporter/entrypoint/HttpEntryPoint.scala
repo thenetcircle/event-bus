@@ -33,7 +33,6 @@ import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
   ExtractedData
 }
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -55,8 +54,8 @@ class HttpEntryPoint(
               import GraphDSL.Implicits._
 
               val httpHandlerFlowShape = builder.add(httpHandlerFlow)
-              val connectionHandler = builder.add(
-                new HttpEntryPoint.ConnectionHandler(settings.priority))
+              val connectionHandler =
+                builder.add(new HttpEntryPoint.ConnectionHandler())
               val unpackFlow = Flow[Future[HttpResponse]].mapAsync(
                 settings.perConnectionParallelism)(identity)
 
@@ -117,9 +116,8 @@ object HttpEntryPoint {
     *
     * '''Cancels when''' when any downstreams cancel
     */
-  final class ConnectionHandler(entryPointPriority: EntryPointPriority)(
-      implicit materializer: Materializer,
-      eventExtractor: EventExtractor)
+  final class ConnectionHandler()(implicit materializer: Materializer,
+                                  eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     implicit val executionContext: ExecutionContext =
@@ -186,8 +184,6 @@ object HttpEntryPoint {
               extractedData.channel.getOrElse(
                 ChannelResolver.getChannel(extractedData.metadata)),
               EventSourceType.Http,
-              // Event priority equals entry points' priority and extracted priority from the data
-              EventPriority(extractedData.priority.id + entryPointPriority.id),
               Map.empty
             ).withCommitter(
               () =>

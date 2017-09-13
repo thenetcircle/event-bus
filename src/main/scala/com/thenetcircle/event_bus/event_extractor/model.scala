@@ -35,6 +35,7 @@ object ExtractedPriority extends Enumeration {
 case class ExtractedData(
     body: EventBody,
     metadata: EventMetaData,
+    // TODO: maybe remove priority?
     priority: ExtractedPriority = ExtractedPriority.Normal,
     channel: Option[String] = None
 ) {

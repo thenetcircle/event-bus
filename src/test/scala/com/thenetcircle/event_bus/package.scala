@@ -20,21 +20,18 @@ import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.EventPriority.EventPriority
 
 package object event_bus {
   def createTestEvent(name: String = "TestEvent",
                       time: Long = 111,
                       sourceType: EventSourceType = EventSourceType.Http,
-                      priority: EventPriority = EventPriority.Normal,
                       body: String = "body",
                       format: EventFormat = EventFormat.DefaultFormat): Event =
     Event(
       EventMetaData("uuid", name, time, "publisher", ("user", "222")),
       EventBody(ByteString(body), format),
       "channel",
-      sourceType,
-      priority
+      sourceType
     )
 
   def createFlowFromSink(sink: Sink[Event, _]): Flow[Event, Event, NotUsed] =
