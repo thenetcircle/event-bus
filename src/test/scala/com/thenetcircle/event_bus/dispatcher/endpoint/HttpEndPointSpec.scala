@@ -24,9 +24,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import com.thenetcircle.event_bus.createTestEvent
+import com.thenetcircle.event_bus.{Event, createTestEvent}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -74,6 +73,51 @@ class HttpEndPointSpec extends AkkaStreamSpec {
     fallbacker.expectNext(testEvent)
     fallbacker.expectNoMsg(100.millisecond)
     senderTimes shouldEqual 10
+  }
+
+  it should "support async sender" in {
+    var senderTimes = 0
+    val sender = Flow[(HttpRequest, Event)].map {
+      case (_, event) =>
+        senderTimes += 1
+        (Failure(new Exception("failed response")), event)
+    }.async
+    // .withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
+
+    val source = Source.fromIterator(
+      () =>
+        (for (i <- 1 to 10)
+          yield createTestEvent(name = s"TestEvent$i")).iterator)
+
+    val fallbacker = TestSubscriber.probe[Event]()
+    val endPoint = createHttpEndPoint(
+      fallbacker = Sink.fromSubscriber(fallbacker),
+      maxRetryTimes = 1
+    )(sender)
+
+    val succeed = source
+      .via(endPoint.stream)
+      .toMat(TestSink.probe[Event])(Keep.right)
+      .run()
+
+    succeed.request(1)
+    for (i <- 1 to 10) {
+      fallbacker.request(1)
+      val _event = fallbacker.expectNext()
+
+      _event.metadata.name shouldEqual s"TestEvent$i"
+
+      if (i < 10) succeed.expectNoMsg(100.millisecond)
+    }
+
+    fallbacker.expectComplete()
+    succeed.expectComplete()
+
+    /*incoming.sendNext(testEvent)
+    succeed.expectNoMsg(100.millisecond)
+    fallbacker.expectNext(testEvent)
+    fallbacker.expectNoMsg(100.millisecond)
+    senderTimes shouldEqual 10*/
   }
 
   it should "properly support multiple ports" in {

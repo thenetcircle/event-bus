@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.dispatcher.endpoint
 
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -135,34 +135,42 @@ object HttpEndPoint {
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
       new GraphStageLogic(shape) with StageLogging {
         val retryTimes: AtomicInteger = new AtomicInteger(0)
-        val pending: AtomicInteger = new AtomicInteger(0)
-        
+
+        val isPending: AtomicBoolean = new AtomicBoolean(false)
+        var isWaitingPull: Boolean = false
+
         setHandler(incoming, new InHandler {
           override def onPush() = {
-            log.info("incoming OnPush")
+            debug("push incoming")
             push(ready, grab(incoming))
+            isPending.set(true)
           }
           override def onUpstreamFinish() = {
-            log.info("incoming onUpstreamFinish")
-            if (pending.get() == 0) completeStage()
+            debug("upstream finished")
+            if (!isPending.get()) completeStage()
           }
         })
 
         setHandler(ready, new OutHandler {
           override def onPull() = {
-            log.info("ready onPull")
-            tryPull(incoming)
+            debug("try pull ready")
+            if (!isPending.get()) {
+              debug("pull ready")
+              tryPull(incoming)
+            }
+            else {
+              isWaitingPull = true
+            }
           }
         })
 
         setHandler(result, new InHandler {
           override def onPush() = {
+            debug("push result")
             grab(result) match {
               case (responseTry, event) =>
                 responseTry match {
                   case Success(response) =>
-                    log.info("result onPush success")
-                    pending.incrementAndGet()
                     responseChecker(response, event).onComplete(getAsyncCallback(responseHandler(event)).invoke)
 
                   case Failure(ex) =>
@@ -176,49 +184,61 @@ object HttpEndPoint {
 
         setHandler(failed, new OutHandler {
           override def onPull() = {
-            log.info("failed onPull")
-            if (!hasBeenPulled(result) && isAvailable(succeed)) tryPull(result)
+            debug("pull failed")
+            if (!hasBeenPulled(result) && isAvailable(succeed)) {
+              debug("pull result")
+              tryPull(result)
+            }
           }
         })
 
         setHandler(succeed, new OutHandler {
           override def onPull() = {
-            log.info("succeed onPull")
-            if (!hasBeenPulled(result) && isAvailable(failed)) tryPull(result)
+            debug("pull succeed")
+            if (!hasBeenPulled(result) && isAvailable(failed)) {
+              debug("pull result")
+              tryPull(result)
+            }
           }
         })
 
-        def responseHandler(event: T): (Try[Boolean]) => Unit = { result =>
-          result match {
-            case Success(true) =>
-              log.info("push succeed")
-              push(succeed, event)
-            case Success(false) =>
-              failureHandler(event)
-            case Failure(ex) =>
-              log.error(s"Parse response error: ${ex.getMessage}")
-              push(failed, event)
-          }
-
-          pending.decrementAndGet()
-          checkCompletion()
+        def responseHandler(event: T): (Try[Boolean]) => Unit = {
+          case Success(true) =>
+            pushResultTo(succeed, event)
+          case Success(false) =>
+            failureHandler(event)
+          case Failure(ex) =>
+            log.error(s"Parse response error: ${ex.getMessage}")
+            pushResultTo(failed, event)
         }
 
         def failureHandler(event: T): Unit = {
           if (retryTimes.incrementAndGet() >= maxRetryTimes) {
             log.error(s"Event sent failed after retried $maxRetryTimes times.")
-            push(failed, event)
-            retryTimes.set(0)
+            pushResultTo(failed, event)
           }
           else {
-            log.info("emit ready and pull result")
+            debug("emit ready and pull result")
             emit(ready, event)
             tryPull(result)
           }
         }
 
-        def checkCompletion(): Unit =
-          if (pending.get() == 0 && retryTimes.get() == 0 && isClosed(incoming)) completeStage()
+        def pushResultTo(outlet: Outlet[T], result: T): Unit = {
+          debug(s"push result $result to $outlet")
+          push(outlet, result)
+          isPending.set(false)
+          retryTimes.set(0)
+          if (isClosed(incoming)) completeStage()
+          else if (isWaitingPull) tryPull(incoming)
+        }
+
+        def debug(message: String): Unit = {
+          log.debug(s"[HttpRetryEngine] $message")
+        }
+
+        /*def checkCompletion(): Unit =
+          if (pending.get() == 0 && retryTimes.get() == 0 && isClosed(incoming)) completeStage()*/
       }
   }
 
