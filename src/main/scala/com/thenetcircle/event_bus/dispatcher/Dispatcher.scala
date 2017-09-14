@@ -22,10 +22,15 @@ import akka.stream.scaladsl.{RunnableGraph, Sink}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
+import com.typesafe.scalalogging.StrictLogging
 
 class Dispatcher(settings: DispatcherSettings,
                  pipelineOutlet: PipelineOutlet,
-                 endPoint: EndPoint)(implicit materializer: Materializer) {
+                 endPoint: EndPoint)(implicit materializer: Materializer)
+    extends StrictLogging {
+
+  logger.debug(
+    s"new Dispatcher ${settings.name} is created with settings: $settings")
 
   // TODO: draw a graph in comments
   // TODO: error handler
@@ -33,13 +38,18 @@ class Dispatcher(settings: DispatcherSettings,
   // TODO: Mat value
   lazy val dispatchStream: RunnableGraph[_] =
     pipelineOutlet.stream
-      .flatMapMerge(settings.maxParallelSources,
-                    source => source.via(endPoint.stream.async))
+      .flatMapMerge(settings.maxParallelSources, source => {
+        logger.info(s"new source is coming")
+        source.via(endPoint.stream.async)
+      })
       .via(pipelineOutlet.committer.async)
-      .to(Sink.ignore)
+      .to(Sink.foreach(event => logger.debug(s"Event $event is committed.")))
 
   // TODO add a transporter controller as a materialized value
-  def run(): Unit = dispatchStream.run()
+  def run(): Unit = {
+    logger.info(s"Dispatcher ${settings.name} is going to run")
+    dispatchStream.run()
+  }
 
 }
 

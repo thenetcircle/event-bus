@@ -16,16 +16,15 @@
  */
 
 package com.thenetcircle.event_bus
-import com.thenetcircle.event_bus.dispatcher.{Dispatcher, DispatcherSettings}
-import com.thenetcircle.event_bus.testkit.IntegrationSpec
+
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model._
+import akka.util.ByteString
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.Future
 
-class HttpTransportingSpec extends IntegrationSpec {
-
-  behavior of "HttpTransporting"
+class HttpTransportingSpec extends BaseIntegrationSpec {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -34,19 +33,65 @@ class HttpTransportingSpec extends IntegrationSpec {
       TransporterSettings(
         system.settings.config.getConfig("event-bus.test-transporter")))
     transporter.run()
-
-    val dispatcher = Dispatcher(
-      DispatcherSettings(
-        system.settings.config.getConfig("event-bus.test-dispatcher")))
-    dispatcher.run()
   }
 
-  it should "properly transport to kafka pipeline" in {
+  behavior of "HttpTransporting"
 
-    println("abc")
+  it should "send to endpoint successfully by proper request content" in {
+    val responseFuture: Future[HttpResponse] =
+      Http().singleRequest(
+        HttpRequest(
+          uri = "http://localhost:8080",
+          entity = HttpEntity("""
+              |{
+              |  "verb": "user.login",
+              |  "actor": {"id": "123", "objectType": "user"}
+              |}
+          """.stripMargin)
+        ))
 
-    Await.ready(system.whenTerminated, Duration.Inf)
+    responseFuture
+      .flatMap(httpResponse => {
+        assert(httpResponse.status == StatusCodes.OK)
+        httpResponse.entity.dataBytes.runFold(ByteString(""))(_ ++ _)
+      })
+      .map(body => assert(body.utf8String == "ok"))
+  }
 
+  it should "send failed by non json content" in {
+    val responseFuture: Future[HttpResponse] =
+      Http().singleRequest(
+        HttpRequest(
+          uri = "http://localhost:8080",
+          entity = HttpEntity("""
+              |test
+            """.stripMargin)
+        ))
+
+    responseFuture
+      .flatMap(httpResponse => {
+        assert(httpResponse.status == StatusCodes.BadRequest)
+        httpResponse.entity.dataBytes.runFold(ByteString(""))(_ ++ _)
+      })
+      .map(body => assert(body.utf8String == "ko"))
+  }
+
+  it should "send failed by missing fields content" in {
+    val responseFuture: Future[HttpResponse] =
+      Http().singleRequest(
+        HttpRequest(
+          uri = "http://localhost:8080",
+          entity = HttpEntity("""
+                                |{"verb":"user.login"}}
+                              """.stripMargin)
+        ))
+
+    responseFuture
+      .flatMap(httpResponse => {
+        assert(httpResponse.status == StatusCodes.BadRequest)
+        httpResponse.entity.dataBytes.runFold(ByteString(""))(_ ++ _)
+      })
+      .map(body => assert(body.utf8String == "ko"))
   }
 
 }

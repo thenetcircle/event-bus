@@ -33,6 +33,7 @@ import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
   ExtractedData
 }
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -42,7 +43,15 @@ class HttpEntryPoint(
     val settings: HttpEntryPointSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
 )(implicit materializer: Materializer, eventExtractor: EventExtractor)
-    extends EntryPoint {
+    extends EntryPoint
+    with StrictLogging {
+
+  logger.debug(s"new HttpEntryPoint ${settings.name} is created")
+
+  private val loggerFlow = Flow[HttpRequest].map(request => {
+    logger.debug(s"new Request $request")
+    request
+  })
 
   override val stream: Source[Event, _] =
     httpBindSource
@@ -63,9 +72,9 @@ class HttpEntryPoint(
               // format: off
               // since Http().bind using join, The direction is a bit different
             
-              httpHandlerFlowShape.out ~> connectionHandler.in
+              httpHandlerFlowShape.out ~> loggerFlow ~> connectionHandler.in
 
-                                          connectionHandler.out0 ~> unpackFlow ~> httpHandlerFlowShape.in
+                                                        connectionHandler.out0 ~> unpackFlow ~> httpHandlerFlowShape.in
             
               // format: on
 
@@ -78,6 +87,8 @@ class HttpEntryPoint(
 
 object HttpEntryPoint {
 
+  val failedResponse =
+    HttpResponse(StatusCodes.BadRequest, entity = HttpEntity("ko"))
   val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
 
   def apply(settings: HttpEntryPointSettings)(
@@ -131,27 +142,36 @@ object HttpEntryPoint {
       new FanOutShape2(in, out0, out1)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) {
+      new GraphStageLogic(shape) with StageLogging {
 
         def tryPullIn(): Unit =
-          if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1))
+          if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
+            log.debug("tryPull in")
             tryPull(in)
+          }
 
         setHandler(
           in,
           new InHandler {
             override def onPush(): Unit = {
+              log.debug("onPush in -> push out0")
               push(out0, requestPreprocess(grab(in)))
             }
           }
         )
 
         setHandler(out0, new OutHandler {
-          override def onPull(): Unit = tryPullIn()
+          override def onPull(): Unit = {
+            log.debug("onPull out0")
+            tryPullIn()
+          }
         })
 
         setHandler(out1, new OutHandler {
-          override def onPull(): Unit = tryPullIn()
+          override def onPull(): Unit = {
+            log.debug("onPull out1")
+            tryPullIn()
+          }
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
@@ -164,11 +184,9 @@ object HttpEntryPoint {
             case Success(extractedData) =>
               getEventExtractCallback(responsePromise).invoke(extractedData)
             case Failure(e) =>
-              // TODO failed response message
-              responsePromise.success(
-                HttpResponse(StatusCodes.BadRequest,
-                             entity = HttpEntity(e.getMessage)))
-
+              log.info(
+                s"Request $request send failed with error message: ${e.getMessage}")
+              responsePromise.success(failedResponse)
               tryPullIn()
           }
 
@@ -192,6 +210,7 @@ object HttpEntryPoint {
               }
             )
 
+            log.debug("push out1")
             push(out1, event)
           })
 

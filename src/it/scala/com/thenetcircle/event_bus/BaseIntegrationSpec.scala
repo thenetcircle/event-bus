@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.testkit
+package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
@@ -23,17 +23,17 @@ import akka.testkit.{ImplicitSender, TestKit}
 import com.thenetcircle.event_bus.pipeline.PipelinePool
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
-import scala.concurrent.duration._
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{FiniteDuration, _}
 
-abstract class IntegrationSpec(_system: ActorSystem)
+abstract class BaseIntegrationSpec(_system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
-    with FlatSpecLike
+    with AsyncFlatSpecLike
     with Matchers
-    with BeforeAndAfterAll {
+    with BeforeAndAfter
+    with BeforeAndAfterAll
+    with Inside {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1,
@@ -42,18 +42,21 @@ abstract class IntegrationSpec(_system: ActorSystem)
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
 
-  implicit val executionContext: ExecutionContext =
-    materializer.executionContext
+  /*implicit val executionContext: ExecutionContext =
+    materializer.executionContext*/
 
   def this() =
     this(
       ActorSystem("eventbus-integration-test",
                   ConfigFactory.load("application-test.conf")))
 
-  override protected def beforeAll(): Unit =
+  override protected def beforeAll(): Unit = {
     PipelinePool.initialize(_system)
+  }
 
-  override protected def afterAll(): Unit =
+  override protected def afterAll(): Unit = {
+    // TODO: terminate host-connection-pool and all transporters and dispatchers
     TestKit.shutdownActorSystem(system)
+  }
 
 }

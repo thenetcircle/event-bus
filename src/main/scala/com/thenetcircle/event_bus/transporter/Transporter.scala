@@ -33,18 +33,26 @@ import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineInlet
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
+import com.typesafe.scalalogging.StrictLogging
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
                   pipelineInletGetter: () => PipelineInlet)(
     implicit system: ActorSystem,
-    materializer: Materializer) {
+    materializer: Materializer)
+    extends StrictLogging {
+
+  logger.debug(s"new Transporter ${settings.name} is created")
 
   private val committer = Flow[Event]
     .filter(_.committer.isDefined)
     // TODO: take care of Supervision of mapAsync
-    .mapAsync(settings.commitParallelism)(_.committer.get.commit())
-    .to(Sink.ignore)
+    .mapAsync(settings.commitParallelism)(
+      event =>
+        event.committer.get
+          .commit()
+          .map(_ => event)(materializer.executionContext))
+    .to(Sink.foreach(event => logger.debug(s"Event $event is committed.")))
 
   // TODO: draw a graph in comments
   // TODO: error handler
@@ -94,7 +102,7 @@ class Transporter(settings: TransporterSettings,
 
           }
 
-                                                                                           committerMerger.out ~> committer.async
+                                                                                         committerMerger.out ~> committer.async
         }
         else {
 
@@ -108,7 +116,10 @@ class Transporter(settings: TransporterSettings,
   )
 
   // TODO add a transporter controller as a materialized value
-  def run(): Unit = stream.run()
+  def run(): Unit = {
+    logger.info(s"Transporter ${settings.name} is going to run")
+    stream.run()
+  }
 
 }
 

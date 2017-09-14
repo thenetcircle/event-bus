@@ -46,19 +46,20 @@ class HttpEndPoint(
     materializer.executionContext
 
   val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
-    Flow[Event]
-      .map(event => buildRequest(event) -> event)
-      .via(connectionPool)
+    Flow[Event].map(buildRequest).via(connectionPool)
 
-  def buildRequest(event: Event): HttpRequest = {
-    settings.defaultRequest
-      .withEntity(HttpEntity(event.body.data))
+  def buildRequest(event: Event): (HttpRequest, Event) = {
+    val request =
+      settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+
+    (request, event)
   }
 
   def responseChecker(response: HttpResponse, event: Event): Future[Boolean] = {
     response.entity
     // TODO: timeout is too much?
     // TODO: unify ExecutionContext
+    // TODO: use Unmarshaller
       .toStrict(3.seconds)
       .map { entity =>
         val result: Boolean = {
@@ -71,7 +72,9 @@ class HttpEndPoint(
 
         if (!result) {
           logger.warn(
-            s"Event ${event.metadata.name} sent failed with unexpected response: ${entity.data.utf8String}.")
+            s"Event (${event.metadata} - ${event.channel}) sent failed " +
+              s"to ${settings.defaultRequest.protocol.value}://${settings.host}:${settings.port}${settings.defaultRequest.uri} " +
+              s"with unexpected response: ${entity.data.utf8String}.")
           false
         } else {
           true
@@ -234,7 +237,7 @@ object HttpEndPoint {
         }
 
         def debug(message: String): Unit = {
-          log.debug(s"[HttpRetryEngine] $message")
+          log.debug(s"$message")
         }
 
         /*def checkCompletion(): Unit =
