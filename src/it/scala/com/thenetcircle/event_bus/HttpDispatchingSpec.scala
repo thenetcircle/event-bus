@@ -24,13 +24,14 @@ import akka.http.scaladsl.server.Directives._
 import com.thenetcircle.event_bus.dispatcher.{Dispatcher, DispatcherSettings}
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.typesafe.config.ConfigFactory
-import org.scalatest
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.mutable
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.{Failure, Success}
 
-class HttpDispatchingSpec extends BaseIntegrationSpec {
+class HttpDispatchingSpec extends BaseIntegrationSpec with StrictLogging {
 
   var receiver: Future[Http.ServerBinding]            = _
   val resultListeners: mutable.Queue[Promise[String]] = mutable.Queue.empty
@@ -77,7 +78,7 @@ class HttpDispatchingSpec extends BaseIntegrationSpec {
   }
 
   override protected def afterAll(): Unit = {
-    Thread.sleep(500) // waiting for requests done
+    Thread.sleep(2000) // waiting for requests done
     receiver
       .map(binding => {
         binding.unbind()
@@ -120,11 +121,12 @@ class HttpDispatchingSpec extends BaseIntegrationSpec {
 
   it should "get same result according the input order with same actor" in {
 
-    var result: Future[scalatest.Assertion] = Future.successful(assert(1 == 1))
-    /*val result: mutable.ListBuffer[String] = mutable.ListBuffer.empty
-    val resultFuture = Promise[mutable.ListBuffer[String]]*/
+    val result: mutable.ListBuffer[String] = mutable.ListBuffer.empty
+    val resultFuture                       = Promise[mutable.ListBuffer[String]]
 
-    for (i <- 1 to 30) {
+    val testCount = 30
+
+    for (i <- 1 to testCount) {
       val listener = Promise[String]
       addListener(listener)
 
@@ -145,29 +147,24 @@ class HttpDispatchingSpec extends BaseIntegrationSpec {
 
       responseFuture.onComplete {
         case Success(response) => response.discardEntityBytes()
-        case Failure(ex)       => println(ex.getMessage)
+        case Failure(ex)       => logger.error(ex.getMessage)
       }
 
-      /*listener.future.onComplete {
+      listener.future.onComplete {
         case Success(r) =>
+          logger.info(s" ---- ${result.size}")
           result.synchronized {
             result += r
-            if (result.size == 100) resultFuture.success(result)
+            logger.info(s"${result.size}")
+            if (result.size == testCount) resultFuture.success(result)
           }
-        case Failure(ex) => println(ex)
-      }*/
-
-      result = result.flatMap(_ =>
-        listener.future.map(r => {
-          assert(1 == 1)
-        }))
+        case Failure(ex) => logger.error(ex.getMessage)
+      }
     }
 
-    result
+    val r = Await.result(resultFuture.future, 10.seconds)
 
-    /*val r = Await.result(resultFuture.future, 1.minute)
-
-    for (i <- 1 to 100) {
+    for (i <- 1 to testCount) {
       assert(r(i) == s"""
                         |{
                         |  "id": "$i",
@@ -177,7 +174,7 @@ class HttpDispatchingSpec extends BaseIntegrationSpec {
                        """.stripMargin)
     }
 
-    assert(r.size == 100)*/
+    assert(r.size == testCount)
 
   }
 

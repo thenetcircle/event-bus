@@ -42,6 +42,8 @@ class HttpEndPoint(
     extends EndPoint
     with StrictLogging {
 
+  logger.debug(s"new HttpEndPoint ${settings.name} is created")
+
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
@@ -51,6 +53,8 @@ class HttpEndPoint(
   def buildRequest(event: Event): (HttpRequest, Event) = {
     val request =
       settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+
+    logger.debug(s"new request $request has been built and is going to send")
 
     (request, event)
   }
@@ -144,24 +148,28 @@ object HttpEndPoint {
 
         setHandler(incoming, new InHandler {
           override def onPush() = {
-            debug("push incoming")
+            log.debug(s"onPush incoming -> push ready")
             push(ready, grab(incoming))
             isPending.set(true)
           }
           override def onUpstreamFinish() = {
-            debug("upstream finished")
-            if (!isPending.get()) completeStage()
+            log.debug("onUpstreamFinish")
+            if (!isPending.get()) {
+              log.debug("completeStage")
+              completeStage()
+            }
           }
         })
 
         setHandler(ready, new OutHandler {
           override def onPull() = {
-            debug("try pull ready")
+            log.debug("onPull ready")
             if (!isPending.get()) {
-              debug("pull ready")
+              log.debug("tryPull incoming")
               tryPull(incoming)
             }
             else {
+              log.debug("set waitingPull to true")
               isWaitingPull = true
             }
           }
@@ -169,7 +177,7 @@ object HttpEndPoint {
 
         setHandler(result, new InHandler {
           override def onPush() = {
-            debug("push result")
+            log.debug("onPush result")
             grab(result) match {
               case (responseTry, event) =>
                 responseTry match {
@@ -187,9 +195,9 @@ object HttpEndPoint {
 
         setHandler(failed, new OutHandler {
           override def onPull() = {
-            debug("pull failed")
+            log.debug("onPull failed")
             if (!hasBeenPulled(result) && isAvailable(succeed)) {
-              debug("pull result")
+              log.debug("tryPull result")
               tryPull(result)
             }
           }
@@ -197,9 +205,9 @@ object HttpEndPoint {
 
         setHandler(succeed, new OutHandler {
           override def onPull() = {
-            debug("pull succeed")
+            log.debug("onPull succeed")
             if (!hasBeenPulled(result) && isAvailable(failed)) {
-              debug("pull result")
+              log.debug("tryPull result")
               tryPull(result)
             }
           }
@@ -221,27 +229,20 @@ object HttpEndPoint {
             pushResultTo(failed, event)
           }
           else {
-            debug("emit ready and pull result")
+            log.debug("emit ready & tryPull result")
             emit(ready, event)
             tryPull(result)
           }
         }
 
         def pushResultTo(outlet: Outlet[T], result: T): Unit = {
-          debug(s"push result $result to $outlet")
+          log.debug(s"push result $result to $outlet")
           push(outlet, result)
           isPending.set(false)
           retryTimes.set(0)
           if (isClosed(incoming)) completeStage()
           else if (isWaitingPull) tryPull(incoming)
         }
-
-        def debug(message: String): Unit = {
-          log.debug(s"$message")
-        }
-
-        /*def checkCompletion(): Unit =
-          if (pending.get() == 0 && retryTimes.get() == 0 && isClosed(incoming)) completeStage()*/
       }
   }
 
