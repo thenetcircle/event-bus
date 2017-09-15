@@ -28,6 +28,11 @@ import akka.http.scaladsl.model.{
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
+import com.github.levkhomich.akka.tracing.{
+  TracingAnnotations,
+  TracingExtension,
+  TracingExtensionImpl
+}
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
@@ -42,7 +47,9 @@ import scala.util.{Failure, Success}
 class HttpEntryPoint(
     val settings: HttpEntryPointSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
-)(implicit materializer: Materializer, eventExtractor: EventExtractor)
+)(implicit system: ActorSystem,
+  materializer: Materializer,
+  eventExtractor: EventExtractor)
     extends EntryPoint
     with StrictLogging {
 
@@ -127,9 +134,12 @@ object HttpEntryPoint {
     *
     * '''Cancels when''' when any downstreams cancel
     */
-  final class ConnectionHandler()(implicit materializer: Materializer,
+  final class ConnectionHandler()(implicit system: ActorSystem,
+                                  materializer: Materializer,
                                   eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
+
+    val trace: TracingExtensionImpl = TracingExtension(system)
 
     implicit val executionContext: ExecutionContext =
       materializer.executionContext
@@ -209,6 +219,10 @@ object HttpEntryPoint {
                   responsePromise.success(successfulResponse)
               }
             )
+
+            trace.sample(event, "HttpEntryPoint", true)
+            trace.record(event, "received a new event")
+            trace.record(event, TracingAnnotations.ServerSend)
 
             log.debug("push out1")
             push(out1, event)
