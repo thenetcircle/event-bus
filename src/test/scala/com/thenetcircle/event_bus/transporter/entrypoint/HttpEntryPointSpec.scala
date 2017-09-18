@@ -26,17 +26,16 @@ import akka.http.scaladsl.model.{
   StatusCodes
 }
 import akka.http.scaladsl.settings.ServerSettings
-import akka.stream.ClosedShape
-import akka.stream.scaladsl.{Flow, GraphDSL, Keep, RunnableGraph, Sink, Source}
-import akka.stream.testkit.scaladsl.{TestSink, TestSource}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
+import com.thenetcircle.event_bus.tracing.Tracer
 import com.thenetcircle.event_bus.{Event, EventBody, EventFormat, EventMetaData}
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class HttpEntryPointSpec extends AkkaStreamSpec {
@@ -144,7 +143,7 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
     (in, out0, out1)
   }
 
-  private def getConnectionHandlerPorts
+  /*private def getConnectionHandlerPorts
     : (TestPublisher.Probe[HttpRequest],
        TestSubscriber.Probe[Future[HttpResponse]],
        TestSubscriber.Probe[Event]) = {
@@ -173,6 +172,6 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
         .run()
 
     (in, out0, out1)
-  }
+  }*/
 
 }

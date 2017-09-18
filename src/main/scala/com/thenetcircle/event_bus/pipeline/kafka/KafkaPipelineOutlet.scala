@@ -29,6 +29,7 @@ import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.thenetcircle.event_bus.{Event, EventCommitter, EventSourceType}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Random
 
 /** RightPort Implementation */
 private[kafka] final class KafkaPipelineOutlet(
@@ -91,6 +92,7 @@ private[kafka] final class KafkaPipelineOutlet(
                   metadata = extractedData.metadata,
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
+                  tracingId = Random.nextLong(),
                   sourceType = EventSourceType.Kafka,
                   context = Map("kafkaCommittableOffset" -> committableOffset),
                   committer = Some(new EventCommitter {

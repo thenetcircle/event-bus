@@ -25,33 +25,30 @@ import akka.http.scaladsl.model.{
   HttpResponse,
   StatusCodes
 }
+import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.github.levkhomich.akka.tracing.{
-  TracingAnnotations,
-  TracingExtension,
-  TracingExtensionImpl
-}
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
   ExtractedData
 }
+import com.thenetcircle.event_bus.tracing.{Tracing, TracingMessage}
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 class HttpEntryPoint(
     val settings: HttpEntryPointSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
-)(implicit system: ActorSystem,
+)(implicit val system: ActorSystem,
   materializer: Materializer,
   eventExtractor: EventExtractor)
     extends EntryPoint
-    with StrictLogging {
+    with StrictLogging
+    with Tracing {
 
   logger.debug(s"new HttpEntryPoint ${settings.name} is created")
 
@@ -71,7 +68,7 @@ class HttpEntryPoint(
 
               val httpHandlerFlowShape = builder.add(httpHandlerFlow)
               val connectionHandler =
-                builder.add(new HttpEntryPoint.ConnectionHandler())
+                builder.add(new HttpEntryPoint.ConnectionHandler(this))
               val unpackFlow = Flow[Future[HttpResponse]].mapAsync(
                 settings.perConnectionParallelism)(identity)
 
@@ -134,15 +131,18 @@ object HttpEntryPoint {
     *
     * '''Cancels when''' when any downstreams cancel
     */
-  final class ConnectionHandler()(implicit system: ActorSystem,
-                                  materializer: Materializer,
-                                  eventExtractor: EventExtractor)
+  final class ConnectionHandler(entryPoint: HttpEntryPoint)(
+      implicit system: ActorSystem,
+      materializer: Materializer,
+      eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
-
-    val trace: TracingExtensionImpl = TracingExtension(system)
 
     implicit val executionContext: ExecutionContext =
       materializer.executionContext
+
+    val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
+      Unmarshaller.byteStringUnmarshaller.andThen(Unmarshaller.apply(_ =>
+        data => eventExtractor.extract(data)))
 
     val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
     val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
@@ -152,7 +152,7 @@ object HttpEntryPoint {
       new FanOutShape2(in, out0, out1)
 
     override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) with StageLogging {
+      new GraphStageLogic(shape) with StageLogging with Tracing {
 
         def tryPullIn(): Unit =
           if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
@@ -185,48 +185,49 @@ object HttpEntryPoint {
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
+          val tracingMessage =
+            entryPoint.tracer.start(entryPoint.settings.name, true)
           val responsePromise = Promise[HttpResponse]
-          val strictEntity    = request.entity.toStrict(3.seconds)(materializer)
-          val result =
-            strictEntity.flatMap(entity => eventExtractor.extract(entity.data))
-
-          result.onComplete {
-            case Success(extractedData) =>
-              getEventExtractCallback(responsePromise).invoke(extractedData)
-            case Failure(e) =>
-              log.info(
-                s"Request $request send failed with error message: ${e.getMessage}")
-              responsePromise.success(failedResponse)
-              tryPullIn()
-          }
-
+          val extractedDataFuture =
+            unmarshaller.apply(request.entity)(executionContext, materializer)
+          val callback =
+            getEventExtractingCallback(responsePromise, tracingMessage)
+          extractedDataFuture.onComplete(result => callback.invoke(result))
           responsePromise.future
         }
 
-        def getEventExtractCallback(responsePromise: Promise[HttpResponse])
-          : AsyncCallback[ExtractedData] =
-          getAsyncCallback(extractedData => {
-            val event = Event(
-              extractedData.metadata,
-              extractedData.body,
-              extractedData.channel.getOrElse(
-                ChannelResolver.getChannel(extractedData.metadata)),
-              EventSourceType.Http,
-              Map.empty
-            ).withCommitter(
-              () =>
-                Future {
-                  responsePromise.success(successfulResponse)
-              }
-            )
+        def getEventExtractingCallback(
+            responsePromise: Promise[HttpResponse],
+            tracingMessage: TracingMessage): AsyncCallback[Try[ExtractedData]] =
+          getAsyncCallback[Try[ExtractedData]] {
+            case Success(extractedData) =>
+              entryPoint.tracer._tracer.createChild()
+              val event = Event(
+                extractedData.metadata,
+                extractedData.body,
+                extractedData.channel.getOrElse(
+                  ChannelResolver.getChannel(extractedData.metadata)),
+                traceingId,
+                EventSourceType.Http,
+                Map.empty
+              ).withCommitter(
+                () =>
+                  Future {
+                    responsePromise.success(successfulResponse)
+                }
+              )
 
-            trace.sample(event, "HttpEntryPoint", true)
-            trace.record(event, "received a new event")
-            trace.record(event, TracingAnnotations.ServerSend)
+              entryPoint.tracer.finish(event)
 
-            log.debug("push out1")
-            push(out1, event)
-          })
+              log.debug("push out1")
+              push(out1, event)
+
+            case Failure(e) =>
+              log.info(
+                s"Request send failed with error message: ${e.getMessage}")
+              responsePromise.success(failedResponse)
+              tryPullIn()
+          }
 
       }
 

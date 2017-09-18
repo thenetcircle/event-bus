@@ -21,6 +21,8 @@ import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import akka.util.ByteString
 
+import scala.util.Random
+
 package object event_bus {
   def createTestEvent(name: String = "TestEvent",
                       time: Long = 111,
@@ -31,6 +33,7 @@ package object event_bus {
       EventMetaData("uuid", name, time, "publisher", ("user", "222")),
       EventBody(ByteString(body), format),
       "channel",
+      Random.nextLong(),
       sourceType
     )
 
