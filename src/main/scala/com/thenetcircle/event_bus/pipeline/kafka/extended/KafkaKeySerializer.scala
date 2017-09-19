@@ -22,8 +22,9 @@ import com.thenetcircle.event_bus.pipeline.kafka.KafkaKey
 import org.apache.kafka.common.serialization.Serializer
 
 class KafkaKeySerializer extends Serializer[KafkaKey] {
-  override def serialize(topic: String, data: KafkaKey): Array[Byte] =
+  override def serialize(topic: String, data: KafkaKey): Array[Byte] = {
     data.rawData.getBytes("UTF-8")
+  }
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
   override def close(): Unit                                                 = {}

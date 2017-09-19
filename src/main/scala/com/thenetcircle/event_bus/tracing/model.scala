@@ -25,26 +25,62 @@ import com.github.levkhomich.akka.tracing.{
 }
 
 trait Tracing {
-  lazy val tracer: TracingExtensionImpl = Tracing.getTracer
+  lazy val tracer: Tracer = Tracer()
 }
 
-object Tracing {
-  private var _tracer: Option[TracingExtensionImpl] = None
-  def initTracer()(implicit system: ActorSystem): Unit =
-    _tracer = Some(TracingExtension(system))
+class Tracer {
+  import Tracer._
 
-  def getTracer: TracingExtensionImpl = _tracer match {
-    case Some(t) => t
-    case None    => throw new Exception("Tracing didnt initialized yet.")
+  private val submitter = getSubmitter
+
+  def startApplication(): TracingMessage = {
+    val tracingMessage = TracingMessage(createNewTracingId(this), "Application")
+    submitter.sample(tracingMessage, "EventBus")
+    tracingMessage
   }
+
+  def start(serviceName: String,
+            parentTracingId: Long,
+            spanName: Option[String] = None): TracingMessage = {
+    val parentTracingMessage = TracingMessage(parentTracingId, "unknown")
+    start(serviceName, parentTracingMessage, spanName)
+  }
+
+  def start(serviceName: String,
+            parentTracingMessage: TracingMessage,
+            spanName: Option[String] = None): TracingMessage = {
+    val tracingMessage = TracingMessage(parentTracingMessage.tracingId,
+                                        spanName.getOrElse("Started"))
+    submitter.sample(tracingMessage, serviceName)
+    submitter.createChild(tracingMessage, parentTracingMessage)
+    tracingMessage
+  }
+
+  def finish(tracingMessage: TracingMessage): Unit = ???
 }
 
-trait TracingMessage extends TracingSupport {
-  override val tracingId: Long = {
-    val a = System.identityHashCode(this)
+object Tracer {
+  private var submitter: Option[TracingExtensionImpl] = None
+
+  def init()(implicit system: ActorSystem): Unit =
+    submitter = Some(TracingExtension(system))
+
+  private def getSubmitter: TracingExtensionImpl = submitter match {
+    case Some(t) => t
+    case None    => throw new Exception("Tracer did not initialized yet.")
+  }
+
+  private val tracer  = new Tracer()
+  def apply(): Tracer = tracer
+
+  def createNewTracingId(obj: Any): Long = {
+    val a = System.identityHashCode(obj)
     val b = hashCode
     a.toLong << 32 | b & 0xFFFFFFFFL
   }
-
-  override val spanName: String = "Event"
 }
+
+case class TracingMessage(
+    override val tracingId: Long,
+    override val spanName: String
+) extends TracingSupport

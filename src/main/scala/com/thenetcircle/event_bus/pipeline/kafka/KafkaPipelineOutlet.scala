@@ -26,10 +26,10 @@ import akka.stream.{FlowShape, Materializer}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
+import com.thenetcircle.event_bus.tracing.{TempTracingMessage, Tracing}
 import com.thenetcircle.event_bus.{Event, EventCommitter, EventSourceType}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Random
 
 /** RightPort Implementation */
 private[kafka] final class KafkaPipelineOutlet(
@@ -38,7 +38,8 @@ private[kafka] final class KafkaPipelineOutlet(
     val outletSettings: KafkaPipelineOutletSettings)(
     implicit materializer: Materializer,
     extractor: EventExtractor)
-    extends PipelineOutlet {
+    extends PipelineOutlet
+    with Tracing {
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
@@ -79,24 +80,33 @@ private[kafka] final class KafkaPipelineOutlet(
         case (topicPartition, source) =>
           source
             .mapAsync(outletSettings.extractParallelism) { msg =>
-              val record = msg.record
+              val kafkaKeyData = msg.record.key().data
+              val tracingId =
+                if (kafkaKeyData.isEmpty) Tracing.createNewTracingId(msg)
+                else kafkaKeyData.get.tracingId
+
+              val tracingMessage = TempTracingMessage(tracingId, "PipelineOut")
+              tracer.record(tracingMessage, "PipelineOut")
+
               extractor
-                .extract(ByteString(record.value()))
-                .map(ed => (ed, record.topic(), msg.committableOffset))
+                .extract(ByteString(msg.record.value()))
+                .map((msg, _, tracingMessage))
             }
             .map {
-              case (extractedData, topic, committableOffset) =>
+              case (msg, extractedData, tracingMessage) =>
+                tracer.record(tracingMessage, "Extracted")
+
                 Event(
                   metadata = extractedData.metadata,
                   body = extractedData.body,
-                  channel = extractedData.channel.getOrElse(topic),
+                  channel = extractedData.channel.getOrElse(msg.record.topic()),
                   sourceType = EventSourceType.Kafka,
-                  // TODO: get the original tracing id
-                  Random.nextLong(),
-                  context = Map("kafkaCommittableOffset" -> committableOffset),
+                  tracingMessage.tracingId,
+                  context =
+                    Map("kafkaCommittableOffset" -> msg.committableOffset),
                   committer = Some(new EventCommitter {
                     override def commit(): Future[Any] =
-                      committableOffset.commitScaladsl()
+                      msg.committableOffset.commitScaladsl()
                   })
                 )
             }
@@ -116,6 +126,8 @@ private[kafka] final class KafkaPipelineOutlet(
         Flow[Event]
           .collect {
             case e if e.hasContext("kafkaCommittableOffset") =>
+              tracer.record(e, "Going to Commit")
+              tracer.flush(e)
               e.context("kafkaCommittableOffset")
                 .asInstanceOf[CommittableOffset]
           }

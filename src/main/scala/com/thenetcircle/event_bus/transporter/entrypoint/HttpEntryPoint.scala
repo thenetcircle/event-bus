@@ -30,7 +30,11 @@ import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
   ExtractedData
 }
-import com.thenetcircle.event_bus.tracing.{Tracing, TracingMessage}
+import com.thenetcircle.event_bus.tracing.{
+  TempTracingMessage,
+  Tracing,
+  TracingMessage
+}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -181,25 +185,28 @@ object HttpEntryPoint {
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
-          val tracingRequest = TracingHttpRequest()
-          tracer.sample(tracingRequest, "EventBus")
+          val tracingMessage = TempTracingMessage(
+            Tracing.createNewTracingId(request),
+            "Request"
+          )
+          tracer.sample(tracingMessage, "EventBus")
 
           val responsePromise = Promise[HttpResponse]
 
           val extractedDataFuture =
             unmarshaller.apply(request.entity)(executionContext, materializer)
           val callback =
-            getEventExtractingCallback(tracingRequest, responsePromise)
+            getEventExtractingCallback(tracingMessage, responsePromise)
           extractedDataFuture.onComplete(result => callback.invoke(result))
 
           responsePromise.future
         }
 
-        def getEventExtractingCallback(tracingRequest: TracingHttpRequest,
+        def getEventExtractingCallback(tracingMessage: TracingMessage,
                                        responsePromise: Promise[HttpResponse])
           : AsyncCallback[Try[ExtractedData]] =
           getAsyncCallback[Try[ExtractedData]](extractedDataTry => {
-            tracer.record(tracingRequest,
+            tracer.record(tracingMessage,
                           TracingAnnotations.Custom("Extracted"))
             extractedDataTry match {
               case Success(extractedData) =>
@@ -209,12 +216,12 @@ object HttpEntryPoint {
                   extractedData.channel.getOrElse(
                     ChannelResolver.getChannel(extractedData.metadata)),
                   EventSourceType.Http,
-                  tracingRequest.tracingId
+                  tracingMessage.tracingId
                 ).withCommitter(
                   () => {
-                    tracer.record(tracingRequest,
+                    tracer.record(tracingMessage,
                                   TracingAnnotations.Custom("Transported"))
-                    tracer.flush(tracingRequest)
+                    // tracer.flush(tracingMessage)
 
                     responsePromise.success(successfulResponse).future
                   }
@@ -226,8 +233,8 @@ object HttpEntryPoint {
               case Failure(ex) =>
                 log.info(
                   s"Request send failed with error message: ${ex.getMessage}")
-                tracer.record(tracingRequest, ex)
-                tracer.flush(tracingRequest)
+                tracer.record(tracingMessage, ex)
+                tracer.flush(tracingMessage)
                 responsePromise.success(failedResponse)
                 tryPullIn()
             }
@@ -236,8 +243,5 @@ object HttpEntryPoint {
       }
 
   }
-
-  final case class TracingHttpRequest(override val spanName: String = "Request")
-      extends TracingMessage
 
 }
