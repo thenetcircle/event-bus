@@ -76,9 +76,6 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
 
 object KafkaPipeline {
 
-  type Key   = Array[Byte]
-  type Value = Array[Byte]
-
   def apply(settings: KafkaPipelineSettings): KafkaPipeline =
     new KafkaPipeline(settings)
 

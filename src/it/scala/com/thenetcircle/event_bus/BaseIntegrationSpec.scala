@@ -21,6 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.thenetcircle.event_bus.pipeline.PipelinePool
+import com.thenetcircle.event_bus.tracing.Tracing
 import com.typesafe.config.ConfigFactory
 import org.scalatest._
 
@@ -52,6 +53,7 @@ abstract class BaseIntegrationSpec(_system: ActorSystem)
 
   override protected def beforeAll(): Unit = {
     PipelinePool.initialize(_system)
+    Tracing.initTracer()
   }
 
   override protected def afterAll(): Unit = {

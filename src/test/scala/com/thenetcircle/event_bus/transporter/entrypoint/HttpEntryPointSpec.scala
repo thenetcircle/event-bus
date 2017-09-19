@@ -33,7 +33,6 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import com.thenetcircle.event_bus.tracing.Tracer
 import com.thenetcircle.event_bus.{Event, EventBody, EventFormat, EventMetaData}
 
 import scala.concurrent.duration._

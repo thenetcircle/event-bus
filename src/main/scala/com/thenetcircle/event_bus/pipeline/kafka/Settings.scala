@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.EventFormat
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
 import com.thenetcircle.event_bus.pipeline.{
   PipelineInletSettings,
   PipelineOutletSettings,
@@ -30,8 +29,8 @@ import scala.concurrent.duration.FiniteDuration
 
 case class KafkaPipelineSettings(
     name: String,
-    producerSettings: ProducerSettings[Key, Value],
-    consumerSettings: ConsumerSettings[Key, Value]
+    producerSettings: ProducerSettings[ProducerKey, ProducerValue],
+    consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue]
 ) extends PipelineSettings
 
 case class KafkaPipelineInletSettings(

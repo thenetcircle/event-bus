@@ -33,8 +33,8 @@ package object event_bus {
       EventMetaData("uuid", name, time, "publisher", ("user", "222")),
       EventBody(ByteString(body), format),
       "channel",
-      Random.nextLong(),
-      sourceType
+      sourceType,
+      Random.nextLong()
     )
 
   def createFlowFromSink(sink: Sink[Event, _]): Flow[Event, Event, NotUsed] =

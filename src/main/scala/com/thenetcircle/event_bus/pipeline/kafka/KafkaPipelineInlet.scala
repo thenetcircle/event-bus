@@ -22,64 +22,72 @@ import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
-import akka.util.ByteString
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.pipeline.PipelineInlet
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
-import org.apache.kafka.clients.producer.ProducerRecord
+import com.thenetcircle.event_bus.pipeline.kafka.extended.KafkaPartitioner
+import com.thenetcircle.event_bus.tracing.Tracing
+import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 /** LeftPort Implementation */
 private[kafka] final class KafkaPipelineInlet(
     val pipeline: KafkaPipeline,
     val inletName: String,
     val inletSettings: KafkaPipelineInletSettings)
-    extends PipelineInlet {
+    extends PipelineInlet
+    with Tracing {
 
-  import KafkaPipeline._
   import KafkaPipelineInlet._
+
+  private def tracingFlow(text: String): Flow[Event, Event, NotUsed] =
+    Flow[Event].map(event => {
+      tracer.record(event, text)
+      event
+    })
 
   override val stream: Flow[Event, Event, NotUsed] = {
 
     // Combine LeftPortSettings with PipelineSettings
-    val producerSettings: ProducerSettings[Key, Value] = {
-      val _settings = pipeline.pipelineSettings.producerSettings
+    val producerSettings: ProducerSettings[ProducerKey, ProducerValue] = {
+      val _settings = pipeline.pipelineSettings.producerSettings.withProperty(
+        ProducerConfig.PARTITIONER_CLASS_CONFIG,
+        classOf[KafkaPartitioner].getName)
+
       inletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
       inletSettings.parallelism.foreach(_settings.withParallelism)
       _settings
     }
 
     Flow[Event]
+      .via(tracingFlow("Before Pipeline"))
       .map(
-        event =>
+        event => {
           Message(
             getProducerRecordFromEvent(event),
             event
-        )
+          )
+        }
       )
       // TODO: take care of Supervision of mapAsync
       .via(Producer.flow(producerSettings))
       .map(_.message.passThrough)
+      .via(tracingFlow("After Pipeline"))
       .named(inletName)
-
   }
 }
 
 object KafkaPipelineInlet {
-  // TODO: manually calculate partition, use key for metadata
   private def getProducerRecordFromEvent(
-      event: Event): ProducerRecord[Key, Value] = {
-    val topic: String   = event.channel
-    val timestamp: Long = event.metadata.timestamp
-    val key: Key        = getKeyFromEvent(event)
-    val value: Value    = event.body.data.toArray
+      event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
+    val topic: String        = event.channel
+    val timestamp: Long      = event.metadata.timestamp
+    val key: ProducerKey     = KafkaKey(event)
+    val value: ProducerValue = event
 
-    new ProducerRecord[Key, Value](topic,
-                                   null,
-                                   timestamp.asInstanceOf[java.lang.Long],
-                                   key,
-                                   value)
+    new ProducerRecord[ProducerKey, ProducerValue](
+      topic,
+      null,
+      timestamp.asInstanceOf[java.lang.Long],
+      key,
+      value)
   }
-
-  private def getKeyFromEvent(event: Event): Key =
-    ByteString(s"${event.metadata.trigger._1}#${event.metadata.trigger._2}").toArray
 }

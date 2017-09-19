@@ -40,8 +40,6 @@ private[kafka] final class KafkaPipelineOutlet(
     extractor: EventExtractor)
     extends PipelineOutlet {
 
-  import KafkaPipeline._
-
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
@@ -52,7 +50,7 @@ private[kafka] final class KafkaPipelineOutlet(
       "The outlet of KafkaPipeline needs to subscribe topics")
 
     /** Build ConsumerSettings */
-    val kafkaConsumerSettings: ConsumerSettings[Key, Value] = {
+    val kafkaConsumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue] = {
       val _settings = pipeline.pipelineSettings.consumerSettings
         .withGroupId(outletSettings.groupId)
 
@@ -92,8 +90,9 @@ private[kafka] final class KafkaPipelineOutlet(
                   metadata = extractedData.metadata,
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(topic),
-                  tracingId = Random.nextLong(),
                   sourceType = EventSourceType.Kafka,
+                  // TODO: get the original tracing id
+                  Random.nextLong(),
                   context = Map("kafkaCommittableOffset" -> committableOffset),
                   committer = Some(new EventCommitter {
                     override def commit(): Future[Any] =

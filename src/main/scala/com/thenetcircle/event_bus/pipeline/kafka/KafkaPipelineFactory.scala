@@ -21,13 +21,14 @@ import akka.actor.ActorSystem
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.pipeline._
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
+import com.thenetcircle.event_bus.pipeline.kafka.extended.{
+  EventSerializer,
+  KafkaKeyDeserializer,
+  KafkaKeySerializer
+}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
-import org.apache.kafka.common.serialization.{
-  ByteArrayDeserializer,
-  ByteArraySerializer
-}
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -64,12 +65,12 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
 
     KafkaPipelineSettings(
       pipelineConfig.as[String]("name"),
-      ProducerSettings[Key, Value](producerConfig,
-                                   new ByteArraySerializer,
-                                   new ByteArraySerializer),
-      ConsumerSettings[Key, Value](consumerConfig,
-                                   new ByteArrayDeserializer,
-                                   new ByteArrayDeserializer)
+      ProducerSettings[ProducerKey, ProducerValue](producerConfig,
+                                                   new KafkaKeySerializer,
+                                                   new EventSerializer),
+      ConsumerSettings[ConsumerKey, ConsumerValue](consumerConfig,
+                                                   new KafkaKeyDeserializer,
+                                                   new ByteArrayDeserializer)
     )
   }
 

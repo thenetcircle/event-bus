@@ -76,8 +76,8 @@ case class Event(
     metadata: EventMetaData,
     body: EventBody,
     channel: String,
-    override val tracingId: Long,
     sourceType: EventSourceType,
+    override val tracingId: Long,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
 ) extends TracingMessage {

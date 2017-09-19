@@ -19,16 +19,12 @@ package com.thenetcircle.event_bus.transporter.entrypoint
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{
-  HttpEntity,
-  HttpRequest,
-  HttpResponse,
-  StatusCodes
-}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
+import com.github.levkhomich.akka.tracing.TracingAnnotations
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
@@ -185,52 +181,63 @@ object HttpEntryPoint {
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
-          val tracingMessage =
-            entryPoint.tracer.start(entryPoint.settings.name, true)
+          val tracingRequest = TracingHttpRequest()
+          tracer.sample(tracingRequest, "EventBus")
+
           val responsePromise = Promise[HttpResponse]
+
           val extractedDataFuture =
             unmarshaller.apply(request.entity)(executionContext, materializer)
           val callback =
-            getEventExtractingCallback(responsePromise, tracingMessage)
+            getEventExtractingCallback(tracingRequest, responsePromise)
           extractedDataFuture.onComplete(result => callback.invoke(result))
+
           responsePromise.future
         }
 
-        def getEventExtractingCallback(
-            responsePromise: Promise[HttpResponse],
-            tracingMessage: TracingMessage): AsyncCallback[Try[ExtractedData]] =
-          getAsyncCallback[Try[ExtractedData]] {
-            case Success(extractedData) =>
-              entryPoint.tracer._tracer.createChild()
-              val event = Event(
-                extractedData.metadata,
-                extractedData.body,
-                extractedData.channel.getOrElse(
-                  ChannelResolver.getChannel(extractedData.metadata)),
-                traceingId,
-                EventSourceType.Http,
-                Map.empty
-              ).withCommitter(
-                () =>
-                  Future {
-                    responsePromise.success(successfulResponse)
-                }
-              )
+        def getEventExtractingCallback(tracingRequest: TracingHttpRequest,
+                                       responsePromise: Promise[HttpResponse])
+          : AsyncCallback[Try[ExtractedData]] =
+          getAsyncCallback[Try[ExtractedData]](extractedDataTry => {
+            tracer.record(tracingRequest,
+                          TracingAnnotations.Custom("Extracted"))
+            extractedDataTry match {
+              case Success(extractedData) =>
+                val event = Event(
+                  extractedData.metadata,
+                  extractedData.body,
+                  extractedData.channel.getOrElse(
+                    ChannelResolver.getChannel(extractedData.metadata)),
+                  EventSourceType.Http,
+                  tracingRequest.tracingId
+                ).withCommitter(
+                  () => {
+                    tracer.record(tracingRequest,
+                                  TracingAnnotations.Custom("Transported"))
+                    tracer.flush(tracingRequest)
 
-              entryPoint.tracer.finish(event)
+                    responsePromise.success(successfulResponse).future
+                  }
+                )
 
-              log.debug("push out1")
-              push(out1, event)
+                log.debug("push out1")
+                push(out1, event)
 
-            case Failure(e) =>
-              log.info(
-                s"Request send failed with error message: ${e.getMessage}")
-              responsePromise.success(failedResponse)
-              tryPullIn()
-          }
+              case Failure(ex) =>
+                log.info(
+                  s"Request send failed with error message: ${ex.getMessage}")
+                tracer.record(tracingRequest, ex)
+                tracer.flush(tracingRequest)
+                responsePromise.success(failedResponse)
+                tryPullIn()
+            }
+          })
 
       }
 
   }
+
+  final case class TracingHttpRequest(override val spanName: String = "Request")
+      extends TracingMessage
 
 }

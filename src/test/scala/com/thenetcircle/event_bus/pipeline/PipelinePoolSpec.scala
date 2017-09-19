@@ -18,16 +18,14 @@
 package com.thenetcircle.event_bus.pipeline
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipeline.{Key, Value}
-import com.thenetcircle.event_bus.pipeline.kafka.{
-  KafkaPipelineFactory,
-  KafkaPipelineSettings
+import com.thenetcircle.event_bus.pipeline.kafka._
+import com.thenetcircle.event_bus.pipeline.kafka.extended.{
+  EventSerializer,
+  KafkaKeyDeserializer,
+  KafkaKeySerializer
 }
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import org.apache.kafka.common.serialization.{
-  ByteArrayDeserializer,
-  ByteArraySerializer
-}
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 class PipelinePoolSpec extends AkkaStreamSpec {
 
@@ -35,21 +33,21 @@ class PipelinePoolSpec extends AkkaStreamSpec {
 
   val testPipelineSettings1 = new KafkaPipelineSettings(
     "TP1",
-    ProducerSettings[Key, Value](system,
-                                 new ByteArraySerializer,
-                                 new ByteArraySerializer),
-    ConsumerSettings[Key, Value](system,
-                                 new ByteArrayDeserializer,
-                                 new ByteArrayDeserializer)
+    ProducerSettings[ProducerKey, ProducerValue](system,
+                                                 new KafkaKeySerializer,
+                                                 new EventSerializer),
+    ConsumerSettings[ConsumerKey, ConsumerValue](system,
+                                                 new KafkaKeyDeserializer,
+                                                 new ByteArrayDeserializer)
   )
   val testPipelineSettings2 = new KafkaPipelineSettings(
     "TP2",
-    ProducerSettings[Key, Value](system,
-                                 new ByteArraySerializer,
-                                 new ByteArraySerializer),
-    ConsumerSettings[Key, Value](system,
-                                 new ByteArrayDeserializer,
-                                 new ByteArrayDeserializer)
+    ProducerSettings[ProducerKey, ProducerValue](system,
+                                                 new KafkaKeySerializer,
+                                                 new EventSerializer),
+    ConsumerSettings[ConsumerKey, ConsumerValue](system,
+                                                 new KafkaKeyDeserializer,
+                                                 new ByteArrayDeserializer)
   )
   val testPipelinePool = new PipelinePool(
     Map[String, (PipelineType, PipelineSettings)](
