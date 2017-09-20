@@ -24,6 +24,8 @@ import com.github.levkhomich.akka.tracing.{
   TracingSupport
 }
 
+import scala.util.Random
+
 trait Tracing {
   lazy val tracer: Tracer = Tracer()
 }
@@ -33,30 +35,31 @@ class Tracer {
 
   private val submitter = getSubmitter
 
-  def startApplication(): TracingMessage = {
-    val tracingMessage = TracingMessage(createNewTracingId(this), "Application")
+  def startTracing(): TracingMessage = {
+    val tracingMessage = TracingMessage("Application")
     submitter.sample(tracingMessage, "EventBus")
     tracingMessage
   }
 
-  def start(serviceName: String,
-            parentTracingId: Long,
-            spanName: Option[String] = None): TracingMessage = {
-    val parentTracingMessage = TracingMessage(parentTracingId, "unknown")
-    start(serviceName, parentTracingMessage, spanName)
-  }
+  def startService(parentTracingId: Long,
+                   serviceName: String,
+                   spanName: Option[String] = None): TracingMessage =
+    startService(TracingMessage("Unknown", parentTracingId),
+                 serviceName,
+                 spanName)
 
-  def start(serviceName: String,
-            parentTracingMessage: TracingMessage,
-            spanName: Option[String] = None): TracingMessage = {
-    val tracingMessage = TracingMessage(parentTracingMessage.tracingId,
-                                        spanName.getOrElse("Started"))
+  def startService(parentTracingMessage: TracingMessage,
+                   serviceName: String,
+                   spanName: Option[String] = None): TracingMessage = {
+    val tracingMessage = TracingMessage(spanName.getOrElse("Started"),
+                                        parentTracingMessage.tracingId)
     submitter.sample(tracingMessage, serviceName)
     submitter.createChild(tracingMessage, parentTracingMessage)
     tracingMessage
   }
 
-  def finish(tracingMessage: TracingMessage): Unit = ???
+  def finish(tracingMessage: TracingMessage): Unit =
+    submitter.flush(tracingMessage)
 }
 
 object Tracer {
@@ -73,14 +76,18 @@ object Tracer {
   private val tracer  = new Tracer()
   def apply(): Tracer = tracer
 
-  def createNewTracingId(obj: Any): Long = {
-    val a = System.identityHashCode(obj)
-    val b = hashCode
-    a.toLong << 32 | b & 0xFFFFFFFFL
-  }
 }
 
 case class TracingMessage(
-    override val tracingId: Long,
-    override val spanName: String
+    override val spanName: String,
+    override val tracingId: Long
 ) extends TracingSupport
+
+object TracingMessage {
+  def apply(spanName: String): TracingMessage = {
+    TracingMessage(spanName, newTracingId())
+  }
+
+  def newTracingId(): Long =
+    System.currentTimeMillis() + Random.nextLong()
+}
