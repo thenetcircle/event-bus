@@ -25,7 +25,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.pipeline.PipelineInlet
 import com.thenetcircle.event_bus.pipeline.kafka.extended.KafkaPartitioner
-import com.thenetcircle.event_bus.tracing.Tracing
+import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 /** LeftPort Implementation */
@@ -37,12 +37,6 @@ private[kafka] final class KafkaPipelineInlet(
     with Tracing {
 
   import KafkaPipelineInlet._
-
-  private def tracingFlow(text: String): Flow[Event, Event, NotUsed] =
-    Flow[Event].map(event => {
-      tracer.record(event, text)
-      event
-    })
 
   override val stream: Flow[Event, Event, NotUsed] = {
 
@@ -58,7 +52,7 @@ private[kafka] final class KafkaPipelineInlet(
     }
 
     Flow[Event]
-      .via(tracingFlow("Before Pipeline"))
+      .via(tracingFlow(TracingSteps.PIPELINE_PUSHING))
       .map(
         event => {
           Message(
@@ -69,8 +63,8 @@ private[kafka] final class KafkaPipelineInlet(
       )
       // TODO: take care of Supervision of mapAsync
       .via(Producer.flow(producerSettings))
-      .map(_.message.passThrough)
-      .via(tracingFlow("After Pipeline"))
+      .map(msg => msg.message.passThrough)
+      .via(tracingFlow(TracingSteps.PIPELINE_PUSHED))
       .named(inletName)
   }
 }

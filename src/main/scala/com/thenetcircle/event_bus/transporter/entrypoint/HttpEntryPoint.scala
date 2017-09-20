@@ -24,17 +24,12 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.github.levkhomich.akka.tracing.TracingAnnotations
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
   ExtractedData
 }
-import com.thenetcircle.event_bus.tracing.{
-  TempTracingMessage,
-  Tracing,
-  TracingMessage
-}
+import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -185,60 +180,53 @@ object HttpEntryPoint {
         })
 
         def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
-          val tracingMessage = TempTracingMessage(
-            Tracing.createNewTracingId(request),
-            "Request"
-          )
-          tracer.sample(tracingMessage, "EventBus")
+          val tracingId = tracer.newTracing()
+          tracer.record(tracingId, TracingSteps.NEW_REQUEST)
 
           val responsePromise = Promise[HttpResponse]
-
           val extractedDataFuture =
             unmarshaller.apply(request.entity)(executionContext, materializer)
           val callback =
-            getEventExtractingCallback(tracingMessage, responsePromise)
+            getEventExtractingCallback(responsePromise, tracingId)
           extractedDataFuture.onComplete(result => callback.invoke(result))
 
           responsePromise.future
         }
 
-        def getEventExtractingCallback(tracingMessage: TracingMessage,
-                                       responsePromise: Promise[HttpResponse])
-          : AsyncCallback[Try[ExtractedData]] =
-          getAsyncCallback[Try[ExtractedData]](extractedDataTry => {
-            tracer.record(tracingMessage,
-                          TracingAnnotations.Custom("Extracted"))
-            extractedDataTry match {
-              case Success(extractedData) =>
-                val event = Event(
-                  extractedData.metadata,
-                  extractedData.body,
-                  extractedData.channel.getOrElse(
-                    ChannelResolver.getChannel(extractedData.metadata)),
-                  EventSourceType.Http,
-                  tracingMessage.tracingId
-                ).withCommitter(
-                  () => {
-                    tracer.record(tracingMessage,
-                                  TracingAnnotations.Custom("Transported"))
-                    // tracer.flush(tracingMessage)
+        def getEventExtractingCallback(
+            responsePromise: Promise[HttpResponse],
+            tracingId: Long): AsyncCallback[Try[ExtractedData]] =
+          getAsyncCallback[Try[ExtractedData]] {
+            case Success(extractedData) =>
+              tracer.record(tracingId, TracingSteps.EXTRACTED)
 
-                    responsePromise.success(successfulResponse).future
-                  }
-                )
+              val event = Event(
+                extractedData.metadata,
+                extractedData.body,
+                extractedData.channel.getOrElse(
+                  ChannelResolver.getChannel(extractedData.metadata)),
+                EventSourceType.Http,
+                tracingId
+              ).withCommitter(
+                () => {
+                  tracer.record(tracingId, TracingSteps.ENTRYPOINT_COMMITTED)
+                  responsePromise.success(successfulResponse).future
+                }
+              )
 
-                log.debug("push out1")
-                push(out1, event)
+              tracer.record(tracingId, event)
 
-              case Failure(ex) =>
-                log.info(
-                  s"Request send failed with error message: ${ex.getMessage}")
-                tracer.record(tracingMessage, ex)
-                tracer.flush(tracingMessage)
-                responsePromise.success(failedResponse)
-                tryPullIn()
-            }
-          })
+              log.debug("push out1")
+              push(out1, event)
+
+            case Failure(ex) =>
+              log.info(
+                s"Request send failed with error message: ${ex.getMessage}")
+              tracer.record(tracingId, ex)
+              tracer.record(tracingId, TracingSteps.ENTRYPOINT_COMMITTED)
+              responsePromise.success(failedResponse)
+              tryPullIn()
+          }
 
       }
 

@@ -36,7 +36,7 @@ class KafkaPartitioner extends Partitioner {
 
     val event = value.asInstanceOf[Event]
     val keyBytes =
-      s"${event.metadata.trigger._1}-${event.metadata.trigger._2}"
+      s"${event.metadata.trigger._2}-${event.metadata.trigger._1}"
         .getBytes("UTF-8")
 
     Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions

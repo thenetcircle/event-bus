@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.thenetcircle.event_bus.pipeline.PipelinePool
-import com.thenetcircle.event_bus.tracing.Tracing
+import com.thenetcircle.event_bus.tracing.Tracer
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
@@ -48,7 +48,7 @@ abstract class AkkaStreamSpec(_system: ActorSystem)
 
   override def beforeAll(): Unit = {
     PipelinePool.initialize(_system)
-    Tracing.initTracer()
+    Tracer.init(_system)
   }
 
   override def afterAll(): Unit =

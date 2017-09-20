@@ -17,16 +17,16 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
-import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
 import akka.stream.{FlowShape, Materializer}
 import akka.util.ByteString
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
-import com.thenetcircle.event_bus.tracing.{TempTracingMessage, Tracing}
+import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.thenetcircle.event_bus.{Event, EventCommitter, EventSourceType}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -80,33 +80,35 @@ private[kafka] final class KafkaPipelineOutlet(
         case (topicPartition, source) =>
           source
             .mapAsync(outletSettings.extractParallelism) { msg =>
-              val kafkaKeyData = msg.record.key().data
-              val tracingId =
-                if (kafkaKeyData.isEmpty) Tracing.createNewTracingId(msg)
-                else kafkaKeyData.get.tracingId
+              val tracingId = msg.record
+                .key()
+                .data
+                .map(k => tracer.resumeTracing(k.tracingId))
+                .getOrElse(tracer.newTracing())
 
-              val tracingMessage = TempTracingMessage(tracingId, "PipelineOut")
-              tracer.record(tracingMessage, "PipelineOut")
+              tracer.record(tracingId, TracingSteps.PIPELINE_PULLED)
 
               extractor
                 .extract(ByteString(msg.record.value()))
-                .map((msg, _, tracingMessage))
+                .map((msg, _, tracingId))
             }
             .map {
-              case (msg, extractedData, tracingMessage) =>
-                tracer.record(tracingMessage, "Extracted")
+              case (msg, extractedData, tracingId) =>
+                tracer.record(tracingId, TracingSteps.EXTRACTED)
 
                 Event(
                   metadata = extractedData.metadata,
                   body = extractedData.body,
                   channel = extractedData.channel.getOrElse(msg.record.topic()),
                   sourceType = EventSourceType.Kafka,
-                  tracingMessage.tracingId,
+                  tracingId,
                   context =
                     Map("kafkaCommittableOffset" -> msg.committableOffset),
                   committer = Some(new EventCommitter {
-                    override def commit(): Future[Any] =
+                    override def commit(): Future[Done] = {
+                      tracer.record(tracingId, TracingSteps.PIPELINE_COMMITTED)
                       msg.committableOffset.commitScaladsl()
+                    }
                   })
                 )
             }
@@ -126,17 +128,23 @@ private[kafka] final class KafkaPipelineOutlet(
         Flow[Event]
           .collect {
             case e if e.hasContext("kafkaCommittableOffset") =>
-              tracer.record(e, "Going to Commit")
-              tracer.flush(e)
-              e.context("kafkaCommittableOffset")
-                .asInstanceOf[CommittableOffset]
+              (e.context("kafkaCommittableOffset")
+                 .asInstanceOf[CommittableOffset],
+               e.tracingId)
           }
-          .batch(max = outletSettings.commitBatchMax,
-                 first => CommittableOffsetBatch.empty.updated(first)) {
-            (batch, elem) =>
-              batch.updated(elem)
-          }
-          .mapAsync(outletSettings.commitParallelism)(_.commitScaladsl())
+          .batch(
+            max = outletSettings.commitBatchMax,
+            firstElem => {
+              val batch       = CommittableOffsetBatch.empty.updated(firstElem._1)
+              val tracingList = List[Long](firstElem._2)
+              batch -> tracingList
+            }
+          )((result, elem) =>
+            (result._1.updated(elem._1), result._2.+:(elem._2)))
+          .mapAsync(outletSettings.commitParallelism)(result => {
+            result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
+            result._1.commitScaladsl()
+          })
           .to(Sink.ignore)
 
       /** --------- work flow --------- */

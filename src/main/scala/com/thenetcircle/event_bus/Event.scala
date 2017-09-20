@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.tracing.TracingMessage
 import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
@@ -77,10 +76,10 @@ case class Event(
     body: EventBody,
     channel: String,
     sourceType: EventSourceType,
-    override val tracingId: Long,
+    tracingId: Long,
     context: Map[String, Any] = Map.empty,
     committer: Option[EventCommitter] = None
-) extends TracingMessage {
+) {
 
   def withCommitter(commitFunction: () => Future[Any]): Event =
     copy(committer = Some(new EventCommitter {
