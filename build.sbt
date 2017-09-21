@@ -1,7 +1,7 @@
 import Dependencies._
 
 lazy val eventBus = (project in file("."))
-  .enablePlugins(GitVersioning, JavaAppPackaging)
+  .enablePlugins(GitVersioning, JavaAppPackaging, SystemdPlugin)
   .configs(IntegrationTest)
   .settings(
     name := "event-bus",
