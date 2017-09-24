@@ -6,14 +6,27 @@
     version={{ eventbus_version | default("master") }}
   notify:
     - recompile project
+  remote_user: "{{ daemon_user }}"
 
 - name: create conf directory
   file:
     path: "{{ eventbus_home }}/conf"
     state: directory
     mode: 0755
+  remote_user: "{{ daemon_user }}"
 
 - name: copy configuration
   copy:
-    src: stresstest.application.conf
-    dest: "{{ eventbus_home }}/conf/stresstest.application.conf"
+    src: "{{ service_name }}.application.conf"
+    dest: "{{ eventbus_home }}/conf/{{ service_name }}.application.conf"
+  remote_user: "{{ daemon_user }}"
+
+- name: create service unit
+  template: src=service.j2 dest=/lib/systemd/system/eventbus-{{ service_name }}.service mode=644
+  notify:
+    - reload systemctl
+  sudo: yes
+
+- name: start {{ service_name }}
+  service: name=eventbus-{{ service_name }}.service state=started enabled=yes
+  sudo: yes

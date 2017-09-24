@@ -1,5 +1,5 @@
 ---
 - name: recompile project
-  shell: sbt clean compile stage
+  shell: /usr/bin/sbt clean compile stage
   args:
     chdir: "{{ eventbus_home }}/"

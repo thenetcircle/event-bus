@@ -1,0 +1,14 @@
+[Unit]
+Description=EventBus Service ({{ service_name }})
+
+[Service]
+Type=simple
+WorkingDirectory={{ eventbus_home }}
+ExecStart="{{ eventbus_home }}/target/universal/stage/bin/event-bus -Dconfig.file=conf/{{ service_name }}.application.conf"
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+User={{ daemon_user }}
+PermissionsStartOnly=true
+
+[Install]
+WantedBy=multi-user.target
