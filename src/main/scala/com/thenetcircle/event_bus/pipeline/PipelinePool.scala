@@ -25,7 +25,7 @@ import net.ceedubs.ficus.Ficus._
 import scala.collection.mutable
 
 private[pipeline] final class PipelinePool(
-    pool: Map[String, (PipelineType, PipelineSettings)])(
+    poolSettings: Map[String, (PipelineType, PipelineSettings)])(
     implicit system: ActorSystem) {
 
   private val cached =
@@ -40,19 +40,19 @@ private[pipeline] final class PipelinePool(
     }
 
   def getPipelineType(pipelineName: String): Option[PipelineType] =
-    pool.get(pipelineName) match {
+    poolSettings.get(pipelineName) match {
       case Some((_type, _)) => Some(_type)
       case None             => None
     }
 
   def getPipelineSettings(pipelineName: String): Option[PipelineSettings] =
-    pool.get(pipelineName) match {
+    poolSettings.get(pipelineName) match {
       case Some((_, _settings)) => Some(_settings)
       case None                 => None
     }
 
   def getPipelineFactory(pipelineName: String): Option[PipelineFactory] =
-    pool.get(pipelineName) match {
+    poolSettings.get(pipelineName) match {
       case Some((_type, _)) => Some(PipelineFactory.getConcreteFactory(_type))
       case None             => None
     }
@@ -67,7 +67,7 @@ private[pipeline] final class PipelinePool(
     getCache(pipelineName) match {
       case Some(p) => Some(p)
       case None =>
-        pool.get(pipelineName) match {
+        poolSettings.get(pipelineName) match {
           case Some((_type, _settings)) =>
             val p = PipelineFactory
               .getConcreteFactory(_type)
@@ -83,28 +83,24 @@ private[pipeline] final class PipelinePool(
 object PipelinePool {
   private var cached: Option[PipelinePool] = None
 
-  def initialize(system: ActorSystem): Unit = {
-    implicit val _system: ActorSystem = system
+  def init(configList: List[Config])(implicit system: ActorSystem): Unit = {
+    init(
+      configList
+        .map(config => {
+          val pipelineName = config.as[String]("name")
+          val pipelineType = config.as[PipelineType]("type")
+          val pipelineSettings = PipelineFactory
+            .getConcreteFactory(pipelineType)
+            .createPipelineSettings(config)
 
-    val result = system.settings.config
-      .as[List[Config]]("event-bus.pipeline.pool")
-      .map(config => {
-        val pipelineName = config.as[String]("name")
-        val pipelineType = config.as[PipelineType]("type")
-        val pipelineSettings = PipelineFactory
-          .getConcreteFactory(pipelineType)
-          .createPipelineSettings(config)
-
-        (pipelineName, (pipelineType, pipelineSettings))
-      })
-      .toMap
-
-    initialize(result)
+          (pipelineName, (pipelineType, pipelineSettings))
+        })
+        .toMap)
   }
 
-  def initialize(config: Map[String, (PipelineType, PipelineSettings)])(
+  def init(poolSettings: Map[String, (PipelineType, PipelineSettings)])(
       implicit system: ActorSystem): Unit =
-    cached = Some(new PipelinePool(config))
+    cached = Some(new PipelinePool(poolSettings))
 
   def apply(): PipelinePool = cached match {
     case Some(f) => f

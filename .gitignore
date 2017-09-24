@@ -1,6 +1,6 @@
 *.iml
 .idea/
 target/
-app.conf
-backup/
-log/
+/backup/
+/log/
+/conf/

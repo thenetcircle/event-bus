@@ -22,12 +22,13 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
 import com.thenetcircle.event_bus.pipeline.PipelinePool
 import com.thenetcircle.event_bus.tracing.Tracer
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest._
+import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration.{FiniteDuration, _}
 
-abstract class BaseIntegrationSpec(_system: ActorSystem)
+abstract class BaseIntegrationISpec(_system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
     with AsyncFlatSpecLike
@@ -49,10 +50,12 @@ abstract class BaseIntegrationSpec(_system: ActorSystem)
   def this() =
     this(
       ActorSystem("eventbus-integration-test",
-                  ConfigFactory.load("application-test.conf")))
+                  ConfigFactory.load("application-integration-test.conf")))
 
   override protected def beforeAll(): Unit = {
-    PipelinePool.initialize(_system)
+    PipelinePool.init(
+      _system.settings.config
+        .as[List[Config]]("event-bus-runtime.pipeline-pool"))
     Tracer.init(_system)
   }
 

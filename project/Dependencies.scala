@@ -7,9 +7,9 @@ object Dependencies {
   // Dependencies
   private val akka              = "com.typesafe.akka" %% "akka-slf4j"          % akkaVersion
   private val akkaStream        = "com.typesafe.akka" %% "akka-stream"         % akkaVersion
-  private val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test
+  private val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % "it,test"
   private val akkaHttp          = "com.typesafe.akka" %% "akka-http"           % akkaHttpVersion
-  private val akkaHttpTestkit   = "com.typesafe.akka" %% "akka-http-testkit"   % akkaHttpVersion % Test
+  private val akkaHttpTestkit   = "com.typesafe.akka" %% "akka-http-testkit"   % akkaHttpVersion % "it,test"
   private val akkaStreamKafka   = "com.typesafe.akka" %% "akka-stream-kafka"   % "0.17"
   private val sprayJson         = "io.spray"          %% "spray-json"          % "1.3.3"
 

@@ -40,7 +40,10 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
     KafkaPipeline(pipelineSettings.asInstanceOf[KafkaPipelineSettings])
 
   override def createPipelineSettings(
-      pipelineConfig: Config): KafkaPipelineSettings = {
+      _pipelineConfig: Config): KafkaPipelineSettings = {
+    val pipelineConfig = _pipelineConfig.withFallback(
+      system.settings.config.getConfig("event-bus.pipeline.kafka.pipeline"))
+
     val originalProducerConfig =
       system.settings.config.getConfig("akka.kafka.producer")
     val producerConfig = {
@@ -78,7 +81,7 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
       pipelineInletConfig: Config): KafkaPipelineInletSettings = {
     val config = pipelineInletConfig.withFallback(
       system.settings.config
-        .getConfig("event-bus.pipeline.default.kafka.inlet"))
+        .getConfig("event-bus.pipeline.kafka.inlet"))
 
     KafkaPipelineInletSettings(
       closeTimeout = config.as[Option[FiniteDuration]]("close-timeout"),
@@ -90,7 +93,7 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
       pipelineOutletConfig: Config): KafkaPipelineOutletSettings = {
     val config = pipelineOutletConfig.withFallback(
       system.settings.config
-        .as[Config]("event-bus.pipeline.default.kafka.outlet"))
+        .as[Config]("event-bus.pipeline.kafka.outlet"))
 
     KafkaPipelineOutletSettings(
       groupId = config.as[String]("group-id"),

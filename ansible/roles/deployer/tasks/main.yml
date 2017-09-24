@@ -1,0 +1,19 @@
+---
+- name: clone or update repository
+  git:
+    repo=https://github.com/thenetcircle/event-bus.git
+    dest={{ eventbus_home }}
+    version={{ eventbus_version | default("master") }}
+  notify:
+    - recompile project
+
+- name: create conf directory
+  file:
+    path: "{{ eventbus_home }}/conf"
+    state: directory
+    mode: 0755
+
+- name: copy configuration
+  copy:
+    src: stresstest.application.conf
+    dest: "{{ eventbus_home }}/conf/stresstest.application.conf"

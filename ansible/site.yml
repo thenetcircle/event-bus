@@ -1,14 +1,5 @@
 ---
 - hosts: servers
-  vars:
-    source_dir: /usr/local/tncdata/source/event-bus
   remote_user: tncdata
-  tasks:
-    - name: clone repository from github
-      git: >
-           repo=https://github.com/thenetcircle/event-bus.git
-           dest={{ source_dir }}
-    - name: recompile project
-      command: sbt clean compile stage
-      args: >
-            chdir: "{{ source_dir }}/"
+  roles:
+    - deployer

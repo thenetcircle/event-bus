@@ -26,12 +26,12 @@ import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.collection.mutable
 import scala.concurrent.{Await, Future, Promise}
 import scala.util.{Failure, Success}
 
-class HttpDispatchingSpec extends BaseIntegrationSpec with StrictLogging {
+class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
 
   var receiver: Future[Http.ServerBinding]            = _
   val resultListeners: mutable.Queue[Promise[String]] = mutable.Queue.empty
@@ -44,7 +44,7 @@ class HttpDispatchingSpec extends BaseIntegrationSpec with StrictLogging {
 
     val transporter = Transporter(
       TransporterSettings(
-        system.settings.config.getConfig("event-bus.test-transporter")))
+        system.settings.config.getConfig("event-bus-runtime.test-transporter")))
     transporter.run()
 
     val dispatcher = Dispatcher(
@@ -58,8 +58,8 @@ class HttpDispatchingSpec extends BaseIntegrationSpec with StrictLogging {
                          |  }
                          |}
                        """.stripMargin)
-          .withFallback(
-            system.settings.config.getConfig("event-bus.test-dispatcher"))))
+          .withFallback(system.settings.config
+            .getConfig("event-bus-runtime.test-dispatcher"))))
     dispatcher.run()
 
     val route = path("") {
@@ -119,7 +119,7 @@ class HttpDispatchingSpec extends BaseIntegrationSpec with StrictLogging {
 
   }
 
-  it should "get same result according the input order with same actor" in {
+  ignore should "get same result according the input order with same actor" in {
 
     val result: mutable.ListBuffer[String] = mutable.ListBuffer.empty
     val resultFuture                       = Promise[mutable.ListBuffer[String]]

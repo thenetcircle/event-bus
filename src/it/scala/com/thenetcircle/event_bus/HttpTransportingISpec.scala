@@ -24,14 +24,14 @@ import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 
 import scala.concurrent.Future
 
-class HttpTransportingSpec extends BaseIntegrationSpec {
+class HttpTransportingISpec extends BaseIntegrationISpec {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
 
     val transporter = Transporter(
       TransporterSettings(
-        system.settings.config.getConfig("event-bus.test-transporter")))
+        system.settings.config.getConfig("event-bus-runtime.test-transporter")))
     transporter.run()
   }
 
