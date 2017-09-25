@@ -4,7 +4,7 @@ Description=EventBus Service ({{ service_name }})
 [Service]
 Type=simple
 WorkingDirectory={{ eventbus_home }}
-ExecStart={{ eventbus_home }}/target/universal/stage/bin/event-bus "-Dconfig.file={{ eventbus_home }}/conf/{{ service_name }}.application.conf"
+ExecStart={{ eventbus_home }}/target/universal/stage/bin/event-bus "-Dconfig.file={{ eventbus_home }}/conf/{{ service_name }}.application.conf" "-Dlogback.configurationFile={{ eventbus_home }}/conf/{{ service_name }}.logback.xml"
 Restart=always
 RestartSec=3
 StartLimitIntervalSec=60

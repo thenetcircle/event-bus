@@ -16,13 +16,6 @@
     state: directory
     mode: 0755
 
-- name: create log link
-  become_user: "{{ daemon_user }}"
-  file:
-    src: "{{ log_dir }}"
-    dest: "{{ eventbus_home }}/log"
-    state: link
-
 - name: create conf directory
   become_user: "{{ daemon_user }}"
   file:
@@ -30,7 +23,7 @@
     state: directory
     mode: 0755
 
-- name: copy configuration
+- name: copy application.conf
   become_user: "{{ daemon_user }}"
   copy:
     src: "{{ service_name }}.application.conf"
@@ -38,9 +31,21 @@
   notify:
     - restart service
 
+- name: copy logback.xml
+  become_user: "{{ daemon_user }}"
+  template:
+    src: logback.j2
+    dest: "{{ eventbus_home }}/conf/{{ service_name }}.logback.xml"
+    mode: 0664
+  notify:
+    - restart service
+
 - name: create service unit
   become: true
-  template: src=service.j2 dest=/lib/systemd/system/eventbus-{{ service_name }}.service mode=644
+  template:
+    src: service.j2
+    dest: /lib/systemd/system/eventbus-{{ service_name }}.service
+    mode: 0644
   notify:
     - reload service
     - restart service
