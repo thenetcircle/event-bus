@@ -1,15 +1,17 @@
 ---
 - name: recompile project
-  shell: /usr/bin/sbt clean compile stage
+  command: /usr/bin/sbt clean compile stage
   args:
     chdir: "{{ eventbus_home }}/"
 
 - name: reload service
+  become: true
   systemd:
     name: eventbus-{{ service_name }}
-    state: reloaded
+    daemon_reload: yes
 
 - name: restart service
+  become: true
   systemd:
     name: eventbus-{{ service_name }}
     state: restarted
