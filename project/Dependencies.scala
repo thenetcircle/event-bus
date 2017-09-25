@@ -50,6 +50,7 @@ object Dependencies {
 
   val stressTestDependencies = Seq(
     gatlingChartsHighcharts,
-    gatlingTestFramework
+    gatlingTestFramework,
+    akkaHttp
   )
 }

@@ -6,7 +6,7 @@
     dest={{ eventbus_home }}
     version={{ eventbus_version | default("master") }}
   notify:
-    - recompile project
+    - recompile service
     - restart service
 
 - name: create log directory
