@@ -1,6 +1,8 @@
 [servers]
 thin
+
 [servers:vars]
 eventbus_home=/usr/local/tncdata/source/event-bus
-remote_user=tncdata
 daemon_user=tncdata
+remote_user=tncdata
+become=true

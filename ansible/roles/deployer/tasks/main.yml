@@ -1,32 +1,31 @@
 ---
 - name: clone or update repository
+  become_user: "{{ daemon_user }}"
   git:
     repo=https://github.com/thenetcircle/event-bus.git
     dest={{ eventbus_home }}
     version={{ eventbus_version | default("master") }}
   notify:
     - recompile project
-  remote_user: "{{ daemon_user }}"
+    - restart service
 
 - name: create conf directory
+  become_user: "{{ daemon_user }}"
   file:
     path: "{{ eventbus_home }}/conf"
     state: directory
     mode: 0755
-  remote_user: "{{ daemon_user }}"
 
 - name: copy configuration
+  become_user: "{{ daemon_user }}"
   copy:
     src: "{{ service_name }}.application.conf"
     dest: "{{ eventbus_home }}/conf/{{ service_name }}.application.conf"
-  remote_user: "{{ daemon_user }}"
+  notify:
+    - restart service
 
 - name: create service unit
   template: src=service.j2 dest=/lib/systemd/system/eventbus-{{ service_name }}.service mode=644
   notify:
-    - reload systemctl
-  sudo: yes
-
-- name: start {{ service_name }}
-  service: name=eventbus-{{ service_name }}.service state=started enabled=yes
-  sudo: yes
+    - reload service
+    - restart service

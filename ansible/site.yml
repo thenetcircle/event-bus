@@ -1,6 +1,5 @@
 ---
 - hosts: servers
   gather_facts: False
-  remote_user: "{{ remote_user }}"
   roles:
     - deployer

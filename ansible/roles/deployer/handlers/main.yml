@@ -3,3 +3,13 @@
   shell: /usr/bin/sbt clean compile stage
   args:
     chdir: "{{ eventbus_home }}/"
+
+- name: reload service
+  systemd:
+    name: eventbus-{{ service_name }}
+    state: reloaded
+
+- name: restart service
+  systemd:
+    name: eventbus-{{ service_name }}
+    state: restarted
