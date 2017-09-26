@@ -9,7 +9,7 @@
 			<timeBasedFileNamingAndTriggeringPolicy
 					class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
 				<!-- or whenever the file size reaches 50MB -->
-				<maxFileSize>50MB</maxFileSize>
+				<maxFileSize>100MB</maxFileSize>
 			</timeBasedFileNamingAndTriggeringPolicy>
 			<!-- keep 30 days' worth of history -->
 			<maxHistory>30</maxHistory>
@@ -21,7 +21,7 @@
 
 	<logger name="org.apache.kafka" level="INFO" />
 
-	<root level="INFO">
+	<root level="DEBUG">
 		<appender-ref ref="FILE" />
 	</root>
 
