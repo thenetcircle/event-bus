@@ -36,6 +36,8 @@ object EventBus extends App with StrictLogging {
   protected implicit val system = akka.actor.ActorSystem()
 
   // Initialization
+  logger.info("Application is initializing.")
+
   PipelinePool.init(
     system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
   Tracer.init(system)

@@ -27,7 +27,7 @@ object Dependencies {
   private val gatlingTestFramework    = "io.gatling"            % "gatling-test-framework"    % "2.2.2" % Test
 
   private val kamonCore   = "io.kamon" %% "kamon-core"     % "0.6.7"
-  private val kamonAkka   = "io.kamon" %% "kamon-akka-2.5" % "0.6.8"
+  private val kamonAkka   = "io.kamon" %% "kamon-akka-2.5" % "0.6.7"
   private val kamonStatsd = "io.kamon" %% "kamon-statsd"   % "0.6.7"
 
   val mainDependencies = Seq(
