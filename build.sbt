@@ -12,7 +12,8 @@ lazy val eventBus = (project in file("."))
     scalaVersion := "2.12.2",
     libraryDependencies ++= mainDependencies,
     Defaults.itSettings,
-    javaOptions in Universal ++= (aspectjWeaverOptions in Aspectj).value
+    bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value
+      .mkString(" ")}""""
   )
 
 lazy val stressTest = (project in file("stresstest"))
