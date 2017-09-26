@@ -31,13 +31,14 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 object EventBus extends App with StrictLogging {
+  Kamon.start()
+
   protected implicit val system = akka.actor.ActorSystem()
 
   // Initialization
   PipelinePool.init(
     system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
   Tracer.init(system)
-  Kamon.start()
 
   logger.info("Application initialization done.")
 
