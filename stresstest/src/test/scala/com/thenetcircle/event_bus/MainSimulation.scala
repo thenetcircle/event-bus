@@ -70,7 +70,7 @@ class MainSimulation extends Simulation {
 
   setUp(
     scn.inject(
-      rampUsers(10) over (1 seconds)
+      rampUsers(50000) over (1 minute)
     )).protocols(httpConf)
 
 }
