@@ -24,26 +24,30 @@ import com.thenetcircle.event_bus.tracing.Tracer
 import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import kamon.Kamon
 import net.ceedubs.ficus.Ficus._
 
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 object EventBus extends App with StrictLogging {
-  val shutdownHooks: mutable.ListBuffer[Function0[Unit]] =
-    mutable.ListBuffer.empty
   protected implicit val system = akka.actor.ActorSystem()
 
   // Initialization
   PipelinePool.init(
     system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
   Tracer.init(system)
+  Kamon.start()
 
   logger.info("Application initialization done.")
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
+
+    logger.info("Kamon is shutting down...")
+    Kamon.shutdown()
+
+    logger.info("ActorSystem is shutting down...")
     Http()
       .shutdownAllConnectionPools()
       .map(_ => terminateActorSystemAndWait)(ExecutionContext.global)
