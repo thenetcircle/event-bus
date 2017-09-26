@@ -31,7 +31,7 @@ class HttpTransportingISpec extends BaseIntegrationISpec {
 
     val transporter = Transporter(
       TransporterSettings(
-        system.settings.config.getConfig("event-bus-runtime.test-transporter")))
+        system.settings.config.getConfig("event-bus.runtime.test-transporter")))
     transporter.run()
   }
 

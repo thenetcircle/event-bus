@@ -50,7 +50,7 @@ abstract class AkkaStreamSpec(_system: ActorSystem)
   override def beforeAll(): Unit = {
     PipelinePool.init(
       _system.settings.config
-        .as[List[Config]]("event-bus-runtime.pipeline-pool"))
+        .as[List[Config]]("event-bus.runtime.pipeline-pool"))
     Tracer.init(_system)
   }
 

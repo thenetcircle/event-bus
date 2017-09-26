@@ -37,7 +37,7 @@ object EventBus extends App with StrictLogging {
 
   // Initialization
   PipelinePool.init(
-    system.settings.config.as[List[Config]]("event-bus-runtime.pipeline-pool"))
+    system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
   Tracer.init(system)
 
   logger.info("Application initialization done.")
@@ -56,7 +56,7 @@ object EventBus extends App with StrictLogging {
 
   // Launch transporters
   val transportersConfig = system.settings.config
-    .as[Option[List[Config]]]("event-bus-runtime.transporters")
+    .as[Option[List[Config]]]("event-bus.runtime.transporters")
   transportersConfig.foreach(configList =>
     configList.foreach(c => {
       val transporterSettings = TransporterSettings(c)
@@ -66,7 +66,7 @@ object EventBus extends App with StrictLogging {
 
   // Launch dispatchers
   val dispatchersConfig = system.settings.config
-    .as[Option[List[Config]]]("event-bus-runtime.dispatchers")
+    .as[Option[List[Config]]]("event-bus.runtime.dispatchers")
   dispatchersConfig.foreach(configList =>
     configList.foreach(c => {
       val dispatcherSettings = DispatcherSettings(c)

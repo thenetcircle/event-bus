@@ -44,7 +44,7 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
 
     val transporter = Transporter(
       TransporterSettings(
-        system.settings.config.getConfig("event-bus-runtime.test-transporter")))
+        system.settings.config.getConfig("event-bus.runtime.test-transporter")))
     transporter.run()
 
     val dispatcher = Dispatcher(
@@ -59,7 +59,7 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
                          |}
                        """.stripMargin)
           .withFallback(system.settings.config
-            .getConfig("event-bus-runtime.test-dispatcher"))))
+            .getConfig("event-bus.runtime.test-dispatcher"))))
     dispatcher.run()
 
     val route = path("") {
