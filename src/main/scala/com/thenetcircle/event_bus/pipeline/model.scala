@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import akka.NotUsed
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.Config
@@ -65,7 +65,7 @@ trait PipelineOutlet {
   val outletSettings: PipelineOutletSettings
 
   val stream: Source[Source[Event, NotUsed], NotUsed]
-  val committer: Flow[Event, Event, NotUsed]
+  val committer: Sink[Event, NotUsed]
 }
 
 object PipelineType extends Enumeration {

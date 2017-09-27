@@ -39,9 +39,8 @@ object TransporterSettings extends StrictLogging {
 
     val name = config.as[String]("name")
 
-    val entryPointsSettings: Vector[EntryPointSettings] =
-      for (_config <- config.as[Vector[Config]]("entrypoints"))
-        yield EntryPointSettings(_config)
+    val entryPointsSettings =
+      config.as[Vector[Config]]("entrypoints").map(EntryPointSettings(_))
 
     val pipelineName = config.as[String]("pipeline.name")
     val pipeline     = PipelinePool().getPipeline(pipelineName).get

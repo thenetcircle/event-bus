@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.pipeline.kafka
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
-import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink, Source}
-import akka.stream.{FlowShape, Materializer}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
@@ -118,39 +118,27 @@ private[kafka] final class KafkaPipelineOutlet(
   }
 
   /** Batch commit flow */
-  override lazy val committer: Flow[Event, Event, NotUsed] =
-    Flow.fromGraph(GraphDSL.create() { implicit builder =>
-      import GraphDSL.Implicits._
-
-      val broadcast = builder.add(Broadcast[Event](2))
-      val output    = builder.add(Flow[Event])
-      val commitSink =
-        Flow[Event]
-          .collect {
-            case e if e.hasContext("kafkaCommittableOffset") =>
-              (e.context("kafkaCommittableOffset")
-                 .asInstanceOf[CommittableOffset],
-               e.tracingId)
-          }
-          .batch(
-            max = outletSettings.commitBatchMax,
-            firstElem => {
-              val batch       = CommittableOffsetBatch.empty.updated(firstElem._1)
-              val tracingList = List[Long](firstElem._2)
-              batch -> tracingList
-            }
-          )((result, elem) =>
-            (result._1.updated(elem._1), result._2.+:(elem._2)))
-          .mapAsync(outletSettings.commitParallelism)(result => {
-            result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
-            result._1.commitScaladsl()
-          })
-          .to(Sink.ignore)
-
-      /** --------- work flow --------- */
-      broadcast.out(0) ~> commitSink
-      broadcast.out(1) ~> output.in
-
-      FlowShape[Event, Event](broadcast.in, output.out)
-    })
+  override lazy val committer: Sink[Event, NotUsed] =
+    Flow[Event]
+      .collect {
+        case e if e.hasContext("kafkaCommittableOffset") =>
+          e.context("kafkaCommittableOffset")
+            .asInstanceOf[CommittableOffset] -> e.tracingId
+      }
+      .batch(
+        max = outletSettings.commitBatchMax, {
+          case (committableOffset, tracingId) =>
+            val batch       = CommittableOffsetBatch.empty.updated(committableOffset)
+            val tracingList = List[Long](tracingId)
+            batch -> tracingList
+        }
+      ) {
+        case ((batch, tracingList), (committableOffset, tracingId)) =>
+          batch.updated(committableOffset) -> tracingList.+:(tracingId)
+      }
+      .mapAsync(outletSettings.commitParallelism)(result => {
+        result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
+        result._1.commitScaladsl()
+      })
+      .to(Sink.ignore)
 }

@@ -35,11 +35,11 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |{
                                              |  name = TestDispatcher
                                              |  max-parallel-sources = 100
-                                             |  endpoint {
+                                             |  endpoints = [{
                                              |    type = http
                                              |    name = TestEndPoint
                                              |    request.host = 127.0.0.1
-                                             |  }
+                                             |  }]
                                              |  pipeline {
                                              |    name = TestPipeline
                                              |    outlet-settings {
@@ -63,8 +63,9 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     settings.name shouldEqual "TestDispatcher"
     settings.maxParallelSources shouldEqual 100
 
-    settings.endPointSettings.name shouldEqual "TestEndPoint"
-    settings.endPointSettings shouldBe a[HttpEndPointSettings]
+    settings.endPointSettings.size shouldEqual 1
+    settings.endPointSettings(0).name shouldEqual "TestEndPoint"
+    settings.endPointSettings(0) shouldBe a[HttpEndPointSettings]
 
     settings.pipeline.pipelineType shouldEqual PipelineType.Kafka
     settings.pipeline.pipelineSettings.name shouldEqual "TestPipeline"
@@ -83,11 +84,11 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val config = ConfigFactory.parseString("""
                                              |{
                                              |  name = TestDefaultDispatcher
-                                             |  endpoint {
+                                             |  endpoints = [{
                                              |    type = http
                                              |    name = TestEndPoint
                                              |    request.host = 127.0.0.1
-                                             |  }
+                                             |  }]
                                              |  pipeline {
                                              |    name = TestPipeline
                                              |    outlet-settings {
@@ -103,7 +104,7 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val settings = DispatcherSettings(config)
 
     settings.name shouldEqual "TestDefaultDispatcher"
-    settings.maxParallelSources shouldEqual 10
+    settings.maxParallelSources shouldEqual 100
     settings.materializerSettings shouldBe empty
   }
 

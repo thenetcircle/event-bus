@@ -40,7 +40,8 @@ object DispatcherSettings extends StrictLogging {
     val name               = config.as[String]("name")
     val maxParallelSources = config.as[Int]("max-parallel-sources")
 
-    val endPointSettings = EndPointSettings(config.as[Config]("endpoint"))
+    val endPointSettings =
+      config.as[Vector[Config]]("endpoints").map(EndPointSettings(_))
 
     val pipelineName = config.as[String]("pipeline.name")
     val pipeline     = PipelinePool().getPipeline(pipelineName).get
@@ -75,7 +76,7 @@ object DispatcherSettings extends StrictLogging {
 final case class DispatcherSettings(
     name: String,
     maxParallelSources: Int,
-    endPointSettings: EndPointSettings,
+    endPointSettings: Vector[EndPointSettings],
     pipeline: Pipeline,
     pipelineOutletSettings: PipelineOutletSettings,
     materializerSettings: Option[ActorMaterializerSettings]

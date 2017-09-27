@@ -42,35 +42,6 @@ class DispatcherSpec extends AkkaStreamSpec {
 
   it should "be properly delivered each port of endpoint and committer" in {
 
-    /*val dispatcherSettings = DispatcherSettings(
-      name = "TestDispatcher",
-      maxParallelSources = 10,
-      endPointSettings = createHttpEndPointSettings(),
-      pipeline = KafkaPipelineFactory.getPipeline("TestPipeline"),
-      rightPortSettings =
-        KafkaPipelineFactory.getRightPortSettings(ConfigFactory.empty()),
-      None
-    )*/
-    val dispatcherSettings =
-      DispatcherSettings(
-        ConfigFactory.parseString("""
-            |{
-            |  name = TestDispatcher
-            |  max-parallel-sources = 10
-            |  endpoint {
-            |    type = http
-            |    name = TestDispatcher-TestEndPoint
-            |    request.host = localhost
-            |  }
-            |  pipeline {
-            |    name = TestPipeline
-            |    outlet-settings {
-            |      group-id = "TestDispatcher"
-            |    }
-            |  }
-            |}
-          """.stripMargin))
-
     val testSource1 = TestPublisher.probe[Event]()
     val testSource2 = TestPublisher.probe[Event]()
     val testSource3 = TestPublisher.probe[Event]()
@@ -96,8 +67,8 @@ class DispatcherSpec extends AkkaStreamSpec {
             .fromPublisher(testSource2) :: Source
             .fromPublisher(testSource3) :: Nil)
 
-      override val committer: Flow[Event, Event, NotUsed] =
-        createFlowFromSink(Sink.fromSubscriber(testCommitter))
+      override val committer: Sink[Event, NotUsed] =
+        Sink.fromSubscriber(testCommitter)
     }
 
     val endPoint = new EndPoint {
@@ -117,8 +88,7 @@ class DispatcherSpec extends AkkaStreamSpec {
       }
     }
 
-    val dispatcher =
-      new Dispatcher(dispatcherSettings, pipelineOutlet, endPoint)
+    val dispatcher = createDispatcher(Vector(endPoint), pipelineOutlet)
 
     dispatcher.run()
 
@@ -127,10 +97,10 @@ class DispatcherSpec extends AkkaStreamSpec {
     val testEvent3 = createTestEvent(name = "TestEvent3")
     val testEvent4 = createTestEvent(name = "TestEvent4")
 
+    testCommitter.request(3)
     testSink1.request(1)
     testSink2.request(1)
     testSink3.request(1)
-    testCommitter.request(3)
 
     testSource1.sendNext(testEvent1)
     testSource2.sendNext(testEvent2)
@@ -155,5 +125,126 @@ class DispatcherSpec extends AkkaStreamSpec {
     testSink3.requestNext(testEvent4)
   }
 
+  it should "evenly delivery to endpoints" in {
+
+    val testSource1 = Source.fromIterator(
+      () =>
+        (for (i <- 1 to 10)
+          yield createTestEvent(name = s"Source1-TestEvent$i")).iterator)
+
+    val testSource2 = Source.fromIterator(
+      () =>
+        (for (i <- 1 to 10)
+          yield createTestEvent(name = s"Source2-TestEvent$i")).iterator)
+
+    val testSource3 = Source.fromIterator(
+      () =>
+        (for (i <- 1 to 10)
+          yield createTestEvent(name = s"Source3-TestEvent$i")).iterator)
+
+    val testSource4 = Source.fromIterator(
+      () =>
+        (for (i <- 1 to 10)
+          yield createTestEvent(name = s"Source4-TestEvent$i")).iterator)
+
+    val testSink1 = TestSubscriber.probe[Event]()
+    val testSink2 = TestSubscriber.probe[Event]()
+    val testSink3 = TestSubscriber.probe[Event]()
+    val testSink4 = TestSubscriber.probe[Event]()
+    val testSink5 = TestSubscriber.probe[Event]()
+
+    val pipelineOutlet = new PipelineOutlet {
+      override val pipeline: Pipeline =
+        PipelinePool().getPipeline("TestPipeline").get
+      override val outletName: String = "TestOutlet"
+      override val outletSettings: PipelineOutletSettings =
+        new PipelineOutletSettings {
+          override val eventFormat: EventFormat = EventFormat.DefaultFormat
+        }
+
+      override val stream: Source[Source[Event, NotUsed], NotUsed] =
+        Source[Source[Event, NotUsed]](
+          testSource1 :: testSource2 :: testSource3 :: testSource4 :: Nil)
+
+      override val committer: Sink[Event, NotUsed] = Flow[Event].to(Sink.ignore)
+    }
+
+    val endPoints = Vector[EndPoint](
+      new EndPoint {
+        var currentIndex = 0
+        override val settings: EndPointSettings = new EndPointSettings {
+          override val name         = "TestEndPoint1"
+          override val endPointType = EndPointType.HTTP
+        }
+        override def stream: Flow[Event, Event, NotUsed] = {
+          currentIndex += 1
+          currentIndex match {
+            case 1 => createFlowFromSink(Sink.fromSubscriber(testSink1))
+            case 2 => createFlowFromSink(Sink.fromSubscriber(testSink2))
+            case 3 => createFlowFromSink(Sink.fromSubscriber(testSink3))
+            case _ => throw new Exception("index error")
+          }
+        }
+      },
+      new EndPoint {
+        override val settings: EndPointSettings = new EndPointSettings {
+          override val name         = "TestEndPoint2"
+          override val endPointType = EndPointType.HTTP
+        }
+        override def stream: Flow[Event, Event, NotUsed] =
+          createFlowFromSink(Sink.fromSubscriber(testSink4))
+      },
+      new EndPoint {
+        override val settings: EndPointSettings = new EndPointSettings {
+          override val name         = "TestEndPoint3"
+          override val endPointType = EndPointType.HTTP
+        }
+        override def stream: Flow[Event, Event, NotUsed] =
+          createFlowFromSink(Sink.fromSubscriber(testSink5))
+      }
+    )
+
+    val dispatcher = createDispatcher(endPoints, pipelineOutlet)
+    dispatcher.run()
+
+    for (i <- 1 to 10) {
+      testSink1.requestNext().metadata.name shouldEqual s"Source1-TestEvent$i"
+      testSink2.requestNext().metadata.name shouldEqual s"Source4-TestEvent$i"
+      testSink4.requestNext().metadata.name shouldEqual s"Source2-TestEvent$i"
+      testSink5.requestNext().metadata.name shouldEqual s"Source3-TestEvent$i"
+    }
+
+    testSink1.expectComplete()
+    testSink2.expectComplete()
+    testSink4.expectComplete()
+    testSink5.expectComplete()
+  }
+
   it should "process maximum specific sub-streams at a time" in {}
+
+  private def createDispatcher(endPoints: Vector[EndPoint],
+                               pipelineOutlet: PipelineOutlet): Dispatcher = {
+
+    val dispatcherSettings =
+      DispatcherSettings(
+        ConfigFactory.parseString("""
+                                    |{
+                                    |  name = TestDispatcher
+                                    |  max-parallel-sources = 10
+                                    |  endpoints = [{
+                                    |    type = http
+                                    |    name = TestDispatcher-TestEndPoint
+                                    |    request.host = localhost
+                                    |  }]
+                                    |  pipeline {
+                                    |    name = TestPipeline
+                                    |    outlet-settings {
+                                    |      group-id = "TestDispatcher"
+                                    |    }
+                                    |  }
+                                    |}
+                                  """.stripMargin))
+
+    new Dispatcher(dispatcherSettings, pipelineOutlet, endPoints)
+  }
 }

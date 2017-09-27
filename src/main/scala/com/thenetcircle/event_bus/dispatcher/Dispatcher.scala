@@ -18,19 +18,30 @@
 package com.thenetcircle.event_bus.dispatcher
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.{RunnableGraph, Sink}
+import akka.stream.scaladsl.RunnableGraph
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.typesafe.scalalogging.StrictLogging
 
-class Dispatcher(settings: DispatcherSettings,
-                 pipelineOutlet: PipelineOutlet,
-                 endPoint: EndPoint)(implicit materializer: Materializer)
+import scala.util.control.NonFatal
+
+class Dispatcher(
+    settings: DispatcherSettings,
+    pipelineOutlet: PipelineOutlet,
+    endPoints: Vector[EndPoint])(implicit materializer: Materializer)
     extends StrictLogging {
 
   logger.debug(
     s"new Dispatcher ${settings.name} is created with settings: $settings")
+
+  def getNextEndpoint(index: Int): EndPoint =
+    if (endPoints.size == 1)
+      endPoints(0)
+    else
+      endPoints(index % endPoints.size)
+
+  private var sourceIndex = 0
 
   // TODO: draw a graph in comments
   // TODO: error handler
@@ -38,12 +49,25 @@ class Dispatcher(settings: DispatcherSettings,
   // TODO: Mat value
   lazy val dispatchStream: RunnableGraph[_] =
     pipelineOutlet.stream
-      .flatMapMerge(settings.maxParallelSources, source => {
-        logger.info(s"new source is coming")
-        source.via(endPoint.stream.async)
-      })
-      .via(pipelineOutlet.committer.async)
-      .to(Sink.foreach(event => logger.debug(s"Event $event is committed.")))
+      .flatMapMerge(
+        1000,
+        source => {
+          logger.info(s"new source is coming")
+          var retryIndex = sourceIndex
+
+          val result = source
+            .via(getNextEndpoint(sourceIndex).stream)
+            .recoverWithRetries(attempts = endPoints.size - 1, {
+              case NonFatal(ex) =>
+                retryIndex += 1
+                source.via(getNextEndpoint(retryIndex).stream)
+            })
+
+          sourceIndex += 1
+          result
+        }
+      )
+      .to(pipelineOutlet.committer.async)
 
   // TODO add a transporter controller as a materialized value
   def run(): Unit = {
@@ -63,8 +87,8 @@ object Dispatcher {
     val pipelineOutlet =
       settings.pipeline.getNewOutlet(settings.pipelineOutletSettings)
 
-    val endPoint = EndPoint(settings.endPointSettings)
+    val endPoints = settings.endPointSettings.map(EndPoint(_))
 
-    new Dispatcher(settings, pipelineOutlet, endPoint)
+    new Dispatcher(settings, pipelineOutlet, endPoints)
   }
 }
