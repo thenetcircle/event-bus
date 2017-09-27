@@ -60,7 +60,7 @@ class Tracer(te: TracingExtensionImpl) {
     record(tracingId, "name", event.metadata.name)
     record(tracingId, "publisher", event.metadata.publisher)
     record(tracingId, "trigger", event.metadata.trigger.toString)
-    record(tracingId, "timestamp", event.metadata.timestamp.toString)
+    record(tracingId, "timestamp", event.metadata.publishTime.toString)
     record(tracingId, "channel", event.channel)
   }
 }

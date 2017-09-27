@@ -65,10 +65,9 @@ case class EventBody(
 case class EventMetaData(
     uuid: String,
     name: String,
-    timestamp: Long,
+    publishTime: Long,
     publisher: String,
-    /** format: triggerType: String -> triggerId: String */
-    trigger: Tuple2[String, String]
+    trigger: Tuple2[String, String] // triggerType: String -> triggerId: String
 )
 
 case class Event(

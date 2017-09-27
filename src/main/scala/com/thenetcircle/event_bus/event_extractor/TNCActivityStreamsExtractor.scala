@@ -94,7 +94,7 @@ abstract class TNCActivityStreamsExtractor {
 
     val uuid = tncActivity.id.getOrElse(EventExtractor.genUUID())
     val name = tncActivity.verb
-    val timestamp = tncActivity.published match {
+    val publishTime = tncActivity.published match {
       case Some(datetime: String) =>
         new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(datetime).getTime
       case None => System.currentTimeMillis()
@@ -109,7 +109,7 @@ abstract class TNCActivityStreamsExtractor {
       body = EventBody(data, format),
       metadata = EventMetaData(uuid,
                                name,
-                               timestamp,
+                               publishTime,
                                publisher,
                                actor.id.get -> actor.objectType.get)
     )
