@@ -29,6 +29,7 @@ import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 /** LeftPort Implementation */
+// TODO: When Kafka delivery failed, Which will complete upstreams as well, Can be reproduced by create new topic
 private[kafka] final class KafkaPipelineInlet(
     val pipeline: KafkaPipeline,
     val inletName: String,
@@ -38,19 +39,18 @@ private[kafka] final class KafkaPipelineInlet(
 
   import KafkaPipelineInlet._
 
-  override val stream: Flow[Event, Event, NotUsed] = {
+  // Combine LeftPortSettings with PipelineSettings
+  private val producerSettings: ProducerSettings[ProducerKey, ProducerValue] = {
+    val _settings = pipeline.pipelineSettings.producerSettings.withProperty(
+      ProducerConfig.PARTITIONER_CLASS_CONFIG,
+      classOf[KafkaPartitioner].getName)
 
-    // Combine LeftPortSettings with PipelineSettings
-    val producerSettings: ProducerSettings[ProducerKey, ProducerValue] = {
-      val _settings = pipeline.pipelineSettings.producerSettings.withProperty(
-        ProducerConfig.PARTITIONER_CLASS_CONFIG,
-        classOf[KafkaPartitioner].getName)
+    inletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
+    inletSettings.parallelism.foreach(_settings.withParallelism)
+    _settings
+  }
 
-      inletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
-      inletSettings.parallelism.foreach(_settings.withParallelism)
-      _settings
-    }
-
+  override val stream: Flow[Event, Event, NotUsed] =
     Flow[Event]
       .via(tracingFlow(TracingSteps.PIPELINE_PUSHING))
       .map(
@@ -66,7 +66,6 @@ private[kafka] final class KafkaPipelineInlet(
       .map(msg => msg.message.passThrough)
       .via(tracingFlow(TracingSteps.PIPELINE_PUSHED))
       .named(inletName)
-  }
 }
 
 object KafkaPipelineInlet {

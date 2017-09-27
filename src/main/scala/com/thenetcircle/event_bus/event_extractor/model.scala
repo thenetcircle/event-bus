@@ -60,16 +60,15 @@ object EventExtractor {
     */
   def genUUID(): String = UUID.random.toString
 
+  implicit val activityStreamsExtractor =
+    new TNCActivityStreamsExtractor with EventExtractor
+
   def apply(format: EventFormat): EventExtractor = format match {
-
-    case EventFormat.DefaultFormat =>
-      new TNCActivityStreamsExtractor with EventExtractor
-
+    case EventFormat.DefaultFormat => activityStreamsExtractor
     case EventFormat.TestFormat =>
       new TNCActivityStreamsExtractor with EventExtractor {
         override val format: EventFormat = TestFormat
       }
-
   }
 
 }

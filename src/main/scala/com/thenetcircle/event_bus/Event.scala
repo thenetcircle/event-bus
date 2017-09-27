@@ -47,7 +47,6 @@ object EventFormat {
       override def read(config: Config, path: String) =
         EventFormat(config.getString(path))
     }
-
 }
 
 trait EventCommitter {

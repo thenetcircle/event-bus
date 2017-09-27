@@ -34,6 +34,11 @@ import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineInlet
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
 import com.typesafe.scalalogging.StrictLogging
+import ActorAttributes.supervisionStrategy
+import Supervision.resumingDecider
+import akka.stream.scaladsl.RestartFlow
+
+import scala.concurrent.duration._
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
@@ -42,17 +47,30 @@ class Transporter(settings: TransporterSettings,
     materializer: Materializer)
     extends StrictLogging {
 
-  logger.debug(s"new Transporter ${settings.name} is created")
+  logger.info(s"new Transporter ${settings.name} is created")
 
   private val committer = Flow[Event]
     .filter(_.committer.isDefined)
-    // TODO: take care of Supervision of mapAsync
-    .mapAsync(settings.commitParallelism)(
-      event =>
-        event.committer.get
-          .commit()
-          .map(_ => event)(materializer.executionContext))
-    .to(Sink.foreach(event => logger.debug(s"Event $event is committed.")))
+    .mapAsync(settings.commitParallelism)(event =>
+      event.committer.get
+        .commit()
+        .map(_ => {
+          logger.debug(
+            s"Event(${event.metadata.uuid}, ${event.metadata.name}) is committed.")
+        })(materializer.executionContext))
+    .withAttributes(supervisionStrategy(resumingDecider))
+    .to(Sink.ignore)
+
+  private def pipelineInlet(): Flow[Event, Event, NotUsed] =
+    RestartFlow.withBackoff[Event, Event](
+      minBackoff = 1.second,
+      maxBackoff = 10.minutes,
+      randomFactor = 0.1
+    ) { () =>
+      logger.info(
+        s"Creating a inlet of pipeline ${settings.pipeline.pipelineSettings.name}")
+      pipelineInletGetter().stream
+    }
 
   // TODO: draw a graph in comments
   // TODO: error handler
@@ -98,15 +116,15 @@ class Transporter(settings: TransporterSettings,
 
           for (i <- 0 until transportParallelism) {
 
-                                balancer.out(i) ~> pipelineInletGetter().stream.async ~> committerMerger.in(i)
+                                balancer.out(i) ~> pipelineInlet() ~> committerMerger.in(i)
 
           }
 
-                                                                                         committerMerger.out ~> committer.async
+                                                                      committerMerger.out ~> committer.async
         }
         else {
 
-          prioritizedChannel ~> pipelineInletGetter().stream.async ~> committer.async
+          prioritizedChannel ~> pipelineInlet() ~> committer.async
 
         }
 
@@ -117,15 +135,16 @@ class Transporter(settings: TransporterSettings,
 
   // TODO add a transporter controller as a materialized value
   def run(): Unit = {
-    logger.info(s"Transporter ${settings.name} is going to run")
+    logger.info(s"running Transporter ${settings.name}")
     stream.run()
   }
-
 }
 
-object Transporter {
+object Transporter extends StrictLogging {
   def apply(settings: TransporterSettings)(
       implicit system: ActorSystem): Transporter = {
+
+    logger.info(s"Creating a new Transporter ${settings.name} from TransporterSettings")
 
     implicit val materializer = ActorMaterializer(settings.materializerSettings, Some(settings.name))
 

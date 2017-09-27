@@ -32,4 +32,12 @@ It supplies data operations (like partition, broadcast, filtering etc, thanks fo
 First version of EventBus based on Akka, Running with some basic requirements.
 
 ## TODO List
-[Check out TODO List](./TODO.md)
+- Add logs
+- Error Handler
+- Improve Tracer
+- Stream Runner (take care of start, restart services)
+- Implicate Channel Resolver
+- Integrate Sentry
+- Config storage
+- Controller Api (start new service, restart services, change services, update configuration)
+- Admin Interface

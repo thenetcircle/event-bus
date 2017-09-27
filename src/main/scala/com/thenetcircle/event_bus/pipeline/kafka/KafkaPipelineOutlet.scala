@@ -41,38 +41,38 @@ private[kafka] final class KafkaPipelineOutlet(
     extends PipelineOutlet
     with Tracing {
 
+  require(
+    outletSettings.topics.isDefined || outletSettings.topicPattern.isDefined,
+    "The outlet of KafkaPipeline needs to subscribe topics")
+
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
-  override val stream: Source[Source[Event, NotUsed], NotUsed] = {
+  /** Build ConsumerSettings */
+  private val kafkaConsumerSettings
+    : ConsumerSettings[ConsumerKey, ConsumerValue] = {
+    val _settings = pipeline.pipelineSettings.consumerSettings
+      .withGroupId(outletSettings.groupId)
 
-    require(
-      outletSettings.topics.isDefined || outletSettings.topicPattern.isDefined,
-      "The outlet of KafkaPipeline needs to subscribe topics")
+    outletSettings.pollInterval.foreach(_settings.withPollInterval)
+    outletSettings.pollTimeout.foreach(_settings.withPollTimeout)
+    outletSettings.stopTimeout.foreach(_settings.withStopTimeout)
+    outletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
+    outletSettings.commitTimeout.foreach(_settings.withCommitTimeout)
+    outletSettings.wakeupTimeout.foreach(_settings.withWakeupTimeout)
+    outletSettings.maxWakeups.foreach(_settings.withMaxWakeups)
 
-    /** Build ConsumerSettings */
-    val kafkaConsumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue] = {
-      val _settings = pipeline.pipelineSettings.consumerSettings
-        .withGroupId(outletSettings.groupId)
+    _settings
+  }
 
-      outletSettings.pollInterval.foreach(_settings.withPollInterval)
-      outletSettings.pollTimeout.foreach(_settings.withPollTimeout)
-      outletSettings.stopTimeout.foreach(_settings.withStopTimeout)
-      outletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
-      outletSettings.commitTimeout.foreach(_settings.withCommitTimeout)
-      outletSettings.wakeupTimeout.foreach(_settings.withWakeupTimeout)
-      outletSettings.maxWakeups.foreach(_settings.withMaxWakeups)
-
-      _settings
+  private var subscription: AutoSubscription =
+    if (outletSettings.topics.isDefined) {
+      Subscriptions.topics(outletSettings.topics.get)
+    } else {
+      Subscriptions.topicPattern(outletSettings.topicPattern.get)
     }
 
-    var subscription: AutoSubscription =
-      if (outletSettings.topics.isDefined) {
-        Subscriptions.topics(outletSettings.topics.get)
-      } else {
-        Subscriptions.topicPattern(outletSettings.topicPattern.get)
-      }
-
+  override val stream: Source[Source[Event, NotUsed], NotUsed] =
     // TODO: maybe use one consumer for one partition
     Consumer
       .committablePartitionedSource(kafkaConsumerSettings, subscription)
@@ -122,7 +122,6 @@ private[kafka] final class KafkaPipelineOutlet(
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
       .named(outletName)
-  }
 
   /** Batch commit flow */
   override lazy val committer: Sink[Event, NotUsed] =

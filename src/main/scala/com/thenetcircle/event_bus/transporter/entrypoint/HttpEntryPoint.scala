@@ -45,10 +45,10 @@ class HttpEntryPoint(
     with StrictLogging
     with Tracing {
 
-  logger.debug(s"new HttpEntryPoint ${settings.name} is created")
+  logger.info(s"new HttpEntryPoint ${settings.name} is created")
 
   private val loggerFlow = Flow[HttpRequest].map(request => {
-    logger.debug(s"new Request $request")
+    logger.debug(s"received a new Request")
     request
   })
 
@@ -84,7 +84,7 @@ class HttpEntryPoint(
       .named(s"entrypoint-${settings.name}")
 }
 
-object HttpEntryPoint {
+object HttpEntryPoint extends StrictLogging {
 
   val failedResponse =
     HttpResponse(StatusCodes.BadRequest, entity = HttpEntity("ko"))
@@ -94,6 +94,9 @@ object HttpEntryPoint {
       implicit system: ActorSystem,
       materializer: Materializer,
       eventExtractor: EventExtractor): HttpEntryPoint = {
+    logger.info(
+      s"Creating a new HttpEntryPoint ${settings.name}, With interface: ${settings.interface}, port: ${settings.port}")
+
     val httpBindSource = Http()
       .bind(
         interface = settings.interface,
@@ -220,8 +223,7 @@ object HttpEntryPoint {
               push(out1, event)
 
             case Failure(ex) =>
-              log.info(
-                s"Request send failed with error message: ${ex.getMessage}")
+              log.info(s"Request send failed with error: ${ex.getMessage}")
               tracer.record(tracingId, ex)
               tracer.record(tracingId, TracingSteps.ENTRYPOINT_COMMITTED)
               responsePromise.success(failedResponse)

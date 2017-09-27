@@ -37,40 +37,49 @@ object TransporterSettings extends StrictLogging {
       _config.withFallback(
         system.settings.config.getConfig("event-bus.transporter"))
 
-    val name = config.as[String]("name")
+    logger.debug(
+      s"Creating a new TransporterSettings accroding to config: $config")
 
-    val entryPointsSettings =
-      config.as[Vector[Config]]("entrypoints").map(EntryPointSettings(_))
+    try {
+      val name = config.as[String]("name")
 
-    val pipelineName = config.as[String]("pipeline.name")
-    val pipeline     = PipelinePool().getPipeline(pipelineName).get
-    val pipelineInletSettings = PipelineFactory
-      .getConcreteFactory(pipeline.pipelineType)
-      .createPipelineInletSettings(config.as[Config]("pipeline.inlet-settings"))
+      val entryPointsSettings =
+        config.as[Vector[Config]]("entrypoints").map(EntryPointSettings(_))
 
-    val transportParallelism = config.as[Int]("transport-parallelism")
-    val commitParallelism    = config.as[Int]("commit-parallelism")
+      val pipelineName = config.as[String]("pipeline.name")
+      val pipeline     = PipelinePool().getPipeline(pipelineName).get
+      val pipelineInletSettings = PipelineFactory
+        .getConcreteFactory(pipeline.pipelineType)
+        .createPipelineInletSettings(
+          config.as[Config]("pipeline.inlet-settings"))
 
-    val materializerKey = "akka.stream.materializer"
-    val materializerSettings: Option[ActorMaterializerSettings] = {
-      if (config.hasPath(materializerKey))
-        Some(
-          ActorMaterializerSettings(
-            config
+      val transportParallelism = config.as[Int]("transport-parallelism")
+      val commitParallelism    = config.as[Int]("commit-parallelism")
+
+      val materializerKey = "akka.stream.materializer"
+      val materializerSettings: Option[ActorMaterializerSettings] = {
+        if (config.hasPath(materializerKey))
+          Some(
+            ActorMaterializerSettings(config
               .getConfig(materializerKey)
               .withFallback(system.settings.config.getConfig(materializerKey))))
-      else
-        None
+        else
+          None
+      }
+
+      TransporterSettings(name,
+                          commitParallelism,
+                          transportParallelism,
+                          entryPointsSettings,
+                          pipeline,
+                          pipelineInletSettings,
+                          materializerSettings)
+    } catch {
+      case ex: Throwable =>
+        logger.error(
+          s"Creating TransporterSettings failed with error: ${ex.getMessage}")
+        throw ex
     }
-
-    TransporterSettings(name,
-                        commitParallelism,
-                        transportParallelism,
-                        entryPointsSettings,
-                        pipeline,
-                        pipelineInletSettings,
-                        materializerSettings)
-
   }
 }
 

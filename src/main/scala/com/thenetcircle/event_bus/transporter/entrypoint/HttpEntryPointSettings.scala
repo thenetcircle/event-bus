@@ -23,6 +23,7 @@ import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointType.EntryPointType
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 /** Http EntryPoint Settings */
@@ -39,31 +40,41 @@ case class HttpEntryPointSettings(
   override val entryPointType: EntryPointType = EntryPointType.HTTP
 }
 
-object HttpEntryPointSettings {
+object HttpEntryPointSettings extends StrictLogging {
   def apply(_config: Config)(
       implicit system: ActorSystem): HttpEntryPointSettings = {
     val config: Config =
       _config.withFallback(
         system.settings.config.getConfig("event-bus.entrypoint.http"))
 
-    val rootConfig =
-      system.settings.config
-    val serverSettings: ServerSettings =
-      if (config.hasPath("akka.http.server")) {
-        ServerSettings(config.withFallback(rootConfig))
-      } else {
-        ServerSettings(rootConfig)
-      }
+    logger.debug(
+      s"Creating a new HttpEntryPointSettings accroding to config: $config")
 
-    HttpEntryPointSettings(
-      config.as[String]("name"),
-      config.as[EntryPointPriority]("priority"),
-      config.as[Int]("max-connections"),
-      config.as[Int]("pre-connection-parallelism"),
-      config.as[EventFormat]("event-format"),
-      serverSettings,
-      config.as[String]("interface"),
-      config.as[Int]("port")
-    )
+    try {
+      val rootConfig =
+        system.settings.config
+      val serverSettings: ServerSettings =
+        if (config.hasPath("akka.http.server")) {
+          ServerSettings(config.withFallback(rootConfig))
+        } else {
+          ServerSettings(rootConfig)
+        }
+
+      HttpEntryPointSettings(
+        config.as[String]("name"),
+        config.as[EntryPointPriority]("priority"),
+        config.as[Int]("max-connections"),
+        config.as[Int]("pre-connection-parallelism"),
+        config.as[EventFormat]("event-format"),
+        serverSettings,
+        config.as[String]("interface"),
+        config.as[Int]("port")
+      )
+    } catch {
+      case ex: Throwable =>
+        logger.error(
+          s"Creating HttpEntryPointSettings failed with error: ${ex.getMessage}")
+        throw ex
+    }
   }
 }
