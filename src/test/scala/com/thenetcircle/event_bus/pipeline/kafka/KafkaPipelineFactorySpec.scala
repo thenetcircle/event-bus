@@ -17,7 +17,6 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
-import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
@@ -85,7 +84,6 @@ class KafkaPipelineFactorySpec extends AkkaStreamSpec {
                                   |{
                                   |  group-id = "TestGroup"
                                   |  extract-parallelism = 999
-                                  |  event-format = test
                                   |  topics = ["a", "b"]
                                   |  topicPattern = "event-*"
                                   |  stop-timeout = 999s
@@ -97,7 +95,6 @@ class KafkaPipelineFactorySpec extends AkkaStreamSpec {
 
     settings.groupId shouldEqual "TestGroup"
     settings.extractParallelism shouldEqual 999
-    settings.eventFormat shouldEqual EventFormat.TestFormat
     settings.topics shouldEqual Some(Set("a", "b"))
     settings.topicPattern shouldEqual Some("event-*")
     settings.stopTimeout shouldEqual Some(FiniteDuration(999, "s"))

@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.actor.ActorSystem
 import akka.kafka.{ConsumerSettings, ProducerSettings}
-import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.pipeline._
 import com.thenetcircle.event_bus.pipeline.kafka.extended.{
   EventSerializer,
@@ -100,9 +99,6 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
       extractParallelism = config.as[Int]("extract-parallelism"),
       commitParallelism = config.as[Int]("commit-parallelism"),
       commitBatchMax = config.as[Int]("commit-batch-max"),
-      eventFormat = config
-        .as[Option[EventFormat]]("event-format")
-        .getOrElse(EventFormat.DefaultFormat),
       topics = config.as[Option[Set[String]]]("topics"),
       topicPattern = config.as[Option[String]]("topicPattern"),
       pollInterval = config.as[Option[FiniteDuration]]("poll-interval"),

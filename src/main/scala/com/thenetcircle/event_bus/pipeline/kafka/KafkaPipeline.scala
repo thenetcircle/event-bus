@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.stream.Materializer
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline._
 
@@ -62,9 +61,6 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
 
     require(pipelineOutletSettings.isInstanceOf[KafkaPipelineOutletSettings],
             "KafkaPipeline only accpect KafkaPipelineOutletSettings.")
-
-    implicit val eventExtractor: EventExtractor = EventExtractor(
-      pipelineOutletSettings.eventFormat)
 
     new KafkaPipelineOutlet(
       this,

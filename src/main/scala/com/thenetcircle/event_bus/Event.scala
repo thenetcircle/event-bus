@@ -26,15 +26,20 @@ import scala.concurrent.Future
 sealed trait EventFormat
 object EventFormat {
   type DefaultFormat = DefaultFormat.type
-  case object DefaultFormat extends EventFormat
+  object DefaultFormat extends EventFormat {
+    override def toString: String = "default"
+  }
 
   type TestFormat = TestFormat.type
-  case object TestFormat extends EventFormat
+  object TestFormat extends EventFormat {
+    override def toString: String = "test"
+  }
 
   def apply(formatString: String): EventFormat =
-    formatString.toUpperCase match {
-      case "DEFAULT" => DefaultFormat
-      case "TEST"    => TestFormat
+    formatString.toLowerCase match {
+      case "default" => DefaultFormat
+      case "test"    => TestFormat
+      case _         => DefaultFormat
     }
 
   implicit val eventFormatReader: ValueReader[EventFormat] =

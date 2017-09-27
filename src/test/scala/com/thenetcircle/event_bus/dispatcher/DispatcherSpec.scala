@@ -32,8 +32,7 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelinePool
 }
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import com.thenetcircle.event_bus.{createFlowFromSink, createTestEvent}
-import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.thenetcircle.event_bus.{Event, createFlowFromSink, createTestEvent}
 import com.typesafe.config.ConfigFactory
 
 class DispatcherSpec extends AkkaStreamSpec {
@@ -57,9 +56,7 @@ class DispatcherSpec extends AkkaStreamSpec {
         PipelinePool().getPipeline("TestPipeline").get
       override val outletName: String = "TestOutlet"
       override val outletSettings: PipelineOutletSettings =
-        new PipelineOutletSettings {
-          override val eventFormat: EventFormat = EventFormat.DefaultFormat
-        }
+        new PipelineOutletSettings {}
 
       override val stream: Source[Source[Event, NotUsed], NotUsed] =
         Source[Source[Event, NotUsed]](
@@ -158,9 +155,7 @@ class DispatcherSpec extends AkkaStreamSpec {
         PipelinePool().getPipeline("TestPipeline").get
       override val outletName: String = "TestOutlet"
       override val outletSettings: PipelineOutletSettings =
-        new PipelineOutletSettings {
-          override val eventFormat: EventFormat = EventFormat.DefaultFormat
-        }
+        new PipelineOutletSettings {}
 
       override val stream: Source[Source[Event, NotUsed], NotUsed] =
         Source[Source[Event, NotUsed]](

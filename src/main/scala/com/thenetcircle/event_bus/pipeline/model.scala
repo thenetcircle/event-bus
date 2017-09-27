@@ -21,8 +21,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
+import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
-import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
@@ -39,13 +39,13 @@ trait Pipeline {
   protected val outletId = new AtomicInteger(0)
 
   def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet
-
   def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
       implicit materializer: Materializer): PipelineOutlet
 
 }
 
 trait PipelineInletSettings
+trait PipelineOutletSettings
 
 trait PipelineInlet {
   val pipeline: Pipeline
@@ -53,10 +53,6 @@ trait PipelineInlet {
   val inletSettings: PipelineInletSettings
 
   val stream: Flow[Event, Event, NotUsed]
-}
-
-trait PipelineOutletSettings {
-  val eventFormat: EventFormat
 }
 
 trait PipelineOutlet {

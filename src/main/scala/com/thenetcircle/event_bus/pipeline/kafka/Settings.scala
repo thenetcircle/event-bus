@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.kafka.{ConsumerSettings, ProducerSettings}
-import com.thenetcircle.event_bus.EventFormat
 import com.thenetcircle.event_bus.pipeline.{
   PipelineInletSettings,
   PipelineOutletSettings,
@@ -43,7 +42,6 @@ case class KafkaPipelineOutletSettings(
     extractParallelism: Int,
     commitParallelism: Int,
     commitBatchMax: Int,
-    eventFormat: EventFormat,
     topics: Option[Set[String]],
     topicPattern: Option[String],
     pollInterval: Option[FiniteDuration],

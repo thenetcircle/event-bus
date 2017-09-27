@@ -24,6 +24,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
@@ -36,8 +37,7 @@ private[kafka] final class KafkaPipelineOutlet(
     val pipeline: KafkaPipeline,
     val outletName: String,
     val outletSettings: KafkaPipelineOutletSettings)(
-    implicit materializer: Materializer,
-    extractor: EventExtractor)
+    implicit materializer: Materializer)
     extends PipelineOutlet
     with Tracing {
 
@@ -80,11 +80,15 @@ private[kafka] final class KafkaPipelineOutlet(
         case (topicPartition, source) =>
           source
             .mapAsync(outletSettings.extractParallelism) { msg =>
-              val tracingId = msg.record
-                .key()
-                .data
-                .map(k => tracer.resumeTracing(k.tracingId))
-                .getOrElse(tracer.newTracing())
+              val (tracingId, extractor) =
+                msg.record
+                  .key()
+                  .data
+                  .map(k =>
+                    (tracer.resumeTracing(k.tracingId),
+                     EventExtractor(k.eventFormat)))
+                  .getOrElse(
+                    (tracer.newTracing(), EventExtractor(DefaultFormat)))
 
               tracer.record(tracingId, TracingSteps.PIPELINE_PULLED)
 
