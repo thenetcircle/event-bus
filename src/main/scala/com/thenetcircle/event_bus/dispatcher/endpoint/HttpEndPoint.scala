@@ -260,6 +260,4 @@ object HttpEndPoint {
     override def deepCopy(): Shape = HttpRetryEngineShape(incoming, result, ready, succeed, failed)
 
   }
-
-
 }

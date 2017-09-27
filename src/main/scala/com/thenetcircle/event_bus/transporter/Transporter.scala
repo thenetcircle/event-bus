@@ -40,6 +40,12 @@ import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
 
+/** Transports data from [[EntryPoint]]s to [[Pipeline]]
+  *
+  * @param settings the settings of this transporter
+  * @param entryPoints the [[EntryPoint]]s bind to this transporter, like data sources
+  * @param pipeline
+  */
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
                   pipeline: Pipeline)(implicit system: ActorSystem,
@@ -48,6 +54,7 @@ class Transporter(settings: TransporterSettings,
 
   logger.info(s"new Transporter ${settings.name} is created")
 
+  /** commits event after it got transported to pipeline */
   private val committer = Flow[Event]
     .filter(_.committer.isDefined)
     .mapAsync(settings.commitParallelism)(event =>
