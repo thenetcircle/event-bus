@@ -37,7 +37,7 @@ object TransporterSettings extends StrictLogging {
       _config.withFallback(
         system.settings.config.getConfig("event-bus.transporter"))
 
-    logger.debug(
+    logger.info(
       s"Creating a new TransporterSettings accroding to config: $config")
 
     try {

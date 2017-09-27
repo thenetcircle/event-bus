@@ -22,6 +22,7 @@ import java.text.SimpleDateFormat
 import akka.util.ByteString
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.{EventBody, EventFormat, EventMetaData}
+import com.typesafe.scalalogging.StrictLogging
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -81,39 +82,45 @@ object TNCActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val tncActivityFormat = jsonFormat5(TNCActivity)
 }
 
-abstract class TNCActivityStreamsExtractor {
+abstract class TNCActivityStreamsExtractor extends StrictLogging {
   import TNCActivityStreamsProtocol._
 
   val format: EventFormat = DefaultFormat
 
   def extract(data: ByteString)(
       implicit executor: ExecutionContext): Future[ExtractedData] = Future {
+    try {
+      val jsonAst     = data.utf8String.parseJson
+      val tncActivity = jsonAst.convertTo[TNCActivity]
 
-    val jsonAst     = data.utf8String.parseJson
-    val tncActivity = jsonAst.convertTo[TNCActivity]
+      val uuid = tncActivity.id.getOrElse(EventExtractor.genUUID())
+      val name = tncActivity.verb
+      val publishTime = tncActivity.published match {
+        case Some(datetime: String) =>
+          new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
+            .parse(datetime)
+            .getTime
+        case None => System.currentTimeMillis()
+      }
+      val publisher = tncActivity.provider match {
+        case Some(o) => o.id.getOrElse("")
+        case None    => ""
+      }
+      val actor = tncActivity.actor
 
-    val uuid = tncActivity.id.getOrElse(EventExtractor.genUUID())
-    val name = tncActivity.verb
-    val publishTime = tncActivity.published match {
-      case Some(datetime: String) =>
-        new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(datetime).getTime
-      case None => System.currentTimeMillis()
+      ExtractedData(
+        body = EventBody(data, format),
+        metadata = EventMetaData(uuid,
+                                 name,
+                                 publishTime,
+                                 publisher,
+                                 actor.id.get -> actor.objectType.get)
+      )
+    } catch {
+      case ex: Throwable =>
+        logger.warn(
+          s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")
+        throw ex
     }
-    val publisher = tncActivity.provider match {
-      case Some(o) => o.id.getOrElse("")
-      case None    => ""
-    }
-    val actor = tncActivity.actor
-
-    ExtractedData(
-      body = EventBody(data, format),
-      metadata = EventMetaData(uuid,
-                               name,
-                               publishTime,
-                               publisher,
-                               actor.id.get -> actor.objectType.get)
-    )
-
   }
-
 }

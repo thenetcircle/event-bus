@@ -47,7 +47,7 @@ object HttpEntryPointSettings extends StrictLogging {
       _config.withFallback(
         system.settings.config.getConfig("event-bus.entrypoint.http"))
 
-    logger.debug(
+    logger.info(
       s"Creating a new HttpEntryPointSettings accroding to config: $config")
 
     try {

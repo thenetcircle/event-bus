@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.dispatcher
 
 import akka.actor.ActorSystem
+import akka.stream.scaladsl.RestartSource
 import akka.stream.scaladsl.RunnableGraph
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
@@ -25,15 +26,15 @@ import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 class Dispatcher(
     settings: DispatcherSettings,
-    pipelineOutlet: PipelineOutlet,
+    pipelineOutletGetter: () => PipelineOutlet,
     endPoints: Vector[EndPoint])(implicit materializer: Materializer)
     extends StrictLogging {
 
-  logger.debug(
-    s"new Dispatcher ${settings.name} is created with settings: $settings")
+  logger.info(s"new Dispatcher ${settings.name} is created")
 
   def getNextEndpoint(index: Int): EndPoint =
     if (endPoints.size == 1)
@@ -42,13 +43,22 @@ class Dispatcher(
       endPoints(index % endPoints.size)
 
   private var sourceIndex = 0
+  private val dataSource = RestartSource.withBackoff(
+    minBackoff = 1.second,
+    maxBackoff = 1.minute,
+    randomFactor = 0.2
+  ) { () =>
+    logger.info(
+      s"Creating a outlet of pipeline ${settings.pipeline.pipelineSettings.name}")
+    pipelineOutletGetter().stream
+  }
 
   // TODO: draw a graph in comments
   // TODO: error handler
   // TODO: parallel and async
   // TODO: Mat value
   lazy val dispatchStream: RunnableGraph[_] =
-    pipelineOutlet.stream
+    dataSource
       .flatMapMerge(
         1000,
         source => {
@@ -77,18 +87,21 @@ class Dispatcher(
 
 }
 
-object Dispatcher {
+object Dispatcher extends StrictLogging {
   def apply(settings: DispatcherSettings)(
       implicit system: ActorSystem): Dispatcher = {
+
+    logger.info(
+      s"Creating a new Dispatcher ${settings.name} from the DispatcherSettings: $settings")
 
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val pipelineOutlet =
+    val pipelineOutletGetter = () =>
       settings.pipeline.getNewOutlet(settings.pipelineOutletSettings)
 
     val endPoints = settings.endPointSettings.map(EndPoint(_))
 
-    new Dispatcher(settings, pipelineOutlet, endPoints)
+    new Dispatcher(settings, pipelineOutletGetter, endPoints)
   }
 }

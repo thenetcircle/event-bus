@@ -37,45 +37,54 @@ object DispatcherSettings extends StrictLogging {
       _config.withFallback(
         system.settings.config.getConfig("event-bus.dispatcher"))
 
-    val name               = config.as[String]("name")
-    val maxParallelSources = config.as[Int]("max-parallel-sources")
+    logger.info(
+      s"Creating a new DispatcherSettings accroding to config: $config")
 
-    val endPointSettings =
-      config.as[Vector[Config]]("endpoints").map(EndPointSettings(_))
+    try {
+      val name               = config.as[String]("name")
+      val maxParallelSources = config.as[Int]("max-parallel-sources")
 
-    val pipelineName = config.as[String]("pipeline.name")
-    val pipeline     = PipelinePool().getPipeline(pipelineName).get
-    val pipelineOutletSettings = PipelineFactory
-      .getConcreteFactory(pipeline.pipelineType)
-      .createPipelineOutletSettings(
-        config.as[Config]("pipeline.outlet-settings"))
+      val endPointSettings =
+        config.as[Vector[Config]]("endpoints").map(EndPointSettings(_))
 
-    val materializerKey = "akka.stream.materializer"
-    val materializerSettings: Option[ActorMaterializerSettings] = {
-      if (config.hasPath(materializerKey))
-        Some(
-          ActorMaterializerSettings(
-            config
-              .getConfig(materializerKey)
-              .withFallback(system.settings.config
-                .getConfig(materializerKey))))
-      else
-        None
+      val pipelineName = config.as[String]("pipeline.name")
+      val pipeline     = PipelinePool().getPipeline(pipelineName).get
+      val pipelineOutletSettings = PipelineFactory
+        .getConcreteFactory(pipeline.pipelineType)
+        .createPipelineOutletSettings(
+          config.as[Config]("pipeline.outlet-settings"))
+
+      val materializerKey = "akka.stream.materializer"
+      val materializerSettings: Option[ActorMaterializerSettings] = {
+        if (config.hasPath(materializerKey))
+          Some(
+            ActorMaterializerSettings(
+              config
+                .getConfig(materializerKey)
+                .withFallback(system.settings.config
+                  .getConfig(materializerKey))))
+        else
+          None
+      }
+
+      DispatcherSettings(name,
+                         maxParallelSources,
+                         endPointSettings,
+                         pipeline,
+                         pipelineOutletSettings,
+                         materializerSettings)
+    } catch {
+      case ex: Throwable =>
+        logger.error(
+          s"Creating DispatcherSettings failed with error: ${ex.getMessage}")
+        throw ex
     }
-
-    DispatcherSettings(name,
-                       maxParallelSources,
-                       endPointSettings,
-                       pipeline,
-                       pipelineOutletSettings,
-                       materializerSettings)
-
   }
 }
 
 final case class DispatcherSettings(
     name: String,
-    maxParallelSources: Int,
+    maxParallelSources: Int, // TODO: remove
     endPointSettings: Vector[EndPointSettings],
     pipeline: Pipeline,
     pipelineOutletSettings: PipelineOutletSettings,

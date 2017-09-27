@@ -24,6 +24,12 @@ import io.jvm.uuid.UUID
 
 import scala.concurrent.{ExecutionContext, Future}
 
+/** The extracted data from [[EventExtractor]]
+  *
+  * @param body
+  * @param metadata
+  * @param channel
+  */
 case class ExtractedData(
     body: EventBody,
     metadata: EventMetaData,
@@ -35,14 +41,13 @@ case class ExtractedData(
 
 trait EventExtractor {
 
-  /**
-    * Format of the extracted data
+  /** Format of the extracted data
+    *
     * @return EventFormat
     */
   def format: EventFormat
 
-  /**
-    * Extract metadata from data accroding to Format
+  /** Extract metadata from data accroding to Format
     *
     * @return ExtractedData
     */
@@ -53,16 +58,22 @@ trait EventExtractor {
 
 object EventExtractor {
 
-  /**
-    * Generate a UUID
+  /** Generate a UUID
     *
     * @return String
     */
   def genUUID(): String = UUID.random.toString
 
+  /** Default event extractor, based on ActivityStreams 1.0
+    * http://activitystrea.ms/specs/json/1.0/
+    */
   implicit val activityStreamsExtractor =
     new TNCActivityStreamsExtractor with EventExtractor
 
+  /** Returns [[EventExtractor]] based on [[EventFormat]]
+    *
+    * @param format
+    */
   def apply(format: EventFormat): EventExtractor = format match {
     case EventFormat.DefaultFormat => activityStreamsExtractor
     case EventFormat.TestFormat =>
@@ -70,5 +81,4 @@ object EventExtractor {
         override val format: EventFormat = TestFormat
       }
   }
-
 }

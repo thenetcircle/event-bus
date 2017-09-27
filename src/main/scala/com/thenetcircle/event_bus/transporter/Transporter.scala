@@ -144,7 +144,7 @@ object Transporter extends StrictLogging {
   def apply(settings: TransporterSettings)(
       implicit system: ActorSystem): Transporter = {
 
-    logger.info(s"Creating a new Transporter ${settings.name} from TransporterSettings")
+    logger.info(s"Creating a new Transporter ${settings.name} from the TransporterSettings: $settings")
 
     implicit val materializer = ActorMaterializer(settings.materializerSettings, Some(settings.name))
 

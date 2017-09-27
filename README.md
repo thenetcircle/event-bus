@@ -36,8 +36,9 @@ First version of EventBus based on Akka, Running with some basic requirements.
 - Error Handler
 - Improve Tracer
 - Stream Runner (take care of start, restart services)
-- Implicate Channel Resolver
+- Implicate ChannelResolver
+- Implicate Fallbacker
 - Integrate Sentry
-- Config storage
+- Configuration storage
 - Controller Api (start new service, restart services, change services, update configuration)
 - Admin Interface

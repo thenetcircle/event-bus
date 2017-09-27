@@ -22,6 +22,7 @@ import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointType.EndPointType
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
 
 case class HttpEndPointSettings(
     name: String,
@@ -37,57 +38,67 @@ case class HttpEndPointSettings(
   override val endPointType: EndPointType = EndPointType.HTTP
 }
 
-object HttpEndPointSettings {
+object HttpEndPointSettings extends StrictLogging {
   def apply(_config: Config)(
       implicit system: ActorSystem): HttpEndPointSettings = {
     val config: Config =
       _config.withFallback(
         system.settings.config.getConfig("event-bus.endpoint.http"))
 
-    val rootConfig =
-      system.settings.config
-    val connectionPoolSettings: ConnectionPoolSettings =
-      if (config.hasPath("akka.http.host-connection-pool")) {
-        ConnectionPoolSettings(
-          config
-            .withFallback(rootConfig))
+    logger.info(
+      s"Creating a new HttpEndPointSettings accroding to config: $config")
+
+    try {
+      val rootConfig =
+        system.settings.config
+      val connectionPoolSettings: ConnectionPoolSettings =
+        if (config.hasPath("akka.http.host-connection-pool")) {
+          ConnectionPoolSettings(
+            config
+              .withFallback(rootConfig))
+        } else {
+          ConnectionPoolSettings(rootConfig)
+        }
+
+      val requestMethod = if (config.hasPath("request.method")) {
+        config.getString("request.method").toUpperCase() match {
+          case "POST" => HttpMethods.POST
+          case "GET"  => HttpMethods.GET
+          case unacceptedMethod =>
+            throw new IllegalArgumentException(
+              s"Http request method $unacceptedMethod is unsupported.")
+        }
       } else {
-        ConnectionPoolSettings(rootConfig)
+        HttpMethods.POST
       }
+      val requsetUri =
+        if (config.hasPath("request.uri")) Uri(config.getString("request.uri"))
+        else Uri./
 
-    val requestMethod = if (config.hasPath("request.method")) {
-      config.getString("request.method").toUpperCase() match {
-        case "POST" => HttpMethods.POST
-        case "GET"  => HttpMethods.GET
-        case unacceptedMethod =>
-          throw new IllegalArgumentException(
-            s"Http request method $unacceptedMethod is unsupported.")
-      }
-    } else {
-      HttpMethods.POST
+      val defaultRequest: HttpRequest = HttpRequest(
+        method = requestMethod,
+        uri = requsetUri
+      )
+
+      val expectedResponse =
+        if (config.hasPath("expected-response-data"))
+          Some(config.getString("expected-response-data"))
+        else None
+
+      HttpEndPointSettings(
+        config.getString("name"),
+        config.getString("request.host"),
+        config.getInt("request.port"),
+        config.getInt("max-retry-times"),
+        connectionPoolSettings,
+        defaultRequest,
+        expectedResponse
+      )
+    } catch {
+      case ex: Throwable =>
+        logger.error(
+          s"Creating HttpEndPointSettings failed with error: ${ex.getMessage}")
+        throw ex
     }
-    val requsetUri =
-      if (config.hasPath("request.uri")) Uri(config.getString("request.uri"))
-      else Uri./
-
-    val defaultRequest: HttpRequest = HttpRequest(
-      method = requestMethod,
-      uri = requsetUri
-    )
-
-    val expectedResponse =
-      if (config.hasPath("expected-response-data"))
-        Some(config.getString("expected-response-data"))
-      else None
-
-    HttpEndPointSettings(
-      config.getString("name"),
-      config.getString("request.host"),
-      config.getInt("request.port"),
-      config.getInt("max-retry-times"),
-      connectionPoolSettings,
-      defaultRequest,
-      expectedResponse
-    )
   }
 }
