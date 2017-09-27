@@ -84,9 +84,12 @@ private[kafka] final class KafkaPipelineOutlet(
                 msg.record
                   .key()
                   .data
-                  .map(k =>
-                    (tracer.resumeTracing(k.tracingId),
-                     EventExtractor(k.eventFormat)))
+                  .map(
+                    k =>
+                      (k.tracingId
+                         .map(tracer.resumeTracing)
+                         .getOrElse(tracer.newTracing()),
+                       EventExtractor(k.eventFormat)))
                   .getOrElse(
                     (tracer.newTracing(), EventExtractor(DefaultFormat)))
 

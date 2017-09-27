@@ -30,14 +30,14 @@ class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {
 
 object KafkaKey {
   def apply(event: Event): KafkaKey =
-    new KafkaKey(KafkaKeyData(event.tracingId, event.body.format))
+    new KafkaKey(KafkaKeyData(event.body.format, Some(event.tracingId)))
 
   /** Serializes [[KafkaKeyData]]
     * @param data
     * @return the serialized value
     */
   def packRawData(data: KafkaKeyData): String =
-    s"${data.tracingId}|${data.eventFormat.toString}|"
+    s"${data.eventFormat.toString}|${data.tracingId.getOrElse("")}|"
 
   /** Deserializes rawdata to be [[KafkaKeyData]]
     * @param rawData
@@ -46,21 +46,20 @@ object KafkaKey {
   def parseRawData(rawData: String): Option[KafkaKeyData] =
     if (rawData.charAt(rawData.length - 1) == '|') {
       val parsed      = rawData.split('|')
-      val tracingId   = parsed(0).toLong
-      val eventFormat = EventFormat(parsed(1))
+      val eventFormat = EventFormat(parsed(0))
 
-      Some(KafkaKeyData(tracingId, eventFormat))
+      val tracingId =
+        if (parsed.isDefinedAt(1) && parsed(1) != "") Some(parsed(1).toLong)
+        else None
+
+      Some(KafkaKeyData(eventFormat, tracingId))
     } else {
       None
     }
 
-  /** Holds real data of the key of a kafka message
-    *
-    * @param tracingId
-    * @param eventFormat
-    */
+  /** Holds real data of the key of a kafka message */
   case class KafkaKeyData(
-      tracingId: Long,
-      eventFormat: EventFormat
+      eventFormat: EventFormat,
+      tracingId: Option[Long]
   )
 }
