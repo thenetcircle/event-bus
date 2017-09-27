@@ -100,8 +100,6 @@ class KafkaPipelineFactorySpec extends AkkaStreamSpec {
     settings.stopTimeout shouldEqual Some(FiniteDuration(999, "s"))
     settings.wakeupTimeout shouldEqual Some(FiniteDuration(999, "s"))
 
-    settings.commitParallelism shouldEqual 3
-    settings.commitBatchMax shouldEqual 20
     settings.maxWakeups shouldBe empty
   }
 }

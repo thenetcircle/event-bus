@@ -19,6 +19,8 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.NotUsed
 import akka.actor.ActorSystem
+import akka.stream.ActorAttributes.supervisionStrategy
+import akka.stream.Supervision.resumingDecider
 import akka.stream._
 import akka.stream.scaladsl.{
   Balance,
@@ -26,25 +28,22 @@ import akka.stream.scaladsl.{
   GraphDSL,
   Merge,
   MergePrioritized,
+  RestartFlow,
   RunnableGraph,
   Sink
 }
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
-import com.thenetcircle.event_bus.pipeline.PipelineInlet
+import com.thenetcircle.event_bus.pipeline.Pipeline
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
 import com.typesafe.scalalogging.StrictLogging
-import ActorAttributes.supervisionStrategy
-import Supervision.resumingDecider
-import akka.stream.scaladsl.RestartFlow
 
 import scala.concurrent.duration._
 
 class Transporter(settings: TransporterSettings,
                   entryPoints: Vector[EntryPoint],
-                  pipelineInletGetter: () => PipelineInlet)(
-    implicit system: ActorSystem,
-    materializer: Materializer)
+                  pipeline: Pipeline)(implicit system: ActorSystem,
+                                      materializer: Materializer)
     extends StrictLogging {
 
   logger.info(s"new Transporter ${settings.name} is created")
@@ -69,7 +68,14 @@ class Transporter(settings: TransporterSettings,
     ) { () =>
       logger.info(
         s"Creating a inlet of pipeline ${settings.pipeline.pipelineSettings.name}")
-      pipelineInletGetter().stream
+      try {
+        pipeline.getNewInlet(settings.pipelineInletSettings).stream
+      } catch {
+        case ex: Throwable =>
+          logger.error(
+            s"Create new PipelineInlet failed with error: ${ex.getMessage}")
+          throw ex
+      }
     }
 
   // TODO: draw a graph in comments
@@ -154,8 +160,6 @@ object Transporter extends StrictLogging {
         EntryPoint(s)
       })
 
-    val pipelineInletGetter = () => settings.pipeline.getNewInlet(settings.pipelineInletSettings)
-
-    new Transporter(settings, entryPoints, pipelineInletGetter)
+    new Transporter(settings, entryPoints, settings.pipeline)
   }
 }

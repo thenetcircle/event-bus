@@ -25,16 +25,12 @@ import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
+import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
-import com.thenetcircle.event_bus.pipeline.{
-  Pipeline,
-  PipelineInlet,
-  PipelineInletSettings,
-  PipelinePool
-}
+import com.thenetcircle.event_bus.pipeline._
 import com.thenetcircle.event_bus.{Event, EventFormat}
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import com.thenetcircle.event_bus.{createTestEvent, createFlowFromSink}
+import com.thenetcircle.event_bus.{createFlowFromSink, createTestEvent}
 import com.thenetcircle.event_bus.transporter.entrypoint._
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.typesafe.config.ConfigFactory
@@ -199,24 +195,35 @@ class TransporterSpec extends AkkaStreamSpec {
     )
 
     var currentPipelinePortIndex = 0
-    new Transporter(
-      settings,
-      testEntryPoints,
-      () => {
+    val testPipeline             = PipelinePool().getPipeline("TestPipeline").get
+    val pipeline = new Pipeline {
+      override val pipelineType: PipelineType = testPipeline.pipelineType
+      override val pipelineSettings: PipelineSettings =
+        testPipeline.pipelineSettings
+      override def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
+          implicit materializer: Materializer): PipelineOutlet =
+        testPipeline.getNewOutlet(pipelineOutletSettings)
+      override def getCommitter(): Sink[Event, NotUsed] =
+        testPipeline.getCommitter()
+
+      override def getNewInlet(
+          pipelineInletSettings: PipelineInletSettings): PipelineInlet = {
         val testPP = testPipelinePort(currentPipelinePortIndex)
         currentPipelinePortIndex += 1
-
         new PipelineInlet {
-          override val pipeline: Pipeline =
-            PipelinePool().getPipeline("TestPipeline").get
-          override val inletName: String = "TestPipelineInlet"
+          override val pipeline: Pipeline = testPipeline
+          override val inletName: String  = "TestPipelineInlet"
           override val inletSettings: PipelineInletSettings =
             new PipelineInletSettings {}
-
           override val stream: Flow[Event, Event, NotUsed] =
             createFlowFromSink(testPP)
         }
       }
+    }
+    new Transporter(
+      settings,
+      testEntryPoints,
+      pipeline
     )
   }
 

@@ -38,7 +38,9 @@ class PipelinePoolSpec extends AkkaStreamSpec {
                                                  new EventSerializer),
     ConsumerSettings[ConsumerKey, ConsumerValue](system,
                                                  new KafkaKeyDeserializer,
-                                                 new ByteArrayDeserializer)
+                                                 new ByteArrayDeserializer),
+    3,
+    10
   )
   val testPipelineSettings2 = new KafkaPipelineSettings(
     "TP2",
@@ -47,7 +49,9 @@ class PipelinePoolSpec extends AkkaStreamSpec {
                                                  new EventSerializer),
     ConsumerSettings[ConsumerKey, ConsumerValue](system,
                                                  new KafkaKeyDeserializer,
-                                                 new ByteArrayDeserializer)
+                                                 new ByteArrayDeserializer),
+    3,
+    10
   )
   val testPipelinePool = new PipelinePool(
     Map[String, (PipelineType, PipelineSettings)](

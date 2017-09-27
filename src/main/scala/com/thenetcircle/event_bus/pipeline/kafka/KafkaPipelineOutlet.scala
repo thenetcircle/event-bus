@@ -17,11 +17,10 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
-import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.EventFormat.DefaultFormat
@@ -65,7 +64,7 @@ private[kafka] final class KafkaPipelineOutlet(
     _settings
   }
 
-  private var subscription: AutoSubscription =
+  private val subscription: AutoSubscription =
     if (outletSettings.topics.isDefined) {
       Subscriptions.topics(outletSettings.topics.get)
     } else {
@@ -122,29 +121,4 @@ private[kafka] final class KafkaPipelineOutlet(
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
       .named(outletName)
-
-  /** Batch commit flow */
-  override lazy val committer: Sink[Event, NotUsed] =
-    Flow[Event]
-      .collect {
-        case e if e.hasContext("kafkaCommittableOffset") =>
-          e.context("kafkaCommittableOffset")
-            .asInstanceOf[CommittableOffset] -> e.tracingId
-      }
-      .batch(
-        max = outletSettings.commitBatchMax, {
-          case (committableOffset, tracingId) =>
-            val batch       = CommittableOffsetBatch.empty.updated(committableOffset)
-            val tracingList = List[Long](tracingId)
-            batch -> tracingList
-        }
-      ) {
-        case ((batch, tracingList), (committableOffset, tracingId)) =>
-          batch.updated(committableOffset) -> tracingList.+:(tracingId)
-      }
-      .mapAsync(outletSettings.commitParallelism)(result => {
-        result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
-        result._1.commitScaladsl()
-      })
-      .to(Sink.ignore)
 }

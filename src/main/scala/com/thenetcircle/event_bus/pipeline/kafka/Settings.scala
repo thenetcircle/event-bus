@@ -29,7 +29,9 @@ import scala.concurrent.duration.FiniteDuration
 case class KafkaPipelineSettings(
     name: String,
     producerSettings: ProducerSettings[ProducerKey, ProducerValue],
-    consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue]
+    consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
+    commitParallelism: Int,
+    commitBatchMax: Int
 ) extends PipelineSettings
 
 case class KafkaPipelineInletSettings(
@@ -40,8 +42,6 @@ case class KafkaPipelineInletSettings(
 case class KafkaPipelineOutletSettings(
     groupId: String,
     extractParallelism: Int,
-    commitParallelism: Int,
-    commitBatchMax: Int,
     topics: Option[Set[String]],
     topicPattern: Option[String],
     pollInterval: Option[FiniteDuration],

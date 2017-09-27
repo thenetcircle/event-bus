@@ -72,7 +72,9 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
                                                    new EventSerializer),
       ConsumerSettings[ConsumerKey, ConsumerValue](consumerConfig,
                                                    new KafkaKeyDeserializer,
-                                                   new ByteArrayDeserializer)
+                                                   new ByteArrayDeserializer),
+      commitParallelism = pipelineConfig.as[Int]("commit-parallelism"),
+      commitBatchMax = pipelineConfig.as[Int]("commit-batch-max")
     )
   }
 
@@ -97,8 +99,6 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
     KafkaPipelineOutletSettings(
       groupId = config.as[String]("group-id"),
       extractParallelism = config.as[Int]("extract-parallelism"),
-      commitParallelism = config.as[Int]("commit-parallelism"),
-      commitBatchMax = config.as[Int]("commit-batch-max"),
       topics = config.as[Option[Set[String]]]("topics"),
       topicPattern = config.as[Option[String]]("topicPattern"),
       pollInterval = config.as[Option[FiniteDuration]]("poll-interval"),

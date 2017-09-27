@@ -18,19 +18,18 @@
 package com.thenetcircle.event_bus.dispatcher
 
 import akka.actor.ActorSystem
-import akka.stream.scaladsl.RestartSource
-import akka.stream.scaladsl.RunnableGraph
+import akka.stream.scaladsl.{RestartSource, RunnableGraph}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
-import com.thenetcircle.event_bus.pipeline.PipelineOutlet
+import com.thenetcircle.event_bus.pipeline.Pipeline
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.util.control.NonFatal
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 class Dispatcher(
     settings: DispatcherSettings,
-    pipelineOutletGetter: () => PipelineOutlet,
+    pipeline: Pipeline,
     endPoints: Vector[EndPoint])(implicit materializer: Materializer)
     extends StrictLogging {
 
@@ -50,7 +49,14 @@ class Dispatcher(
   ) { () =>
     logger.info(
       s"Creating a outlet of pipeline ${settings.pipeline.pipelineSettings.name}")
-    pipelineOutletGetter().stream
+    try {
+      pipeline.getNewOutlet(settings.pipelineOutletSettings).stream
+    } catch {
+      case ex: Throwable =>
+        logger.error(
+          s"Create new PipelineOutlet failed with error: ${ex.getMessage}")
+        throw ex
+    }
   }
 
   // TODO: draw a graph in comments
@@ -77,7 +83,7 @@ class Dispatcher(
           result
         }
       )
-      .to(pipelineOutlet.committer.async)
+      .to(pipeline.getCommitter().async)
 
   // TODO add a transporter controller as a materialized value
   def run(): Unit = {
@@ -97,11 +103,8 @@ object Dispatcher extends StrictLogging {
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val pipelineOutletGetter = () =>
-      settings.pipeline.getNewOutlet(settings.pipelineOutletSettings)
-
     val endPoints = settings.endPointSettings.map(EndPoint(_))
 
-    new Dispatcher(settings, pipelineOutletGetter, endPoints)
+    new Dispatcher(settings, settings.pipeline, endPoints)
   }
 }

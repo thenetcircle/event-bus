@@ -17,13 +17,22 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
+import java.util.concurrent.atomic.AtomicInteger
+
+import akka.NotUsed
+import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Sink}
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline._
+import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 
 class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
-    extends Pipeline {
+    extends Pipeline
+    with Tracing {
+  private val inletId  = new AtomicInteger(0)
+  private val outletId = new AtomicInteger(0)
 
   val pipelineName: String = pipelineSettings.name
 
@@ -68,6 +77,30 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
       pipelineOutletSettings.asInstanceOf[KafkaPipelineOutletSettings])
   }
 
+  /** Batch commit flow */
+  override def getCommitter(): Sink[Event, NotUsed] =
+    Flow[Event]
+      .collect {
+        case e if e.hasContext("kafkaCommittableOffset") =>
+          e.context("kafkaCommittableOffset")
+            .asInstanceOf[CommittableOffset] -> e.tracingId
+      }
+      .batch(
+        max = pipelineSettings.commitBatchMax, {
+          case (committableOffset, tracingId) =>
+            val batch       = CommittableOffsetBatch.empty.updated(committableOffset)
+            val tracingList = List[Long](tracingId)
+            batch -> tracingList
+        }
+      ) {
+        case ((batch, tracingList), (committableOffset, tracingId)) =>
+          batch.updated(committableOffset) -> tracingList.+:(tracingId)
+      }
+      .mapAsync(pipelineSettings.commitParallelism)(result => {
+        result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
+        result._1.commitScaladsl()
+      })
+      .to(Sink.ignore)
 }
 
 object KafkaPipeline {

@@ -16,8 +16,6 @@
  */
 
 package com.thenetcircle.event_bus.pipeline
-import java.util.concurrent.atomic.AtomicInteger
-
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
@@ -31,37 +29,35 @@ trait PipelineSettings {
 }
 
 trait Pipeline {
-
   val pipelineType: PipelineType
   val pipelineSettings: PipelineSettings
 
-  protected val inletId  = new AtomicInteger(0)
-  protected val outletId = new AtomicInteger(0)
-
   def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet
+
   def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
       implicit materializer: Materializer): PipelineOutlet
 
+  def getCommitter(): Sink[Event, NotUsed]
+}
+
+sealed trait PipelinePort {
+  val pipeline: Pipeline
 }
 
 trait PipelineInletSettings
-trait PipelineOutletSettings
-
-trait PipelineInlet {
-  val pipeline: Pipeline
+trait PipelineInlet extends PipelinePort {
   val inletName: String
   val inletSettings: PipelineInletSettings
 
   val stream: Flow[Event, Event, NotUsed]
 }
 
-trait PipelineOutlet {
-  val pipeline: Pipeline
+trait PipelineOutletSettings
+trait PipelineOutlet extends PipelinePort {
   val outletName: String
   val outletSettings: PipelineOutletSettings
 
   val stream: Source[Source[Event, NotUsed], NotUsed]
-  val committer: Sink[Event, NotUsed]
 }
 
 object PipelineType extends Enumeration {
