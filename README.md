@@ -32,9 +32,10 @@ It supplies data operations (like partition, broadcast, filtering etc, thanks fo
 First version of EventBus based on Akka, Running with some basic requirements.
 
 ## TODO List
-- Add logs
+- ~~Add logs~~
 - Error Handler
 - Improve Tracer
+- ExecutionContext
 - Stream Runner (take care of start, restart services)
 - Implicate ChannelResolver
 - Implicate Fallbacker

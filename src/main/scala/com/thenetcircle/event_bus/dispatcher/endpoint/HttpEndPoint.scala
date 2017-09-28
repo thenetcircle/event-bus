@@ -42,7 +42,7 @@ class HttpEndPoint(
     extends EndPoint
     with StrictLogging {
 
-  logger.debug(s"new HttpEndPoint ${settings.name} is created")
+  logger.info(s"new HttpEndPoint ${settings.name} is created")
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
@@ -54,7 +54,7 @@ class HttpEndPoint(
     val request =
       settings.defaultRequest.withEntity(HttpEntity(event.body.data))
 
-    logger.debug(s"new request $request has been built and is going to send")
+    logger.debug(s"Sending new request to EndPoint")
 
     (request, event)
   }
