@@ -20,13 +20,8 @@ package com.thenetcircle.event_bus.dispatcher
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
-import com.thenetcircle.event_bus.pipeline.{
-  Pipeline,
-  PipelineFactory,
-  PipelineOutletSettings,
-  PipelinePool
-}
-import com.typesafe.config.Config
+import com.thenetcircle.event_bus.pipeline._
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -41,18 +36,26 @@ object DispatcherSettings extends StrictLogging {
       s"Creating a new DispatcherSettings accroding to config: $config")
 
     try {
-      val name               = config.as[String]("name")
-      val maxParallelSources = config.as[Int]("max-parallel-sources")
+      val name = config.as[String]("name")
 
       val endPointSettings =
         config.as[Vector[Config]]("endpoints").map(EndPointSettings(_))
 
       val pipelineName = config.as[String]("pipeline.name")
       val pipeline     = PipelinePool().getPipeline(pipelineName).get
-      val pipelineOutletSettings = PipelineFactory
-        .getConcreteFactory(pipeline.pipelineType)
-        .createPipelineOutletSettings(
-          config.as[Config]("pipeline.outlet-settings"))
+      val pipelineFactory =
+        PipelineFactory.getConcreteFactory(pipeline.pipelineType)
+
+      val pipelineOutletSettings = pipelineFactory.createPipelineOutletSettings(
+        config
+          .as[Option[Config]]("pipeline.outlet")
+          .getOrElse(ConfigFactory.empty()))
+
+      val pipelineCommitterSettings =
+        pipelineFactory.createPipelineCommitterSettings(
+          config
+            .as[Option[Config]]("pipeline.committer")
+            .getOrElse(ConfigFactory.empty()))
 
       val materializerKey = "akka.stream.materializer"
       val materializerSettings: Option[ActorMaterializerSettings] = {
@@ -68,10 +71,10 @@ object DispatcherSettings extends StrictLogging {
       }
 
       DispatcherSettings(name,
-                         maxParallelSources,
                          endPointSettings,
                          pipeline,
                          pipelineOutletSettings,
+                         pipelineCommitterSettings,
                          materializerSettings)
     } catch {
       case ex: Throwable =>
@@ -84,9 +87,9 @@ object DispatcherSettings extends StrictLogging {
 
 final case class DispatcherSettings(
     name: String,
-    maxParallelSources: Int, // TODO: remove
     endPointSettings: Vector[EndPointSettings],
     pipeline: Pipeline,
     pipelineOutletSettings: PipelineOutletSettings,
+    pipelineCommitterSettings: PipelineCommitterSettings,
     materializerSettings: Option[ActorMaterializerSettings]
 )

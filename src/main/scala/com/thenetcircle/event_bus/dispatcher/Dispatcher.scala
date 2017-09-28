@@ -83,7 +83,7 @@ class Dispatcher(
           result
         }
       )
-      .to(pipeline.getCommitter().async)
+      .to(pipeline.getCommitter(settings.pipelineCommitterSettings).async)
 
   // TODO add a transporter controller as a materialized value
   def run(): Unit = {

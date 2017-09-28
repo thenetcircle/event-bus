@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.pipeline.{
+  PipelineCommitterSettings,
   PipelineInletSettings,
   PipelineOutletSettings,
   PipelineSettings
@@ -29,9 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 case class KafkaPipelineSettings(
     name: String,
     producerSettings: ProducerSettings[ProducerKey, ProducerValue],
-    consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
-    commitParallelism: Int,
-    commitBatchMax: Int
+    consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue]
 ) extends PipelineSettings
 
 case class KafkaPipelineInletSettings(
@@ -52,3 +51,8 @@ case class KafkaPipelineOutletSettings(
     wakeupTimeout: Option[FiniteDuration],
     maxWakeups: Option[Int]
 ) extends PipelineOutletSettings
+
+case class KafkaPipelineCommitterSettings(
+    commitParallelism: Int,
+    commitBatchMax: Int
+) extends PipelineCommitterSettings

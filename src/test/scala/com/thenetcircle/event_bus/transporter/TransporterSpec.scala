@@ -203,8 +203,10 @@ class TransporterSpec extends AkkaStreamSpec {
       override def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
           implicit materializer: Materializer): PipelineOutlet =
         testPipeline.getNewOutlet(pipelineOutletSettings)
-      override def getCommitter(): Sink[Event, NotUsed] =
-        testPipeline.getCommitter()
+      override def getCommitter(
+          pipelineCommitterSettings: PipelineCommitterSettings)
+        : Sink[Event, NotUsed] =
+        testPipeline.getCommitter(pipelineCommitterSettings)
 
       override def getNewInlet(
           pipelineInletSettings: PipelineInletSettings): PipelineInlet = {

@@ -213,7 +213,7 @@ class DispatcherSpec extends AkkaStreamSpec {
                                     |  }]
                                     |  pipeline {
                                     |    name = TestPipeline
-                                    |    outlet-settings {
+                                    |    outlet {
                                     |      group-id = "TestDispatcher"
                                     |    }
                                     |  }
@@ -248,7 +248,9 @@ class DispatcherSpec extends AkkaStreamSpec {
             outletStream
         }
 
-      override def getCommitter(): Sink[Event, NotUsed] = committer
+      override def getCommitter(
+          pipelineCommitterSettings: PipelineCommitterSettings)
+        : Sink[Event, NotUsed] = committer
     }
   }
 }

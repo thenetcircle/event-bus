@@ -42,17 +42,16 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
     *
     * Which will create a new producer with a new connection to Kafka internally after the port got materialized
     *
-    * @param pipelineInletSettings settings object, needs [[KafkaPipelineInletSettings]]
+    * @param settings settings object, needs [[KafkaPipelineInletSettings]]
     */
   override def getNewInlet(
-      pipelineInletSettings: PipelineInletSettings): KafkaPipelineInlet = {
-    require(pipelineInletSettings.isInstanceOf[KafkaPipelineInletSettings],
+      settings: PipelineInletSettings): KafkaPipelineInlet = {
+    require(settings.isInstanceOf[KafkaPipelineInletSettings],
             "KafkaPipeline only accpect KafkaLPipelineInletSettings.")
 
-    new KafkaPipelineInlet(
-      this,
-      s"$pipelineName-inlet-${inletId.getAndIncrement()}",
-      pipelineInletSettings.asInstanceOf[KafkaPipelineInletSettings])
+    new KafkaPipelineInlet(this,
+                           s"$pipelineName-inlet-${inletId.getAndIncrement()}",
+                           settings.asInstanceOf[KafkaPipelineInletSettings])
   }
 
   /** Returns a new [[PipelineOutlet]] of the [[Pipeline]]
@@ -63,22 +62,32 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
     * 1. Call the committer of the [[Event]] for committing the single [[Event]]
     * 2. Use the committer of the [[PipelineOutlet]] (Batched, Recommended)
     *
-    * @param pipelineOutletSettings settings object, needs [[KafkaPipelineOutletSettings]]
+    * @param settings settings object, needs [[KafkaPipelineOutletSettings]]
     */
-  override def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
+  override def getNewOutlet(settings: PipelineOutletSettings)(
       implicit materializer: Materializer): KafkaPipelineOutlet = {
 
-    require(pipelineOutletSettings.isInstanceOf[KafkaPipelineOutletSettings],
+    require(settings.isInstanceOf[KafkaPipelineOutletSettings],
             "KafkaPipeline only accpect KafkaPipelineOutletSettings.")
 
     new KafkaPipelineOutlet(
       this,
       s"$pipelineName-outlet-${outletId.getAndIncrement()}",
-      pipelineOutletSettings.asInstanceOf[KafkaPipelineOutletSettings])
+      settings.asInstanceOf[KafkaPipelineOutletSettings])
   }
 
-  /** Batch commit flow */
-  override def getCommitter(): Sink[Event, NotUsed] =
+  /** Acknowledges the event to [[Pipeline]]
+    *
+    * @param settings the committer parameters
+    * @return the committing akka-stream stage
+    */
+  override def getCommitter(
+      settings: PipelineCommitterSettings): Sink[Event, NotUsed] = {
+    require(settings.isInstanceOf[KafkaPipelineCommitterSettings],
+            "KafkaPipeline only accpect KafkaPipelineCommitterSettings.")
+
+    val _settings = settings.asInstanceOf[KafkaPipelineCommitterSettings]
+
     Flow[Event]
       .collect {
         case e if e.hasContext("kafkaCommittableOffset") =>
@@ -86,7 +95,7 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
             .asInstanceOf[CommittableOffset] -> e.tracingId
       }
       .batch(
-        max = pipelineSettings.commitBatchMax, {
+        max = _settings.commitBatchMax, {
           case (committableOffset, tracingId) =>
             val batch       = CommittableOffsetBatch.empty.updated(committableOffset)
             val tracingList = List[Long](tracingId)
@@ -96,11 +105,12 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
         case ((batch, tracingList), (committableOffset, tracingId)) =>
           batch.updated(committableOffset) -> tracingList.+:(tracingId)
       }
-      .mapAsync(pipelineSettings.commitParallelism)(result => {
+      .mapAsync(_settings.commitParallelism)(result => {
         result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
         result._1.commitScaladsl()
       })
       .to(Sink.ignore)
+  }
 }
 
 object KafkaPipeline {

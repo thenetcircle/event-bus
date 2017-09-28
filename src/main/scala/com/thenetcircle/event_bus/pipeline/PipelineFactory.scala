@@ -50,6 +50,13 @@ abstract class PipelineFactory(implicit system: ActorSystem) {
   def createPipelineOutletSettings(
       pipelineOutletConfig: Config): PipelineOutletSettings
 
+  /** Creates [[PipelineCommitterSettings]] according to a TypeSafe [[Config]]
+    *
+    * @param pipelineCommitterConfig the TypeSafe [[Config]]
+    */
+  def createPipelineCommitterSettings(
+      pipelineCommitterConfig: Config): PipelineCommitterSettings
+
 }
 
 object PipelineFactory {

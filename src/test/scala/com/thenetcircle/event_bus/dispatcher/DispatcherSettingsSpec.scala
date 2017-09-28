@@ -34,7 +34,6 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val config = ConfigFactory.parseString("""
                                              |{
                                              |  name = TestDispatcher
-                                             |  max-parallel-sources = 100
                                              |  endpoints = [{
                                              |    type = http
                                              |    name = TestEndPoint
@@ -42,9 +41,11 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |  }]
                                              |  pipeline {
                                              |    name = TestPipeline
-                                             |    outlet-settings {
+                                             |    outlet {
                                              |      group-id = TestDispatcher
                                              |      extract-parallelism = 10
+                                             |    }
+                                             |    committer {
                                              |      commit-parallelism = 10
                                              |      commit-batch-max = 10
                                              |    }
@@ -61,7 +62,6 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val settings = DispatcherSettings(config)
 
     settings.name shouldEqual "TestDispatcher"
-    settings.maxParallelSources shouldEqual 100
 
     settings.endPointSettings.size shouldEqual 1
     settings.endPointSettings(0).name shouldEqual "TestEndPoint"
@@ -91,9 +91,11 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |  }]
                                              |  pipeline {
                                              |    name = TestPipeline
-                                             |    outlet-settings {
+                                             |    outlet {
                                              |      group-id = TestDispatcher
                                              |      extract-parallelism = 10
+                                             |    }
+                                             |    committer {
                                              |      commit-parallelism = 10
                                              |      commit-batch-max = 10
                                              |    }
@@ -104,7 +106,6 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val settings = DispatcherSettings(config)
 
     settings.name shouldEqual "TestDefaultDispatcher"
-    settings.maxParallelSources shouldEqual 100
     settings.materializerSettings shouldBe empty
   }
 

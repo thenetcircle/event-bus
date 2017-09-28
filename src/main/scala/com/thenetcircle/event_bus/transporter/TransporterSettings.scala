@@ -26,7 +26,7 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelinePool
 }
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -51,7 +51,9 @@ object TransporterSettings extends StrictLogging {
       val pipelineInletSettings = PipelineFactory
         .getConcreteFactory(pipeline.pipelineType)
         .createPipelineInletSettings(
-          config.as[Config]("pipeline.inlet-settings"))
+          config
+            .as[Option[Config]]("pipeline.inlet")
+            .getOrElse(ConfigFactory.empty()))
 
       val transportParallelism = config.as[Int]("transport-parallelism")
       val commitParallelism    = config.as[Int]("commit-parallelism")

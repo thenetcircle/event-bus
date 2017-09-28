@@ -27,24 +27,26 @@ import net.ceedubs.ficus.readers.ValueReader
 trait PipelineSettings {
   val name: String
 }
+trait PipelineInletSettings
+trait PipelineOutletSettings
+trait PipelineCommitterSettings
 
 trait Pipeline {
   val pipelineType: PipelineType
   val pipelineSettings: PipelineSettings
 
-  def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet
+  def getNewInlet(settings: PipelineInletSettings): PipelineInlet
 
-  def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
+  def getNewOutlet(settings: PipelineOutletSettings)(
       implicit materializer: Materializer): PipelineOutlet
 
-  def getCommitter(): Sink[Event, NotUsed]
+  def getCommitter(settings: PipelineCommitterSettings): Sink[Event, NotUsed]
 }
 
 sealed trait PipelinePort {
   val pipeline: Pipeline
 }
 
-trait PipelineInletSettings
 trait PipelineInlet extends PipelinePort {
   val inletName: String
   val inletSettings: PipelineInletSettings
@@ -52,7 +54,6 @@ trait PipelineInlet extends PipelinePort {
   val stream: Flow[Event, Event, NotUsed]
 }
 
-trait PipelineOutletSettings
 trait PipelineOutlet extends PipelinePort {
   val outletName: String
   val outletSettings: PipelineOutletSettings

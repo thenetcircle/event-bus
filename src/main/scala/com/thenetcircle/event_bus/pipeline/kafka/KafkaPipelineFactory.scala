@@ -72,9 +72,7 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
                                                    new EventSerializer),
       ConsumerSettings[ConsumerKey, ConsumerValue](consumerConfig,
                                                    new KafkaKeyDeserializer,
-                                                   new ByteArrayDeserializer),
-      commitParallelism = pipelineConfig.as[Int]("commit-parallelism"),
-      commitBatchMax = pipelineConfig.as[Int]("commit-batch-max")
+                                                   new ByteArrayDeserializer)
     )
   }
 
@@ -108,6 +106,18 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
       commitTimeout = config.as[Option[FiniteDuration]]("commit-timeout"),
       wakeupTimeout = config.as[Option[FiniteDuration]]("wakeup-timeout"),
       maxWakeups = config.as[Option[Int]]("max-wakeups")
+    )
+  }
+
+  override def createPipelineCommitterSettings(
+      pipelineCommitterConfig: Config): KafkaPipelineCommitterSettings = {
+    val config = pipelineCommitterConfig.withFallback(
+      system.settings.config
+        .getConfig("event-bus.pipeline.kafka.committer"))
+
+    KafkaPipelineCommitterSettings(
+      commitParallelism = config.as[Int]("commit-parallelism"),
+      commitBatchMax = config.as[Int]("commit-batch-max")
     )
   }
 
