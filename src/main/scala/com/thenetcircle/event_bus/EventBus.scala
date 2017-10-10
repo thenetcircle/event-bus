@@ -31,12 +31,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext}
 
 object EventBus extends App with StrictLogging {
-  Kamon.start()
-
-  protected implicit val system = akka.actor.ActorSystem()
 
   // Initialization
   logger.info("Application is initializing.")
+
+  Kamon.start()
+  protected implicit val system = akka.actor.ActorSystem()
 
   PipelinePool.init(
     system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
@@ -62,6 +62,7 @@ object EventBus extends App with StrictLogging {
   }
 
   // Launch transporters
+  logger.info(s"Running transporters.")
   val transportersConfig = system.settings.config
     .as[Option[List[Config]]]("event-bus.runtime.transporters")
   transportersConfig.foreach(configList =>
@@ -72,6 +73,7 @@ object EventBus extends App with StrictLogging {
     }))
 
   // Launch dispatchers
+  logger.info(s"Running dispatchers.")
   val dispatchersConfig = system.settings.config
     .as[Option[List[Config]]]("event-bus.runtime.dispatchers")
   dispatchersConfig.foreach(configList =>
@@ -80,4 +82,5 @@ object EventBus extends App with StrictLogging {
       Dispatcher(dispatcherSettings).run()
       logger.info(s"Dispatcher ${dispatcherSettings.name} launched.")
     }))
+
 }

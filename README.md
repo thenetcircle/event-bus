@@ -36,6 +36,7 @@ First version of EventBus based on Akka, Running with some basic requirements.
 - Error Handler
 - Improve Tracer
 - ExecutionContext
+- Kafka Settings
 - Stream Runner (take care of start, restart services)
 - Implicate ChannelResolver
 - Implicate Fallbacker
