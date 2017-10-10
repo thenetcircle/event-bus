@@ -1,28 +1,24 @@
 <!-- language: lang-none -->
-            ____              __    ___         
-           / __/  _____ ___  / /_  / _ )__ _____
-          / _/| |/ / -_) _ \/ __/ / _  / // (_-<
-         /___/|___/\__/_//_/\__/ /____/\_,_/___/
+                                    ____              __    ___         
+                                   / __/  _____ ___  / /_  / _ )__ _____
+                                  / _/| |/ / -_) _ \/ __/ / _  / // (_-<
+                                 /___/|___/\__/_//_/\__/ /____/\_,_/___/
 
---------------------------------------- 
+*** 
  
 [![Build Status](https://travis-ci.org/thenetcircle/event-bus.svg?branch=master)](https://travis-ci.org/thenetcircle/event-dispatcher)
 [![License](https://img.shields.io/github/license/thenetcircle/event-bus.svg)](LICENSE)
 
-EventBus is a system which working as a postman who delivering events/messages/data between different systems/services.   
-It supplies data operations (like partition, broadcast, filtering etc, thanks for Akka Stream), And data persistence, at least once semantics and exactly once semantics (needs client support)
+EventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...
 
 ## Features
 
-- Refactoring based on Akka-Stream.
-- Supplies some data sources and sinks (RedisPubSub, Kafka, AMQP, HTTP).
-- Event persistence
-- Supports secondary pipeline (for fallback)
-- At least once delivery guarantee and Exactly once (needs client support)
-- Statistics and Monitoring
+- Supplies multiple sources and sinks (HTTP for now).
+- Supplies multiple pipelines (Kafka for now)
+- Retry and Fallback
+- Supplies tracing and monitoring
 
-
-## TODO
+## Todo
 - ~~Add logs~~
 - Error Handler
 - Improve Tracer
