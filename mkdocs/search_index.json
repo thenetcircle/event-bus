@@ -1,0 +1,59 @@
+{
+    "docs": [
+        {
+            "location": "/",
+            "text": "____              __    ___         \n                                / __/  _____ ___  / /_  / _ )__ _____\n                               / _/| |/ / -_) _ \\/ __/ / _  / // (_-<\n                              /___/|___/\\__/_//_/\\__/ /____/\\_,_/___/\n\n\n\n\n\n\n\nEventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...\n\n\nFeatures\n\n\n\n\nSupplies multiple sources and sinks (HTTP for now).\n\n\nSupplies multiple pipelines (Kafka for now)\n\n\nRetry and Fallback\n\n\nSupplies tracing and monitoring\n\n\n\n\nContributing\n\n\nPull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.\n\n\nPlease make sure to update tests as appropriate.",
+            "title": "Home"
+        },
+        {
+            "location": "/#features",
+            "text": "Supplies multiple sources and sinks (HTTP for now).  Supplies multiple pipelines (Kafka for now)  Retry and Fallback  Supplies tracing and monitoring",
+            "title": "Features"
+        },
+        {
+            "location": "/#contributing",
+            "text": "Pull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.  Please make sure to update tests as appropriate.",
+            "title": "Contributing"
+        },
+        {
+            "location": "/getting_started/",
+            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
+            "title": "Getting Started"
+        },
+        {
+            "location": "/getting_started/#requirements",
+            "text": "",
+            "title": "Requirements"
+        },
+        {
+            "location": "/getting_started/#installation",
+            "text": "",
+            "title": "Installation"
+        },
+        {
+            "location": "/getting_started/#sbt",
+            "text": "",
+            "title": "Sbt"
+        },
+        {
+            "location": "/getting_started/#maven",
+            "text": "",
+            "title": "Maven"
+        },
+        {
+            "location": "/getting_started/#from-source",
+            "text": "",
+            "title": "From Source"
+        },
+        {
+            "location": "/getting_started/#usage",
+            "text": "",
+            "title": "Usage"
+        },
+        {
+            "location": "/getting_started/#deployment",
+            "text": "",
+            "title": "Deployment"
+        }
+    ]
+}
