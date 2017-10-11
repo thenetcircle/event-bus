@@ -9,6 +9,8 @@
 
 EventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...
 
+[Documention]: https://thenetcircle.github.io/event-bus/
+
 ## Features
 
 - Supplies multiple sources and sinks (HTTP for now).
