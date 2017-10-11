@@ -1,0 +1,13 @@
+# Todo
+- ~~Add logs~~
+- Error Handler
+- Improve Tracer
+- ExecutionContext
+- Kafka Settings
+- Stream Runner (take care of start, restart services)
+- Implicate ChannelResolver
+- Implicate Fallbacker
+- Integrate Sentry
+- Configuration storage
+- Controller Api (start new service, restart services, change services, update configuration)
+- Admin Interface

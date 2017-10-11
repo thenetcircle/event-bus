@@ -1,0 +1,5 @@
+site_name: EventBus
+theme: material
+pages:
+  - Home: index.md
+  - Getting Started: getting_started.md
