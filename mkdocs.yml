@@ -2,4 +2,7 @@ site_name: EventBus
 theme: material
 pages:
   - Home: index.md
+  - Installation: installation.md
   - Getting Started: getting_started.md
+  - Components: components.md
+  - Deployment: deployment.md

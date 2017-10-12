@@ -9,7 +9,9 @@
 
 EventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...
 
-For more detail, Please check [Documention](https://thenetcircle.github.io/event-bus/).
+Visit the [Documention](https://thenetcircle.github.io/event-bus/) for more details.
+
+[![EventBus Workflow](https://thenetcircle.github.io/event-bus/assets/workflow.png)](https://thenetcircle.github.io/event-bus/assets/workflow.png)
 
 ## Features
 
@@ -19,7 +21,7 @@ For more detail, Please check [Documention](https://thenetcircle.github.io/event
 - Supplies tracing and monitoring
 
 ## Contributing
-Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.
+Feedbacks and pull requests are welcome and appropriated. 
+For major changes, Please open an issue first to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
