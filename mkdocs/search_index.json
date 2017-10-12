@@ -47,12 +47,12 @@
         },
         {
             "location": "/quickstart/",
-            "text": "Background\n\n\nEventBus works like a postman to delivering stuff from source to target.\n\nLet's set up a scenario to describe how it works.  \n\n\nFor example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.     \n\n\nThe flow will be work like this:\n\n\n\n\nSetting up EventBus\n\n\nFirst of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called EntryPoint in EventBus) and targets(called EndPoint). We need to point out which of them is using in this scenario.\n\nLet's create a configuration file to describe this, The configuration file is based on \nTypesafe Config\n, similar as json.\nLet's create a file called application.conf, Put it on root of EventBus directory.\n\n\n# includes the original configuration\ninclude \"application\"\n\n# EventBus runtime configuration\nevent-bus.runtime {\n\n  # Creates a PipelinePool and declare what Pipelines it has.\n  pipeline-pool = [\n    {\n      name = TestPipeline\n      type = kafka\n\n      # Sets up the Pipeline specific settings\n      akka.kafka.producer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n      akka.kafka.consumer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n    }\n  ]\n\n  # Creates Transporters which will accept data from outside to Pipeline.\n  transporters = [{\n    name = TestTransporter\n\n    # Declares which EntryPoints this Transporter can support.\n    entrypoints = [\n      {\n        type = http\n        name = TestEntryPoint1\n\n        # EntryPoint specific parameters\n        interface = localhost\n        port = 8086\n      }\n    ]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n    }\n\n    # Transporter specific parameters.\n    transport-parallelism = 1\n    commit-parallelism = 10\n    akka.stream.materializer {}\n  }]\n\n  # Creates Dispatchers which will publish data from Pipeline to outside.\n  dispatchers = [{\n    name = StressTestDispatcher\n\n    # Declares which EndPoints this Dispatcher can support.\n    endpoints = [{\n      type = http\n      name = TestEndPoint\n\n      # EndPoint specific parameters\n      request {\n        host = localhost\n        port = 8087\n        uri = \"/\"\n      }\n      akka.http.host-connection-pool {\n        max-open-requests = 32\n      }\n    }]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n\n      # The options of using the Pipeline\n      outlet {\n        group-id = EventBus.TestDispatcher\n        topics = [\"default\"]\n      }\n    }\n  }]\n}\n\n\n\n\nLaunch EventBus\n\n\nAfter you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka...\n\nThen we can launch EventBus by the way if want, Let's using normal way here.\n\n\n\n\npackage EventBus\n\n\n\n\nsbt clean compile stage\n\n\n\n\n\n\nlaunch with the configuration\n\n\n\n\n./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf\n\n\n\n\nNow EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.",
+            "text": "Background\n\n\nEventBus works like a postman to delivering stuff from source to target.\n\nLet's set up a scenario to describe how it works.  \n\n\nFor example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.     \n\n\nThe workflow will like this:\n\n\n\n\nSetting up EventBus\n\n\nFirst of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called EntryPoint in EventBus) and targets(called EndPoint). We need to point out which of them is using in this scenario.\n\nLet's create a configuration file to describe this, The configuration file is based on \nTypesafe Config\n, similar as json.\nLet's create a file called application.conf, Put it on root of EventBus directory.\n\n\n# includes the original configuration\ninclude \"application\"\n\n# EventBus runtime configuration\nevent-bus.runtime {\n\n  # Creates a PipelinePool and declare what Pipelines it has.\n  pipeline-pool = [\n    {\n      name = TestPipeline\n      type = kafka\n\n      # Sets up the Pipeline specific settings\n      akka.kafka.producer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n      akka.kafka.consumer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n    }\n  ]\n\n  # Creates Transporters which will accept data from outside to Pipeline.\n  transporters = [{\n    name = TestTransporter\n\n    # Declares which EntryPoints this Transporter can support.\n    entrypoints = [\n      {\n        type = http\n        name = TestEntryPoint1\n\n        # EntryPoint specific parameters\n        interface = localhost\n        port = 8086\n      }\n    ]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n    }\n\n    # Transporter specific parameters.\n    transport-parallelism = 1\n    commit-parallelism = 10\n    akka.stream.materializer {}\n  }]\n\n  # Creates Dispatchers which will publish data from Pipeline to outside.\n  dispatchers = [{\n    name = StressTestDispatcher\n\n    # Declares which EndPoints this Dispatcher can support.\n    endpoints = [{\n      type = http\n      name = TestEndPoint\n\n      # EndPoint specific parameters\n      request {\n        host = localhost\n        port = 8087\n        uri = \"/\"\n      }\n      akka.http.host-connection-pool {\n        max-open-requests = 32\n      }\n    }]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n\n      # The options of using the Pipeline\n      outlet {\n        group-id = EventBus.TestDispatcher\n        topics = [\"default\"]\n      }\n    }\n  }]\n}\n\n\n\n\nLaunch EventBus\n\n\nAfter you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka...\n\nThen we can launch EventBus by the way if want, Let's using normal way here.\n\n\n\n\npackage EventBus\n\n\n\n\nsbt clean compile stage\n\n\n\n\n\n\nlaunch with the configuration\n\n\n\n\n./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf\n\n\n\n\nNow EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.",
             "title": "QuickStart"
         },
         {
             "location": "/quickstart/#background",
-            "text": "EventBus works like a postman to delivering stuff from source to target. \nLet's set up a scenario to describe how it works.    For example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.       The flow will be work like this:",
+            "text": "EventBus works like a postman to delivering stuff from source to target. \nLet's set up a scenario to describe how it works.    For example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.       The workflow will like this:",
             "title": "Background"
         },
         {
@@ -66,69 +66,74 @@
             "title": "Launch EventBus"
         },
         {
-            "location": "/development/",
-            "text": "Components\n\n\nTransporter\n\n\nEntryPoints\n\n\nHTTP EntryPoint\n\n\nPipeline\n\n\nKafka Pipeline\n\n\nDispatcher\n\n\nEndPoints\n\n\nHTTP EndPoint\n\n\nFallbacker\n\n\nTracer\n\n\nManager",
-            "title": "Development"
-        },
-        {
-            "location": "/development/#components",
-            "text": "",
+            "location": "/components/",
+            "text": "Transporter\n\n\nEntryPoints\n\n\nHTTP EntryPoint\n\n\nPipeline\n\n\nKafka Pipeline\n\n\nDispatcher\n\n\nEndPoints\n\n\nHTTP EndPoint\n\n\nFallbacker\n\n\nTracer\n\n\nManager",
             "title": "Components"
         },
         {
-            "location": "/development/#transporter",
+            "location": "/components/#transporter",
             "text": "",
             "title": "Transporter"
         },
         {
-            "location": "/development/#entrypoints",
+            "location": "/components/#entrypoints",
             "text": "",
             "title": "EntryPoints"
         },
         {
-            "location": "/development/#http-entrypoint",
+            "location": "/components/#http-entrypoint",
             "text": "",
             "title": "HTTP EntryPoint"
         },
         {
-            "location": "/development/#pipeline",
+            "location": "/components/#pipeline",
             "text": "",
             "title": "Pipeline"
         },
         {
-            "location": "/development/#kafka-pipeline",
+            "location": "/components/#kafka-pipeline",
             "text": "",
             "title": "Kafka Pipeline"
         },
         {
-            "location": "/development/#dispatcher",
+            "location": "/components/#dispatcher",
             "text": "",
             "title": "Dispatcher"
         },
         {
-            "location": "/development/#endpoints",
+            "location": "/components/#endpoints",
             "text": "",
             "title": "EndPoints"
         },
         {
-            "location": "/development/#http-endpoint",
+            "location": "/components/#http-endpoint",
             "text": "",
             "title": "HTTP EndPoint"
         },
         {
-            "location": "/development/#fallbacker",
+            "location": "/components/#fallbacker",
             "text": "",
             "title": "Fallbacker"
         },
         {
-            "location": "/development/#tracer",
+            "location": "/components/#tracer",
             "text": "",
             "title": "Tracer"
         },
         {
-            "location": "/development/#manager",
+            "location": "/components/#manager",
             "text": "",
             "title": "Manager"
+        },
+        {
+            "location": "/unified_event/",
+            "text": "ActivityStreams",
+            "title": "Unified Event"
+        },
+        {
+            "location": "/unified_event/#activitystreams",
+            "text": "",
+            "title": "ActivityStreams"
         },
         {
             "location": "/configuration/",
