@@ -16,7 +16,7 @@
     
     
       
-        <title>Components - EventBus</title>
+        <title>QuickStart - EventBus</title>
       
     
     
@@ -74,7 +74,7 @@
             
               
             
-            Components
+            QuickStart
           
         </span>
       </div>
@@ -159,18 +159,6 @@
       
       
 
-
-  <li class="md-nav__item">
-    <a href="../getting_started/" title="Getting Started" class="md-nav__link">
-      Getting Started
-    </a>
-  </li>
-
-    
-      
-      
-      
-
   
 
 
@@ -180,11 +168,11 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="toc">
-        Components
+        QuickStart
       </label>
     
-    <a href="./" title="Components" class="md-nav__link md-nav__link--active">
-      Components
+    <a href="./" title="QuickStart" class="md-nav__link md-nav__link--active">
+      QuickStart
     </a>
     
       
@@ -196,56 +184,22 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#requirements" title="Requirements" class="md-nav__link">
-    Requirements
+  <a href="#background" title="Background" class="md-nav__link">
+    Background
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation" title="Installation" class="md-nav__link">
-    Installation
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sbt" title="Sbt" class="md-nav__link">
-    Sbt
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#maven" title="Maven" class="md-nav__link">
-    Maven
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#from-source" title="From Source" class="md-nav__link">
-    From Source
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" title="Usage" class="md-nav__link">
-    Usage
+  <a href="#setting-up-eventbus" title="Setting up EventBus" class="md-nav__link">
+    Setting up EventBus
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#deployment" title="Deployment" class="md-nav__link">
-    Deployment
+  <a href="#launch-eventbus" title="Launch EventBus" class="md-nav__link">
+    Launch EventBus
   </a>
   
 </li>
@@ -256,6 +210,30 @@
   
 </nav>
     
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../development/" title="Development" class="md-nav__link">
+      Development
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../configuration/" title="Configuration" class="md-nav__link">
+      Configuration
+    </a>
   </li>
 
     
@@ -290,56 +268,22 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#requirements" title="Requirements" class="md-nav__link">
-    Requirements
+  <a href="#background" title="Background" class="md-nav__link">
+    Background
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#installation" title="Installation" class="md-nav__link">
-    Installation
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sbt" title="Sbt" class="md-nav__link">
-    Sbt
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#maven" title="Maven" class="md-nav__link">
-    Maven
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#from-source" title="From Source" class="md-nav__link">
-    From Source
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" title="Usage" class="md-nav__link">
-    Usage
+  <a href="#setting-up-eventbus" title="Setting up EventBus" class="md-nav__link">
+    Setting up EventBus
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#deployment" title="Deployment" class="md-nav__link">
-    Deployment
+  <a href="#launch-eventbus" title="Launch EventBus" class="md-nav__link">
+    Launch EventBus
   </a>
   
 </li>
@@ -359,15 +303,123 @@
               
                 
                 
-                  <h1>Components</h1>
+                  <h1>QuickStart</h1>
                 
-                <h2 id="requirements">Requirements</h2>
-<h2 id="installation">Installation</h2>
-<h3 id="sbt">Sbt</h3>
-<h3 id="maven">Maven</h3>
-<h3 id="from-source">From Source</h3>
-<h2 id="usage">Usage</h2>
-<h2 id="deployment">Deployment</h2>
+                <h2 id="background">Background</h2>
+<p>EventBus works like a postman to delivering stuff from source to target.<br />
+Let's set up a scenario to describe how it works.  </p>
+<p>For example if we have a web application which writen by PHP, 
+And we have some other backend services using different languages like Java, Nodejs, Python.
+And we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.     </p>
+<p>The flow will be work like this:</p>
+<p><a href="assets/quickstart.png" target="_blank"><img alt="EventBus Workflow" src="../assets/quickstart.png" /></a></p>
+<h2 id="setting-up-eventbus">Setting up EventBus</h2>
+<p>First of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called EntryPoint in EventBus) and targets(called EndPoint). We need to point out which of them is using in this scenario.<br />
+Let's create a configuration file to describe this, The configuration file is based on <a href="https://github.com/typesafehub/config">Typesafe Config</a>, similar as json.
+Let's create a file called application.conf, Put it on root of EventBus directory.</p>
+<pre><code class="json"># includes the original configuration
+include &quot;application&quot;
+
+# EventBus runtime configuration
+event-bus.runtime {
+
+  # Creates a PipelinePool and declare what Pipelines it has.
+  pipeline-pool = [
+    {
+      name = TestPipeline
+      type = kafka
+
+      # Sets up the Pipeline specific settings
+      akka.kafka.producer {
+        kafka-clients {
+          bootstrap.servers = &quot;...&quot;
+        }
+      }
+      akka.kafka.consumer {
+        kafka-clients {
+          bootstrap.servers = &quot;...&quot;
+        }
+      }
+    }
+  ]
+
+  # Creates Transporters which will accept data from outside to Pipeline.
+  transporters = [{
+    name = TestTransporter
+
+    # Declares which EntryPoints this Transporter can support.
+    entrypoints = [
+      {
+        type = http
+        name = TestEntryPoint1
+
+        # EntryPoint specific parameters
+        interface = localhost
+        port = 8086
+      }
+    ]
+
+    # Declares which Pipeline it using (from PipelinePool)
+    pipeline {
+      name = TestPipeline
+    }
+
+    # Transporter specific parameters.
+    transport-parallelism = 1
+    commit-parallelism = 10
+    akka.stream.materializer {}
+  }]
+
+  # Creates Dispatchers which will publish data from Pipeline to outside.
+  dispatchers = [{
+    name = StressTestDispatcher
+
+    # Declares which EndPoints this Dispatcher can support.
+    endpoints = [{
+      type = http
+      name = TestEndPoint
+
+      # EndPoint specific parameters
+      request {
+        host = localhost
+        port = 8087
+        uri = &quot;/&quot;
+      }
+      akka.http.host-connection-pool {
+        max-open-requests = 32
+      }
+    }]
+
+    # Declares which Pipeline it using (from PipelinePool)
+    pipeline {
+      name = TestPipeline
+
+      # The options of using the Pipeline
+      outlet {
+        group-id = EventBus.TestDispatcher
+        topics = [&quot;default&quot;]
+      }
+    }
+  }]
+}
+</code></pre>
+
+<h2 id="launch-eventbus">Launch EventBus</h2>
+<p>After you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka...<br />
+Then we can launch EventBus by the way if want, Let's using normal way here.</p>
+<ul>
+<li>package EventBus</li>
+</ul>
+<pre><code class="sh">sbt clean compile stage
+</code></pre>
+
+<ul>
+<li>launch with the configuration</li>
+</ul>
+<pre><code class="sh">./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf
+</code></pre>
+
+<p>Now EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.</p>
                 
                   
                 
@@ -386,7 +438,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../getting_started/" title="Getting Started" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../installation/" title="Installation" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -395,19 +447,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Getting Started
+                Installation
               </span>
             </div>
           </a>
         
         
-          <a href="../deployment/" title="Deployment" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../development/" title="Development" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Deployment
+                Development
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">

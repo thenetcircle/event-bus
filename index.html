@@ -200,8 +200,8 @@
 
 
   <li class="md-nav__item">
-    <a href="getting_started/" title="Getting Started" class="md-nav__link">
-      Getting Started
+    <a href="quickstart/" title="QuickStart" class="md-nav__link">
+      QuickStart
     </a>
   </li>
 
@@ -212,8 +212,20 @@
 
 
   <li class="md-nav__item">
-    <a href="components/" title="Components" class="md-nav__link">
-      Components
+    <a href="development/" title="Development" class="md-nav__link">
+      Development
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="configuration/" title="Configuration" class="md-nav__link">
+      Configuration
     </a>
   </li>
 
@@ -279,19 +291,21 @@
                 
                   <h1>Home</h1>
                 
-                <p>EventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...</p>
-<p><a href="./assets/workflow.png"><img alt="EventBus Workflow" src="./assets/workflow.png" /></a></p>
+                <p>EventBus is built for distributing unified events/messages(as a language everyone can understand) from multiple different sources to different targets. With abilities of messages persistence, tracing and manipulating.</p>
+<p><a href="assets/workflow.png" target="_blank"><img alt="EventBus Workflow" src="./assets/workflow_small.png" /></a></p>
 <h2 id="features">Features</h2>
 <ul>
-<li>Supplies multiple sources and sinks (HTTP for now).</li>
-<li>Supplies multiple pipelines (Kafka for now)</li>
-<li>Retry and Fallback</li>
-<li>Supplies tracing and monitoring</li>
+<li>Supplies multiple different sources and targets.</li>
+<li>Based on AkkaStreams, Whole flow supports back-pressure, and various stream operations.</li>
+<li>Each components are decoupled, can run into independent processes.</li>
+<li>Fully tested (unit test, integration test, stress test).</li>
+<li>Whole system is configurable.</li>
+<li>Providers tracing and monitoring.</li>
+<li>Providers manager interface.</li>
+<li>Fault-tolerant</li>
 </ul>
 <h2 id="contributing">Contributing</h2>
-<p>Pull requests are welcome. For major changes, please open an issue first
-to discuss what you would like to change.</p>
-<p>Please make sure to update tests as appropriate.</p>
+<p>Feedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.</p>
                 
                   
                 

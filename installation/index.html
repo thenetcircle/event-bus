@@ -187,6 +187,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#from-source" title="From Source" class="md-nav__link">
+    From Source
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#sbt" title="Sbt" class="md-nav__link">
     Sbt
   </a>
@@ -200,29 +207,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#from-source" title="From Source" class="md-nav__link">
-    From Source
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" title="Usage" class="md-nav__link">
-    Usage
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#deployment" title="Deployment" class="md-nav__link">
-    Deployment
-  </a>
   
 </li>
       
@@ -241,8 +227,8 @@
 
 
   <li class="md-nav__item">
-    <a href="../getting_started/" title="Getting Started" class="md-nav__link">
-      Getting Started
+    <a href="../quickstart/" title="QuickStart" class="md-nav__link">
+      QuickStart
     </a>
   </li>
 
@@ -253,8 +239,20 @@
 
 
   <li class="md-nav__item">
-    <a href="../components/" title="Components" class="md-nav__link">
-      Components
+    <a href="../development/" title="Development" class="md-nav__link">
+      Development
+    </a>
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../configuration/" title="Configuration" class="md-nav__link">
+      Configuration
     </a>
   </li>
 
@@ -305,6 +303,13 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#from-source" title="From Source" class="md-nav__link">
+    From Source
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#sbt" title="Sbt" class="md-nav__link">
     Sbt
   </a>
@@ -318,29 +323,8 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#from-source" title="From Source" class="md-nav__link">
-    From Source
-  </a>
-  
-</li>
-        
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" title="Usage" class="md-nav__link">
-    Usage
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#deployment" title="Deployment" class="md-nav__link">
-    Deployment
-  </a>
   
 </li>
       
@@ -362,12 +346,29 @@
                   <h1>Installation</h1>
                 
                 <h2 id="requirements">Requirements</h2>
+<ul>
+<li>Java 1.8+ installed</li>
+<li>Sbt</li>
+<li>Kafka 0.10+</li>
+<li>Ansible (using for deployment)</li>
+</ul>
 <h2 id="installation">Installation</h2>
+<h3 id="from-source">From Source</h3>
+<ul>
+<li>clone the code</li>
+</ul>
+<pre><code class="bash">git clone https://github.com/thenetcircle/event-bus.git
+</code></pre>
+
+<ul>
+<li>change configs</li>
+<li>package</li>
+</ul>
+<pre><code class="bash">sbt stage
+</code></pre>
+
 <h3 id="sbt">Sbt</h3>
 <h3 id="maven">Maven</h3>
-<h3 id="from-source">From Source</h3>
-<h2 id="usage">Usage</h2>
-<h2 id="deployment">Deployment</h2>
                 
                   
                 
@@ -401,13 +402,13 @@
           </a>
         
         
-          <a href="../getting_started/" title="Getting Started" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../quickstart/" title="QuickStart" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Getting Started
+                QuickStart
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">

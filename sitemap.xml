@@ -19,7 +19,7 @@
 
     
     <url>
-     <loc>/getting_started/</loc>
+     <loc>/quickstart/</loc>
      <lastmod>2017-10-12</lastmod>
      <changefreq>daily</changefreq>
     </url>
@@ -27,7 +27,15 @@
 
     
     <url>
-     <loc>/components/</loc>
+     <loc>/development/</loc>
+     <lastmod>2017-10-12</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/configuration/</loc>
      <lastmod>2017-10-12</lastmod>
      <changefreq>daily</changefreq>
     </url>

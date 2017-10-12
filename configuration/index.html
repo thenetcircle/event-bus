@@ -16,7 +16,7 @@
     
     
       
-        <title>Deployment - EventBus</title>
+        <title>Configuration - EventBus</title>
       
     
     
@@ -74,7 +74,7 @@
             
               
             
-            Deployment
+            Configuration
           
         </span>
       </div>
@@ -183,18 +183,6 @@
       
       
 
-
-  <li class="md-nav__item">
-    <a href="../configuration/" title="Configuration" class="md-nav__link">
-      Configuration
-    </a>
-  </li>
-
-    
-      
-      
-      
-
   
 
 
@@ -204,11 +192,11 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="toc">
-        Deployment
+        Configuration
       </label>
     
-    <a href="./" title="Deployment" class="md-nav__link md-nav__link--active">
-      Deployment
+    <a href="./" title="Configuration" class="md-nav__link md-nav__link--active">
+      Configuration
     </a>
     
       
@@ -220,42 +208,15 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ansible" title="Ansible" class="md-nav__link">
-    Ansible
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#change-configuration" title="Change Configuration" class="md-nav__link">
-    Change Configuration
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploy-to-specific-servers" title="Deploy to specific servers" class="md-nav__link">
-    Deploy to specific servers
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker" title="Docker" class="md-nav__link">
-    Docker
+  <a href="#default-configuration" title="Default Configuration" class="md-nav__link">
+    Default Configuration
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#manually" title="Manually" class="md-nav__link">
-    Manually
+  <a href="#runtime-configuration" title="Runtime Configuration" class="md-nav__link">
+    Runtime Configuration
   </a>
   
 </li>
@@ -266,6 +227,18 @@
   
 </nav>
     
+  </li>
+
+    
+      
+      
+      
+
+
+  <li class="md-nav__item">
+    <a href="../deployment/" title="Deployment" class="md-nav__link">
+      Deployment
+    </a>
   </li>
 
     
@@ -288,42 +261,15 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ansible" title="Ansible" class="md-nav__link">
-    Ansible
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#change-configuration" title="Change Configuration" class="md-nav__link">
-    Change Configuration
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploy-to-specific-servers" title="Deploy to specific servers" class="md-nav__link">
-    Deploy to specific servers
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker" title="Docker" class="md-nav__link">
-    Docker
+  <a href="#default-configuration" title="Default Configuration" class="md-nav__link">
+    Default Configuration
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#manually" title="Manually" class="md-nav__link">
-    Manually
+  <a href="#runtime-configuration" title="Runtime Configuration" class="md-nav__link">
+    Runtime Configuration
   </a>
   
 </li>
@@ -343,16 +289,110 @@
               
                 
                 
-                  <h1>Deployment</h1>
+                  <h1>Configuration</h1>
                 
-                <h2 id="ansible">Ansible</h2>
-<h3 id="change-configuration">Change Configuration</h3>
-<h3 id="deploy-to-specific-servers">Deploy to specific servers</h3>
-<pre><code class="sh">ansible-playbook -i ansible/lab ansible/site.yml -e &quot;service_name=stresstest&quot;
+                <h2 id="default-configuration">Default Configuration</h2>
+<pre><code class="json"># Default Settings Of EventBus
+event-bus {
+  pipeline {
+    kafka {
+      pipeline {
+        akka.kafka.producer {
+          #use-dispatcher = &quot;akka.kafka.default-dispatcher&quot;
+          kafka-clients {
+            client.id = &quot;EventBus-Producer&quot;
+          }
+        }
+        akka.kafka.consumer {
+          #use-dispatcher = &quot;akka.kafka.default-dispatcher&quot;
+          kafka-clients {
+            client.id = &quot;EventBus-Consumer&quot;
+          }
+        }
+      }
+      inlet {
+        #close-timeout = 60s
+        #parallelism = 10
+      }
+      outlet {
+        #group-id = TestGroup
+        extract-parallelism = 3
+        #topics = []
+        #topicPattern = event-*
+        #poll-interval = 50ms
+        #poll-timeout = 50ms
+        #stop-timeout = 30s
+        #close-timeout = 20s
+        #commit-timeout = 15s
+        #wakeup-timeout = 3s
+        #max-wakeups = 10
+      }
+      committer {
+        commit-parallelism = 3
+        commit-batch-max = 20
+      }
+    }
+  }
+
+  transporter {
+    #name = TestTransporter
+    #entrypoints = [
+    #  {
+    #    type = http
+    #    name = TestEntryPoint1
+    #    interface = 127.0.0.1
+    #    port = 8080
+    #  }
+    #]
+    #pipeline {
+    #  name = DefaultKafkaPipeline
+    #  inlet-settings {}
+    #}
+    transport-parallelism = 1
+    commit-parallelism = 10
+    #akka.stream.materializer {}
+  }
+
+  entrypoint {
+    http {
+      #name = TestHttpEntryPoint
+      #interface = localhost
+      #port = 8080
+      priority = normal
+      // TODO: adjust these default values when doing stress testing
+      max-connections = 1000
+      pre-connection-parallelism = 10
+      event-format = default
+      # akka.http.server {} // override &quot;akka.http.server&quot; default settings
+    }
+  }
+
+  dispatcher {
+    #akka.stream.materializer {}
+  }
+
+  endpoint {
+    http {
+      max-retry-times = 10
+      request {
+        port = 80
+        method = POST
+        uri = /
+      }
+      #expected-response-data = OK
+      akka.http.host-connection-pool {
+        #max-connections = 4
+        max-retries = 0
+        #max-open-requests = 32
+        #pipelining-limit = 1
+        #idle-timeout = 30 s
+      }
+    }
+  }
+}
 </code></pre>
 
-<h2 id="docker">Docker</h2>
-<h2 id="manually">Manually</h2>
+<h2 id="runtime-configuration">Runtime Configuration</h2>
                 
                   
                 
@@ -371,7 +411,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../configuration/" title="Configuration" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../development/" title="Development" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -380,11 +420,25 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Configuration
+                Development
               </span>
             </div>
           </a>
         
+        
+          <a href="../deployment/" title="Deployment" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
+              <span class="md-flex__ellipsis">
+                <span class="md-footer-nav__direction">
+                  Next
+                </span>
+                Deployment
+              </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink">
+              <i class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          </a>
         
       </nav>
     </div>

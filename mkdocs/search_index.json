@@ -2,33 +2,38 @@
     "docs": [
         {
             "location": "/",
-            "text": "EventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...\n\n\n\n\nFeatures\n\n\n\n\nSupplies multiple sources and sinks (HTTP for now).\n\n\nSupplies multiple pipelines (Kafka for now)\n\n\nRetry and Fallback\n\n\nSupplies tracing and monitoring\n\n\n\n\nContributing\n\n\nPull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.\n\n\nPlease make sure to update tests as appropriate.",
+            "text": "EventBus is built for distributing unified events/messages(as a language everyone can understand) from multiple different sources to different targets. With abilities of messages persistence, tracing and manipulating.\n\n\n\n\nFeatures\n\n\n\n\nSupplies multiple different sources and targets.\n\n\nBased on AkkaStreams, Whole flow supports back-pressure, and various stream operations.\n\n\nEach components are decoupled, can run into independent processes.\n\n\nFully tested (unit test, integration test, stress test).\n\n\nWhole system is configurable.\n\n\nProviders tracing and monitoring.\n\n\nProviders manager interface.\n\n\nFault-tolerant\n\n\n\n\nContributing\n\n\nFeedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.",
             "title": "Home"
         },
         {
             "location": "/#features",
-            "text": "Supplies multiple sources and sinks (HTTP for now).  Supplies multiple pipelines (Kafka for now)  Retry and Fallback  Supplies tracing and monitoring",
+            "text": "Supplies multiple different sources and targets.  Based on AkkaStreams, Whole flow supports back-pressure, and various stream operations.  Each components are decoupled, can run into independent processes.  Fully tested (unit test, integration test, stress test).  Whole system is configurable.  Providers tracing and monitoring.  Providers manager interface.  Fault-tolerant",
             "title": "Features"
         },
         {
             "location": "/#contributing",
-            "text": "Pull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.  Please make sure to update tests as appropriate.",
+            "text": "Feedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.",
             "title": "Contributing"
         },
         {
             "location": "/installation/",
-            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
+            "text": "Requirements\n\n\n\n\nJava 1.8+ installed\n\n\nSbt\n\n\nKafka 0.10+\n\n\nAnsible (using for deployment)\n\n\n\n\nInstallation\n\n\nFrom Source\n\n\n\n\nclone the code\n\n\n\n\ngit clone https://github.com/thenetcircle/event-bus.git\n\n\n\n\n\n\nchange configs\n\n\npackage\n\n\n\n\nsbt stage\n\n\n\n\nSbt\n\n\nMaven",
             "title": "Installation"
         },
         {
             "location": "/installation/#requirements",
-            "text": "",
+            "text": "Java 1.8+ installed  Sbt  Kafka 0.10+  Ansible (using for deployment)",
             "title": "Requirements"
         },
         {
             "location": "/installation/#installation",
             "text": "",
             "title": "Installation"
+        },
+        {
+            "location": "/installation/#from-source",
+            "text": "clone the code   git clone https://github.com/thenetcircle/event-bus.git   change configs  package   sbt stage",
+            "title": "From Source"
         },
         {
             "location": "/installation/#sbt",
@@ -41,139 +46,134 @@
             "title": "Maven"
         },
         {
-            "location": "/installation/#from-source",
+            "location": "/quickstart/",
+            "text": "Background\n\n\nEventBus works like a postman to delivering stuff from source to target.\n\nLet's set up a scenario to describe how it works.  \n\n\nFor example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.     \n\n\nThe flow will be work like this:\n\n\n\n\nSetting up EventBus\n\n\nFirst of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called EntryPoint in EventBus) and targets(called EndPoint). We need to point out which of them is using in this scenario.\n\nLet's create a configuration file to describe this, The configuration file is based on \nTypesafe Config\n, similar as json.\nLet's create a file called application.conf, Put it on root of EventBus directory.\n\n\n# includes the original configuration\ninclude \"application\"\n\n# EventBus runtime configuration\nevent-bus.runtime {\n\n  # Creates a PipelinePool and declare what Pipelines it has.\n  pipeline-pool = [\n    {\n      name = TestPipeline\n      type = kafka\n\n      # Sets up the Pipeline specific settings\n      akka.kafka.producer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n      akka.kafka.consumer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n    }\n  ]\n\n  # Creates Transporters which will accept data from outside to Pipeline.\n  transporters = [{\n    name = TestTransporter\n\n    # Declares which EntryPoints this Transporter can support.\n    entrypoints = [\n      {\n        type = http\n        name = TestEntryPoint1\n\n        # EntryPoint specific parameters\n        interface = localhost\n        port = 8086\n      }\n    ]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n    }\n\n    # Transporter specific parameters.\n    transport-parallelism = 1\n    commit-parallelism = 10\n    akka.stream.materializer {}\n  }]\n\n  # Creates Dispatchers which will publish data from Pipeline to outside.\n  dispatchers = [{\n    name = StressTestDispatcher\n\n    # Declares which EndPoints this Dispatcher can support.\n    endpoints = [{\n      type = http\n      name = TestEndPoint\n\n      # EndPoint specific parameters\n      request {\n        host = localhost\n        port = 8087\n        uri = \"/\"\n      }\n      akka.http.host-connection-pool {\n        max-open-requests = 32\n      }\n    }]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n\n      # The options of using the Pipeline\n      outlet {\n        group-id = EventBus.TestDispatcher\n        topics = [\"default\"]\n      }\n    }\n  }]\n}\n\n\n\n\nLaunch EventBus\n\n\nAfter you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka...\n\nThen we can launch EventBus by the way if want, Let's using normal way here.\n\n\n\n\npackage EventBus\n\n\n\n\nsbt clean compile stage\n\n\n\n\n\n\nlaunch with the configuration\n\n\n\n\n./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf\n\n\n\n\nNow EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.",
+            "title": "QuickStart"
+        },
+        {
+            "location": "/quickstart/#background",
+            "text": "EventBus works like a postman to delivering stuff from source to target. \nLet's set up a scenario to describe how it works.    For example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.       The flow will be work like this:",
+            "title": "Background"
+        },
+        {
+            "location": "/quickstart/#setting-up-eventbus",
+            "text": "First of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called EntryPoint in EventBus) and targets(called EndPoint). We need to point out which of them is using in this scenario. \nLet's create a configuration file to describe this, The configuration file is based on  Typesafe Config , similar as json.\nLet's create a file called application.conf, Put it on root of EventBus directory.  # includes the original configuration\ninclude \"application\"\n\n# EventBus runtime configuration\nevent-bus.runtime {\n\n  # Creates a PipelinePool and declare what Pipelines it has.\n  pipeline-pool = [\n    {\n      name = TestPipeline\n      type = kafka\n\n      # Sets up the Pipeline specific settings\n      akka.kafka.producer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n      akka.kafka.consumer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n    }\n  ]\n\n  # Creates Transporters which will accept data from outside to Pipeline.\n  transporters = [{\n    name = TestTransporter\n\n    # Declares which EntryPoints this Transporter can support.\n    entrypoints = [\n      {\n        type = http\n        name = TestEntryPoint1\n\n        # EntryPoint specific parameters\n        interface = localhost\n        port = 8086\n      }\n    ]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n    }\n\n    # Transporter specific parameters.\n    transport-parallelism = 1\n    commit-parallelism = 10\n    akka.stream.materializer {}\n  }]\n\n  # Creates Dispatchers which will publish data from Pipeline to outside.\n  dispatchers = [{\n    name = StressTestDispatcher\n\n    # Declares which EndPoints this Dispatcher can support.\n    endpoints = [{\n      type = http\n      name = TestEndPoint\n\n      # EndPoint specific parameters\n      request {\n        host = localhost\n        port = 8087\n        uri = \"/\"\n      }\n      akka.http.host-connection-pool {\n        max-open-requests = 32\n      }\n    }]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n\n      # The options of using the Pipeline\n      outlet {\n        group-id = EventBus.TestDispatcher\n        topics = [\"default\"]\n      }\n    }\n  }]\n}",
+            "title": "Setting up EventBus"
+        },
+        {
+            "location": "/quickstart/#launch-eventbus",
+            "text": "After you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka... \nThen we can launch EventBus by the way if want, Let's using normal way here.   package EventBus   sbt clean compile stage   launch with the configuration   ./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf  Now EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.",
+            "title": "Launch EventBus"
+        },
+        {
+            "location": "/development/",
+            "text": "Components\n\n\nTransporter\n\n\nEntryPoints\n\n\nHTTP EntryPoint\n\n\nPipeline\n\n\nKafka Pipeline\n\n\nDispatcher\n\n\nEndPoints\n\n\nHTTP EndPoint\n\n\nFallbacker\n\n\nTracer\n\n\nManager",
+            "title": "Development"
+        },
+        {
+            "location": "/development/#components",
             "text": "",
-            "title": "From Source"
-        },
-        {
-            "location": "/installation/#usage",
-            "text": "",
-            "title": "Usage"
-        },
-        {
-            "location": "/installation/#deployment",
-            "text": "",
-            "title": "Deployment"
-        },
-        {
-            "location": "/getting_started/",
-            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
-            "title": "Getting Started"
-        },
-        {
-            "location": "/getting_started/#requirements",
-            "text": "",
-            "title": "Requirements"
-        },
-        {
-            "location": "/getting_started/#installation",
-            "text": "",
-            "title": "Installation"
-        },
-        {
-            "location": "/getting_started/#sbt",
-            "text": "",
-            "title": "Sbt"
-        },
-        {
-            "location": "/getting_started/#maven",
-            "text": "",
-            "title": "Maven"
-        },
-        {
-            "location": "/getting_started/#from-source",
-            "text": "",
-            "title": "From Source"
-        },
-        {
-            "location": "/getting_started/#usage",
-            "text": "",
-            "title": "Usage"
-        },
-        {
-            "location": "/getting_started/#deployment",
-            "text": "",
-            "title": "Deployment"
-        },
-        {
-            "location": "/components/",
-            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
             "title": "Components"
         },
         {
-            "location": "/components/#requirements",
+            "location": "/development/#transporter",
             "text": "",
-            "title": "Requirements"
+            "title": "Transporter"
         },
         {
-            "location": "/components/#installation",
+            "location": "/development/#entrypoints",
             "text": "",
-            "title": "Installation"
+            "title": "EntryPoints"
         },
         {
-            "location": "/components/#sbt",
+            "location": "/development/#http-entrypoint",
             "text": "",
-            "title": "Sbt"
+            "title": "HTTP EntryPoint"
         },
         {
-            "location": "/components/#maven",
+            "location": "/development/#pipeline",
             "text": "",
-            "title": "Maven"
+            "title": "Pipeline"
         },
         {
-            "location": "/components/#from-source",
+            "location": "/development/#kafka-pipeline",
             "text": "",
-            "title": "From Source"
+            "title": "Kafka Pipeline"
         },
         {
-            "location": "/components/#usage",
+            "location": "/development/#dispatcher",
             "text": "",
-            "title": "Usage"
+            "title": "Dispatcher"
         },
         {
-            "location": "/components/#deployment",
+            "location": "/development/#endpoints",
             "text": "",
-            "title": "Deployment"
+            "title": "EndPoints"
+        },
+        {
+            "location": "/development/#http-endpoint",
+            "text": "",
+            "title": "HTTP EndPoint"
+        },
+        {
+            "location": "/development/#fallbacker",
+            "text": "",
+            "title": "Fallbacker"
+        },
+        {
+            "location": "/development/#tracer",
+            "text": "",
+            "title": "Tracer"
+        },
+        {
+            "location": "/development/#manager",
+            "text": "",
+            "title": "Manager"
+        },
+        {
+            "location": "/configuration/",
+            "text": "Default Configuration\n\n\n# Default Settings Of EventBus\nevent-bus {\n  pipeline {\n    kafka {\n      pipeline {\n        akka.kafka.producer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Producer\"\n          }\n        }\n        akka.kafka.consumer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Consumer\"\n          }\n        }\n      }\n      inlet {\n        #close-timeout = 60s\n        #parallelism = 10\n      }\n      outlet {\n        #group-id = TestGroup\n        extract-parallelism = 3\n        #topics = []\n        #topicPattern = event-*\n        #poll-interval = 50ms\n        #poll-timeout = 50ms\n        #stop-timeout = 30s\n        #close-timeout = 20s\n        #commit-timeout = 15s\n        #wakeup-timeout = 3s\n        #max-wakeups = 10\n      }\n      committer {\n        commit-parallelism = 3\n        commit-batch-max = 20\n      }\n    }\n  }\n\n  transporter {\n    #name = TestTransporter\n    #entrypoints = [\n    #  {\n    #    type = http\n    #    name = TestEntryPoint1\n    #    interface = 127.0.0.1\n    #    port = 8080\n    #  }\n    #]\n    #pipeline {\n    #  name = DefaultKafkaPipeline\n    #  inlet-settings {}\n    #}\n    transport-parallelism = 1\n    commit-parallelism = 10\n    #akka.stream.materializer {}\n  }\n\n  entrypoint {\n    http {\n      #name = TestHttpEntryPoint\n      #interface = localhost\n      #port = 8080\n      priority = normal\n      // TODO: adjust these default values when doing stress testing\n      max-connections = 1000\n      pre-connection-parallelism = 10\n      event-format = default\n      # akka.http.server {} // override \"akka.http.server\" default settings\n    }\n  }\n\n  dispatcher {\n    #akka.stream.materializer {}\n  }\n\n  endpoint {\n    http {\n      max-retry-times = 10\n      request {\n        port = 80\n        method = POST\n        uri = /\n      }\n      #expected-response-data = OK\n      akka.http.host-connection-pool {\n        #max-connections = 4\n        max-retries = 0\n        #max-open-requests = 32\n        #pipelining-limit = 1\n        #idle-timeout = 30 s\n      }\n    }\n  }\n}\n\n\n\n\nRuntime Configuration",
+            "title": "Configuration"
+        },
+        {
+            "location": "/configuration/#default-configuration",
+            "text": "# Default Settings Of EventBus\nevent-bus {\n  pipeline {\n    kafka {\n      pipeline {\n        akka.kafka.producer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Producer\"\n          }\n        }\n        akka.kafka.consumer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Consumer\"\n          }\n        }\n      }\n      inlet {\n        #close-timeout = 60s\n        #parallelism = 10\n      }\n      outlet {\n        #group-id = TestGroup\n        extract-parallelism = 3\n        #topics = []\n        #topicPattern = event-*\n        #poll-interval = 50ms\n        #poll-timeout = 50ms\n        #stop-timeout = 30s\n        #close-timeout = 20s\n        #commit-timeout = 15s\n        #wakeup-timeout = 3s\n        #max-wakeups = 10\n      }\n      committer {\n        commit-parallelism = 3\n        commit-batch-max = 20\n      }\n    }\n  }\n\n  transporter {\n    #name = TestTransporter\n    #entrypoints = [\n    #  {\n    #    type = http\n    #    name = TestEntryPoint1\n    #    interface = 127.0.0.1\n    #    port = 8080\n    #  }\n    #]\n    #pipeline {\n    #  name = DefaultKafkaPipeline\n    #  inlet-settings {}\n    #}\n    transport-parallelism = 1\n    commit-parallelism = 10\n    #akka.stream.materializer {}\n  }\n\n  entrypoint {\n    http {\n      #name = TestHttpEntryPoint\n      #interface = localhost\n      #port = 8080\n      priority = normal\n      // TODO: adjust these default values when doing stress testing\n      max-connections = 1000\n      pre-connection-parallelism = 10\n      event-format = default\n      # akka.http.server {} // override \"akka.http.server\" default settings\n    }\n  }\n\n  dispatcher {\n    #akka.stream.materializer {}\n  }\n\n  endpoint {\n    http {\n      max-retry-times = 10\n      request {\n        port = 80\n        method = POST\n        uri = /\n      }\n      #expected-response-data = OK\n      akka.http.host-connection-pool {\n        #max-connections = 4\n        max-retries = 0\n        #max-open-requests = 32\n        #pipelining-limit = 1\n        #idle-timeout = 30 s\n      }\n    }\n  }\n}",
+            "title": "Default Configuration"
+        },
+        {
+            "location": "/configuration/#runtime-configuration",
+            "text": "",
+            "title": "Runtime Configuration"
         },
         {
             "location": "/deployment/",
-            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
+            "text": "Ansible\n\n\nChange Configuration\n\n\nDeploy to specific servers\n\n\nansible-playbook -i ansible/lab ansible/site.yml -e \"service_name=stresstest\"\n\n\n\n\nDocker\n\n\nManually",
             "title": "Deployment"
         },
         {
-            "location": "/deployment/#requirements",
+            "location": "/deployment/#ansible",
             "text": "",
-            "title": "Requirements"
+            "title": "Ansible"
         },
         {
-            "location": "/deployment/#installation",
+            "location": "/deployment/#change-configuration",
             "text": "",
-            "title": "Installation"
+            "title": "Change Configuration"
         },
         {
-            "location": "/deployment/#sbt",
-            "text": "",
-            "title": "Sbt"
+            "location": "/deployment/#deploy-to-specific-servers",
+            "text": "ansible-playbook -i ansible/lab ansible/site.yml -e \"service_name=stresstest\"",
+            "title": "Deploy to specific servers"
         },
         {
-            "location": "/deployment/#maven",
+            "location": "/deployment/#docker",
             "text": "",
-            "title": "Maven"
+            "title": "Docker"
         },
         {
-            "location": "/deployment/#from-source",
+            "location": "/deployment/#manually",
             "text": "",
-            "title": "From Source"
-        },
-        {
-            "location": "/deployment/#usage",
-            "text": "",
-            "title": "Usage"
-        },
-        {
-            "location": "/deployment/#deployment",
-            "text": "",
-            "title": "Deployment"
+            "title": "Manually"
         }
     ]
 }
