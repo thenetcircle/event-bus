@@ -1,13 +1,13 @@
-## Requirements
+## Ansible
 
-## Installation
+### Change Configuration
 
-### Sbt
+### Deploy to specific servers
 
-### Maven
+```sh
+ansible-playbook -i ansible/lab ansible/site.yml -e "service_name=stresstest"
+```
 
-### From Source
+## Docker
 
-## Usage
-
-## Deployment
+## Manually
