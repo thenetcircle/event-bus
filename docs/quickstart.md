@@ -7,7 +7,7 @@ For example if we have a web application which writen by PHP,
 And we have some other backend services using different languages like Java, Nodejs, Python.
 And we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.     
 
-The flow will be work like this:
+The workflow will like this:
 
 <a href="assets/quickstart.png" target="_blank">![EventBus Workflow](assets/quickstart.png)</a>
 
