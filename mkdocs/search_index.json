@@ -2,7 +2,7 @@
     "docs": [
         {
             "location": "/",
-            "text": "____              __    ___         \n                                / __/  _____ ___  / /_  / _ )__ _____\n                               / _/| |/ / -_) _ \\/ __/ / _  / // (_-<\n                              /___/|___/\\__/_//_/\\__/ /____/\\_,_/___/\n\n\n\n\n\n\n\nEventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...\n\n\nFeatures\n\n\n\n\nSupplies multiple sources and sinks (HTTP for now).\n\n\nSupplies multiple pipelines (Kafka for now)\n\n\nRetry and Fallback\n\n\nSupplies tracing and monitoring\n\n\n\n\nContributing\n\n\nPull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.\n\n\nPlease make sure to update tests as appropriate.",
+            "text": "EventBus likes a postman delivering events/messages from multiple sources to multiple targets, Also supports features like data persistence(by Pipeline, default using Kafka), fallback solution(for example if delivery failed) etc...\n\n\n\n\nFeatures\n\n\n\n\nSupplies multiple sources and sinks (HTTP for now).\n\n\nSupplies multiple pipelines (Kafka for now)\n\n\nRetry and Fallback\n\n\nSupplies tracing and monitoring\n\n\n\n\nContributing\n\n\nPull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.\n\n\nPlease make sure to update tests as appropriate.",
             "title": "Home"
         },
         {
@@ -14,6 +14,46 @@
             "location": "/#contributing",
             "text": "Pull requests are welcome. For major changes, please open an issue first\nto discuss what you would like to change.  Please make sure to update tests as appropriate.",
             "title": "Contributing"
+        },
+        {
+            "location": "/installation/",
+            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
+            "title": "Installation"
+        },
+        {
+            "location": "/installation/#requirements",
+            "text": "",
+            "title": "Requirements"
+        },
+        {
+            "location": "/installation/#installation",
+            "text": "",
+            "title": "Installation"
+        },
+        {
+            "location": "/installation/#sbt",
+            "text": "",
+            "title": "Sbt"
+        },
+        {
+            "location": "/installation/#maven",
+            "text": "",
+            "title": "Maven"
+        },
+        {
+            "location": "/installation/#from-source",
+            "text": "",
+            "title": "From Source"
+        },
+        {
+            "location": "/installation/#usage",
+            "text": "",
+            "title": "Usage"
+        },
+        {
+            "location": "/installation/#deployment",
+            "text": "",
+            "title": "Deployment"
         },
         {
             "location": "/getting_started/",
@@ -52,6 +92,86 @@
         },
         {
             "location": "/getting_started/#deployment",
+            "text": "",
+            "title": "Deployment"
+        },
+        {
+            "location": "/components/",
+            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
+            "title": "Components"
+        },
+        {
+            "location": "/components/#requirements",
+            "text": "",
+            "title": "Requirements"
+        },
+        {
+            "location": "/components/#installation",
+            "text": "",
+            "title": "Installation"
+        },
+        {
+            "location": "/components/#sbt",
+            "text": "",
+            "title": "Sbt"
+        },
+        {
+            "location": "/components/#maven",
+            "text": "",
+            "title": "Maven"
+        },
+        {
+            "location": "/components/#from-source",
+            "text": "",
+            "title": "From Source"
+        },
+        {
+            "location": "/components/#usage",
+            "text": "",
+            "title": "Usage"
+        },
+        {
+            "location": "/components/#deployment",
+            "text": "",
+            "title": "Deployment"
+        },
+        {
+            "location": "/deployment/",
+            "text": "Requirements\n\n\nInstallation\n\n\nSbt\n\n\nMaven\n\n\nFrom Source\n\n\nUsage\n\n\nDeployment",
+            "title": "Deployment"
+        },
+        {
+            "location": "/deployment/#requirements",
+            "text": "",
+            "title": "Requirements"
+        },
+        {
+            "location": "/deployment/#installation",
+            "text": "",
+            "title": "Installation"
+        },
+        {
+            "location": "/deployment/#sbt",
+            "text": "",
+            "title": "Sbt"
+        },
+        {
+            "location": "/deployment/#maven",
+            "text": "",
+            "title": "Maven"
+        },
+        {
+            "location": "/deployment/#from-source",
+            "text": "",
+            "title": "From Source"
+        },
+        {
+            "location": "/deployment/#usage",
+            "text": "",
+            "title": "Usage"
+        },
+        {
+            "location": "/deployment/#deployment",
             "text": "",
             "title": "Deployment"
         }
