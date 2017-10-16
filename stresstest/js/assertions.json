@@ -1,0 +1,10 @@
+{
+  "simulation": "com.thenetcircle.event_bus.MainSimulation",
+  "simulationId": "mainsimulation",
+  "start": 1506418293410,
+  "description": "",
+  "scenarios": ["EventBus Stress Test"],
+  "assertions": [
+
+  ]
+}
