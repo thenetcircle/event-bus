@@ -28,7 +28,8 @@ import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.thenetcircle.event_bus.pipeline._
-import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event_extractor.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.{createFlowFromSink, createTestEvent}
 import com.thenetcircle.event_bus.transporter.entrypoint._

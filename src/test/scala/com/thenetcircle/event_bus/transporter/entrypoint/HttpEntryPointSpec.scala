@@ -30,10 +30,10 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.event_extractor._
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import com.thenetcircle.event_bus.{Event, EventBody, EventFormat, EventMetaData}
+import com.thenetcircle.event_bus._
+import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
 
 import scala.concurrent.duration._
 
@@ -81,7 +81,7 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
     var data = s"""
                   |{
                   |  "id": "123",
-                  |  "verb": "user.login",
+                  |  "title": "user.login",
                   |  "actor": {"id": "123", "objectType": "user"},
                   |  "published": "$time"
                   |}
@@ -99,8 +99,8 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
       "123",
       "user.login",
       new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time).getTime,
-      "",
-      "123" -> "user"
+      None,
+      Some(EventActor("123", "user"))
     )
     event.body shouldEqual EventBody(ByteString(data), DefaultFormat)
 

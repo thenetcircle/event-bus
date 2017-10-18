@@ -58,9 +58,10 @@ class Tracer(te: TracingExtensionImpl) {
   def record(tracingId: Long, event: Event): Unit = {
     record(tracingId, "UUID", event.metadata.uuid)
     record(tracingId, "name", event.metadata.name)
-    record(tracingId, "publisher", event.metadata.publisher)
-    record(tracingId, "trigger", event.metadata.trigger.toString)
-    record(tracingId, "timestamp", event.metadata.publishTime.toString)
+    event.metadata.provider.foreach(record(tracingId, "provider", _))
+    event.metadata.actor.foreach(actor =>
+      record(tracingId, "actor", s"${actor.objectType}-${actor.id}"))
+    record(tracingId, "timestamp", event.metadata.published.toString)
     record(tracingId, "channel", event.channel)
   }
 }

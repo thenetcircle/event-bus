@@ -20,6 +20,7 @@ import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import akka.util.ByteString
+import com.thenetcircle.event_bus.event_extractor._
 
 import scala.util.Random
 
@@ -30,7 +31,11 @@ package object event_bus {
                       body: String = "body",
                       format: EventFormat = EventFormat.DefaultFormat): Event =
     Event(
-      EventMetaData("uuid", name, time, "publisher", ("user", "222")),
+      EventMetaData("uuid",
+                    name,
+                    time,
+                    Some("publisher"),
+                    Some(EventActor("222", "user"))),
       EventBody(ByteString(body), format),
       "channel",
       sourceType,

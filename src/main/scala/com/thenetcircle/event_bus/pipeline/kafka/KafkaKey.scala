@@ -16,7 +16,8 @@
  */
 
 package com.thenetcircle.event_bus.pipeline.kafka
-import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event_extractor.EventFormat
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaKey._
 
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {

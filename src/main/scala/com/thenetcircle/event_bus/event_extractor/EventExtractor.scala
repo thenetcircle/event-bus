@@ -18,26 +18,8 @@
 package com.thenetcircle.event_bus.event_extractor
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.EventFormat.TestFormat
-import com.thenetcircle.event_bus.{EventBody, EventFormat, EventMetaData}
-import io.jvm.uuid.UUID
-
+import com.thenetcircle.event_bus.event_extractor.activity_streams.ActivityStreamsExtractor
 import scala.concurrent.{ExecutionContext, Future}
-
-/** The extracted data from [[EventExtractor]]
-  *
-  * @param body
-  * @param metadata
-  * @param channel
-  */
-case class ExtractedData(
-    body: EventBody,
-    metadata: EventMetaData,
-    channel: Option[String] = None
-) {
-  def withChannel(channel: String): ExtractedData =
-    copy(channel = Some(channel))
-}
 
 trait EventExtractor {
 
@@ -58,27 +40,18 @@ trait EventExtractor {
 
 object EventExtractor {
 
-  /** Generate a UUID
-    *
-    * @return String
-    */
-  def genUUID(): String = UUID.random.toString
-
   /** Default event extractor, based on ActivityStreams 1.0
     * http://activitystrea.ms/specs/json/1.0/
     */
-  implicit val activityStreamsExtractor =
-    new TNCActivityStreamsExtractor with EventExtractor
+  implicit val activityStreamsExtractor: EventExtractor =
+    new ActivityStreamsExtractor
 
   /** Returns [[EventExtractor]] based on [[EventFormat]]
     *
     * @param format
     */
   def apply(format: EventFormat): EventExtractor = format match {
-    case EventFormat.DefaultFormat => activityStreamsExtractor
-    case EventFormat.TestFormat =>
-      new TNCActivityStreamsExtractor with EventExtractor {
-        override val format: EventFormat = TestFormat
-      }
+    // case EventFormat.DefaultFormat => activityStreamsExtractor
+    case _ => activityStreamsExtractor
   }
 }

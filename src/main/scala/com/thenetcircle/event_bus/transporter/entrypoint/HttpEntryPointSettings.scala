@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.transporter.entrypoint
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.settings.ServerSettings
-import com.thenetcircle.event_bus.EventFormat
+import com.thenetcircle.event_bus.event_extractor.EventFormat
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointType.EntryPointType
 import com.typesafe.config.Config

@@ -27,6 +27,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus._
 import com.thenetcircle.event_bus.event_extractor.{
   EventExtractor,
+  EventSourceType,
   ExtractedData
 }
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}

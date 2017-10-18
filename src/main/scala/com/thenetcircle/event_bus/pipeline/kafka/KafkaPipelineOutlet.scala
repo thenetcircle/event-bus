@@ -23,11 +23,15 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.event_extractor.{
+  EventCommitter,
+  EventExtractor,
+  EventSourceType
+}
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
-import com.thenetcircle.event_bus.{Event, EventCommitter, EventSourceType}
+import com.thenetcircle.event_bus.Event
 
 import scala.concurrent.{ExecutionContext, Future}
 

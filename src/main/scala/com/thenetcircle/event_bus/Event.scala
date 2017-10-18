@@ -17,62 +17,8 @@
 
 package com.thenetcircle.event_bus
 
-import akka.util.ByteString
-import com.typesafe.config.Config
-import net.ceedubs.ficus.readers.ValueReader
-
+import com.thenetcircle.event_bus.event_extractor._
 import scala.concurrent.Future
-
-sealed trait EventFormat
-object EventFormat {
-  type DefaultFormat = DefaultFormat.type
-  object DefaultFormat extends EventFormat {
-    override def toString: String = "default"
-  }
-
-  type TestFormat = TestFormat.type
-  object TestFormat extends EventFormat {
-    override def toString: String = "test"
-  }
-
-  def apply(formatString: String): EventFormat =
-    formatString.toLowerCase match {
-      case "default" => DefaultFormat
-      case "test"    => TestFormat
-      case _         => DefaultFormat
-    }
-
-  implicit val eventFormatReader: ValueReader[EventFormat] =
-    new ValueReader[EventFormat] {
-      override def read(config: Config, path: String) =
-        EventFormat(config.getString(path))
-    }
-}
-
-trait EventCommitter {
-  def commit(): Future[Any]
-}
-
-sealed trait EventSourceType
-object EventSourceType {
-  case object Redis extends EventSourceType
-  case object AMQP  extends EventSourceType
-  case object Kafka extends EventSourceType
-  case object Http  extends EventSourceType
-}
-
-case class EventBody(
-    data: ByteString,
-    format: EventFormat
-)
-
-case class EventMetaData(
-    uuid: String,
-    name: String,
-    publishTime: Long,
-    publisher: String,
-    trigger: Tuple2[String, String] // triggerType: String -> triggerId: String
-)
 
 case class Event(
     metadata: EventMetaData,

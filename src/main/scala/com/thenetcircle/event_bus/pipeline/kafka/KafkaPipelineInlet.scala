@@ -72,7 +72,7 @@ object KafkaPipelineInlet {
   private def getProducerRecordFromEvent(
       event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
     val topic: String        = event.channel
-    val timestamp: Long      = event.metadata.publishTime
+    val timestamp: Long      = event.metadata.published
     val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event
 

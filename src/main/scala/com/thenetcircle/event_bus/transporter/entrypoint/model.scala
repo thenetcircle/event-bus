@@ -20,10 +20,10 @@ package com.thenetcircle.event_bus.transporter.entrypoint
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import com.thenetcircle.event_bus.event_extractor.EventExtractor
+import com.thenetcircle.event_bus.event_extractor.{EventExtractor, EventFormat}
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
 import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointType.EntryPointType
-import com.thenetcircle.event_bus.{Event, EventFormat}
+import com.thenetcircle.event_bus.Event
 import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
@@ -101,7 +101,8 @@ object EntryPointSettings {
     * @throws IllegalArgumentException
     *             if "type" didn't match any predefined types
     */
-  def apply(config: Config)(implicit system: ActorSystem): EntryPointSettings = {
+  def apply(config: Config)(
+      implicit system: ActorSystem): EntryPointSettings = {
     var entryPointType = config.as[EntryPointType]("type")
 
     entryPointType match {
