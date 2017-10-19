@@ -32,6 +32,9 @@ import com.thenetcircle.event_bus.event_extractor.{
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.thenetcircle.event_bus.Event
+import akka.stream.ActorAttributes.supervisionStrategy
+import akka.stream.Supervision.resumingDecider
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,7 +45,8 @@ private[kafka] final class KafkaPipelineOutlet(
     val outletSettings: KafkaPipelineOutletSettings)(
     implicit materializer: Materializer)
     extends PipelineOutlet
-    with Tracing {
+    with Tracing
+    with StrictLogging {
 
   require(
     outletSettings.topics.isDefined || outletSettings.topicPattern.isDefined,
@@ -87,21 +91,26 @@ private[kafka] final class KafkaPipelineOutlet(
                 msg.record
                   .key()
                   .data
-                  .map(
-                    k =>
-                      (k.tracingId
-                         .map(tracer.resumeTracing)
-                         .getOrElse(tracer.newTracing()),
-                       EventExtractor(k.eventFormat)))
-                  .getOrElse(
-                    (tracer.newTracing(), EventExtractor(DefaultFormat)))
+                  .map(k =>
+                    (k.tracingId
+                       .map(tracer.resumeTracing)
+                       .getOrElse(tracer.newTracing()),
+                     EventExtractor(k.eventFormat)))
+                  .getOrElse((tracer.newTracing(),
+                              EventExtractor(DefaultFormat)))
 
               tracer.record(tracingId, TracingSteps.PIPELINE_PULLED)
 
-              extractor
+              val extractFuture = extractor
                 .extract(ByteString(msg.record.value()))
-                .map((msg, _, tracingId))
+
+              extractFuture.failed.foreach(e =>
+                logger.warn(s"Extract message ${msg.record
+                  .value()} from Pipeline failed with Error: ${e.getMessage}"))
+
+              extractFuture.map((msg, _, tracingId))
             }
+            .withAttributes(supervisionStrategy(resumingDecider))
             .map {
               case (msg, extractedData, tracingId) =>
                 tracer.record(tracingId, TracingSteps.EXTRACTED)
