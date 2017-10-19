@@ -101,12 +101,13 @@ private[kafka] final class KafkaPipelineOutlet(
 
               tracer.record(tracingId, TracingSteps.PIPELINE_PULLED)
 
+              val msgData = ByteString(msg.record.value())
               val extractFuture = extractor
-                .extract(ByteString(msg.record.value()))
+                .extract(msgData)
 
               extractFuture.failed.foreach(e =>
-                logger.warn(s"Extract message ${msg.record
-                  .value()} from Pipeline failed with Error: ${e.getMessage}"))
+                logger.warn(
+                  s"Extract message ${msgData.utf8String} from Pipeline failed with Error: ${e.getMessage}"))
 
               extractFuture.map((msg, _, tracingId))
             }
