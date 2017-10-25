@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter.entrypoint
+package com.thenetcircle.event_bus.transporter.receiver
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -36,17 +36,17 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-class HttpEntryPoint(
-    val settings: HttpEntryPointSettings,
+class HttpReceiver(
+    val settings: HttpReceiverSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
 )(implicit val system: ActorSystem,
   materializer: Materializer,
   eventExtractor: EventExtractor)
-    extends EntryPoint
+    extends Receiver
     with StrictLogging
     with Tracing {
 
-  logger.info(s"new HttpEntryPoint ${settings.name} is created")
+  logger.info(s"new HttpReceiver ${settings.name} is created")
 
   private val loggerFlow = Flow[HttpRequest].map(request => {
     logger.debug(s"received a new Request")
@@ -64,39 +64,39 @@ class HttpEntryPoint(
 
               val httpHandlerFlowShape = builder.add(httpHandlerFlow)
               val connectionHandler =
-                builder.add(new HttpEntryPoint.ConnectionHandler(this))
+                builder.add(new HttpReceiver.ConnectionHandler(this))
               val unpackFlow = Flow[Future[HttpResponse]].mapAsync(
                 settings.perConnectionParallelism)(identity)
 
               /** ----- work flow ----- */
               // format: off
               // since Http().bind using join, The direction is a bit different
-            
+
               httpHandlerFlowShape.out ~> loggerFlow ~> connectionHandler.in
 
                                                         connectionHandler.out0 ~> unpackFlow ~> httpHandlerFlowShape.in
-            
+
               // format: on
 
               SourceShape(connectionHandler.out1)
           })
         }
       )
-      .named(s"entrypoint-${settings.name}")
+      .named(s"receiver-${settings.name}")
 }
 
-object HttpEntryPoint extends StrictLogging {
+object HttpReceiver extends StrictLogging {
 
   val failedResponse =
     HttpResponse(StatusCodes.BadRequest, entity = HttpEntity("ko"))
   val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
 
-  def apply(settings: HttpEntryPointSettings)(
+  def apply(settings: HttpReceiverSettings)(
       implicit system: ActorSystem,
       materializer: Materializer,
-      eventExtractor: EventExtractor): HttpEntryPoint = {
+      eventExtractor: EventExtractor): HttpReceiver = {
     logger.info(
-      s"Creating a new HttpEntryPoint ${settings.name}, With interface: ${settings.interface}, port: ${settings.port}")
+      s"Creating a new HttpReceiver ${settings.name}, With interface: ${settings.interface}, port: ${settings.port}")
 
     val httpBindSource = Http()
       .bind(
@@ -106,7 +106,7 @@ object HttpEntryPoint extends StrictLogging {
       )
       .map(_.flow)
 
-    new HttpEntryPoint(settings, httpBindSource)
+    new HttpReceiver(settings, httpBindSource)
   }
 
   /** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
@@ -130,7 +130,7 @@ object HttpEntryPoint extends StrictLogging {
     *
     * '''Cancels when''' when any downstreams cancel
     */
-  final class ConnectionHandler(entryPoint: HttpEntryPoint)(
+  final class ConnectionHandler(receiver: HttpReceiver)(
       implicit system: ActorSystem,
       materializer: Materializer,
       eventExtractor: EventExtractor)
@@ -213,7 +213,7 @@ object HttpEntryPoint extends StrictLogging {
                 tracingId
               ).withCommitter(
                 () => {
-                  tracer.record(tracingId, TracingSteps.ENTRYPOINT_COMMITTED)
+                  tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
                   responsePromise.success(successfulResponse).future
                 }
               )
@@ -226,7 +226,7 @@ object HttpEntryPoint extends StrictLogging {
             case Failure(ex) =>
               log.info(s"Request send failed with error: ${ex.getMessage}")
               tracer.record(tracingId, ex)
-              tracer.record(tracingId, TracingSteps.ENTRYPOINT_COMMITTED)
+              tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
               responsePromise.success(failedResponse)
               tryPullIn()
           }

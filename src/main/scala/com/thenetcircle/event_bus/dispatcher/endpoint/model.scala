@@ -22,22 +22,22 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointType.EndPointType
+import com.thenetcircle.event_bus.dispatcher.endpoint.EmitterType.EmitterType
 import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
 
-object EndPointType extends Enumeration {
-  type EndPointType = Value
+object EmitterType extends Enumeration {
+  type EmitterType = Value
 
   val HTTP = Value(1, "HTTP")
 
-  def apply(name: String): EndPointType = name.toUpperCase match {
+  def apply(name: String): EmitterType = name.toUpperCase match {
     case "HTTP" => HTTP
   }
 
-  implicit val entryPointTypeReader: ValueReader[EndPointType] =
-    new ValueReader[EndPointType] {
+  implicit val emitterTypeReader: ValueReader[EmitterType] =
+    new ValueReader[EmitterType] {
       override def read(config: Config, path: String) =
         apply(config.getString(path))
     }
@@ -52,14 +52,14 @@ object EndPoint {
   def apply(settings: EndPointSettings)(implicit system: ActorSystem,
                                         materializer: Materializer): EndPoint =
     settings.endPointType match {
-      case EndPointType.HTTP =>
+      case EmitterType.HTTP =>
         HttpEndPoint(settings.asInstanceOf[HttpEndPointSettings])
     }
 }
 
 trait EndPointSettings {
   val name: String
-  val endPointType: EndPointType
+  val endPointType: EmitterType
 }
 
 object EndPointSettings {
@@ -72,10 +72,10 @@ object EndPointSettings {
     *             if "type" didn't match any predefined types
     */
   def apply(config: Config)(implicit system: ActorSystem): EndPointSettings = {
-    var endPointType = config.as[EndPointType]("type")
+    var endPointType = config.as[EmitterType]("type")
 
     endPointType match {
-      case EndPointType.HTTP =>
+      case EmitterType.HTTP =>
         HttpEndPointSettings(config)
 
       case _ =>

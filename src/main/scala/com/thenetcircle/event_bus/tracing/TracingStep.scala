@@ -23,11 +23,11 @@ sealed trait TracingMiddleStep    extends TracingStep
 sealed trait TracingEndingStep    extends TracingStep
 
 object TracingSteps {
-  case object NEW_REQUEST          extends TracingBeginningStep
-  case object EXTRACTED            extends TracingMiddleStep
-  case object ENTRYPOINT_COMMITTED extends TracingEndingStep
-  case object PIPELINE_PUSHING     extends TracingMiddleStep
-  case object PIPELINE_PUSHED      extends TracingMiddleStep
-  case object PIPELINE_PULLED      extends TracingBeginningStep
-  case object PIPELINE_COMMITTED   extends TracingEndingStep
+  case object NEW_REQUEST        extends TracingBeginningStep
+  case object EXTRACTED          extends TracingMiddleStep
+  case object RECEIVER_COMMITTED extends TracingEndingStep
+  case object PIPELINE_PUSHING   extends TracingMiddleStep
+  case object PIPELINE_PUSHED    extends TracingMiddleStep
+  case object PIPELINE_PULLED    extends TracingBeginningStep
+  case object PIPELINE_COMMITTED extends TracingEndingStep
 }

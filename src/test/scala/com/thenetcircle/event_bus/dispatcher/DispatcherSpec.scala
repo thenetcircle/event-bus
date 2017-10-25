@@ -24,7 +24,7 @@ import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.dispatcher.endpoint.{
   EndPoint,
   EndPointSettings,
-  EndPointType
+  EmitterType
 }
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline._
@@ -60,7 +60,7 @@ class DispatcherSpec extends AkkaStreamSpec {
       var currentIndex = 0
       override val settings: EndPointSettings = new EndPointSettings {
         override val name         = "TestEndPoint"
-        override val endPointType = EndPointType.HTTP
+        override val endPointType = EmitterType.HTTP
       }
       override def stream: Flow[Event, Event, NotUsed] = {
         currentIndex += 1
@@ -149,7 +149,7 @@ class DispatcherSpec extends AkkaStreamSpec {
         var currentIndex = 0
         override val settings: EndPointSettings = new EndPointSettings {
           override val name         = "TestEndPoint1"
-          override val endPointType = EndPointType.HTTP
+          override val endPointType = EmitterType.HTTP
         }
         override def stream: Flow[Event, Event, NotUsed] = {
           currentIndex += 1
@@ -164,7 +164,7 @@ class DispatcherSpec extends AkkaStreamSpec {
       new EndPoint {
         override val settings: EndPointSettings = new EndPointSettings {
           override val name         = "TestEndPoint2"
-          override val endPointType = EndPointType.HTTP
+          override val endPointType = EmitterType.HTTP
         }
         override def stream: Flow[Event, Event, NotUsed] =
           createFlowFromSink(Sink.fromSubscriber(testSink4))
@@ -172,7 +172,7 @@ class DispatcherSpec extends AkkaStreamSpec {
       new EndPoint {
         override val settings: EndPointSettings = new EndPointSettings {
           override val name         = "TestEndPoint3"
-          override val endPointType = EndPointType.HTTP
+          override val endPointType = EmitterType.HTTP
         }
         override def stream: Flow[Event, Event, NotUsed] =
           createFlowFromSink(Sink.fromSubscriber(testSink5))

@@ -25,7 +25,7 @@ import com.thenetcircle.event_bus.pipeline.{
   PipelineInletSettings,
   PipelinePool
 }
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointSettings
+import com.thenetcircle.event_bus.transporter.receiver.ReceiverSettings
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -43,8 +43,8 @@ object TransporterSettings extends StrictLogging {
     try {
       val name = config.as[String]("name")
 
-      val entryPointsSettings =
-        config.as[Vector[Config]]("entrypoints").map(EntryPointSettings(_))
+      val receiverSettings =
+        config.as[Vector[Config]]("receivers").map(ReceiverSettings(_))
 
       val pipelineName = config.as[String]("pipeline.name")
       val pipeline     = PipelinePool().getPipeline(pipelineName).get
@@ -72,7 +72,7 @@ object TransporterSettings extends StrictLogging {
       TransporterSettings(name,
                           commitParallelism,
                           transportParallelism,
-                          entryPointsSettings,
+                          receiverSettings,
                           pipeline,
                           pipelineInletSettings,
                           materializerSettings)
@@ -89,7 +89,7 @@ final case class TransporterSettings(
     name: String,
     commitParallelism: Int,
     transportParallelism: Int,
-    entryPointsSettings: Vector[EntryPointSettings],
+    receiverSettings: Vector[ReceiverSettings],
     pipeline: Pipeline,
     pipelineInletSettings: PipelineInletSettings,
     materializerSettings: Option[ActorMaterializerSettings]

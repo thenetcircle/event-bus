@@ -15,19 +15,19 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter.entrypoint
+package com.thenetcircle.event_bus.transporter.receiver
 import com.thenetcircle.event_bus.event_extractor.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
-class HttpEntryPointSettingsSpec extends AkkaStreamSpec {
+class HttpReceiverSettingsSpec extends AkkaStreamSpec {
 
-  behavior of "HttpEntryPointSettings"
+  behavior of "HttpReceiverSettings"
 
   it should "properly be parsed from typesafe Config" in {
     val config = ConfigFactory.parseString("""
         |{
-        |  name = TestEntryPoint
+        |  name = TestReceiver
         |  priority = high
         |  max-connections = 10
         |  pre-connection-parallelism = 5
@@ -42,10 +42,10 @@ class HttpEntryPointSettingsSpec extends AkkaStreamSpec {
         |}
       """.stripMargin)
 
-    val settings = HttpEntryPointSettings(config)
+    val settings = HttpReceiverSettings(config)
 
-    settings.name shouldEqual "TestEntryPoint"
-    settings.priority shouldEqual EntryPointPriority.High
+    settings.name shouldEqual "TestReceiver"
+    settings.priority shouldEqual ReceiverPriority.High
     settings.maxConnections shouldEqual 10
     settings.perConnectionParallelism shouldEqual 5
     settings.eventFormat shouldEqual EventFormat.TestFormat
@@ -59,16 +59,16 @@ class HttpEntryPointSettingsSpec extends AkkaStreamSpec {
   it should "use default values if the fields not set" in {
     val config = ConfigFactory.parseString("""
                                              |{
-                                             |  name = TestEntryPoint
+                                             |  name = TestReceiver
                                              |  interface = localhost
                                              |  port = 8080
                                              |}
                                            """.stripMargin)
 
-    val settings = HttpEntryPointSettings(config)
+    val settings = HttpReceiverSettings(config)
 
-    settings.name shouldEqual "TestEntryPoint"
-    settings.priority shouldEqual EntryPointPriority.Normal
+    settings.name shouldEqual "TestReceiver"
+    settings.priority shouldEqual ReceiverPriority.Normal
     settings.maxConnections shouldEqual 1000
     settings.perConnectionParallelism shouldEqual 10
     settings.eventFormat shouldEqual EventFormat.DefaultFormat

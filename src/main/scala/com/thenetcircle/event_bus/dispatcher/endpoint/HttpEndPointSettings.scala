@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.dispatcher.endpoint
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
-import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointType.EndPointType
+import com.thenetcircle.event_bus.dispatcher.endpoint.EmitterType.EmitterType
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
@@ -35,7 +35,7 @@ case class HttpEndPointSettings(
     // TODO: set to optional
     expectedResponse: Option[String] = None
 ) extends EndPointSettings {
-  override val endPointType: EndPointType = EndPointType.HTTP
+  override val endPointType: EmitterType = EmitterType.HTTP
 }
 
 object HttpEndPointSettings extends StrictLogging {

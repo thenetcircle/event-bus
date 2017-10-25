@@ -15,40 +15,40 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter.entrypoint
+package com.thenetcircle.event_bus.transporter.receiver
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.settings.ServerSettings
 import com.thenetcircle.event_bus.event_extractor.EventFormat
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointType.EntryPointType
+import com.thenetcircle.event_bus.transporter.receiver.ReceiverPriority.ReceiverPriority
+import com.thenetcircle.event_bus.transporter.receiver.ReceiverType.ReceiverType
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
-/** Http EntryPoint Settings */
-case class HttpEntryPointSettings(
+/** Http Receiver Settings */
+case class HttpReceiverSettings(
     name: String,
-    priority: EntryPointPriority,
+    priority: ReceiverPriority,
     maxConnections: Int,
     perConnectionParallelism: Int,
     eventFormat: EventFormat,
     serverSettings: ServerSettings,
     interface: String,
     port: Int
-) extends EntryPointSettings {
-  override val entryPointType: EntryPointType = EntryPointType.HTTP
+) extends ReceiverSettings {
+  override val receiverType: ReceiverType = ReceiverType.HTTP
 }
 
-object HttpEntryPointSettings extends StrictLogging {
+object HttpReceiverSettings extends StrictLogging {
   def apply(_config: Config)(
-      implicit system: ActorSystem): HttpEntryPointSettings = {
+      implicit system: ActorSystem): HttpReceiverSettings = {
     val config: Config =
       _config.withFallback(
-        system.settings.config.getConfig("event-bus.entrypoint.http"))
+        system.settings.config.getConfig("event-bus.receiver.http"))
 
     logger.info(
-      s"Creating a new HttpEntryPointSettings accroding to config: $config")
+      s"Creating a new HttpReceiverSettings accroding to config: $config")
 
     try {
       val rootConfig =
@@ -60,9 +60,9 @@ object HttpEntryPointSettings extends StrictLogging {
           ServerSettings(rootConfig)
         }
 
-      HttpEntryPointSettings(
+      HttpReceiverSettings(
         config.as[String]("name"),
-        config.as[EntryPointPriority]("priority"),
+        config.as[ReceiverPriority]("priority"),
         config.as[Int]("max-connections"),
         config.as[Int]("pre-connection-parallelism"),
         config.as[EventFormat]("event-format"),
@@ -73,7 +73,7 @@ object HttpEntryPointSettings extends StrictLogging {
     } catch {
       case ex: Throwable =>
         logger.error(
-          s"Creating HttpEntryPointSettings failed with error: ${ex.getMessage}")
+          s"Creating HttpReceiverSettings failed with error: ${ex.getMessage}")
         throw ex
     }
   }

@@ -35,19 +35,19 @@ import akka.stream.scaladsl.{
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
 import com.thenetcircle.event_bus.pipeline.Pipeline
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPoint
+import com.thenetcircle.event_bus.transporter.receiver.Receiver
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
 
-/** Transports data from [[EntryPoint]]s to [[Pipeline]]
+/** Transports data from [[Receiver]]s to [[Pipeline]]
   *
-  * @param settings the settings of this transporter
-  * @param entryPoints the [[EntryPoint]]s bind to this transporter, like data sources
+  * @param settings    the settings of this transporter
+  * @param receivers the [[Receiver]]s bind to this transporter, like data sources
   * @param pipeline
   */
 class Transporter(settings: TransporterSettings,
-                  entryPoints: Vector[EntryPoint],
+                  receivers: Vector[Receiver],
                   pipeline: Pipeline)(implicit system: ActorSystem,
                                       materializer: Materializer)
     extends StrictLogging {
@@ -94,9 +94,9 @@ class Transporter(settings: TransporterSettings,
 
         val transportParallelism = settings.transportParallelism
 
-        val groupedEntryPoints = entryPoints.groupBy(_.settings.priority.id)
+        val groupedReceivers = receivers.groupBy(_.settings.priority.id)
         // IndexedSeq(6, 3, 1)
-        var priorities = (for ((_priorityId, _) <- groupedEntryPoints)
+        var priorities = (for ((_priorityId, _) <- groupedReceivers)
           yield _priorityId).toIndexedSeq
         val prioritizedChannel =
           builder.add(MergePrioritized[Event](priorities))
@@ -104,19 +104,19 @@ class Transporter(settings: TransporterSettings,
         /** --------------- Work Flow ---------------- */
         // format: off
 
-        for ((_priorityId, _entryPoints) <- groupedEntryPoints) {
+        for ((_priorityId, _receivers) <- groupedReceivers) {
 
           val targetChannel =
             prioritizedChannel.in(priorities.indexOf(_priorityId))
 
-          if (_entryPoints.size > 1) {
-            val merge = builder.add(Merge[Event](_entryPoints.size))
-            for (i <- _entryPoints.indices) {
-              _entryPoints(i).stream ~> merge.in(i)
+          if (_receivers.size > 1) {
+            val merge = builder.add(Merge[Event](_receivers.size))
+            for (i <- _receivers.indices) {
+              _receivers(i).stream ~> merge.in(i)
             }
             merge.out ~> targetChannel
           } else {
-            _entryPoints(0).stream ~> targetChannel
+            _receivers(0).stream ~> targetChannel
           }
 
         }
@@ -161,12 +161,12 @@ object Transporter extends StrictLogging {
 
     implicit val materializer = ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val entryPoints =
-      settings.entryPointsSettings.map(s => {
+    val receivers =
+      settings.receiverSettings.map(s => {
         implicit val exector = EventExtractor(s.eventFormat)
-        EntryPoint(s)
+        Receiver(s)
       })
 
-    new Transporter(settings, entryPoints, settings.pipeline)
+    new Transporter(settings, receivers, settings.pipeline)
   }
 }

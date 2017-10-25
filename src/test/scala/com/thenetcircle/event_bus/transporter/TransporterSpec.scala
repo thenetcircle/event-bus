@@ -32,8 +32,8 @@ import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.{createFlowFromSink, createTestEvent}
-import com.thenetcircle.event_bus.transporter.entrypoint._
-import com.thenetcircle.event_bus.transporter.entrypoint.EntryPointPriority.EntryPointPriority
+import com.thenetcircle.event_bus.transporter.receiver._
+import com.thenetcircle.event_bus.transporter.receiver.ReceiverPriority.ReceiverPriority
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.Future
@@ -42,7 +42,7 @@ class TransporterSpec extends AkkaStreamSpec {
 
   behavior of "Transporter"
 
-  it should "be delivered according to the priority of the EntryPoint" in {
+  it should "be delivered according to the priority of the Receiver" in {
     val eventsCount     = 20000
     val testLowEvent    = createTestEvent("testEvent1")
     val testNormalEvent = createTestEvent("testEvent2")
@@ -65,11 +65,11 @@ class TransporterSpec extends AkkaStreamSpec {
 
     createTransporter(
       Vector(
-        (EntryPointPriority.Low, testLowSource1),
-        (EntryPointPriority.Low, testLowSource2),
-        (EntryPointPriority.High, testHighSource),
-        (EntryPointPriority.Normal, testNormalSource1),
-        (EntryPointPriority.Normal, testNormalSource2)
+        (ReceiverPriority.Low, testLowSource1),
+        (ReceiverPriority.Low, testLowSource2),
+        (ReceiverPriority.High, testHighSource),
+        (ReceiverPriority.Normal, testNormalSource1),
+        (ReceiverPriority.Normal, testNormalSource2)
       ),
       Vector(Sink.fromSubscriber(testPipelinePort))
     ).run()
@@ -94,7 +94,7 @@ class TransporterSpec extends AkkaStreamSpec {
 
     createTransporter(
       Vector(
-        (EntryPointPriority.Normal, Source.fromPublisher(testPublisher))
+        (ReceiverPriority.Normal, Source.fromPublisher(testPublisher))
       ),
       Vector(Sink.ignore),
       commitParallelism = 10
@@ -133,9 +133,9 @@ class TransporterSpec extends AkkaStreamSpec {
 
     createTransporter(
       Vector(
-        (EntryPointPriority.High, testSource1),
-        (EntryPointPriority.Normal, testSource2),
-        (EntryPointPriority.Low, testSource3)
+        (ReceiverPriority.High, testSource1),
+        (ReceiverPriority.Normal, testSource2),
+        (ReceiverPriority.Low, testSource3)
       ),
       Vector(Sink.fromSubscriber(testSink1), Sink.fromSubscriber(testSink2)),
       commitParallelism = 10,
@@ -156,15 +156,15 @@ class TransporterSpec extends AkkaStreamSpec {
   }
 
   def createTransporter(
-      testSources: Vector[(EntryPointPriority, Source[Event, _])],
+      testSources: Vector[(ReceiverPriority, Source[Event, _])],
       testPipelinePort: Vector[Sink[Event, _]],
       commitParallelism: Int = 1,
       transportParallelism: Int = 1)(
       implicit system: ActorSystem,
       materializer: Materializer): Transporter = {
-    val entryPointSettings = HttpEntryPointSettings(
-      "TestHttpEntryPoint",
-      EntryPointPriority.Normal,
+    val receiverSettings = HttpReceiverSettings(
+      "TestHttpReceiver",
+      ReceiverPriority.Normal,
       100,
       10,
       EventFormat.DefaultFormat,
@@ -173,13 +173,13 @@ class TransporterSpec extends AkkaStreamSpec {
       8888
     )
 
-    val testEntryPoints = testSources.map(_source =>
-      new EntryPoint {
-        override val settings: EntryPointSettings = new EntryPointSettings {
-          override val name           = s"TestEntryPoint-${_source._1}"
-          override val priority       = _source._1
-          override val entryPointType = EntryPointType.HTTP
-          override val eventFormat    = EventFormat.DefaultFormat
+    val testReceivers = testSources.map(_source =>
+      new Receiver {
+        override val settings: ReceiverSettings = new ReceiverSettings {
+          override val name         = s"TestReceiver-${_source._1}"
+          override val priority     = _source._1
+          override val receiverType = ReceiverType.HTTP
+          override val eventFormat  = EventFormat.DefaultFormat
         }
 
         override def stream: Source[Event, _] = _source._2
@@ -189,7 +189,7 @@ class TransporterSpec extends AkkaStreamSpec {
       "TestTransporter",
       commitParallelism,
       transportParallelism,
-      Vector(entryPointSettings),
+      Vector(receiverSettings),
       PipelinePool().getPipeline("TestPipeline").get,
       KafkaPipelineFactory().createPipelineInletSettings(ConfigFactory.empty()),
       None
@@ -225,7 +225,7 @@ class TransporterSpec extends AkkaStreamSpec {
     }
     new Transporter(
       settings,
-      testEntryPoints,
+      testReceivers,
       pipeline
     )
   }

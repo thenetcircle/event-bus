@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.transporter.entrypoint
+package com.thenetcircle.event_bus.transporter.receiver
 
 import java.text.SimpleDateFormat
 
@@ -37,14 +37,14 @@ import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
 
 import scala.concurrent.duration._
 
-class HttpEntryPointSpec extends AkkaStreamSpec {
+class HttpReceiverSpec extends AkkaStreamSpec {
 
   implicit val eventExtractor = EventExtractor(DefaultFormat)
 
-  behavior of "HttpEntryPoint"
+  behavior of "HttpReceiver"
 
   it should "return a BadRequest of HttpResponse when empty request coming" in {
-    val (in, out0, out1) = getEntryPointPorts
+    val (in, out0, out1) = getReceivers
 
     out1.request(1)
     out0.request(1)
@@ -58,7 +58,7 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
   }
 
   it should "return a BadRequest of HttpResponse when a unaccepted request body coming" in {
-    val (in, out0, out1) = getEntryPointPorts
+    val (in, out0, out1) = getReceivers
 
     out1.request(1)
     out0.request(1)
@@ -75,7 +75,7 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
   }
 
   it should "return a proper HttpResponse when a normal request processed and committed" in {
-    val (in, out0, out1) = getEntryPointPorts
+    val (in, out0, out1) = getReceivers
 
     val time = "2017-08-15T13:49:55Z"
     var data = s"""
@@ -116,12 +116,12 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
 
   // TODO: test abnormal cases
 
-  private def getEntryPointPorts: (TestPublisher.Probe[HttpRequest],
-                                   TestSubscriber.Probe[HttpResponse],
-                                   TestSubscriber.Probe[Event]) = {
-    val settings = HttpEntryPointSettings(
-      "test-entrypoint",
-      EntryPointPriority.Normal,
+  private def getReceivers: (TestPublisher.Probe[HttpRequest],
+                             TestSubscriber.Probe[HttpResponse],
+                             TestSubscriber.Probe[Event]) = {
+    val settings = HttpReceiverSettings(
+      "test-receiver",
+      ReceiverPriority.Normal,
       1000,
       10,
       EventFormat.DefaultFormat,
@@ -136,7 +136,7 @@ class HttpEntryPointSpec extends AkkaStreamSpec {
     val handler = Source.single(
       Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0),
                                     Source.fromPublisher(in)))
-    val hep  = new HttpEntryPoint(settings, handler)
+    val hep  = new HttpReceiver(settings, handler)
     val out1 = hep.stream.toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)

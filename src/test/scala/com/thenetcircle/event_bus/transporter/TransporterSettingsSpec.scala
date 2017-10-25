@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.transporter
 import com.thenetcircle.event_bus.pipeline.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineSettings
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
-import com.thenetcircle.event_bus.transporter.entrypoint.HttpEntryPointSettings
+import com.thenetcircle.event_bus.transporter.receiver.HttpReceiverSettings
 import com.typesafe.config.ConfigFactory
 
 class TransporterSettingsSpec extends AkkaStreamSpec {
@@ -32,16 +32,16 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
                                              |  name = TestTransporter
                                              |  transport-parallelism = 11
                                              |  commit-parallelism = 11
-                                             |  entrypoints = [
+                                             |  receivers = [
                                              |    {
                                              |      type = http
-                                             |      name = TestEntryPoint1
+                                             |      name = TestReceiver1
                                              |      interface = 127.0.0.1
                                              |      port = 8080
                                              |    }
                                              |    {
                                              |      type = http
-                                             |      name = TestEntryPoint2
+                                             |      name = TestReceiver2
                                              |      interface = 127.0.0.2
                                              |      port = 8081
                                              |    }
@@ -65,20 +65,20 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
     settings.transportParallelism shouldEqual 11
     settings.commitParallelism shouldEqual 11
 
-    settings.entryPointsSettings(0) shouldBe a[HttpEntryPointSettings]
-    settings.entryPointsSettings(1) shouldBe a[HttpEntryPointSettings]
+    settings.receiverSettings(0) shouldBe a[HttpReceiverSettings]
+    settings.receiverSettings(1) shouldBe a[HttpReceiverSettings]
 
-    val entryPoint0 =
-      settings.entryPointsSettings(0).asInstanceOf[HttpEntryPointSettings]
-    entryPoint0.name shouldEqual "TestEntryPoint1"
-    entryPoint0.interface shouldEqual "127.0.0.1"
-    entryPoint0.port shouldEqual 8080
+    val receiver1 =
+      settings.receiverSettings(0).asInstanceOf[HttpReceiverSettings]
+    receiver1.name shouldEqual "TestReceiver1"
+    receiver1.interface shouldEqual "127.0.0.1"
+    receiver1.port shouldEqual 8080
 
-    val entryPoint1 =
-      settings.entryPointsSettings(1).asInstanceOf[HttpEntryPointSettings]
-    entryPoint1.name shouldEqual "TestEntryPoint2"
-    entryPoint1.interface shouldEqual "127.0.0.2"
-    entryPoint1.port shouldEqual 8081
+    val receiver2 =
+      settings.receiverSettings(1).asInstanceOf[HttpReceiverSettings]
+    receiver2.name shouldEqual "TestReceiver2"
+    receiver2.interface shouldEqual "127.0.0.2"
+    receiver2.port shouldEqual 8081
 
     settings.pipeline.pipelineType shouldEqual PipelineType.Kafka
     settings.pipeline.pipelineSettings.name shouldEqual "TestPipeline"
@@ -96,10 +96,10 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
     val config = ConfigFactory.parseString("""
                                              |{
                                              |  name = TestDefaultTransporter
-                                             |  entrypoints = [
+                                             |  receivers = [
                                              |    {
                                              |      type = http
-                                             |      name = TestEntryPoint1
+                                             |      name = TestReceiver1
                                              |      interface = 127.0.0.1
                                              |      port = 8080
                                              |    }
