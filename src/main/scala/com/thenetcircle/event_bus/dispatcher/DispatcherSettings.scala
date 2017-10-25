@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.dispatcher
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
-import com.thenetcircle.event_bus.dispatcher.endpoint.EndPointSettings
+import com.thenetcircle.event_bus.dispatcher.emitter.EmitterSettings
 import com.thenetcircle.event_bus.pipeline._
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -27,7 +27,8 @@ import net.ceedubs.ficus.Ficus._
 
 object DispatcherSettings extends StrictLogging {
 
-  def apply(_config: Config)(implicit system: ActorSystem): DispatcherSettings = {
+  def apply(_config: Config)(
+      implicit system: ActorSystem): DispatcherSettings = {
     val config: Config =
       _config.withFallback(
         system.settings.config.getConfig("event-bus.dispatcher"))
@@ -38,8 +39,8 @@ object DispatcherSettings extends StrictLogging {
     try {
       val name = config.as[String]("name")
 
-      val endPointSettings =
-        config.as[Vector[Config]]("endpoints").map(EndPointSettings(_))
+      val emitterSettings =
+        config.as[Vector[Config]]("emitters").map(EmitterSettings(_))
 
       val pipelineName = config.as[String]("pipeline.name")
       val pipeline     = PipelinePool().getPipeline(pipelineName).get
@@ -71,7 +72,7 @@ object DispatcherSettings extends StrictLogging {
       }
 
       DispatcherSettings(name,
-                         endPointSettings,
+                         emitterSettings,
                          pipeline,
                          pipelineOutletSettings,
                          pipelineCommitterSettings,
@@ -87,7 +88,7 @@ object DispatcherSettings extends StrictLogging {
 
 final case class DispatcherSettings(
     name: String,
-    endPointSettings: Vector[EndPointSettings],
+    emitterSettings: Vector[EmitterSettings],
     pipeline: Pipeline,
     pipelineOutletSettings: PipelineOutletSettings,
     pipelineCommitterSettings: PipelineCommitterSettings,

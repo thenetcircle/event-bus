@@ -158,7 +158,7 @@ class HttpReceiverSpec extends AkkaStreamSpec {
             import GraphDSL.Implicits._
 
             val handler =
-              builder.add(new HttpEntryPoint.ConnectionHandler())
+              builder.add(new HttpReceiver.ConnectionHandler())
 
             // format: off
             p1 ~> handler.in

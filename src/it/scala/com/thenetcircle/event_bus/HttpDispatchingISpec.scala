@@ -89,7 +89,7 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
 
   behavior of "HttpDispatching"
 
-  it should "in the end get same request on EndPoint side" in {
+  it should "in the end get same request on Emitter side" in {
 
     val result = Promise[String]
     addListener(result)

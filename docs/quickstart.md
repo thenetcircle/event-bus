@@ -13,7 +13,7 @@ The workflow will like this:
 
 ## Setting up EventBus
 
-First of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called EntryPoint in EventBus) and targets(called EndPoint). We need to point out which of them is using in this scenario.  
+First of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called Receiver in EventBus) and targets(called Emitter). We need to point out which of them is using in this scenario.  
 Let's create a configuration file to describe this, The configuration file is based on [Typesafe Config](https://github.com/typesafehub/config), similar as json.
 Let's create a file called application.conf, Put it on root of EventBus directory.
 
@@ -49,12 +49,12 @@ event-bus.runtime {
     name = TestTransporter
     
     # Declares which EntryPoints this Transporter can support.
-    entrypoints = [
+    receivers = [
       {
         type = http
-        name = TestEntryPoint1
+        name = TestReceiver1
         
-        # EntryPoint specific parameters
+        # Receiver specific parameters
         interface = localhost
         port = 8086
       }
@@ -75,12 +75,12 @@ event-bus.runtime {
   dispatchers = [{
     name = StressTestDispatcher
     
-    # Declares which EndPoints this Dispatcher can support.
-    endpoints = [{
+    # Declares which Emitters this Dispatcher can support.
+    emitters = [{
       type = http
-      name = TestEndPoint
+      name = TestEmitter
       
-      # EndPoint specific parameters
+      # Emitter specific parameters
       request {
         host = localhost
         port = 8087

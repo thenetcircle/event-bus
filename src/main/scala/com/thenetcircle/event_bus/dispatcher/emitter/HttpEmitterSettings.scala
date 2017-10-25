@@ -15,16 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.dispatcher.endpoint
+package com.thenetcircle.event_bus.dispatcher.emitter
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
-import com.thenetcircle.event_bus.dispatcher.endpoint.EmitterType.EmitterType
+import com.thenetcircle.event_bus.dispatcher.emitter.EmitterType.EmitterType
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
-case class HttpEndPointSettings(
+case class HttpEmitterSettings(
     name: String,
     host: String,
     port: Int,
@@ -34,19 +34,19 @@ case class HttpEndPointSettings(
     defaultRequest: HttpRequest,
     // TODO: set to optional
     expectedResponse: Option[String] = None
-) extends EndPointSettings {
-  override val endPointType: EmitterType = EmitterType.HTTP
+) extends EmitterSettings {
+  override val emitterType: EmitterType = EmitterType.HTTP
 }
 
-object HttpEndPointSettings extends StrictLogging {
+object HttpEmitterSettings extends StrictLogging {
   def apply(_config: Config)(
-      implicit system: ActorSystem): HttpEndPointSettings = {
+      implicit system: ActorSystem): HttpEmitterSettings = {
     val config: Config =
       _config.withFallback(
-        system.settings.config.getConfig("event-bus.endpoint.http"))
+        system.settings.config.getConfig("event-bus.emitter.http"))
 
     logger.info(
-      s"Creating a new HttpEndPointSettings accroding to config: $config")
+      s"Creating a new HttpEmitterSettings according to config: $config")
 
     try {
       val rootConfig =
@@ -85,7 +85,7 @@ object HttpEndPointSettings extends StrictLogging {
           Some(config.getString("expected-response-data"))
         else None
 
-      HttpEndPointSettings(
+      HttpEmitterSettings(
         config.getString("name"),
         config.getString("request.host"),
         config.getInt("request.port"),
@@ -97,7 +97,7 @@ object HttpEndPointSettings extends StrictLogging {
     } catch {
       case ex: Throwable =>
         logger.error(
-          s"Creating HttpEndPointSettings failed with error: ${ex.getMessage}")
+          s"Creating HttpEmitterSettings failed with error: ${ex.getMessage}")
         throw ex
     }
   }

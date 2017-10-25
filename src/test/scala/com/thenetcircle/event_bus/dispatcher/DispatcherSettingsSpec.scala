@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.dispatcher
 
-import com.thenetcircle.event_bus.dispatcher.endpoint.HttpEndPointSettings
+import com.thenetcircle.event_bus.dispatcher.emitter.HttpEmitterSettings
 import com.thenetcircle.event_bus.pipeline.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.{
   KafkaPipelineOutletSettings,
@@ -34,9 +34,9 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val config = ConfigFactory.parseString("""
                                              |{
                                              |  name = TestDispatcher
-                                             |  endpoints = [{
+                                             |  emitters = [{
                                              |    type = http
-                                             |    name = TestEndPoint
+                                             |    name = TestEmitter
                                              |    request.host = 127.0.0.1
                                              |  }]
                                              |  pipeline {
@@ -63,9 +63,9 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
 
     settings.name shouldEqual "TestDispatcher"
 
-    settings.endPointSettings.size shouldEqual 1
-    settings.endPointSettings(0).name shouldEqual "TestEndPoint"
-    settings.endPointSettings(0) shouldBe a[HttpEndPointSettings]
+    settings.emitterSettings.size shouldEqual 1
+    settings.emitterSettings(0).name shouldEqual "TestEmitter"
+    settings.emitterSettings(0) shouldBe a[HttpEmitterSettings]
 
     settings.pipeline.pipelineType shouldEqual PipelineType.Kafka
     settings.pipeline.pipelineSettings.name shouldEqual "TestPipeline"
@@ -84,9 +84,9 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     val config = ConfigFactory.parseString("""
                                              |{
                                              |  name = TestDefaultDispatcher
-                                             |  endpoints = [{
+                                             |  emitters = [{
                                              |    type = http
-                                             |    name = TestEndPoint
+                                             |    name = TestEmitter
                                              |    request.host = 127.0.0.1
                                              |  }]
                                              |  pipeline {

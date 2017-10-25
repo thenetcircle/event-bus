@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.dispatcher.endpoint
+package com.thenetcircle.event_bus.dispatcher.emitter
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
@@ -30,15 +30,15 @@ import com.thenetcircle.event_bus.{Event, createTestEvent}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class HttpEndPointSpec extends AkkaStreamSpec {
+class HttpEmitterSpec extends AkkaStreamSpec {
 
-  behavior of "HttpEndPoint"
+  behavior of "HttpEmitter"
 
   it must "delivery successfully to the target with proper HttpResponse" in {
     val fallbacker = TestSubscriber.probe[Event]()
-    val endPoint =
-      createHttpEndPoint(fallbacker = Sink.fromSubscriber(fallbacker))()
-    val (incoming, succeed) = run(endPoint)
+    val emitter =
+      createHttpEmitter(fallbacker = Sink.fromSubscriber(fallbacker))()
+    val (incoming, succeed) = run(emitter)
 
     val testEvent = createTestEvent()
 
@@ -57,21 +57,21 @@ class HttpEndPointSpec extends AkkaStreamSpec {
         senderTimes += 1
         (Failure(new Exception("failed response")), event)
     }
-    val fallbacker = TestSubscriber.probe[Event]()
-    val endPoint = createHttpEndPoint(
-      fallbacker = Sink.fromSubscriber(fallbacker),
+    val fallback = TestSubscriber.probe[Event]()
+    val emitter = createHttpEmitter(
+      fallbacker = Sink.fromSubscriber(fallback),
       maxRetryTimes = 10
     )(sender)
-    val (incoming, succeed) = run(endPoint)
+    val (incoming, succeed) = run(emitter)
 
     val testEvent = createTestEvent()
 
-    fallbacker.request(1)
+    fallback.request(1)
     succeed.request(1)
     incoming.sendNext(testEvent)
     succeed.expectNoMsg(100.millisecond)
-    fallbacker.expectNext(testEvent)
-    fallbacker.expectNoMsg(100.millisecond)
+    fallback.expectNext(testEvent)
+    fallback.expectNoMsg(100.millisecond)
     senderTimes shouldEqual 10
   }
 
@@ -89,28 +89,28 @@ class HttpEndPointSpec extends AkkaStreamSpec {
         (for (i <- 1 to 10)
           yield createTestEvent(name = s"TestEvent$i")).iterator)
 
-    val fallbacker = TestSubscriber.probe[Event]()
-    val endPoint = createHttpEndPoint(
-      fallbacker = Sink.fromSubscriber(fallbacker),
+    val fallback = TestSubscriber.probe[Event]()
+    val emitter = createHttpEmitter(
+      fallbacker = Sink.fromSubscriber(fallback),
       maxRetryTimes = 1
     )(sender)
 
     val succeed = source
-      .via(endPoint.stream)
+      .via(emitter.stream)
       .toMat(TestSink.probe[Event])(Keep.right)
       .run()
 
     succeed.request(1)
     for (i <- 1 to 10) {
-      fallbacker.request(1)
-      val _event = fallbacker.expectNext()
+      fallback.request(1)
+      val _event = fallback.expectNext()
 
       _event.metadata.name shouldEqual s"TestEvent$i"
 
       if (i < 10) succeed.expectNoMsg(100.millisecond)
     }
 
-    fallbacker.expectComplete()
+    fallback.expectComplete()
     succeed.expectComplete()
 
     /*incoming.sendNext(testEvent)
@@ -128,22 +128,22 @@ class HttpEndPointSpec extends AkkaStreamSpec {
         (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
     }
 
-    val fallbacker = TestSubscriber.probe[Event]()
+    val fallback = TestSubscriber.probe[Event]()
 
-    val endPoint =
-      createHttpEndPoint(
-        fallbacker = Sink.fromSubscriber(fallbacker),
+    val emitter =
+      createHttpEmitter(
+        fallbacker = Sink.fromSubscriber(fallback),
         expectedResponse = Some("OK")
       )(sender)
 
-    val (in1, out1) = run(endPoint)
-    fallbacker.expectSubscription().request(1)
+    val (in1, out1) = run(emitter)
+    fallback.expectSubscription().request(1)
 
-    val (in2, out2) = run(endPoint)
-    fallbacker.expectSubscription().request(1)
+    val (in2, out2) = run(emitter)
+    fallback.expectSubscription().request(1)
 
-    val (in3, out3) = run(endPoint)
-    fallbacker.expectSubscription().request(1)
+    val (in3, out3) = run(emitter)
+    fallback.expectSubscription().request(1)
 
     val okEvent = createTestEvent(body = "OK")
     val koEvent = createTestEvent(body = "KO")
@@ -167,7 +167,7 @@ class HttpEndPointSpec extends AkkaStreamSpec {
     out1.expectNoMsg(100.millisecond)
     out2.expectNoMsg(100.millisecond)
 
-    fallbacker.expectNoMsg(100.millisecond)
+    fallback.expectNoMsg(100.millisecond)
     senderTimes shouldEqual 3
 
     out1.request(1)
@@ -178,7 +178,7 @@ class HttpEndPointSpec extends AkkaStreamSpec {
     out2.expectNoMsg(100.millisecond)
     out3.expectNoMsg(100.millisecond)
 
-    fallbacker.expectNext(koEvent)
+    fallback.expectNext(koEvent)
   }
 
   it should "goes to the target if succeed after several tries" in {
@@ -193,28 +193,28 @@ class HttpEndPointSpec extends AkkaStreamSpec {
         }
         (response, event)
     }
-    val fallbacker = TestSubscriber.probe[Event]()
-    val endPoint =
-      createHttpEndPoint(
-        fallbacker = Sink.fromSubscriber(fallbacker),
+    val fallback = TestSubscriber.probe[Event]()
+    val emitter =
+      createHttpEmitter(
+        fallbacker = Sink.fromSubscriber(fallback),
         maxRetryTimes = 10,
         expectedResponse = Some("OK")
       )(sender)
 
-    val (testSource, testSink) = run(endPoint)
+    val (testSource, testSink) = run(emitter)
     val testEvent              = createTestEvent(body = "OK")
 
     testSink.request(1)
-    fallbacker.request(1)
+    fallback.request(1)
     testSource.sendNext(testEvent)
     testSink.expectNext(testEvent)
-    fallbacker.expectNoMsg(100.microsecond)
+    fallback.expectNoMsg(100.microsecond)
     senderTimes shouldEqual 6
 
     testSink.request(1)
     testSource.sendNext(testEvent)
     testSink.expectNext(testEvent)
-    fallbacker.expectNoMsg(100.microsecond)
+    fallback.expectNoMsg(100.microsecond)
     senderTimes shouldEqual 7
   }
 
@@ -225,10 +225,10 @@ class HttpEndPointSpec extends AkkaStreamSpec {
         senderTimes += 1
         (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
     }
-    val fallbacker = TestSubscriber.probe[Event]()
-    val endPoint =
-      createHttpEndPoint(
-        fallbacker = Sink.fromSubscriber(fallbacker),
+    val fallback = TestSubscriber.probe[Event]()
+    val emitter =
+      createHttpEmitter(
+        fallbacker = Sink.fromSubscriber(fallback),
         maxRetryTimes = 10,
         expectedResponse = Some("OK")
       )(sender)
@@ -243,63 +243,63 @@ class HttpEndPointSpec extends AkkaStreamSpec {
 
     val sink1 =
       source1
-        .via(endPoint.stream)
+        .via(emitter.stream)
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
-    val fallbackerSub1 = fallbacker.expectSubscription()
+    val fallbackerSub1 = fallback.expectSubscription()
 
     val sink2 =
       source2
-        .via(endPoint.stream)
+        .via(emitter.stream)
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
-    val fallbackerSub2 = fallbacker.expectSubscription()
+    val fallbackerSub2 = fallback.expectSubscription()
 
     val sink3 =
       source3
-        .via(endPoint.stream)
+        .via(emitter.stream)
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
-    val fallbackerSub3 = fallbacker.expectSubscription()
+    val fallbackerSub3 = fallback.expectSubscription()
 
     fallbackerSub1.request(1)
     for (i <- 1 to 100) {
       sink1.request(1)
       sink1.expectNext(okEvent)
     }
-    fallbacker.expectComplete()
+    fallback.expectComplete()
     sink1.expectComplete()
 
     sink2.request(1)
     for (i <- 1 to 10) {
       fallbackerSub2.request(1)
-      fallbacker.expectNext(koEvent)
+      fallback.expectNext(koEvent)
     }
-    fallbacker.expectComplete()
+    fallback.expectComplete()
 
     fallbackerSub3.request(1)
     for (i <- 1 to 100) {
       sink3.request(1)
-      fallbacker.expectNext(koEvent)
+      fallback.expectNext(koEvent)
 
       fallbackerSub3.request(1)
       sink3.expectNext(okEvent)
     }
     sink3.expectComplete()
-    fallbacker.expectComplete()
+    fallback.expectComplete()
   }
 
   // TODO: test abnormal cases, like exception, cancel, error, complete etc...
 
-  def run(endPoint: HttpEndPoint)
+  def run(emitter: HttpEmitter)
     : (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
     TestSource
       .probe[Event]
-      .viaMat(endPoint.stream)(Keep.left)
+      .viaMat(emitter.stream)(Keep.left)
       .toMat(TestSink.probe[Event])(Keep.both)
       .run()
 
-  def createHttpEndPoint(
+  def createHttpEmitter(
       expectedResponse: Option[String] = None,
       fallbacker: Sink[Event, _] = Sink.ignore,
       maxRetryTimes: Int = 1,
@@ -310,23 +310,23 @@ class HttpEndPointSpec extends AkkaStreamSpec {
         case (_, event) =>
           (defaultResponse, event)
       })(implicit system: ActorSystem,
-         materializer: Materializer): HttpEndPoint = {
-    val endPointSettings = createHttpEndPointSettings(
+         materializer: Materializer): HttpEmitter = {
+    val emitterSettings = createHttpEmitterSettings(
       maxRetryTimes = maxRetryTimes,
       defaultRequest = defaultRequest,
       expectedResponse = expectedResponse
     )
-    new HttpEndPoint(endPointSettings, sender, fallbacker)
+    new HttpEmitter(emitterSettings, sender, fallbacker)
   }
 
-  def createHttpEndPointSettings(
-      name: String = "TestHttpEndPoint",
+  def createHttpEmitterSettings(
+      name: String = "TestHttpEmitter",
       host: String = "localhost",
       port: Int = 8888,
       maxRetryTimes: Int = 10,
       defaultRequest: HttpRequest = HttpRequest(),
       expectedResponse: Option[String] = None
-  )(implicit system: ActorSystem): HttpEndPointSettings = HttpEndPointSettings(
+  )(implicit system: ActorSystem): HttpEmitterSettings = HttpEmitterSettings(
     name,
     host,
     port,

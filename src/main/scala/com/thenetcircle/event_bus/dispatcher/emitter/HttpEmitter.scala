@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.dispatcher.endpoint
+package com.thenetcircle.event_bus.dispatcher.emitter
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
@@ -35,14 +35,14 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
-class HttpEndPoint(
-    val settings: HttpEndPointSettings,
+class HttpEmitter(
+    val settings: HttpEmitterSettings,
     connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
     fallbacker: Sink[Event, _])(implicit val materializer: Materializer)
-    extends EndPoint
+    extends Emitter
     with StrictLogging {
 
-  logger.info(s"new HttpEndPoint ${settings.name} is created")
+  logger.info(s"new HttpEmitter ${settings.name} is created")
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
@@ -54,7 +54,7 @@ class HttpEndPoint(
     val request =
       settings.defaultRequest.withEntity(HttpEntity(event.body.data))
 
-    logger.debug(s"Sending new request to EndPoint")
+    logger.debug(s"Sending new request to Emitter")
 
     (request, event)
   }
@@ -92,8 +92,8 @@ class HttpEndPoint(
 
       val retryEngine =
         builder.add(
-          new HttpEndPoint.HttpRetryEngine[Event](settings.maxRetryTimes,
-                                                  responseChecker))
+          new HttpEmitter.HttpRetryEngine[Event](settings.maxRetryTimes,
+                                                 responseChecker))
 
       /** --- work flow --- */
       // format: off
@@ -109,10 +109,10 @@ class HttpEndPoint(
   })
 }
 
-object HttpEndPoint {
+object HttpEmitter {
 
-  def apply(settings: HttpEndPointSettings)(
-      implicit system: ActorSystem, materializer: Materializer): HttpEndPoint = {
+  def apply(settings: HttpEmitterSettings)(
+      implicit system: ActorSystem, materializer: Materializer): HttpEmitter = {
     // TODO: check when it creates a new pool
     val connectionPool = Http().cachedHostConnectionPool[Event](
       settings.host,
@@ -122,7 +122,7 @@ object HttpEndPoint {
     // TODO: implementation of fallbacker
     val fallbacker: Sink[Event, NotUsed] = Flow[Event].to(Sink.ignore)
 
-    new HttpEndPoint(settings, connectionPool, fallbacker)
+    new HttpEmitter(settings, connectionPool, fallbacker)
   }
 
   final class HttpRetryEngine[T <: Event](

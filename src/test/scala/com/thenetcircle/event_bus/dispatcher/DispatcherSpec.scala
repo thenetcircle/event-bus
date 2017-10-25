@@ -21,9 +21,9 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.dispatcher.endpoint.{
-  EndPoint,
-  EndPointSettings,
+import com.thenetcircle.event_bus.dispatcher.emitter.{
+  Emitter,
+  EmitterSettings,
   EmitterType
 }
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
@@ -36,7 +36,7 @@ class DispatcherSpec extends AkkaStreamSpec {
 
   behavior of "Dispatcher"
 
-  it should "be properly delivered each port of endpoint and committer" in {
+  it should "be properly delivered each port of emitter and committer" in {
 
     val testSource1 = TestPublisher.probe[Event]()
     val testSource2 = TestPublisher.probe[Event]()
@@ -56,11 +56,11 @@ class DispatcherSpec extends AkkaStreamSpec {
       Sink.fromSubscriber(testCommitter)
     )
 
-    val endPoint = new EndPoint {
+    val emitter = new Emitter {
       var currentIndex = 0
-      override val settings: EndPointSettings = new EndPointSettings {
-        override val name         = "TestEndPoint"
-        override val endPointType = EmitterType.HTTP
+      override val settings: EmitterSettings = new EmitterSettings {
+        override val name        = "TestEmitter"
+        override val emitterType = EmitterType.HTTP
       }
       override def stream: Flow[Event, Event, NotUsed] = {
         currentIndex += 1
@@ -73,7 +73,7 @@ class DispatcherSpec extends AkkaStreamSpec {
       }
     }
 
-    val dispatcher = createDispatcher(Vector(endPoint), pipeline)
+    val dispatcher = createDispatcher(Vector(emitter), pipeline)
 
     dispatcher.run()
 
@@ -110,7 +110,7 @@ class DispatcherSpec extends AkkaStreamSpec {
     testSink3.requestNext(testEvent4)
   }
 
-  it should "evenly delivery to endpoints" in {
+  it should "evenly delivery to emitters" in {
 
     val testSource1 = Source.fromIterator(
       () =>
@@ -144,12 +144,12 @@ class DispatcherSpec extends AkkaStreamSpec {
       Flow[Event].to(Sink.ignore)
     )
 
-    val endPoints = Vector[EndPoint](
-      new EndPoint {
+    val emitters = Vector[Emitter](
+      new Emitter {
         var currentIndex = 0
-        override val settings: EndPointSettings = new EndPointSettings {
-          override val name         = "TestEndPoint1"
-          override val endPointType = EmitterType.HTTP
+        override val settings: EmitterSettings = new EmitterSettings {
+          override val name        = "TestEmitter1"
+          override val emitterType = EmitterType.HTTP
         }
         override def stream: Flow[Event, Event, NotUsed] = {
           currentIndex += 1
@@ -161,25 +161,25 @@ class DispatcherSpec extends AkkaStreamSpec {
           }
         }
       },
-      new EndPoint {
-        override val settings: EndPointSettings = new EndPointSettings {
-          override val name         = "TestEndPoint2"
-          override val endPointType = EmitterType.HTTP
+      new Emitter {
+        override val settings: EmitterSettings = new EmitterSettings {
+          override val name        = "TestEmitter2"
+          override val emitterType = EmitterType.HTTP
         }
         override def stream: Flow[Event, Event, NotUsed] =
           createFlowFromSink(Sink.fromSubscriber(testSink4))
       },
-      new EndPoint {
-        override val settings: EndPointSettings = new EndPointSettings {
-          override val name         = "TestEndPoint3"
-          override val endPointType = EmitterType.HTTP
+      new Emitter {
+        override val settings: EmitterSettings = new EmitterSettings {
+          override val name        = "TestEmitter3"
+          override val emitterType = EmitterType.HTTP
         }
         override def stream: Flow[Event, Event, NotUsed] =
           createFlowFromSink(Sink.fromSubscriber(testSink5))
       }
     )
 
-    val dispatcher = createDispatcher(endPoints, pipeline)
+    val dispatcher = createDispatcher(emitters, pipeline)
     dispatcher.run()
 
     for (i <- 1 to 10) {
@@ -197,7 +197,7 @@ class DispatcherSpec extends AkkaStreamSpec {
 
   it should "process maximum specific sub-streams at a time" in {}
 
-  private def createDispatcher(endPoints: Vector[EndPoint],
+  private def createDispatcher(emitters: Vector[Emitter],
                                pipeline: Pipeline): Dispatcher = {
 
     val dispatcherSettings =
@@ -206,9 +206,9 @@ class DispatcherSpec extends AkkaStreamSpec {
                                     |{
                                     |  name = TestDispatcher
                                     |  max-parallel-sources = 10
-                                    |  endpoints = [{
+                                    |  emitters = [{
                                     |    type = http
-                                    |    name = TestDispatcher-TestEndPoint
+                                    |    name = TestDispatcher-TestEmitter
                                     |    request.host = localhost
                                     |  }]
                                     |  pipeline {
@@ -220,7 +220,7 @@ class DispatcherSpec extends AkkaStreamSpec {
                                     |}
                                   """.stripMargin))
 
-    new Dispatcher(dispatcherSettings, pipeline, endPoints)
+    new Dispatcher(dispatcherSettings, pipeline, emitters)
   }
 
   private def createPipeline(

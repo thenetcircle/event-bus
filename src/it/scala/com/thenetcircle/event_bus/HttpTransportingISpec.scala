@@ -37,7 +37,7 @@ class HttpTransportingISpec extends BaseIntegrationISpec {
 
   behavior of "HttpTransporting"
 
-  it should "send to endpoint successfully by proper request content" in {
+  it should "send to emitter successfully by proper request content" in {
     val responseFuture: Future[HttpResponse] =
       Http().singleRequest(
         HttpRequest(

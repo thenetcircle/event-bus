@@ -44,10 +44,10 @@ event-bus {
   
   transporter {
     #name = TestTransporter
-    #entrypoints = [
+    #receivers = [
     #  {
     #    type = http
-    #    name = TestEntryPoint1
+    #    name = TestReceiver1
     #    interface = 127.0.0.1
     #    port = 8080
     #  }
@@ -61,9 +61,9 @@ event-bus {
     #akka.stream.materializer {}
   }
 
-  entrypoint {
+  receiver {
     http {
-      #name = TestHttpEntryPoint
+      #name = TestHttpReceiver
       #interface = localhost
       #port = 8080
       priority = normal
@@ -79,7 +79,7 @@ event-bus {
     #akka.stream.materializer {}
   }
 
-  endpoint {
+  emitter {
     http {
       max-retry-times = 10
       request {

@@ -15,14 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.dispatcher.endpoint
+package com.thenetcircle.event_bus.dispatcher.emitter
 
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.dispatcher.endpoint.EmitterType.EmitterType
+import com.thenetcircle.event_bus.dispatcher.emitter.EmitterType.EmitterType
 import com.typesafe.config.{Config, ConfigException}
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ValueReader
@@ -43,44 +43,43 @@ object EmitterType extends Enumeration {
     }
 }
 
-trait EndPoint {
-  val settings: EndPointSettings
+trait Emitter {
+  val settings: EmitterSettings
   def stream: Flow[Event, Event, NotUsed]
 }
 
-object EndPoint {
-  def apply(settings: EndPointSettings)(implicit system: ActorSystem,
-                                        materializer: Materializer): EndPoint =
-    settings.endPointType match {
+object Emitter {
+  def apply(settings: EmitterSettings)(implicit system: ActorSystem,
+                                       materializer: Materializer): Emitter =
+    settings.emitterType match {
       case EmitterType.HTTP =>
-        HttpEndPoint(settings.asInstanceOf[HttpEndPointSettings])
+        HttpEmitter(settings.asInstanceOf[HttpEmitterSettings])
     }
 }
 
-trait EndPointSettings {
+trait EmitterSettings {
   val name: String
-  val endPointType: EmitterType
+  val emitterType: EmitterType
 }
 
-object EndPointSettings {
+object EmitterSettings {
 
-  /** Returns a [[EndPointSettings]] from a TypeSafe [[Config]]
+  /** Returns a [[EmitterSettings]] from a TypeSafe [[Config]]
     *
     * @throws ConfigException
     *             if config incorrect
     * @throws IllegalArgumentException
     *             if "type" didn't match any predefined types
     */
-  def apply(config: Config)(implicit system: ActorSystem): EndPointSettings = {
-    var endPointType = config.as[EmitterType]("type")
+  def apply(config: Config)(implicit system: ActorSystem): EmitterSettings = {
+    var emitterType = config.as[EmitterType]("type")
 
-    endPointType match {
+    emitterType match {
       case EmitterType.HTTP =>
-        HttpEndPointSettings(config)
+        HttpEmitterSettings(config)
 
       case _ =>
-        throw new IllegalArgumentException(
-          """EndPoint "type" is not correct!""")
+        throw new IllegalArgumentException("""Emitter "type" is not correct!""")
     }
   }
 }

@@ -1,13 +1,13 @@
 <a href="assets/workflow.png" target="_blank">![EventBus Workflow](assets/workflow_small.png)</a>
 
 ## Transporter
-### EntryPoints
-#### HTTP EntryPoint
+### Receiver
+#### HTTP Receiver
 ## Pipeline
 ### Kafka Pipeline
 ## Dispatcher
-### EndPoints
-#### HTTP EndPoint
-## Fallbacker
+### Emitter
+#### HTTP Emitter
+## Fallback
 ## Tracer
 ## Manager

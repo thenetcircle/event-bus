@@ -20,26 +20,25 @@ package com.thenetcircle.event_bus.dispatcher
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{RestartSource, RunnableGraph}
 import akka.stream.{ActorMaterializer, Materializer}
-import com.thenetcircle.event_bus.dispatcher.endpoint.EndPoint
+import com.thenetcircle.event_bus.dispatcher.emitter.Emitter
 import com.thenetcircle.event_bus.pipeline.Pipeline
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class Dispatcher(
-    settings: DispatcherSettings,
-    pipeline: Pipeline,
-    endPoints: Vector[EndPoint])(implicit materializer: Materializer)
+class Dispatcher(settings: DispatcherSettings,
+                 pipeline: Pipeline,
+                 emitter: Vector[Emitter])(implicit materializer: Materializer)
     extends StrictLogging {
 
   logger.info(s"new Dispatcher ${settings.name} is created")
 
-  def getNextEndpoint(index: Int): EndPoint =
-    if (endPoints.size == 1)
-      endPoints(0)
+  def getNextEmitter(index: Int): Emitter =
+    if (emitter.size == 1)
+      emitter(0)
     else
-      endPoints(index % endPoints.size)
+      emitter(index % emitter.size)
 
   private var sourceIndex = 0
   private val dataSource = RestartSource.withBackoff(
@@ -72,11 +71,11 @@ class Dispatcher(
           var retryIndex = sourceIndex
 
           val result = source
-            .via(getNextEndpoint(sourceIndex).stream)
-            .recoverWithRetries(attempts = endPoints.size - 1, {
+            .via(getNextEmitter(sourceIndex).stream)
+            .recoverWithRetries(attempts = emitter.size - 1, {
               case NonFatal(ex) =>
                 retryIndex += 1
-                source.via(getNextEndpoint(retryIndex).stream)
+                source.via(getNextEmitter(retryIndex).stream)
             })
 
           sourceIndex += 1
@@ -103,8 +102,8 @@ object Dispatcher extends StrictLogging {
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
-    val endPoints = settings.endPointSettings.map(EndPoint(_))
+    val emitters = settings.emitterSettings.map(Emitter(_))
 
-    new Dispatcher(settings, settings.pipeline, endPoints)
+    new Dispatcher(settings, settings.pipeline, emitters)
   }
 }

@@ -15,20 +15,20 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.dispatcher.endpoint
+package com.thenetcircle.event_bus.dispatcher.emitter
 
 import akka.http.scaladsl.model.{HttpMethods, Uri}
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
-class HttpEndPointSettingsSpec extends AkkaStreamSpec {
+class HttpEmitterSettingsSpec extends AkkaStreamSpec {
 
-  behavior of "HttpEndPointSettings"
+  behavior of "HttpEmitterSettings"
 
   it should "properly be parsed from typesafe Config" in {
     val config = ConfigFactory.parseString("""
         |{
-        |  name = TestEndPoint
+        |  name = TestEmitter
         |  max-retry-times = 10
         |  akka.http.host-connection-pool {
         |    max-connections = 100
@@ -45,9 +45,9 @@ class HttpEndPointSettingsSpec extends AkkaStreamSpec {
         |}
       """.stripMargin)
 
-    val settings = HttpEndPointSettings(config)
+    val settings = HttpEmitterSettings(config)
 
-    settings.name shouldEqual "TestEndPoint"
+    settings.name shouldEqual "TestEmitter"
 
     settings.host shouldEqual "127.0.0.1"
     settings.port shouldEqual 8888
@@ -66,14 +66,14 @@ class HttpEndPointSettingsSpec extends AkkaStreamSpec {
   it should "use default values if the fields not set" in {
     val config = ConfigFactory.parseString("""
                                              |{
-                                             |  name = TestDefaultEndPoint
+                                             |  name = TestDefaultEmitter
                                              |  request.host = 127.0.0.2
                                              |}
                                            """.stripMargin)
 
-    val settings = HttpEndPointSettings(config)
+    val settings = HttpEmitterSettings(config)
 
-    settings.name shouldEqual "TestDefaultEndPoint"
+    settings.name shouldEqual "TestDefaultEmitter"
 
     settings.host shouldEqual "127.0.0.2"
     settings.port shouldEqual 80
