@@ -34,8 +34,7 @@ abstract class AkkaStreamSpec(_system: ActorSystem)
     with UnitSpec {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
-    ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1,
-                                                       maxSize = 1)
+    ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1, maxSize = 1)
   )
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
@@ -44,13 +43,13 @@ abstract class AkkaStreamSpec(_system: ActorSystem)
     materializer.executionContext
 
   def this() =
-    this(
-      ActorSystem("eventbus-test", ConfigFactory.load("application-test.conf")))
+    this(ActorSystem("eventbus-test", ConfigFactory.load("application-test.conf")))
 
   override def beforeAll(): Unit = {
     PipelinePool.init(
       _system.settings.config
-        .as[List[Config]]("event-bus.runtime.pipeline-pool"))
+        .as[List[Config]]("event-bus.runtime.pipeline-pool")
+    )
     Tracer.init(_system)
   }
 

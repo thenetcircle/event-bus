@@ -33,27 +33,36 @@ class PipelinePoolSpec extends AkkaStreamSpec {
 
   val testPipelineSettings1 = new KafkaPipelineSettings(
     "TP1",
-    ProducerSettings[ProducerKey, ProducerValue](system,
-                                                 new KafkaKeySerializer,
-                                                 new EventSerializer),
-    ConsumerSettings[ConsumerKey, ConsumerValue](system,
-                                                 new KafkaKeyDeserializer,
-                                                 new ByteArrayDeserializer)
+    ProducerSettings[ProducerKey, ProducerValue](
+      system,
+      new KafkaKeySerializer,
+      new EventSerializer
+    ),
+    ConsumerSettings[ConsumerKey, ConsumerValue](
+      system,
+      new KafkaKeyDeserializer,
+      new ByteArrayDeserializer
+    )
   )
   val testPipelineSettings2 = new KafkaPipelineSettings(
     "TP2",
-    ProducerSettings[ProducerKey, ProducerValue](system,
-                                                 new KafkaKeySerializer,
-                                                 new EventSerializer),
-    ConsumerSettings[ConsumerKey, ConsumerValue](system,
-                                                 new KafkaKeyDeserializer,
-                                                 new ByteArrayDeserializer)
+    ProducerSettings[ProducerKey, ProducerValue](
+      system,
+      new KafkaKeySerializer,
+      new EventSerializer
+    ),
+    ConsumerSettings[ConsumerKey, ConsumerValue](
+      system,
+      new KafkaKeyDeserializer,
+      new ByteArrayDeserializer
+    )
   )
   val testPipelinePool = new PipelinePool(
     Map[String, (PipelineType, PipelineSettings)](
       "TP1" -> (PipelineType.Kafka, testPipelineSettings1),
       "TP2" -> (PipelineType.Kafka, testPipelineSettings2)
-    ))
+    )
+  )
 
   it should "support to get predefined pipelines" in {
 
@@ -62,13 +71,10 @@ class PipelinePoolSpec extends AkkaStreamSpec {
         if (pipelineName == "TP1") testPipelineSettings1
         else testPipelineSettings2
 
-      testPipelinePool.getPipelineType(pipelineName) shouldBe Some(
-        PipelineType.Kafka)
+      testPipelinePool.getPipelineType(pipelineName) shouldBe Some(PipelineType.Kafka)
 
-      testPipelinePool.getPipelineSettings(pipelineName) shouldBe Some(
-        _settings)
-      testPipelinePool.getPipelineFactory(pipelineName) shouldBe Some(
-        KafkaPipelineFactory())
+      testPipelinePool.getPipelineSettings(pipelineName) shouldBe Some(_settings)
+      testPipelinePool.getPipelineFactory(pipelineName) shouldBe Some(KafkaPipelineFactory())
 
       testPipelinePool.getPipeline(pipelineName) shouldBe defined
       testPipelinePool

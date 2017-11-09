@@ -46,7 +46,7 @@ object KafkaKey {
     */
   def parseRawData(rawData: String): Option[KafkaKeyData] =
     if (rawData.charAt(rawData.length - 1) == '|') {
-      val parsed      = rawData.split('|')
+      val parsed = rawData.split('|')
       val eventFormat = EventFormat(parsed(0))
 
       val tracingId =
@@ -59,8 +59,5 @@ object KafkaKey {
     }
 
   /** Holds real data of the key of a kafka message */
-  case class KafkaKeyData(
-      eventFormat: EventFormat,
-      tracingId: Option[Long]
-  )
+  case class KafkaKeyData(eventFormat: EventFormat, tracingId: Option[Long])
 }

@@ -27,14 +27,11 @@ import net.ceedubs.ficus.Ficus._
 
 object DispatcherSettings extends StrictLogging {
 
-  def apply(_config: Config)(
-      implicit system: ActorSystem): DispatcherSettings = {
+  def apply(_config: Config)(implicit system: ActorSystem): DispatcherSettings = {
     val config: Config =
-      _config.withFallback(
-        system.settings.config.getConfig("event-bus.dispatcher"))
+      _config.withFallback(system.settings.config.getConfig("event-bus.dispatcher"))
 
-    logger.info(
-      s"Creating a new DispatcherSettings accroding to config: $config")
+    logger.info(s"Creating a new DispatcherSettings accroding to config: $config")
 
     try {
       val name = config.as[String]("name")
@@ -43,20 +40,22 @@ object DispatcherSettings extends StrictLogging {
         config.as[Vector[Config]]("emitters").map(EmitterSettings(_))
 
       val pipelineName = config.as[String]("pipeline.name")
-      val pipeline     = PipelinePool().getPipeline(pipelineName).get
+      val pipeline = PipelinePool().getPipeline(pipelineName).get
       val pipelineFactory =
         PipelineFactory.getConcreteFactory(pipeline.pipelineType)
 
       val pipelineOutletSettings = pipelineFactory.createPipelineOutletSettings(
         config
           .as[Option[Config]]("pipeline.outlet")
-          .getOrElse(ConfigFactory.empty()))
+          .getOrElse(ConfigFactory.empty())
+      )
 
       val pipelineCommitterSettings =
         pipelineFactory.createPipelineCommitterSettings(
           config
             .as[Option[Config]]("pipeline.committer")
-            .getOrElse(ConfigFactory.empty()))
+            .getOrElse(ConfigFactory.empty())
+        )
 
       val materializerKey = "akka.stream.materializer"
       val materializerSettings: Option[ActorMaterializerSettings] = {
@@ -65,32 +64,35 @@ object DispatcherSettings extends StrictLogging {
             ActorMaterializerSettings(
               config
                 .getConfig(materializerKey)
-                .withFallback(system.settings.config
-                  .getConfig(materializerKey))))
+                .withFallback(
+                  system.settings.config
+                    .getConfig(materializerKey)
+                )
+            )
+          )
         else
           None
       }
 
-      DispatcherSettings(name,
-                         emitterSettings,
-                         pipeline,
-                         pipelineOutletSettings,
-                         pipelineCommitterSettings,
-                         materializerSettings)
+      DispatcherSettings(
+        name,
+        emitterSettings,
+        pipeline,
+        pipelineOutletSettings,
+        pipelineCommitterSettings,
+        materializerSettings
+      )
     } catch {
       case ex: Throwable =>
-        logger.error(
-          s"Creating DispatcherSettings failed with error: ${ex.getMessage}")
+        logger.error(s"Creating DispatcherSettings failed with error: ${ex.getMessage}")
         throw ex
     }
   }
 }
 
-final case class DispatcherSettings(
-    name: String,
-    emitterSettings: Vector[EmitterSettings],
-    pipeline: Pipeline,
-    pipelineOutletSettings: PipelineOutletSettings,
-    pipelineCommitterSettings: PipelineCommitterSettings,
-    materializerSettings: Option[ActorMaterializerSettings]
-)
+final case class DispatcherSettings(name: String,
+                                    emitterSettings: Vector[EmitterSettings],
+                                    pipeline: Pipeline,
+                                    pipelineOutletSettings: PipelineOutletSettings,
+                                    pipelineCommitterSettings: PipelineCommitterSettings,
+                                    materializerSettings: Option[ActorMaterializerSettings])

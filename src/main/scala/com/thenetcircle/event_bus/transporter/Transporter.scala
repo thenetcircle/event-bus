@@ -46,24 +46,24 @@ import scala.concurrent.duration._
   * @param receivers the [[Receiver]]s bind to this transporter, like data sources
   * @param pipeline
   */
-class Transporter(settings: TransporterSettings,
-                  receivers: Vector[Receiver],
-                  pipeline: Pipeline)(implicit system: ActorSystem,
-                                      materializer: Materializer)
-    extends StrictLogging {
+class Transporter(settings: TransporterSettings, receivers: Vector[Receiver], pipeline: Pipeline)(
+    implicit system: ActorSystem,
+    materializer: Materializer
+) extends StrictLogging {
 
   logger.info(s"new Transporter ${settings.name} is created")
 
   /** commits event after it got transported to pipeline */
   private val committer = Flow[Event]
     .filter(_.committer.isDefined)
-    .mapAsync(settings.commitParallelism)(event =>
-      event.committer.get
-        .commit()
-        .map(_ => {
-          logger.debug(
-            s"Event(${event.metadata.uuid}, ${event.metadata.name}) is committed.")
-        })(materializer.executionContext))
+    .mapAsync(settings.commitParallelism)(
+      event =>
+        event.committer.get
+          .commit()
+          .map(_ => {
+            logger.debug(s"Event(${event.metadata.uuid}, ${event.metadata.name}) is committed.")
+          })(materializer.executionContext)
+    )
     .withAttributes(supervisionStrategy(resumingDecider))
     .to(Sink.ignore)
 
@@ -73,14 +73,12 @@ class Transporter(settings: TransporterSettings,
       maxBackoff = 10.minutes,
       randomFactor = 0.1
     ) { () =>
-      logger.info(
-        s"Creating a inlet of pipeline ${settings.pipeline.pipelineSettings.name}")
+      logger.info(s"Creating a inlet of pipeline ${settings.pipeline.pipelineSettings.name}")
       try {
         pipeline.getNewInlet(settings.pipelineInletSettings).stream
       } catch {
         case ex: Throwable =>
-          logger.error(
-            s"Create new PipelineInlet failed with error: ${ex.getMessage}")
+          logger.error(s"Create new PipelineInlet failed with error: ${ex.getMessage}")
           throw ex
       }
     }

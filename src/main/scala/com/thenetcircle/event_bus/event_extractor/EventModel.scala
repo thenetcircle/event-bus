@@ -26,41 +26,30 @@ import scala.concurrent.Future
   * @param metadata
   * @param channel
   */
-case class ExtractedData(
-    body: EventBody,
-    metadata: EventMetaData,
-    channel: Option[String] = None
-) {
+case class ExtractedData(body: EventBody, metadata: EventMetaData, channel: Option[String] = None) {
   def withChannel(channel: String): ExtractedData =
     copy(channel = Some(channel))
 }
 
-case class EventMetaData(
-    uuid: String,
-    name: String,
-    published: Long,
-    provider: Option[String], // who provided the event
-    actor: Option[EventActor] // who triggered the event
+case class EventMetaData(uuid: String,
+                         name: String,
+                         published: Long,
+                         provider: Option[String], // who provided the event
+                         actor: Option[EventActor] // who triggered the event
 )
 
-case class EventBody(
-    data: ByteString,
-    format: EventFormat
-)
+case class EventBody(data: ByteString, format: EventFormat)
 
 trait EventCommitter {
   def commit(): Future[Any]
 }
 
-case class EventActor(
-    id: String,
-    objectType: String
-)
+case class EventActor(id: String, objectType: String)
 
 sealed trait EventSourceType
 object EventSourceType {
   case object Redis extends EventSourceType
-  case object AMQP  extends EventSourceType
+  case object AMQP extends EventSourceType
   case object Kafka extends EventSourceType
-  case object Http  extends EventSourceType
+  case object Http extends EventSourceType
 }

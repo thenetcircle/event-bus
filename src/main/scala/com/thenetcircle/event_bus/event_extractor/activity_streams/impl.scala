@@ -19,31 +19,29 @@ package com.thenetcircle.event_bus.event_extractor.activity_streams
 
 import spray.json._
 
-case class Activity(
-    title: String,
-    id: Option[String],
-    published: Option[String],
-    verb: Option[String],
-    actor: Option[ActivityObject],
-    // `object`: Option[ActivityObject],
-    // target: Option[ActivityObject],
-    provider: Option[ActivityObject],
-    // content: Option[Any],
-    // generator: Option[ActivityObject]
+case class Activity(title: String,
+                    id: Option[String],
+                    published: Option[String],
+                    verb: Option[String],
+                    actor: Option[ActivityObject],
+                    // `object`: Option[ActivityObject],
+                    // target: Option[ActivityObject],
+                    provider: Option[ActivityObject],
+                    // content: Option[Any],
+                    // generator: Option[ActivityObject]
 )
 
-case class ActivityObject(
-    id: Option[String],
-    objectType: Option[String],
-    // attachments: Option[List[ActivityObject]],
-    // content: Option[Any],
-    // summary: Option[Any],
-    // downstreamDuplicates: Option[List[String]],
-    // upstreamDuplicates: Option[List[String]],
-    // author: Option[ActivityObject]
+case class ActivityObject(id: Option[String],
+                          objectType: Option[String],
+                          // attachments: Option[List[ActivityObject]],
+                          // content: Option[Any],
+                          // summary: Option[Any],
+                          // downstreamDuplicates: Option[List[String]],
+                          // upstreamDuplicates: Option[List[String]],
+                          // author: Option[ActivityObject]
 )
 
 object ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val activityObjectFormat = jsonFormat2(ActivityObject)
-  implicit val activityFormat       = jsonFormat6(Activity)
+  implicit val activityFormat = jsonFormat6(Activity)
 }

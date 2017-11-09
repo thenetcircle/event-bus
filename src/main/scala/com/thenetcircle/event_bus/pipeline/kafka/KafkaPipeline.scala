@@ -31,7 +31,7 @@ import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
     extends Pipeline
     with Tracing {
-  private val inletId  = new AtomicInteger(0)
+  private val inletId = new AtomicInteger(0)
   private val outletId = new AtomicInteger(0)
 
   val pipelineName: String = pipelineSettings.name
@@ -44,14 +44,17 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
     *
     * @param settings settings object, needs [[KafkaPipelineInletSettings]]
     */
-  override def getNewInlet(
-      settings: PipelineInletSettings): KafkaPipelineInlet = {
-    require(settings.isInstanceOf[KafkaPipelineInletSettings],
-            "KafkaPipeline only accpect KafkaLPipelineInletSettings.")
+  override def getNewInlet(settings: PipelineInletSettings): KafkaPipelineInlet = {
+    require(
+      settings.isInstanceOf[KafkaPipelineInletSettings],
+      "KafkaPipeline only accpect KafkaLPipelineInletSettings."
+    )
 
-    new KafkaPipelineInlet(this,
-                           s"$pipelineName-inlet-${inletId.getAndIncrement()}",
-                           settings.asInstanceOf[KafkaPipelineInletSettings])
+    new KafkaPipelineInlet(
+      this,
+      s"$pipelineName-inlet-${inletId.getAndIncrement()}",
+      settings.asInstanceOf[KafkaPipelineInletSettings]
+    )
   }
 
   /** Returns a new [[PipelineOutlet]] of the [[Pipeline]]
@@ -64,16 +67,20 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
     *
     * @param settings settings object, needs [[KafkaPipelineOutletSettings]]
     */
-  override def getNewOutlet(settings: PipelineOutletSettings)(
-      implicit materializer: Materializer): KafkaPipelineOutlet = {
+  override def getNewOutlet(
+      settings: PipelineOutletSettings
+  )(implicit materializer: Materializer): KafkaPipelineOutlet = {
 
-    require(settings.isInstanceOf[KafkaPipelineOutletSettings],
-            "KafkaPipeline only accpect KafkaPipelineOutletSettings.")
+    require(
+      settings.isInstanceOf[KafkaPipelineOutletSettings],
+      "KafkaPipeline only accpect KafkaPipelineOutletSettings."
+    )
 
     new KafkaPipelineOutlet(
       this,
       s"$pipelineName-outlet-${outletId.getAndIncrement()}",
-      settings.asInstanceOf[KafkaPipelineOutletSettings])
+      settings.asInstanceOf[KafkaPipelineOutletSettings]
+    )
   }
 
   /** Acknowledges the event to [[Pipeline]]
@@ -81,10 +88,11 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
     * @param settings the committer parameters
     * @return the committing akka-stream stage
     */
-  override def getCommitter(
-      settings: PipelineCommitterSettings): Sink[Event, NotUsed] = {
-    require(settings.isInstanceOf[KafkaPipelineCommitterSettings],
-            "KafkaPipeline only accpect KafkaPipelineCommitterSettings.")
+  override def getCommitter(settings: PipelineCommitterSettings): Sink[Event, NotUsed] = {
+    require(
+      settings.isInstanceOf[KafkaPipelineCommitterSettings],
+      "KafkaPipeline only accpect KafkaPipelineCommitterSettings."
+    )
 
     val _settings = settings.asInstanceOf[KafkaPipelineCommitterSettings]
 
@@ -94,14 +102,12 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
           e.context("kafkaCommittableOffset")
             .asInstanceOf[CommittableOffset] -> e.tracingId
       }
-      .batch(
-        max = _settings.commitBatchMax, {
-          case (committableOffset, tracingId) =>
-            val batch       = CommittableOffsetBatch.empty.updated(committableOffset)
-            val tracingList = List[Long](tracingId)
-            batch -> tracingList
-        }
-      ) {
+      .batch(max = _settings.commitBatchMax, {
+        case (committableOffset, tracingId) =>
+          val batch = CommittableOffsetBatch.empty.updated(committableOffset)
+          val tracingList = List[Long](tracingId)
+          batch -> tracingList
+      }) {
         case ((batch, tracingList), (committableOffset, tracingId)) =>
           batch.updated(committableOffset) -> tracingList.+:(tracingId)
       }

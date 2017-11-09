@@ -16,12 +16,9 @@
  */
 
 package com.thenetcircle.event_bus.tracing
+
 import akka.actor.ActorSystem
-import com.github.levkhomich.akka.tracing.{
-  TracingExtension,
-  TracingExtensionImpl,
-  TracingSupport
-}
+import com.github.levkhomich.akka.tracing.{TracingExtension, TracingExtensionImpl, TracingSupport}
 import com.thenetcircle.event_bus.Event
 
 import scala.util.Random
@@ -59,8 +56,8 @@ class Tracer(te: TracingExtensionImpl) {
     record(tracingId, "UUID", event.metadata.uuid)
     record(tracingId, "name", event.metadata.name)
     event.metadata.provider.foreach(record(tracingId, "provider", _))
-    event.metadata.actor.foreach(actor =>
-      record(tracingId, "actor", s"${actor.objectType}-${actor.id}"))
+    event.metadata.actor
+      .foreach(actor => record(tracingId, "actor", s"${actor.objectType}-${actor.id}"))
     record(tracingId, "timestamp", event.metadata.published.toString)
     record(tracingId, "channel", event.channel)
   }
@@ -81,10 +78,8 @@ object Tracer {
   def newTracingId(): Long = System.currentTimeMillis() + Random.nextInt(10000)
 }
 
-case class TracingMessage(
-    override val tracingId: Long,
-    override val spanName: String
-) extends TracingSupport {}
+case class TracingMessage(override val tracingId: Long, override val spanName: String)
+    extends TracingSupport {}
 
 object TracingMessage {
   def apply(tracingId: Long): TracingMessage =

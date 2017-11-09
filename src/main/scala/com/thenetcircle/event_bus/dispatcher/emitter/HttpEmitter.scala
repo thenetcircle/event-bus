@@ -35,10 +35,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 // Notice that each new instance will create a new connection pool based on the poolSettings
-class HttpEmitter(
-    val settings: HttpEmitterSettings,
-    connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
-    fallbacker: Sink[Event, _])(implicit val materializer: Materializer)
+class HttpEmitter(val settings: HttpEmitterSettings,
+                  connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
+                  fallbacker: Sink[Event, _])(implicit val materializer: Materializer)
     extends Emitter
     with StrictLogging {
 
@@ -78,7 +77,8 @@ class HttpEmitter(
           logger.warn(
             s"Event (${event.metadata} - ${event.channel}) sent failed " +
               s"to ${settings.defaultRequest.protocol.value}://${settings.host}:${settings.port}${settings.defaultRequest.uri} " +
-              s"with unexpected response: ${entity.data.utf8String}.")
+              s"with unexpected response: ${entity.data.utf8String}."
+          )
           false
         } else {
           true
@@ -91,9 +91,7 @@ class HttpEmitter(
       import GraphDSL.Implicits._
 
       val retryEngine =
-        builder.add(
-          new HttpEmitter.HttpRetryEngine[Event](settings.maxRetryTimes,
-                                                 responseChecker))
+        builder.add(new HttpEmitter.HttpRetryEngine[Event](settings.maxRetryTimes, responseChecker))
 
       /** --- work flow --- */
       // format: off
@@ -128,7 +126,8 @@ object HttpEmitter {
   final class HttpRetryEngine[T <: Event](
     maxRetryTimes: Int,
     responseChecker: (HttpResponse, T) => Future[Boolean]
-  )(implicit executionContext: ExecutionContext) extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]]
+  )(implicit executionContext: ExecutionContext)
+    extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]]
   {
     val incoming: Inlet[T]          = Inlet("incoming")
     val result: Inlet[(Try[HttpResponse], T)] = Inlet("result")

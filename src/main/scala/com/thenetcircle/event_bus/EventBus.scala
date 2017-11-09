@@ -38,8 +38,7 @@ object EventBus extends App with StrictLogging {
   Kamon.start()
   protected implicit val system = akka.actor.ActorSystem()
 
-  PipelinePool.init(
-    system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
+  PipelinePool.init(system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
   Tracer.init(system)
 
   logger.info("Application initialization done.")
@@ -65,22 +64,26 @@ object EventBus extends App with StrictLogging {
   logger.info(s"Running transporters.")
   val transportersConfig = system.settings.config
     .as[Option[List[Config]]]("event-bus.runtime.transporters")
-  transportersConfig.foreach(configList =>
-    configList.foreach(c => {
-      val transporterSettings = TransporterSettings(c)
-      Transporter(transporterSettings).run()
-      logger.info(s"Transporter ${transporterSettings.name} launched.")
-    }))
+  transportersConfig.foreach(
+    configList =>
+      configList.foreach(c => {
+        val transporterSettings = TransporterSettings(c)
+        Transporter(transporterSettings).run()
+        logger.info(s"Transporter ${transporterSettings.name} launched.")
+      })
+  )
 
   // Launch dispatchers
   logger.info(s"Running dispatchers.")
   val dispatchersConfig = system.settings.config
     .as[Option[List[Config]]]("event-bus.runtime.dispatchers")
-  dispatchersConfig.foreach(configList =>
-    configList.foreach(c => {
-      val dispatcherSettings = DispatcherSettings(c)
-      Dispatcher(dispatcherSettings).run()
-      logger.info(s"Dispatcher ${dispatcherSettings.name} launched.")
-    }))
+  dispatchersConfig.foreach(
+    configList =>
+      configList.foreach(c => {
+        val dispatcherSettings = DispatcherSettings(c)
+        Dispatcher(dispatcherSettings).run()
+        logger.info(s"Dispatcher ${dispatcherSettings.name} launched.")
+      })
+  )
 
 }

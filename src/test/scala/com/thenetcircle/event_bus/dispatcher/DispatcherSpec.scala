@@ -21,11 +21,7 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.dispatcher.emitter.{
-  Emitter,
-  EmitterSettings,
-  EmitterType
-}
+import com.thenetcircle.event_bus.dispatcher.emitter.{Emitter, EmitterSettings, EmitterType}
 import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline._
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
@@ -52,14 +48,15 @@ class DispatcherSpec extends AkkaStreamSpec {
       Source[Source[Event, NotUsed]](
         Source.fromPublisher(testSource1) :: Source
           .fromPublisher(testSource2) :: Source
-          .fromPublisher(testSource3) :: Nil),
+          .fromPublisher(testSource3) :: Nil
+      ),
       Sink.fromSubscriber(testCommitter)
     )
 
     val emitter = new Emitter {
       var currentIndex = 0
       override val settings: EmitterSettings = new EmitterSettings {
-        override val name        = "TestEmitter"
+        override val name = "TestEmitter"
         override val emitterType = EmitterType.HTTP
       }
       override def stream: Flow[Event, Event, NotUsed] = {
@@ -115,22 +112,26 @@ class DispatcherSpec extends AkkaStreamSpec {
     val testSource1 = Source.fromIterator(
       () =>
         (for (i <- 1 to 10)
-          yield createTestEvent(name = s"Source1-TestEvent$i")).iterator)
+          yield createTestEvent(name = s"Source1-TestEvent$i")).iterator
+    )
 
     val testSource2 = Source.fromIterator(
       () =>
         (for (i <- 1 to 10)
-          yield createTestEvent(name = s"Source2-TestEvent$i")).iterator)
+          yield createTestEvent(name = s"Source2-TestEvent$i")).iterator
+    )
 
     val testSource3 = Source.fromIterator(
       () =>
         (for (i <- 1 to 10)
-          yield createTestEvent(name = s"Source3-TestEvent$i")).iterator)
+          yield createTestEvent(name = s"Source3-TestEvent$i")).iterator
+    )
 
     val testSource4 = Source.fromIterator(
       () =>
         (for (i <- 1 to 10)
-          yield createTestEvent(name = s"Source4-TestEvent$i")).iterator)
+          yield createTestEvent(name = s"Source4-TestEvent$i")).iterator
+    )
 
     val testSink1 = TestSubscriber.probe[Event]()
     val testSink2 = TestSubscriber.probe[Event]()
@@ -140,44 +141,46 @@ class DispatcherSpec extends AkkaStreamSpec {
 
     val pipeline = createPipeline(
       Source[Source[Event, NotUsed]](
-        testSource1 :: testSource2 :: testSource3 :: testSource4 :: Nil),
+        testSource1 :: testSource2 :: testSource3 :: testSource4 :: Nil
+      ),
       Flow[Event].to(Sink.ignore)
     )
 
-    val emitters = Vector[Emitter](
-      new Emitter {
-        var currentIndex = 0
-        override val settings: EmitterSettings = new EmitterSettings {
-          override val name        = "TestEmitter1"
-          override val emitterType = EmitterType.HTTP
-        }
-        override def stream: Flow[Event, Event, NotUsed] = {
-          currentIndex += 1
-          currentIndex match {
-            case 1 => createFlowFromSink(Sink.fromSubscriber(testSink1))
-            case 2 => createFlowFromSink(Sink.fromSubscriber(testSink2))
-            case 3 => createFlowFromSink(Sink.fromSubscriber(testSink3))
-            case _ => throw new Exception("index error")
+    val emitters =
+      Vector[Emitter](
+        new Emitter {
+          var currentIndex = 0
+          override val settings: EmitterSettings = new EmitterSettings {
+            override val name = "TestEmitter1"
+            override val emitterType = EmitterType.HTTP
           }
+          override def stream: Flow[Event, Event, NotUsed] = {
+            currentIndex += 1
+            currentIndex match {
+              case 1 => createFlowFromSink(Sink.fromSubscriber(testSink1))
+              case 2 => createFlowFromSink(Sink.fromSubscriber(testSink2))
+              case 3 => createFlowFromSink(Sink.fromSubscriber(testSink3))
+              case _ => throw new Exception("index error")
+            }
+          }
+        },
+        new Emitter {
+          override val settings: EmitterSettings = new EmitterSettings {
+            override val name = "TestEmitter2"
+            override val emitterType = EmitterType.HTTP
+          }
+          override def stream: Flow[Event, Event, NotUsed] =
+            createFlowFromSink(Sink.fromSubscriber(testSink4))
+        },
+        new Emitter {
+          override val settings: EmitterSettings = new EmitterSettings {
+            override val name = "TestEmitter3"
+            override val emitterType = EmitterType.HTTP
+          }
+          override def stream: Flow[Event, Event, NotUsed] =
+            createFlowFromSink(Sink.fromSubscriber(testSink5))
         }
-      },
-      new Emitter {
-        override val settings: EmitterSettings = new EmitterSettings {
-          override val name        = "TestEmitter2"
-          override val emitterType = EmitterType.HTTP
-        }
-        override def stream: Flow[Event, Event, NotUsed] =
-          createFlowFromSink(Sink.fromSubscriber(testSink4))
-      },
-      new Emitter {
-        override val settings: EmitterSettings = new EmitterSettings {
-          override val name        = "TestEmitter3"
-          override val emitterType = EmitterType.HTTP
-        }
-        override def stream: Flow[Event, Event, NotUsed] =
-          createFlowFromSink(Sink.fromSubscriber(testSink5))
-      }
-    )
+      )
 
     val dispatcher = createDispatcher(emitters, pipeline)
     dispatcher.run()
@@ -197,12 +200,10 @@ class DispatcherSpec extends AkkaStreamSpec {
 
   it should "process maximum specific sub-streams at a time" in {}
 
-  private def createDispatcher(emitters: Vector[Emitter],
-                               pipeline: Pipeline): Dispatcher = {
+  private def createDispatcher(emitters: Vector[Emitter], pipeline: Pipeline): Dispatcher = {
 
     val dispatcherSettings =
-      DispatcherSettings(
-        ConfigFactory.parseString("""
+      DispatcherSettings(ConfigFactory.parseString("""
                                     |{
                                     |  name = TestDispatcher
                                     |  max-parallel-sources = 10
@@ -223,21 +224,20 @@ class DispatcherSpec extends AkkaStreamSpec {
     new Dispatcher(dispatcherSettings, pipeline, emitters)
   }
 
-  private def createPipeline(
-      outletStream: => Source[Source[Event, NotUsed], NotUsed],
-      committer: => Sink[Event, NotUsed]): Pipeline = {
+  private def createPipeline(outletStream: => Source[Source[Event, NotUsed], NotUsed],
+                             committer: => Sink[Event, NotUsed]): Pipeline = {
     val testPipeline = PipelinePool().getPipeline("TestPipeline").get
     new Pipeline {
       override val pipelineType: PipelineType = testPipeline.pipelineType
       override val pipelineSettings: PipelineSettings =
         testPipeline.pipelineSettings
 
-      override def getNewInlet(
-          pipelineInletSettings: PipelineInletSettings): PipelineInlet =
+      override def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet =
         testPipeline.getNewInlet(pipelineInletSettings)
 
-      override def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
-          implicit materializer: Materializer): PipelineOutlet =
+      override def getNewOutlet(
+          pipelineOutletSettings: PipelineOutletSettings
+      )(implicit materializer: Materializer): PipelineOutlet =
         new PipelineOutlet {
           override val pipeline: Pipeline = testPipeline
           override val outletName: String = "TestOutlet"
@@ -249,8 +249,8 @@ class DispatcherSpec extends AkkaStreamSpec {
         }
 
       override def getCommitter(
-          pipelineCommitterSettings: PipelineCommitterSettings)
-        : Sink[Event, NotUsed] = committer
+          pipelineCommitterSettings: PipelineCommitterSettings
+      ): Sink[Event, NotUsed] = committer
     }
   }
 }

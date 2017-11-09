@@ -19,8 +19,8 @@ package com.thenetcircle.event_bus.pipeline
 import com.thenetcircle.event_bus.Event
 
 package object kafka {
-  type ProducerKey   = KafkaKey
+  type ProducerKey = KafkaKey
   type ProducerValue = Event
-  type ConsumerKey   = KafkaKey
+  type ConsumerKey = KafkaKey
   type ConsumerValue = Array[Byte]
 }

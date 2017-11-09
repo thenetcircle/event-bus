@@ -20,10 +20,7 @@ package com.thenetcircle.event_bus.event_extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event_extractor.EventFormat.{
-  DefaultFormat,
-  TestFormat
-}
+import com.thenetcircle.event_bus.event_extractor.EventFormat.{DefaultFormat, TestFormat}
 import com.thenetcircle.event_bus.event_extractor.activity_streams.ActivityStreamsExtractor
 import com.thenetcircle.event_bus.testkit.AsyncUnitSpec
 import org.scalatest.Succeeded
@@ -42,24 +39,20 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
   behavior of "EventExtractor"
 
   it should "be failed, because it's not a json formatted data" in {
-    var data = ByteString(
-      """
+    var data = ByteString("""
         |abc
-      """.stripMargin
-    )
+      """.stripMargin)
     recoverToSucceededIf[JsonParser.ParsingException] {
       defaultFormatExtractor.extract(data)
     }.map(r => assert(r == Succeeded))
   }
 
   it should "be failed, because the required field \"title\" is missed." in {
-    val data = ByteString(
-      """
+    val data = ByteString("""
         |{
         |  "verb": "login"
         |}
-      """.stripMargin
-    )
+      """.stripMargin)
     // Object is missing required member 'title'
     recoverToSucceededIf[DeserializationException] {
       defaultFormatExtractor.extract(data)
@@ -67,13 +60,11 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
   }
 
   it should "be succeeded if there is a title" in {
-    var data = ByteString(
-      s"""
+    var data = ByteString(s"""
          |{
          |  "title": "user.login"
          |}
-      """.stripMargin
-    )
+      """.stripMargin)
 
     defaultFormatExtractor.extract(data) map { _data =>
       inside(_data) {
@@ -86,8 +77,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
 
   it should "be succeeded as well if there are proper data" in {
     val time = "2017-08-15T13:49:55Z"
-    var data = ByteString(
-      s"""
+    var data = ByteString(s"""
         |{
         |  "version": "1.0",
         |  "id": "ED-providerId-message.send-actorId-59e704843e9cb",
@@ -97,8 +87,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
         |  "provider": {"id": "providerId", "objectType": "providerType"},
         |  "published": "$time"
         |}
-      """.stripMargin
-    )
+      """.stripMargin)
 
     defaultFormatExtractor.extract(data) map { _data =>
       inside(_data) {
@@ -119,8 +108,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
 
   it should "be succeeded as well with complete ActivityStreams data" in {
     val time = "2017-08-15T13:49:55Z"
-    var data = ByteString(
-      s"""
+    var data = ByteString(s"""
          |{
          |  "version": "1.0",
          |  "content": {
@@ -179,8 +167,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
          |    }
          |  }
          |}
-      """.stripMargin
-    )
+      """.stripMargin)
 
     defaultFormatExtractor.extract(data) map { _data =>
       inside(_data) {
@@ -200,13 +187,11 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
   }
 
   it should "be succeeded with another EventFormat" in {
-    var data = ByteString(
-      s"""
+    var data = ByteString(s"""
          |{
          |  "title": "user.login"
          |}
-      """.stripMargin
-    )
+      """.stripMargin)
     testFormatExtractor.extract(data) map { d =>
       inside(d) {
         case ExtractedData(body, _, _) =>

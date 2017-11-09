@@ -25,8 +25,8 @@ import net.ceedubs.ficus.Ficus._
 import scala.collection.mutable
 
 private[pipeline] final class PipelinePool(
-    poolSettings: Map[String, (PipelineType, PipelineSettings)])(
-    implicit system: ActorSystem) {
+    poolSettings: Map[String, (PipelineType, PipelineSettings)]
+)(implicit system: ActorSystem) {
 
   private val cached =
     mutable.Map.empty[String, Pipeline]
@@ -95,11 +95,13 @@ object PipelinePool {
 
           (pipelineName, (pipelineType, pipelineSettings))
         })
-        .toMap)
+        .toMap
+    )
   }
 
-  def init(poolSettings: Map[String, (PipelineType, PipelineSettings)])(
-      implicit system: ActorSystem): Unit =
+  def init(
+      poolSettings: Map[String, (PipelineType, PipelineSettings)]
+  )(implicit system: ActorSystem): Unit =
     cached = Some(new PipelinePool(poolSettings))
 
   def apply(): PipelinePool = cached match {

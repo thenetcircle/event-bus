@@ -24,29 +24,25 @@ import com.thenetcircle.event_bus.dispatcher.emitter.EmitterType.EmitterType
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
-case class HttpEmitterSettings(
-    name: String,
-    host: String,
-    port: Int,
-    maxRetryTimes: Int,
-    // TODO: set pool maxRetries to 1
-    connectionPoolSettings: ConnectionPoolSettings,
-    defaultRequest: HttpRequest,
-    // TODO: set to optional
-    expectedResponse: Option[String] = None
-) extends EmitterSettings {
+case class HttpEmitterSettings(name: String,
+                               host: String,
+                               port: Int,
+                               maxRetryTimes: Int,
+                               // TODO: set pool maxRetries to 1
+                               connectionPoolSettings: ConnectionPoolSettings,
+                               defaultRequest: HttpRequest,
+                               // TODO: set to optional
+                               expectedResponse: Option[String] = None)
+    extends EmitterSettings {
   override val emitterType: EmitterType = EmitterType.HTTP
 }
 
 object HttpEmitterSettings extends StrictLogging {
-  def apply(_config: Config)(
-      implicit system: ActorSystem): HttpEmitterSettings = {
+  def apply(_config: Config)(implicit system: ActorSystem): HttpEmitterSettings = {
     val config: Config =
-      _config.withFallback(
-        system.settings.config.getConfig("event-bus.emitter.http"))
+      _config.withFallback(system.settings.config.getConfig("event-bus.emitter.http"))
 
-    logger.info(
-      s"Creating a new HttpEmitterSettings according to config: $config")
+    logger.info(s"Creating a new HttpEmitterSettings according to config: $config")
 
     try {
       val rootConfig =
@@ -55,7 +51,8 @@ object HttpEmitterSettings extends StrictLogging {
         if (config.hasPath("akka.http.host-connection-pool")) {
           ConnectionPoolSettings(
             config
-              .withFallback(rootConfig))
+              .withFallback(rootConfig)
+          )
         } else {
           ConnectionPoolSettings(rootConfig)
         }
@@ -66,7 +63,8 @@ object HttpEmitterSettings extends StrictLogging {
           case "GET"  => HttpMethods.GET
           case unacceptedMethod =>
             throw new IllegalArgumentException(
-              s"Http request method $unacceptedMethod is unsupported.")
+              s"Http request method $unacceptedMethod is unsupported."
+            )
         }
       } else {
         HttpMethods.POST
@@ -75,10 +73,7 @@ object HttpEmitterSettings extends StrictLogging {
         if (config.hasPath("request.uri")) Uri(config.getString("request.uri"))
         else Uri./
 
-      val defaultRequest: HttpRequest = HttpRequest(
-        method = requestMethod,
-        uri = requsetUri
-      )
+      val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
 
       val expectedResponse =
         if (config.hasPath("expected-response-data"))
@@ -96,8 +91,7 @@ object HttpEmitterSettings extends StrictLogging {
       )
     } catch {
       case ex: Throwable =>
-        logger.error(
-          s"Creating HttpEmitterSettings failed with error: ${ex.getMessage}")
+        logger.error(s"Creating HttpEmitterSettings failed with error: ${ex.getMessage}")
         throw ex
     }
   }

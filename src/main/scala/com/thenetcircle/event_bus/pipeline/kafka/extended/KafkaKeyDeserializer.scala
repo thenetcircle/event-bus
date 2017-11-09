@@ -27,5 +27,5 @@ class KafkaKeyDeserializer extends Deserializer[KafkaKey] {
     new KafkaKey(new String(data, "UTF-8"))
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
-  override def close(): Unit                                                 = {}
+  override def close(): Unit = {}
 }

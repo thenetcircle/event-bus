@@ -25,11 +25,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.event_extractor.{
-  EventExtractor,
-  EventSourceType,
-  ExtractedData
-}
+import com.thenetcircle.event_bus.event_extractor.{EventExtractor, EventSourceType, ExtractedData}
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -39,9 +35,7 @@ import scala.util.{Failure, Success, Try}
 class HttpReceiver(
     val settings: HttpReceiverSettings,
     httpBindSource: Source[Flow[HttpResponse, HttpRequest, Any], _]
-)(implicit val system: ActorSystem,
-  materializer: Materializer,
-  eventExtractor: EventExtractor)
+)(implicit val system: ActorSystem, materializer: Materializer, eventExtractor: EventExtractor)
     extends Receiver
     with StrictLogging
     with Tracing {
@@ -65,8 +59,8 @@ class HttpReceiver(
               val httpHandlerFlowShape = builder.add(httpHandlerFlow)
               val connectionHandler =
                 builder.add(new HttpReceiver.ConnectionHandler(this))
-              val unpackFlow = Flow[Future[HttpResponse]].mapAsync(
-                settings.perConnectionParallelism)(identity)
+              val unpackFlow =
+                Flow[Future[HttpResponse]].mapAsync(settings.perConnectionParallelism)(identity)
 
               /** ----- work flow ----- */
               // format: off
@@ -91,12 +85,12 @@ object HttpReceiver extends StrictLogging {
     HttpResponse(StatusCodes.BadRequest, entity = HttpEntity("ko"))
   val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
 
-  def apply(settings: HttpReceiverSettings)(
-      implicit system: ActorSystem,
-      materializer: Materializer,
-      eventExtractor: EventExtractor): HttpReceiver = {
+  def apply(settings: HttpReceiverSettings)(implicit system: ActorSystem,
+                                            materializer: Materializer,
+                                            eventExtractor: EventExtractor): HttpReceiver = {
     logger.info(
-      s"Creating a new HttpReceiver ${settings.name}, With interface: ${settings.interface}, port: ${settings.port}")
+      s"Creating a new HttpReceiver ${settings.name}, With interface: ${settings.interface}, port: ${settings.port}"
+    )
 
     val httpBindSource = Http()
       .bind(
@@ -130,22 +124,22 @@ object HttpReceiver extends StrictLogging {
     *
     * '''Cancels when''' when any downstreams cancel
     */
-  final class ConnectionHandler(receiver: HttpReceiver)(
-      implicit system: ActorSystem,
-      materializer: Materializer,
-      eventExtractor: EventExtractor)
+  final class ConnectionHandler(receiver: HttpReceiver)(implicit system: ActorSystem,
+                                                        materializer: Materializer,
+                                                        eventExtractor: EventExtractor)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     implicit val executionContext: ExecutionContext =
       materializer.executionContext
 
     val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
-      Unmarshaller.byteStringUnmarshaller.andThen(Unmarshaller.apply(_ =>
-        data => eventExtractor.extract(data)))
+      Unmarshaller.byteStringUnmarshaller.andThen(
+        Unmarshaller.apply(_ => data => eventExtractor.extract(data))
+      )
 
-    val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
+    val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
     val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
-    val out1: Outlet[Event]                = Outlet("outlet-event")
+    val out1: Outlet[Event] = Outlet("outlet-event")
 
     override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
       new FanOutShape2(in, out0, out1)
@@ -159,15 +153,12 @@ object HttpReceiver extends StrictLogging {
             tryPull(in)
           }
 
-        setHandler(
-          in,
-          new InHandler {
-            override def onPush(): Unit = {
-              log.debug("onPush in -> push out0")
-              push(out0, requestPreprocess(grab(in)))
-            }
+        setHandler(in, new InHandler {
+          override def onPush(): Unit = {
+            log.debug("onPush in -> push out0")
+            push(out0, requestPreprocess(grab(in)))
           }
-        )
+        })
 
         setHandler(out0, new OutHandler {
           override def onPull(): Unit = {
@@ -197,9 +188,8 @@ object HttpReceiver extends StrictLogging {
           responsePromise.future
         }
 
-        def getEventExtractingCallback(
-            responsePromise: Promise[HttpResponse],
-            tracingId: Long): AsyncCallback[Try[ExtractedData]] =
+        def getEventExtractingCallback(responsePromise: Promise[HttpResponse],
+                                       tracingId: Long): AsyncCallback[Try[ExtractedData]] =
           getAsyncCallback[Try[ExtractedData]] {
             case Success(extractedData) =>
               tracer.record(tracingId, TracingSteps.EXTRACTED)
@@ -207,16 +197,13 @@ object HttpReceiver extends StrictLogging {
               val event = Event(
                 extractedData.metadata,
                 extractedData.body,
-                extractedData.channel.getOrElse(
-                  ChannelResolver.getChannel(extractedData.metadata)),
+                extractedData.channel.getOrElse(ChannelResolver.getChannel(extractedData.metadata)),
                 EventSourceType.Http,
                 tracingId
-              ).withCommitter(
-                () => {
-                  tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
-                  responsePromise.success(successfulResponse).future
-                }
-              )
+              ).withCommitter(() => {
+                tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
+                responsePromise.success(successfulResponse).future
+              })
 
               tracer.record(tracingId, event)
 

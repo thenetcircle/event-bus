@@ -27,28 +27,24 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 /** Http Receiver Settings */
-case class HttpReceiverSettings(
-    name: String,
-    priority: ReceiverPriority,
-    maxConnections: Int,
-    perConnectionParallelism: Int,
-    eventFormat: EventFormat,
-    serverSettings: ServerSettings,
-    interface: String,
-    port: Int
-) extends ReceiverSettings {
+case class HttpReceiverSettings(name: String,
+                                priority: ReceiverPriority,
+                                maxConnections: Int,
+                                perConnectionParallelism: Int,
+                                eventFormat: EventFormat,
+                                serverSettings: ServerSettings,
+                                interface: String,
+                                port: Int)
+    extends ReceiverSettings {
   override val receiverType: ReceiverType = ReceiverType.HTTP
 }
 
 object HttpReceiverSettings extends StrictLogging {
-  def apply(_config: Config)(
-      implicit system: ActorSystem): HttpReceiverSettings = {
+  def apply(_config: Config)(implicit system: ActorSystem): HttpReceiverSettings = {
     val config: Config =
-      _config.withFallback(
-        system.settings.config.getConfig("event-bus.receiver.http"))
+      _config.withFallback(system.settings.config.getConfig("event-bus.receiver.http"))
 
-    logger.info(
-      s"Creating a new HttpReceiverSettings accroding to config: $config")
+    logger.info(s"Creating a new HttpReceiverSettings accroding to config: $config")
 
     try {
       val rootConfig =
@@ -72,8 +68,7 @@ object HttpReceiverSettings extends StrictLogging {
       )
     } catch {
       case ex: Throwable =>
-        logger.error(
-          s"Creating HttpReceiverSettings failed with error: ${ex.getMessage}")
+        logger.error(s"Creating HttpReceiverSettings failed with error: ${ex.getMessage}")
         throw ex
     }
   }

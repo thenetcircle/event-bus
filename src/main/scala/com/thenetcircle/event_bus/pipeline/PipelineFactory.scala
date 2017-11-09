@@ -40,22 +40,19 @@ abstract class PipelineFactory(implicit system: ActorSystem) {
     *
     * @param pipelineInletConfig the TypeSafe [[Config]]
     */
-  def createPipelineInletSettings(
-      pipelineInletConfig: Config): PipelineInletSettings
+  def createPipelineInletSettings(pipelineInletConfig: Config): PipelineInletSettings
 
   /** Creates [[PipelineOutletSettings]] according to a TypeSafe [[Config]]
     *
     * @param pipelineOutletConfig the TypeSafe [[Config]]
     */
-  def createPipelineOutletSettings(
-      pipelineOutletConfig: Config): PipelineOutletSettings
+  def createPipelineOutletSettings(pipelineOutletConfig: Config): PipelineOutletSettings
 
   /** Creates [[PipelineCommitterSettings]] according to a TypeSafe [[Config]]
     *
     * @param pipelineCommitterConfig the TypeSafe [[Config]]
     */
-  def createPipelineCommitterSettings(
-      pipelineCommitterConfig: Config): PipelineCommitterSettings
+  def createPipelineCommitterSettings(pipelineCommitterConfig: Config): PipelineCommitterSettings
 
 }
 
@@ -70,12 +67,12 @@ object PipelineFactory {
           s"""No matched pipeline factory of pipeline name "$pipelineName".""")
     }*/
 
-  def getConcreteFactory(pipelineType: PipelineType)(
-      implicit system: ActorSystem): PipelineFactory =
+  def getConcreteFactory(
+      pipelineType: PipelineType
+  )(implicit system: ActorSystem): PipelineFactory =
     pipelineType match {
       case PipelineType.Kafka => KafkaPipelineFactory()
       case _ =>
-        throw new Exception(
-          s"""No matched pipeline factory of pipeline type "$pipelineType".""")
+        throw new Exception(s"""No matched pipeline factory of pipeline type "$pipelineType".""")
     }
 }

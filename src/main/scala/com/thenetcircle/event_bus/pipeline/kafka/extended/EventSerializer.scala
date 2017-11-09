@@ -27,5 +27,5 @@ class EventSerializer extends Serializer[Event] {
     data.body.data.toArray
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
-  override def close(): Unit                                                 = {}
+  override def close(): Unit = {}
 }

@@ -33,21 +33,19 @@ class KafkaPipelineFactorySpec extends AkkaStreamSpec {
 
   it should "properly create PipelineSettings" in {
     val config =
-      ConfigFactory.parseString(
-        """
-                                             |{
-                                             |  name = TestPipeline
-                                             |  akka.kafka.producer {
-                                             |    close-timeout = 999s
-                                             |    use-dispatcher = "TestPipelineProducerDispatcher"
-                                             |  }
-                                             |  akka.kafka.consumer {
-                                             |    poll-timeout = 999ms
-                                             |    max-wakeups = 999
-                                             |    use-dispatcher = "TestPipelineConsumerDispatcher"
-                                             |  }
-                                             |}
-                                           """.stripMargin)
+      ConfigFactory.parseString("""|{
+                                   |  name = TestPipeline
+                                   |  akka.kafka.producer {
+                                   |    close-timeout = 999s
+                                   |    use-dispatcher = "TestPipelineProducerDispatcher"
+                                   |  }
+                                   |  akka.kafka.consumer {
+                                   |    poll-timeout = 999ms
+                                   |    max-wakeups = 999
+                                   |    use-dispatcher = "TestPipelineConsumerDispatcher"
+                                   |  }
+                                   |}
+                                 """.stripMargin)
 
     val settings = KafkaPipelineFactory().createPipelineSettings(config)
 

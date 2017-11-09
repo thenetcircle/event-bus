@@ -19,12 +19,7 @@ package com.thenetcircle.event_bus.transporter.receiver
 
 import java.text.SimpleDateFormat
 
-import akka.http.scaladsl.model.{
-  HttpEntity,
-  HttpRequest,
-  HttpResponse,
-  StatusCodes
-}
+import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.TestSink
@@ -130,13 +125,13 @@ class HttpReceiverSpec extends AkkaStreamSpec {
       8888
     )
 
-    val in   = TestPublisher.probe[HttpRequest]()
+    val in = TestPublisher.probe[HttpRequest]()
     val out0 = TestSubscriber.probe[HttpResponse]()
 
     val handler = Source.single(
-      Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0),
-                                    Source.fromPublisher(in)))
-    val hep  = new HttpReceiver(settings, handler)
+      Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0), Source.fromPublisher(in))
+    )
+    val hep = new HttpReceiver(settings, handler)
     val out1 = hep.stream.toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)

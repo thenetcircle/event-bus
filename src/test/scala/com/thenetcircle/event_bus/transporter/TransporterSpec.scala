@@ -43,10 +43,10 @@ class TransporterSpec extends AkkaStreamSpec {
   behavior of "Transporter"
 
   it should "be delivered according to the priority of the Receiver" in {
-    val eventsCount     = 20000
-    val testLowEvent    = createTestEvent("testEvent1")
+    val eventsCount = 20000
+    val testLowEvent = createTestEvent("testEvent1")
     val testNormalEvent = createTestEvent("testEvent2")
-    val testHighEvent   = createTestEvent("testEvent3")
+    val testHighEvent = createTestEvent("testEvent3")
 
     val testPipelinePort = TestSubscriber.probe[Event]()
 
@@ -80,9 +80,9 @@ class TransporterSpec extends AkkaStreamSpec {
       collected :+= testPipelinePort.expectNext()
     }
 
-    val lows    = collected.count(_ == testLowEvent).toDouble
+    val lows = collected.count(_ == testLowEvent).toDouble
     val normals = collected.count(_ == testNormalEvent).toDouble
-    val highs   = collected.count(_ == testHighEvent).toDouble
+    val highs = collected.count(_ == testHighEvent).toDouble
 
     (highs / lows).round shouldEqual 6
     (highs / normals).round shouldEqual 2
@@ -93,9 +93,7 @@ class TransporterSpec extends AkkaStreamSpec {
     val testPublisher = TestPublisher.probe[Event]()
 
     createTransporter(
-      Vector(
-        (ReceiverPriority.Normal, Source.fromPublisher(testPublisher))
-      ),
+      Vector((ReceiverPriority.Normal, Source.fromPublisher(testPublisher))),
       Vector(Sink.ignore),
       commitParallelism = 10
     ).run()
@@ -103,8 +101,7 @@ class TransporterSpec extends AkkaStreamSpec {
     var result = new AtomicInteger(0)
 
     val testEvent =
-      createTestEvent("TestEvent").withCommitter(() =>
-        Future { result.incrementAndGet() })
+      createTestEvent("TestEvent").withCommitter(() => Future { result.incrementAndGet() })
     val count = 10000
 
     for (_ <- 1 to count) {
@@ -117,8 +114,8 @@ class TransporterSpec extends AkkaStreamSpec {
 
   it should "concurrently processing when transportParallelism greater than 1" in {
     var result = new AtomicInteger(0)
-    val testEvent = createTestEvent("TestEvent").withCommitter(() =>
-      Future { result.incrementAndGet() })
+    val testEvent =
+      createTestEvent("TestEvent").withCommitter(() => Future { result.incrementAndGet() })
 
     val testCount = 10000
     val testSource1 =
@@ -159,9 +156,8 @@ class TransporterSpec extends AkkaStreamSpec {
       testSources: Vector[(ReceiverPriority, Source[Event, _])],
       testPipelinePort: Vector[Sink[Event, _]],
       commitParallelism: Int = 1,
-      transportParallelism: Int = 1)(
-      implicit system: ActorSystem,
-      materializer: Materializer): Transporter = {
+      transportParallelism: Int = 1
+  )(implicit system: ActorSystem, materializer: Materializer): Transporter = {
     val receiverSettings = HttpReceiverSettings(
       "TestHttpReceiver",
       ReceiverPriority.Normal,
@@ -173,17 +169,19 @@ class TransporterSpec extends AkkaStreamSpec {
       8888
     )
 
-    val testReceivers = testSources.map(_source =>
-      new Receiver {
-        override val settings: ReceiverSettings = new ReceiverSettings {
-          override val name         = s"TestReceiver-${_source._1}"
-          override val priority     = _source._1
-          override val receiverType = ReceiverType.HTTP
-          override val eventFormat  = EventFormat.DefaultFormat
-        }
+    val testReceivers = testSources.map(
+      _source =>
+        new Receiver {
+          override val settings: ReceiverSettings = new ReceiverSettings {
+            override val name = s"TestReceiver-${_source._1}"
+            override val priority = _source._1
+            override val receiverType = ReceiverType.HTTP
+            override val eventFormat = EventFormat.DefaultFormat
+          }
 
-        override def stream: Source[Event, _] = _source._2
-    })
+          override def stream: Source[Event, _] = _source._2
+      }
+    )
 
     val settings = TransporterSettings(
       "TestTransporter",
@@ -196,26 +194,26 @@ class TransporterSpec extends AkkaStreamSpec {
     )
 
     var currentPipelinePortIndex = 0
-    val testPipeline             = PipelinePool().getPipeline("TestPipeline").get
+    val testPipeline = PipelinePool().getPipeline("TestPipeline").get
     val pipeline = new Pipeline {
       override val pipelineType: PipelineType = testPipeline.pipelineType
       override val pipelineSettings: PipelineSettings =
         testPipeline.pipelineSettings
-      override def getNewOutlet(pipelineOutletSettings: PipelineOutletSettings)(
-          implicit materializer: Materializer): PipelineOutlet =
+      override def getNewOutlet(
+          pipelineOutletSettings: PipelineOutletSettings
+      )(implicit materializer: Materializer): PipelineOutlet =
         testPipeline.getNewOutlet(pipelineOutletSettings)
       override def getCommitter(
-          pipelineCommitterSettings: PipelineCommitterSettings)
-        : Sink[Event, NotUsed] =
+          pipelineCommitterSettings: PipelineCommitterSettings
+      ): Sink[Event, NotUsed] =
         testPipeline.getCommitter(pipelineCommitterSettings)
 
-      override def getNewInlet(
-          pipelineInletSettings: PipelineInletSettings): PipelineInlet = {
+      override def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet = {
         val testPP = testPipelinePort(currentPipelinePortIndex)
         currentPipelinePortIndex += 1
         new PipelineInlet {
           override val pipeline: Pipeline = testPipeline
-          override val inletName: String  = "TestPipelineInlet"
+          override val inletName: String = "TestPipelineInlet"
           override val inletSettings: PipelineInletSettings =
             new PipelineInletSettings {}
           override val stream: Flow[Event, Event, NotUsed] =
@@ -223,11 +221,7 @@ class TransporterSpec extends AkkaStreamSpec {
         }
       }
     }
-    new Transporter(
-      settings,
-      testReceivers,
-      pipeline
-    )
+    new Transporter(settings, testReceivers, pipeline)
   }
 
 }

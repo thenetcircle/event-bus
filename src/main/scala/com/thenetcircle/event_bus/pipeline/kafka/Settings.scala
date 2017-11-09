@@ -27,32 +27,27 @@ import com.thenetcircle.event_bus.pipeline.{
 
 import scala.concurrent.duration.FiniteDuration
 
-case class KafkaPipelineSettings(
-    name: String,
-    producerSettings: ProducerSettings[ProducerKey, ProducerValue],
-    consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue]
-) extends PipelineSettings
+case class KafkaPipelineSettings(name: String,
+                                 producerSettings: ProducerSettings[ProducerKey, ProducerValue],
+                                 consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue])
+    extends PipelineSettings
 
-case class KafkaPipelineInletSettings(
-    closeTimeout: Option[FiniteDuration],
-    parallelism: Option[Int]
-) extends PipelineInletSettings
+case class KafkaPipelineInletSettings(closeTimeout: Option[FiniteDuration],
+                                      parallelism: Option[Int])
+    extends PipelineInletSettings
 
-case class KafkaPipelineOutletSettings(
-    groupId: String,
-    extractParallelism: Int,
-    topics: Option[Set[String]],
-    topicPattern: Option[String],
-    pollInterval: Option[FiniteDuration],
-    pollTimeout: Option[FiniteDuration],
-    stopTimeout: Option[FiniteDuration],
-    closeTimeout: Option[FiniteDuration],
-    commitTimeout: Option[FiniteDuration],
-    wakeupTimeout: Option[FiniteDuration],
-    maxWakeups: Option[Int]
-) extends PipelineOutletSettings
+case class KafkaPipelineOutletSettings(groupId: String,
+                                       extractParallelism: Int,
+                                       topics: Option[Set[String]],
+                                       topicPattern: Option[String],
+                                       pollInterval: Option[FiniteDuration],
+                                       pollTimeout: Option[FiniteDuration],
+                                       stopTimeout: Option[FiniteDuration],
+                                       closeTimeout: Option[FiniteDuration],
+                                       commitTimeout: Option[FiniteDuration],
+                                       wakeupTimeout: Option[FiniteDuration],
+                                       maxWakeups: Option[Int])
+    extends PipelineOutletSettings
 
-case class KafkaPipelineCommitterSettings(
-    commitParallelism: Int,
-    commitBatchMax: Int
-) extends PipelineCommitterSettings
+case class KafkaPipelineCommitterSettings(commitParallelism: Int, commitBatchMax: Int)
+    extends PipelineCommitterSettings

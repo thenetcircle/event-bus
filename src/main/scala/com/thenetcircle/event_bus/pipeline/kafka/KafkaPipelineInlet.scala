@@ -31,10 +31,10 @@ import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 /** LeftPort Implementation */
 // TODO: When Kafka delivery failed, Which will complete upstreams as well, Can be reproduced by create new topic
 private[kafka] final class KafkaPipelineInlet(
-    val pipeline: KafkaPipeline,
-    val inletName: String,
-    val inletSettings: KafkaPipelineInletSettings)
-    extends PipelineInlet
+  val pipeline: KafkaPipeline,
+  val inletName: String,
+  val inletSettings: KafkaPipelineInletSettings
+) extends PipelineInlet
     with Tracing {
 
   import KafkaPipelineInlet._
@@ -43,7 +43,8 @@ private[kafka] final class KafkaPipelineInlet(
   private val producerSettings: ProducerSettings[ProducerKey, ProducerValue] = {
     val _settings = pipeline.pipelineSettings.producerSettings.withProperty(
       ProducerConfig.PARTITIONER_CLASS_CONFIG,
-      classOf[KafkaPartitioner].getName)
+      classOf[KafkaPartitioner].getName
+    )
 
     inletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
     inletSettings.parallelism.foreach(_settings.withParallelism)
@@ -53,14 +54,9 @@ private[kafka] final class KafkaPipelineInlet(
   override val stream: Flow[Event, Event, NotUsed] =
     Flow[Event]
       .via(tracingFlow(TracingSteps.PIPELINE_PUSHING))
-      .map(
-        event => {
-          Message(
-            getProducerRecordFromEvent(event),
-            event
-          )
-        }
-      )
+      .map(event => {
+        Message(getProducerRecordFromEvent(event), event)
+      })
       // TODO: take care of Supervision of mapAsync
       .via(Producer.flow(producerSettings))
       .map(msg => msg.message.passThrough)
@@ -70,7 +66,8 @@ private[kafka] final class KafkaPipelineInlet(
 
 object KafkaPipelineInlet {
   private def getProducerRecordFromEvent(
-      event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
+    event: Event
+  ): ProducerRecord[ProducerKey, ProducerValue] = {
     val topic: String        = event.channel
     val timestamp: Long      = event.metadata.published
     val key: ProducerKey     = KafkaKey(event)
@@ -81,6 +78,7 @@ object KafkaPipelineInlet {
       null,
       timestamp.asInstanceOf[java.lang.Long],
       key,
-      value)
+      value
+    )
   }
 }

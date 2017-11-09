@@ -24,11 +24,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.event_extractor.{
-  EventCommitter,
-  EventExtractor,
-  EventSourceType
-}
+import com.thenetcircle.event_bus.event_extractor.{EventCommitter, EventExtractor, EventSourceType}
 import com.thenetcircle.event_bus.pipeline.PipelineOutlet
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.thenetcircle.event_bus.Event
@@ -42,22 +38,22 @@ import scala.concurrent.{ExecutionContext, Future}
 private[kafka] final class KafkaPipelineOutlet(
     val pipeline: KafkaPipeline,
     val outletName: String,
-    val outletSettings: KafkaPipelineOutletSettings)(
-    implicit materializer: Materializer)
+    val outletSettings: KafkaPipelineOutletSettings
+)(implicit materializer: Materializer)
     extends PipelineOutlet
     with Tracing
     with StrictLogging {
 
   require(
     outletSettings.topics.isDefined || outletSettings.topicPattern.isDefined,
-    "The outlet of KafkaPipeline needs to subscribe topics")
+    "The outlet of KafkaPipeline needs to subscribe topics"
+  )
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext
 
   /** Build ConsumerSettings */
-  private val kafkaConsumerSettings
-    : ConsumerSettings[ConsumerKey, ConsumerValue] = {
+  private val kafkaConsumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue] = {
     val _settings = pipeline.pipelineSettings.consumerSettings
       .withGroupId(outletSettings.groupId)
 
@@ -91,13 +87,16 @@ private[kafka] final class KafkaPipelineOutlet(
                 msg.record
                   .key()
                   .data
-                  .map(k =>
-                    (k.tracingId
-                       .map(tracer.resumeTracing)
-                       .getOrElse(tracer.newTracing()),
-                     EventExtractor(k.eventFormat)))
-                  .getOrElse((tracer.newTracing(),
-                              EventExtractor(DefaultFormat)))
+                  .map(
+                    k =>
+                      (
+                        k.tracingId
+                          .map(tracer.resumeTracing)
+                          .getOrElse(tracer.newTracing()),
+                        EventExtractor(k.eventFormat)
+                    )
+                  )
+                  .getOrElse((tracer.newTracing(), EventExtractor(DefaultFormat)))
 
               tracer.record(tracingId, TracingSteps.PIPELINE_PULLED)
 
@@ -105,9 +104,12 @@ private[kafka] final class KafkaPipelineOutlet(
               val extractFuture = extractor
                 .extract(msgData)
 
-              extractFuture.failed.foreach(e =>
-                logger.warn(
-                  s"Extract message ${msgData.utf8String} from Pipeline failed with Error: ${e.getMessage}"))
+              extractFuture.failed.foreach(
+                e =>
+                  logger.warn(
+                    s"Extract message ${msgData.utf8String} from Pipeline failed with Error: ${e.getMessage}"
+                )
+              )
 
               extractFuture.map((msg, _, tracingId))
             }
@@ -122,8 +124,7 @@ private[kafka] final class KafkaPipelineOutlet(
                   channel = extractedData.channel.getOrElse(msg.record.topic()),
                   sourceType = EventSourceType.Kafka,
                   tracingId,
-                  context =
-                    Map("kafkaCommittableOffset" -> msg.committableOffset),
+                  context = Map("kafkaCommittableOffset" -> msg.committableOffset),
                   committer = Some(new EventCommitter {
                     override def commit(): Future[Done] = {
                       tracer.record(tracingId, TracingSteps.PIPELINE_COMMITTED)

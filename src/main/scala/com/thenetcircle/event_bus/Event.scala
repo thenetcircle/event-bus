@@ -20,15 +20,13 @@ package com.thenetcircle.event_bus
 import com.thenetcircle.event_bus.event_extractor._
 import scala.concurrent.Future
 
-case class Event(
-    metadata: EventMetaData,
-    body: EventBody,
-    channel: String,
-    sourceType: EventSourceType,
-    tracingId: Long,
-    context: Map[String, Any] = Map.empty,
-    committer: Option[EventCommitter] = None
-) {
+case class Event(metadata: EventMetaData,
+                 body: EventBody,
+                 channel: String,
+                 sourceType: EventSourceType,
+                 tracingId: Long,
+                 context: Map[String, Any] = Map.empty,
+                 committer: Option[EventCommitter] = None) {
 
   def withCommitter(commitFunction: () => Future[Any]): Event =
     copy(committer = Some(new EventCommitter {

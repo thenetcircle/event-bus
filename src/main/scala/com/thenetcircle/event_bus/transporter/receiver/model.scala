@@ -31,9 +31,9 @@ import net.ceedubs.ficus.readers.ValueReader
 object ReceiverPriority extends Enumeration {
   type ReceiverPriority = Value
 
-  val High   = Value(6, "High")
+  val High = Value(6, "High")
   val Normal = Value(3, "Normal")
-  val Low    = Value(1, "Low")
+  val Low = Value(1, "Low")
 
   def apply(name: String): ReceiverPriority = name.toUpperCase match {
     case "HIGH"   => High
@@ -76,10 +76,9 @@ trait Receiver {
   */
 object Receiver {
 
-  def apply(settings: ReceiverSettings)(
-      implicit system: ActorSystem,
-      materializer: Materializer,
-      eventExtractor: EventExtractor): Receiver =
+  def apply(settings: ReceiverSettings)(implicit system: ActorSystem,
+                                        materializer: Materializer,
+                                        eventExtractor: EventExtractor): Receiver =
     settings.receiverType match {
       case ReceiverType.HTTP =>
         HttpReceiver(settings.asInstanceOf[HttpReceiverSettings])
@@ -111,8 +110,7 @@ object ReceiverSettings {
         HttpReceiverSettings(config)
 
       case _ =>
-        throw new IllegalArgumentException(
-          """Receiver "type" is not correct!""")
+        throw new IllegalArgumentException("""Receiver "type" is not correct!""")
     }
   }
 

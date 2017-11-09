@@ -58,10 +58,8 @@ class HttpEmitterSpec extends AkkaStreamSpec {
         (Failure(new Exception("failed response")), event)
     }
     val fallback = TestSubscriber.probe[Event]()
-    val emitter = createHttpEmitter(
-      fallbacker = Sink.fromSubscriber(fallback),
-      maxRetryTimes = 10
-    )(sender)
+    val emitter =
+      createHttpEmitter(fallbacker = Sink.fromSubscriber(fallback), maxRetryTimes = 10)(sender)
     val (incoming, succeed) = run(emitter)
 
     val testEvent = createTestEvent()
@@ -87,13 +85,12 @@ class HttpEmitterSpec extends AkkaStreamSpec {
     val source = Source.fromIterator(
       () =>
         (for (i <- 1 to 10)
-          yield createTestEvent(name = s"TestEvent$i")).iterator)
+          yield createTestEvent(name = s"TestEvent$i")).iterator
+    )
 
     val fallback = TestSubscriber.probe[Event]()
-    val emitter = createHttpEmitter(
-      fallbacker = Sink.fromSubscriber(fallback),
-      maxRetryTimes = 1
-    )(sender)
+    val emitter =
+      createHttpEmitter(fallbacker = Sink.fromSubscriber(fallback), maxRetryTimes = 1)(sender)
 
     val succeed = source
       .via(emitter.stream)
@@ -131,10 +128,9 @@ class HttpEmitterSpec extends AkkaStreamSpec {
     val fallback = TestSubscriber.probe[Event]()
 
     val emitter =
-      createHttpEmitter(
-        fallbacker = Sink.fromSubscriber(fallback),
-        expectedResponse = Some("OK")
-      )(sender)
+      createHttpEmitter(fallbacker = Sink.fromSubscriber(fallback), expectedResponse = Some("OK"))(
+        sender
+      )
 
     val (in1, out1) = run(emitter)
     fallback.expectSubscription().request(1)
@@ -202,7 +198,7 @@ class HttpEmitterSpec extends AkkaStreamSpec {
       )(sender)
 
     val (testSource, testSink) = run(emitter)
-    val testEvent              = createTestEvent(body = "OK")
+    val testEvent = createTestEvent(body = "OK")
 
     testSink.request(1)
     fallback.request(1)
@@ -238,8 +234,9 @@ class HttpEmitterSpec extends AkkaStreamSpec {
 
     val source1 = Source.fromIterator(() => Seq.fill(100)(okEvent).iterator)
     val source2 = Source.fromIterator(() => Seq.fill(10)(koEvent).iterator)
-    val source3 = Source.fromIterator(() =>
-      (for (_ <- 1 to 100) yield koEvent :: okEvent :: Nil).flatten.iterator)
+    val source3 = Source.fromIterator(
+      () => (for (_ <- 1 to 100) yield koEvent :: okEvent :: Nil).flatten.iterator
+    )
 
     val sink1 =
       source1
@@ -291,26 +288,24 @@ class HttpEmitterSpec extends AkkaStreamSpec {
 
   // TODO: test abnormal cases, like exception, cancel, error, complete etc...
 
-  def run(emitter: HttpEmitter)
-    : (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
+  def run(emitter: HttpEmitter): (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
     TestSource
       .probe[Event]
       .viaMat(emitter.stream)(Keep.left)
       .toMat(TestSink.probe[Event])(Keep.both)
       .run()
 
-  def createHttpEmitter(
-      expectedResponse: Option[String] = None,
-      fallbacker: Sink[Event, _] = Sink.ignore,
-      maxRetryTimes: Int = 1,
-      defaultRequest: HttpRequest = HttpRequest(),
-      defaultResponse: Try[HttpResponse] = Success(HttpResponse())
-  )(sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _] =
-      Flow[(HttpRequest, Event)].map {
-        case (_, event) =>
-          (defaultResponse, event)
-      })(implicit system: ActorSystem,
-         materializer: Materializer): HttpEmitter = {
+  def createHttpEmitter(expectedResponse: Option[String] = None,
+                        fallbacker: Sink[Event, _] = Sink.ignore,
+                        maxRetryTimes: Int = 1,
+                        defaultRequest: HttpRequest = HttpRequest(),
+                        defaultResponse: Try[HttpResponse] = Success(HttpResponse()))(
+      sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _] =
+        Flow[(HttpRequest, Event)].map {
+          case (_, event) =>
+            (defaultResponse, event)
+        }
+  )(implicit system: ActorSystem, materializer: Materializer): HttpEmitter = {
     val emitterSettings = createHttpEmitterSettings(
       maxRetryTimes = maxRetryTimes,
       defaultRequest = defaultRequest,

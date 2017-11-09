@@ -31,11 +31,7 @@ package object event_bus {
                       body: String = "body",
                       format: EventFormat = EventFormat.DefaultFormat): Event =
     Event(
-      EventMetaData("uuid",
-                    name,
-                    time,
-                    Some("publisher"),
-                    Some(EventActor("222", "user"))),
+      EventMetaData("uuid", name, time, Some("publisher"), Some(EventActor("222", "user"))),
       EventBody(ByteString(body), format),
       "channel",
       sourceType,
@@ -46,8 +42,8 @@ package object event_bus {
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
-      val inlet     = builder.add(Flow[Event])
-      val outlet    = builder.add(Flow[Event])
+      val inlet = builder.add(Flow[Event])
+      val outlet = builder.add(Flow[Event])
       val broadcast = builder.add(Broadcast[Event](2))
 
       // format: off

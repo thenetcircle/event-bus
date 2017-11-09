@@ -27,10 +27,9 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class Dispatcher(settings: DispatcherSettings,
-                 pipeline: Pipeline,
-                 emitter: Vector[Emitter])(implicit materializer: Materializer)
-    extends StrictLogging {
+class Dispatcher(settings: DispatcherSettings, pipeline: Pipeline, emitter: Vector[Emitter])(
+    implicit materializer: Materializer
+) extends StrictLogging {
 
   logger.info(s"new Dispatcher ${settings.name} is created")
 
@@ -41,22 +40,18 @@ class Dispatcher(settings: DispatcherSettings,
       emitter(index % emitter.size)
 
   private var sourceIndex = 0
-  private val dataSource = RestartSource.withBackoff(
-    minBackoff = 1.second,
-    maxBackoff = 1.minute,
-    randomFactor = 0.2
-  ) { () =>
-    logger.info(
-      s"Creating a outlet of pipeline ${settings.pipeline.pipelineSettings.name}")
-    try {
-      pipeline.getNewOutlet(settings.pipelineOutletSettings).stream
-    } catch {
-      case ex: Throwable =>
-        logger.error(
-          s"Create new PipelineOutlet failed with error: ${ex.getMessage}")
-        throw ex
+  private val dataSource =
+    RestartSource.withBackoff(minBackoff = 1.second, maxBackoff = 1.minute, randomFactor = 0.2) {
+      () =>
+        logger.info(s"Creating a outlet of pipeline ${settings.pipeline.pipelineSettings.name}")
+        try {
+          pipeline.getNewOutlet(settings.pipelineOutletSettings).stream
+        } catch {
+          case ex: Throwable =>
+            logger.error(s"Create new PipelineOutlet failed with error: ${ex.getMessage}")
+            throw ex
+        }
     }
-  }
 
   // TODO: draw a graph in comments
   // TODO: error handler
@@ -93,11 +88,11 @@ class Dispatcher(settings: DispatcherSettings,
 }
 
 object Dispatcher extends StrictLogging {
-  def apply(settings: DispatcherSettings)(
-      implicit system: ActorSystem): Dispatcher = {
+  def apply(settings: DispatcherSettings)(implicit system: ActorSystem): Dispatcher = {
 
     logger.info(
-      s"Creating a new Dispatcher ${settings.name} from the DispatcherSettings: $settings")
+      s"Creating a new Dispatcher ${settings.name} from the DispatcherSettings: $settings"
+    )
 
     implicit val materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))

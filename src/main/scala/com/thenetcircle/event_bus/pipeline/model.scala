@@ -38,7 +38,8 @@ trait Pipeline {
   def getNewInlet(settings: PipelineInletSettings): PipelineInlet
 
   def getNewOutlet(settings: PipelineOutletSettings)(
-      implicit materializer: Materializer): PipelineOutlet
+      implicit materializer: Materializer
+  ): PipelineOutlet
 
   def getCommitter(settings: PipelineCommitterSettings): Sink[Event, NotUsed]
 }

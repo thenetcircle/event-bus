@@ -34,10 +34,11 @@ class ActivityStreamsExtractor extends EventExtractor with StrictLogging {
 
   override val format: EventFormat = DefaultFormat
 
-  override def extract(data: ByteString)(
-      implicit executor: ExecutionContext): Future[ExtractedData] = Future {
+  override def extract(
+      data: ByteString
+  )(implicit executor: ExecutionContext): Future[ExtractedData] = Future {
     try {
-      val jsonAst  = data.utf8String.parseJson
+      val jsonAst = data.utf8String.parseJson
       val activity = jsonAst.convertTo[Activity]
 
       val uuid: String = activity.id.getOrElse(UUID.random.toString)
@@ -53,9 +54,8 @@ class ActivityStreamsExtractor extends EventExtractor with StrictLogging {
       }
       val provider = activity.provider.flatMap(_.id)
       val actor = activity.actor.flatMap(
-        actor =>
-          Some(
-            EventActor(actor.id.getOrElse(""), actor.objectType.getOrElse(""))))
+        actor => Some(EventActor(actor.id.getOrElse(""), actor.objectType.getOrElse("")))
+      )
 
       ExtractedData(
         body = EventBody(data, format),
@@ -63,8 +63,7 @@ class ActivityStreamsExtractor extends EventExtractor with StrictLogging {
       )
     } catch {
       case ex: Throwable =>
-        logger.warn(
-          s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")
+        logger.warn(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")
         throw ex
     }
   }

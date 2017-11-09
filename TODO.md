@@ -1,6 +1,6 @@
 # Todo
 - ~~Add logs~~
-- Error Handler
+- ~~Error Handler~~
 - Improve Tracer
 - ExecutionContext
 - Kafka Settings

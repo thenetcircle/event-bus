@@ -31,14 +31,11 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 object TransporterSettings extends StrictLogging {
-  def apply(_config: Config)(
-      implicit system: ActorSystem): TransporterSettings = {
+  def apply(_config: Config)(implicit system: ActorSystem): TransporterSettings = {
     val config: Config =
-      _config.withFallback(
-        system.settings.config.getConfig("event-bus.transporter"))
+      _config.withFallback(system.settings.config.getConfig("event-bus.transporter"))
 
-    logger.info(
-      s"Creating a new TransporterSettings accroding to config: $config")
+    logger.info(s"Creating a new TransporterSettings accroding to config: $config")
 
     try {
       val name = config.as[String]("name")
@@ -47,50 +44,53 @@ object TransporterSettings extends StrictLogging {
         config.as[Vector[Config]]("receivers").map(ReceiverSettings(_))
 
       val pipelineName = config.as[String]("pipeline.name")
-      val pipeline     = PipelinePool().getPipeline(pipelineName).get
+      val pipeline = PipelinePool().getPipeline(pipelineName).get
       val pipelineInletSettings = PipelineFactory
         .getConcreteFactory(pipeline.pipelineType)
         .createPipelineInletSettings(
           config
             .as[Option[Config]]("pipeline.inlet")
-            .getOrElse(ConfigFactory.empty()))
+            .getOrElse(ConfigFactory.empty())
+        )
 
       val transportParallelism = config.as[Int]("transport-parallelism")
-      val commitParallelism    = config.as[Int]("commit-parallelism")
+      val commitParallelism = config.as[Int]("commit-parallelism")
 
       val materializerKey = "akka.stream.materializer"
       val materializerSettings: Option[ActorMaterializerSettings] = {
         if (config.hasPath(materializerKey))
           Some(
-            ActorMaterializerSettings(config
-              .getConfig(materializerKey)
-              .withFallback(system.settings.config.getConfig(materializerKey))))
+            ActorMaterializerSettings(
+              config
+                .getConfig(materializerKey)
+                .withFallback(system.settings.config.getConfig(materializerKey))
+            )
+          )
         else
           None
       }
 
-      TransporterSettings(name,
-                          commitParallelism,
-                          transportParallelism,
-                          receiverSettings,
-                          pipeline,
-                          pipelineInletSettings,
-                          materializerSettings)
+      TransporterSettings(
+        name,
+        commitParallelism,
+        transportParallelism,
+        receiverSettings,
+        pipeline,
+        pipelineInletSettings,
+        materializerSettings
+      )
     } catch {
       case ex: Throwable =>
-        logger.error(
-          s"Creating TransporterSettings failed with error: ${ex.getMessage}")
+        logger.error(s"Creating TransporterSettings failed with error: ${ex.getMessage}")
         throw ex
     }
   }
 }
 
-final case class TransporterSettings(
-    name: String,
-    commitParallelism: Int,
-    transportParallelism: Int,
-    receiverSettings: Vector[ReceiverSettings],
-    pipeline: Pipeline,
-    pipelineInletSettings: PipelineInletSettings,
-    materializerSettings: Option[ActorMaterializerSettings]
-)
+final case class TransporterSettings(name: String,
+                                     commitParallelism: Int,
+                                     transportParallelism: Int,
+                                     receiverSettings: Vector[ReceiverSettings],
+                                     pipeline: Pipeline,
+                                     pipelineInletSettings: PipelineInletSettings,
+                                     materializerSettings: Option[ActorMaterializerSettings])

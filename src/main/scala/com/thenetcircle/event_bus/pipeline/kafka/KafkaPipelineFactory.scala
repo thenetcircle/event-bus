@@ -31,17 +31,15 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration.FiniteDuration
 
-class KafkaPipelineFactory(implicit system: ActorSystem)
-    extends PipelineFactory {
+class KafkaPipelineFactory(implicit system: ActorSystem) extends PipelineFactory {
 
-  override def createPipeline(
-      pipelineSettings: PipelineSettings): KafkaPipeline =
+  override def createPipeline(pipelineSettings: PipelineSettings): KafkaPipeline =
     KafkaPipeline(pipelineSettings.asInstanceOf[KafkaPipelineSettings])
 
-  override def createPipelineSettings(
-      _pipelineConfig: Config): KafkaPipelineSettings = {
+  override def createPipelineSettings(_pipelineConfig: Config): KafkaPipelineSettings = {
     val pipelineConfig = _pipelineConfig.withFallback(
-      system.settings.config.getConfig("event-bus.pipeline.kafka.pipeline"))
+      system.settings.config.getConfig("event-bus.pipeline.kafka.pipeline")
+    )
 
     val originalProducerConfig =
       system.settings.config.getConfig("akka.kafka.producer")
@@ -67,20 +65,27 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
 
     KafkaPipelineSettings(
       pipelineConfig.as[String]("name"),
-      ProducerSettings[ProducerKey, ProducerValue](producerConfig,
-                                                   new KafkaKeySerializer,
-                                                   new EventSerializer),
-      ConsumerSettings[ConsumerKey, ConsumerValue](consumerConfig,
-                                                   new KafkaKeyDeserializer,
-                                                   new ByteArrayDeserializer)
+      ProducerSettings[ProducerKey, ProducerValue](
+        producerConfig,
+        new KafkaKeySerializer,
+        new EventSerializer
+      ),
+      ConsumerSettings[ConsumerKey, ConsumerValue](
+        consumerConfig,
+        new KafkaKeyDeserializer,
+        new ByteArrayDeserializer
+      )
     )
+
   }
 
   override def createPipelineInletSettings(
-      pipelineInletConfig: Config): KafkaPipelineInletSettings = {
+      pipelineInletConfig: Config
+  ): KafkaPipelineInletSettings = {
     val config = pipelineInletConfig.withFallback(
       system.settings.config
-        .getConfig("event-bus.pipeline.kafka.inlet"))
+        .getConfig("event-bus.pipeline.kafka.inlet")
+    )
 
     KafkaPipelineInletSettings(
       closeTimeout = config.as[Option[FiniteDuration]]("close-timeout"),
@@ -89,10 +94,12 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
   }
 
   override def createPipelineOutletSettings(
-      pipelineOutletConfig: Config): KafkaPipelineOutletSettings = {
+      pipelineOutletConfig: Config
+  ): KafkaPipelineOutletSettings = {
     val config = pipelineOutletConfig.withFallback(
       system.settings.config
-        .as[Config]("event-bus.pipeline.kafka.outlet"))
+        .as[Config]("event-bus.pipeline.kafka.outlet")
+    )
 
     KafkaPipelineOutletSettings(
       groupId = config.as[String]("group-id"),
@@ -110,10 +117,12 @@ class KafkaPipelineFactory(implicit system: ActorSystem)
   }
 
   override def createPipelineCommitterSettings(
-      pipelineCommitterConfig: Config): KafkaPipelineCommitterSettings = {
+      pipelineCommitterConfig: Config
+  ): KafkaPipelineCommitterSettings = {
     val config = pipelineCommitterConfig.withFallback(
       system.settings.config
-        .getConfig("event-bus.pipeline.kafka.committer"))
+        .getConfig("event-bus.pipeline.kafka.committer")
+    )
 
     KafkaPipelineCommitterSettings(
       commitParallelism = config.as[Int]("commit-parallelism"),
