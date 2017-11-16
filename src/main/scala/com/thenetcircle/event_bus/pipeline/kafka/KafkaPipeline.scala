@@ -40,7 +40,8 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
 
   /** Returns a new [[PipelineInlet]] of the [[Pipeline]]
     *
-    * Which will create a new producer with a new connection to Kafka internally after the port got materialized
+    * Which will create a new producer with a new connection to Kafka internally
+    * after the port got materialized
     *
     * @param settings settings object, needs [[KafkaPipelineInletSettings]]
     */
@@ -59,7 +60,8 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
 
   /** Returns a new [[PipelineOutlet]] of the [[Pipeline]]
     *
-    * Which will create a new consumer to the kafka Cluster after the port got materialized, It expressed as a Source[Source[Event, _], _]
+    * Which will create a new consumer to the kafka Cluster after the port got materialized,
+    * It expressed as a Source[Source[Event, _], _]
     * Each (topic, partition) will be presented as a Source[Event, NotUsed]
     * After each [[Event]] got processed, It needs to be commit, There are two ways to do that:
     * 1. Call the committer of the [[Event]] for committing the single [[Event]]
@@ -81,6 +83,7 @@ class KafkaPipeline(override val pipelineSettings: KafkaPipelineSettings)
       s"$pipelineName-outlet-${outletId.getAndIncrement()}",
       settings.asInstanceOf[KafkaPipelineOutletSettings]
     )
+
   }
 
   /** Acknowledges the event to [[Pipeline]]

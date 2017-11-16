@@ -27,16 +27,16 @@ class MainSimulation extends Simulation {
 
   val httpConf = http
     .baseURL("http://thin:8086") // Here is the root for all relative URLs
-    .acceptHeader(
-      "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") // Here are the common headers
+    .acceptHeader("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") // Here are the common headers
     .acceptEncodingHeader("gzip, deflate")
     .acceptLanguageHeader("en-US,en;q=0.5")
     .userAgentHeader(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0")
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:16.0) Gecko/20100101 Firefox/16.0"
+    )
 
   val feeder = Iterator.continually(
-    Map("uuid"    -> Random.alphanumeric.take(20).mkString,
-        "actorId" -> Random.nextInt(65020100)))
+    Map("uuid" -> Random.alphanumeric.take(20).mkString, "actorId" -> Random.nextInt(65020100))
+  )
 
   val scn = scenario("EventBus Stress Test")
     .feed(feeder)
@@ -65,12 +65,10 @@ class MainSimulation extends Simulation {
         |    "class":"dfEvent_User"
         |  }
         |}
-      """.stripMargin)))
+      """.stripMargin))
+      )
     }
 
-  setUp(
-    scn.inject(
-      rampUsers(10000) over (1 minute)
-    )).protocols(httpConf)
+  setUp(scn.inject(rampUsers(10000) over (1 minute))).protocols(httpConf)
 
 }
