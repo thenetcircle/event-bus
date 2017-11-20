@@ -51,9 +51,9 @@ private[pipeline] final class PipelinePool(
       case None                 => None
     }
 
-  def getPipelineFactory(pipelineName: String): Option[PipelineFactory] =
+  def getPipelineFactory(pipelineName: String): Option[AbstractPipelineFactory] =
     poolSettings.get(pipelineName) match {
-      case Some((_type, _)) => Some(PipelineFactory.getConcreteFactory(_type))
+      case Some((_type, _)) => Some(AbstractPipelineFactory.getConcreteFactory(_type))
       case None             => None
     }
 
@@ -69,7 +69,7 @@ private[pipeline] final class PipelinePool(
       case None =>
         poolSettings.get(pipelineName) match {
           case Some((_type, _settings)) =>
-            val p = PipelineFactory
+            val p = AbstractPipelineFactory
               .getConcreteFactory(_type)
               .createPipeline(_settings)
             addToCache(p)
@@ -89,7 +89,7 @@ object PipelinePool {
         .map(config => {
           val pipelineName = config.as[String]("name")
           val pipelineType = config.as[PipelineType]("type")
-          val pipelineSettings = PipelineFactory
+          val pipelineSettings = AbstractPipelineFactory
             .getConcreteFactory(pipelineType)
             .createPipelineSettings(config)
 

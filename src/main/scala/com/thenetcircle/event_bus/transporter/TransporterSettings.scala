@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.pipeline.{
   Pipeline,
-  PipelineFactory,
+  AbstractPipelineFactory,
   PipelineInletSettings,
   PipelinePool
 }
@@ -45,7 +45,7 @@ object TransporterSettings extends StrictLogging {
 
       val pipelineName = config.as[String]("pipeline.name")
       val pipeline = PipelinePool().getPipeline(pipelineName).get
-      val pipelineInletSettings = PipelineFactory
+      val pipelineInletSettings = AbstractPipelineFactory
         .getConcreteFactory(pipeline.pipelineType)
         .createPipelineInletSettings(
           config

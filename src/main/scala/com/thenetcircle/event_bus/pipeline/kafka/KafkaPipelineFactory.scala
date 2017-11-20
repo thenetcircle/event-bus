@@ -31,7 +31,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration.FiniteDuration
 
-class KafkaPipelineFactory(implicit system: ActorSystem) extends PipelineFactory {
+class KafkaPipelineFactory(implicit system: ActorSystem) extends AbstractPipelineFactory {
 
   override def createPipeline(pipelineSettings: PipelineSettings): KafkaPipeline =
     KafkaPipeline(pipelineSettings.asInstanceOf[KafkaPipelineSettings])

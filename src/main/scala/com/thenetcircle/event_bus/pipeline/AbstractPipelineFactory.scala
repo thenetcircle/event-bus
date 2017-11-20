@@ -22,7 +22,7 @@ import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
 import com.typesafe.config.Config
 
-abstract class PipelineFactory(implicit system: ActorSystem) {
+abstract class AbstractPipelineFactory(implicit system: ActorSystem) {
 
   /** Creates a new [[Pipeline]]
     *
@@ -56,12 +56,12 @@ abstract class PipelineFactory(implicit system: ActorSystem) {
 
 }
 
-object PipelineFactory {
+object AbstractPipelineFactory {
   /*def getConcreteFactoryByName(pipelineName: String)(
-      implicit system: ActorSystem): PipelineFactory =
+      implicit system: ActorSystem): AbstractPipelineFactory =
     PipelinePool().getPipelineType(pipelineName) match {
       case Some(pipelineType) =>
-        PipelineFactory.getConcreteFactoryByType(pipelineType)
+        AbstractPipelineFactory.getConcreteFactoryByType(pipelineType)
       case None =>
         throw new Exception(
           s"""No matched pipeline factory of pipeline name "$pipelineName".""")
@@ -69,7 +69,7 @@ object PipelineFactory {
 
   def getConcreteFactory(
       pipelineType: PipelineType
-  )(implicit system: ActorSystem): PipelineFactory =
+  )(implicit system: ActorSystem): AbstractPipelineFactory =
     pipelineType match {
       case PipelineType.Kafka => KafkaPipelineFactory()
       case _ =>

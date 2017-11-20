@@ -42,7 +42,7 @@ object DispatcherSettings extends StrictLogging {
       val pipelineName = config.as[String]("pipeline.name")
       val pipeline = PipelinePool().getPipeline(pipelineName).get
       val pipelineFactory =
-        PipelineFactory.getConcreteFactory(pipeline.pipelineType)
+        AbstractPipelineFactory.getConcreteFactory(pipeline.pipelineType)
 
       val pipelineOutletSettings = pipelineFactory.createPipelineOutletSettings(
         config
