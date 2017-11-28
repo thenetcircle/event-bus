@@ -33,7 +33,7 @@ import scala.util.{Failure, Success}
 
 class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
 
-  var receiver: Future[Http.ServerBinding]            = _
+  var receiver: Future[Http.ServerBinding] = _
   val resultListeners: mutable.Queue[Promise[String]] = mutable.Queue.empty
 
   def addListener(listener: Promise[String]): Unit =
@@ -43,8 +43,8 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
     super.beforeAll()
 
     val transporter = Transporter(
-      TransporterSettings(
-        system.settings.config.getConfig("event-bus.runtime.test-transporter")))
+      TransporterSettings(system.settings.config.getConfig("event-bus.runtime.test-transporter"))
+    )
     transporter.run()
 
     val dispatcher = Dispatcher(
@@ -58,8 +58,12 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
                          |  }
                          |}
                        """.stripMargin)
-          .withFallback(system.settings.config
-            .getConfig("event-bus.runtime.test-dispatcher"))))
+          .withFallback(
+            system.settings.config
+              .getConfig("event-bus.runtime.test-dispatcher")
+          )
+      )
+    )
     dispatcher.run()
 
     val route = path("") {
@@ -97,16 +101,14 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
     val requestBody =
       """
         |{
-        |  "verb": "user.login",
+        |  "title": "user.login",
         |  "actor": {"id": "123", "objectType": "user"}
         |}
       """.stripMargin
 
     val responseFuture: Future[HttpResponse] = Http().singleRequest(
-      HttpRequest(
-        uri = "http://localhost:8080",
-        entity = HttpEntity(requestBody)
-      ))
+      HttpRequest(uri = "http://localhost:8080", entity = HttpEntity(requestBody))
+    )
 
     responseFuture.onComplete {
       case Success(response) => response.discardEntityBytes()
@@ -122,7 +124,7 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
   ignore should "get same result according the input order with same actor" in {
 
     val result: mutable.ListBuffer[String] = mutable.ListBuffer.empty
-    val resultFuture                       = Promise[mutable.ListBuffer[String]]
+    val resultFuture = Promise[mutable.ListBuffer[String]]
 
     val testCount = 30
 
@@ -140,10 +142,8 @@ class HttpDispatchingISpec extends BaseIntegrationISpec with StrictLogging {
         """.stripMargin
 
       val responseFuture: Future[HttpResponse] = Http().singleRequest(
-        HttpRequest(
-          uri = "http://localhost:8080",
-          entity = HttpEntity(requestBody)
-        ))
+        HttpRequest(uri = "http://localhost:8080", entity = HttpEntity(requestBody))
+      )
 
       responseFuture.onComplete {
         case Success(response) => response.discardEntityBytes()

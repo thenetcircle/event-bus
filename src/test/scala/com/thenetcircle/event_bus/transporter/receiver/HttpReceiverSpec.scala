@@ -60,7 +60,7 @@ class HttpReceiverSpec extends AkkaStreamSpec {
     // sub2.request(1)
     in.sendNext(HttpRequest(entity = HttpEntity(s"""
                                                        |{
-                                                       |  "verb": "user.login"
+                                                       |  "title": "user.login"
                                                        |}
                                                     """)))
 

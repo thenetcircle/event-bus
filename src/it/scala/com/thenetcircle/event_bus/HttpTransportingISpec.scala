@@ -30,8 +30,8 @@ class HttpTransportingISpec extends BaseIntegrationISpec {
     super.beforeAll()
 
     val transporter = Transporter(
-      TransporterSettings(
-        system.settings.config.getConfig("event-bus.runtime.test-transporter")))
+      TransporterSettings(system.settings.config.getConfig("event-bus.runtime.test-transporter"))
+    )
     transporter.run()
   }
 
@@ -44,11 +44,12 @@ class HttpTransportingISpec extends BaseIntegrationISpec {
           uri = "http://localhost:8080",
           entity = HttpEntity("""
               |{
-              |  "verb": "user.login",
+              |  "title": "user.login",
               |  "actor": {"id": "123", "objectType": "user"}
               |}
           """.stripMargin)
-        ))
+        )
+      )
 
     responseFuture
       .flatMap(httpResponse => {
@@ -60,13 +61,9 @@ class HttpTransportingISpec extends BaseIntegrationISpec {
 
   it should "send failed by non json content" in {
     val responseFuture: Future[HttpResponse] =
-      Http().singleRequest(
-        HttpRequest(
-          uri = "http://localhost:8080",
-          entity = HttpEntity("""
+      Http().singleRequest(HttpRequest(uri = "http://localhost:8080", entity = HttpEntity("""
               |test
-            """.stripMargin)
-        ))
+            """.stripMargin)))
 
     responseFuture
       .flatMap(httpResponse => {
@@ -79,12 +76,10 @@ class HttpTransportingISpec extends BaseIntegrationISpec {
   it should "send failed by missing fields content" in {
     val responseFuture: Future[HttpResponse] =
       Http().singleRequest(
-        HttpRequest(
-          uri = "http://localhost:8080",
-          entity = HttpEntity("""
-                                |{"verb":"user.login"}}
-                              """.stripMargin)
-        ))
+        HttpRequest(uri = "http://localhost:8080", entity = HttpEntity("""
+                                |{"title":"user.login"}}
+                              """.stripMargin))
+      )
 
     responseFuture
       .flatMap(httpResponse => {

@@ -47,7 +47,8 @@ class MainSimulation extends Simulation {
           .body(StringBody(s"""
         |{
         |  "id":"$${uuid}",
-        |  "verb":"user.login",
+        |  "title":"user.login",
+        |  "verb":"login",
         |  "provider":{"id":"POPP","objectType":"community"},
         |  "actor":{"id":"$${actorId}","objectType":"user"},
         |  "published":"2017-07-17T13:26:11+02:00",
