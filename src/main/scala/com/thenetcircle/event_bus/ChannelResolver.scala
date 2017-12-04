@@ -5,7 +5,7 @@ class ChannelResolver {}
 
 object ChannelResolver {
 
-  val defaultChannel = "default"
+  val defaultChannel = "event-default"
 
   def getChannel(metadata: EventMetaData): String = {
 
