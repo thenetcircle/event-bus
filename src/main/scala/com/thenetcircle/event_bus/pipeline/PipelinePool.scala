@@ -18,8 +18,9 @@
 package com.thenetcircle.event_bus.pipeline
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
-import com.typesafe.config.Config
+import com.thenetcircle.event_bus.pipeline.model.PipelineType.PipelineType
+import com.thenetcircle.event_bus.pipeline.model._
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.collection.mutable
@@ -36,7 +37,7 @@ private[pipeline] final class PipelinePool(
 
   private def addToCache(pipeline: Pipeline): Unit =
     cached.synchronized {
-      cached += (pipeline.pipelineSettings.name -> pipeline)
+      cached += (pipeline.settings.name -> pipeline)
     }
 
   def getPipelineType(pipelineName: String): Option[PipelineType] =
@@ -51,9 +52,9 @@ private[pipeline] final class PipelinePool(
       case None                 => None
     }
 
-  def getPipelineFactory(pipelineName: String): Option[AbstractPipelineFactory] =
+  def getPipelineFactory(pipelineName: String): Option[PipelineFactory] =
     poolSettings.get(pipelineName) match {
-      case Some((_type, _)) => Some(AbstractPipelineFactory.getConcreteFactory(_type))
+      case Some((_type, _)) => Some(PipelineFactory.getConcreteFactory(_type))
       case None             => None
     }
 
@@ -69,7 +70,7 @@ private[pipeline] final class PipelinePool(
       case None =>
         poolSettings.get(pipelineName) match {
           case Some((_type, _settings)) =>
-            val p = AbstractPipelineFactory
+            val p = PipelineFactory
               .getConcreteFactory(_type)
               .createPipeline(_settings)
             addToCache(p)
@@ -77,6 +78,36 @@ private[pipeline] final class PipelinePool(
           case None => None
         }
     }
+
+  def getPipelineInlet(config: Config): Option[PipelineInlet] = {
+    val pipelineName = config.as[String]("name")
+
+    getPipeline(pipelineName).map(pipeline => {
+      val pipelineFactory = PipelineFactory.getConcreteFactory(pipeline._type)
+      val pipelineInletSettings = pipelineFactory.createPipelineInletSettings(
+        config
+          .as[Option[Config]]("inlet")
+          .getOrElse(ConfigFactory.empty())
+      )
+
+      pipeline.createInlet(pipelineInletSettings)
+    })
+  }
+
+  def getPipelineOutlet(config: Config): Option[PipelineOutlet] = {
+    val pipelineName = config.as[String]("name")
+
+    getPipeline(pipelineName).map(pipeline => {
+      val pipelineFactory = PipelineFactory.getConcreteFactory(pipeline._type)
+      val pipelineOutletSettings = pipelineFactory.createPipelineOutletSettings(
+        config
+          .as[Option[Config]]("outlet")
+          .getOrElse(ConfigFactory.empty())
+      )
+
+      pipeline.createOutlet(pipelineOutletSettings)
+    })
+  }
 
 }
 
@@ -89,7 +120,7 @@ object PipelinePool {
         .map(config => {
           val pipelineName = config.as[String]("name")
           val pipelineType = config.as[PipelineType]("type")
-          val pipelineSettings = AbstractPipelineFactory
+          val pipelineSettings = PipelineFactory
             .getConcreteFactory(pipelineType)
             .createPipelineSettings(config)
 

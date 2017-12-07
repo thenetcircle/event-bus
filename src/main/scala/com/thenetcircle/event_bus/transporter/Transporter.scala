@@ -34,7 +34,7 @@ import akka.stream.scaladsl.{
 }
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventExtractor
-import com.thenetcircle.event_bus.pipeline.Pipeline
+import com.thenetcircle.event_bus.pipeline.model.{Pipeline, PipelineInlet}
 import com.thenetcircle.event_bus.transporter.receiver.Receiver
 import com.typesafe.scalalogging.StrictLogging
 
@@ -44,12 +44,14 @@ import scala.concurrent.duration._
   *
   * @param settings    the settings of this transporter
   * @param receivers the [[Receiver]]s bind to this transporter, like data sources
-  * @param pipeline
+  * @param pipelineInlet
   */
-class Transporter(settings: TransporterSettings, receivers: Vector[Receiver], pipeline: Pipeline)(
-    implicit system: ActorSystem,
-    materializer: Materializer
-) extends StrictLogging {
+class Transporter(
+    settings: TransporterSettings,
+    receivers: Vector[Receiver],
+    pipelineInlet: PipelineInlet
+)(implicit system: ActorSystem, materializer: Materializer)
+    extends StrictLogging {
 
   logger.info(s"new Transporter ${settings.name} is created")
 
@@ -67,15 +69,15 @@ class Transporter(settings: TransporterSettings, receivers: Vector[Receiver], pi
     .withAttributes(supervisionStrategy(resumingDecider))
     .to(Sink.ignore)
 
-  private def pipelineInlet(): Flow[Event, Event, NotUsed] =
+  private def newPipelineInlet(): Flow[Event, Event, NotUsed] =
     RestartFlow.withBackoff[Event, Event](
       minBackoff = 1.second,
       maxBackoff = 10.minutes,
       randomFactor = 0.1
     ) { () =>
-      logger.info(s"Creating a inlet of pipeline ${settings.pipeline.pipelineSettings.name}")
+      logger.info(s"Creating a inlet of pipeline ${pipelineInlet.pipeline.settings.name}")
       try {
-        pipeline.getNewInlet(settings.pipelineInletSettings).stream
+        pipelineInlet.stream()
       } catch {
         case ex: Throwable =>
           logger.error(s"Create new PipelineInlet failed with error: ${ex.getMessage}")
@@ -127,7 +129,7 @@ class Transporter(settings: TransporterSettings, receivers: Vector[Receiver], pi
 
           for (i <- 0 until transportParallelism) {
 
-                                balancer.out(i) ~> pipelineInlet() ~> committerMerger.in(i)
+                                balancer.out(i) ~> newPipelineInlet() ~> committerMerger.in(i)
 
           }
 
@@ -135,7 +137,7 @@ class Transporter(settings: TransporterSettings, receivers: Vector[Receiver], pi
         }
         else {
 
-          prioritizedChannel ~> pipelineInlet() ~> committer.async
+          prioritizedChannel ~> newPipelineInlet() ~> committer.async
 
         }
 
@@ -157,14 +159,14 @@ object Transporter extends StrictLogging {
 
     logger.info(s"Creating a new Transporter ${settings.name} from the TransporterSettings: $settings")
 
-    implicit val materializer = ActorMaterializer(settings.materializerSettings, Some(settings.name))
+    implicit val materializer: Materializer = ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
     val receivers =
       settings.receiverSettings.map(s => {
-        implicit val exector = EventExtractor(s.eventFormat)
+        implicit val extrator: EventExtractor = EventExtractor(s.eventFormat)
         Receiver(s)
       })
 
-    new Transporter(settings, receivers, settings.pipeline)
+    new Transporter(settings, receivers, settings.pipelineInlet)
   }
 }

@@ -21,15 +21,16 @@ import akka.actor.ActorSystem
 import akka.stream.scaladsl.{RestartSource, RunnableGraph}
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.dispatcher.emitter.Emitter
-import com.thenetcircle.event_bus.pipeline.Pipeline
+import com.thenetcircle.event_bus.pipeline.model.PipelineOutlet
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-class Dispatcher(settings: DispatcherSettings, pipeline: Pipeline, emitter: Vector[Emitter])(
-    implicit materializer: Materializer
-) extends StrictLogging {
+class Dispatcher(settings: DispatcherSettings,
+                 pipelineOutlet: PipelineOutlet,
+                 emitter: Vector[Emitter])(implicit materializer: Materializer)
+    extends StrictLogging {
 
   logger.info(s"new Dispatcher ${settings.name} is created")
 
@@ -43,9 +44,9 @@ class Dispatcher(settings: DispatcherSettings, pipeline: Pipeline, emitter: Vect
   private val dataSource =
     RestartSource.withBackoff(minBackoff = 1.second, maxBackoff = 1.minute, randomFactor = 0.2) {
       () =>
-        logger.info(s"Creating a outlet of pipeline ${settings.pipeline.pipelineSettings.name}")
+        logger.info(s"Creating a outlet of pipeline ${pipelineOutlet.pipeline.settings.name}")
         try {
-          pipeline.getNewOutlet(settings.pipelineOutletSettings).stream
+          pipelineOutlet.stream()
         } catch {
           case ex: Throwable =>
             logger.error(s"Create new PipelineOutlet failed with error: ${ex.getMessage}")
@@ -77,7 +78,7 @@ class Dispatcher(settings: DispatcherSettings, pipeline: Pipeline, emitter: Vect
           result
         }
       )
-      .to(pipeline.getCommitter(settings.pipelineCommitterSettings).async)
+      .to(pipelineOutlet.ackStream().async)
 
   // TODO add a transporter controller as a materialized value
   def run(): Unit = {
@@ -94,11 +95,11 @@ object Dispatcher extends StrictLogging {
       s"Creating a new Dispatcher ${settings.name} from the DispatcherSettings: $settings"
     )
 
-    implicit val materializer =
+    implicit val materializer: Materializer =
       ActorMaterializer(settings.materializerSettings, Some(settings.name))
 
     val emitters = settings.emitterSettings.map(Emitter(_))
 
-    new Dispatcher(settings, settings.pipeline, emitters)
+    new Dispatcher(settings, settings.pipelineOutlet, emitters)
   }
 }

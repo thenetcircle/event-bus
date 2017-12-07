@@ -21,7 +21,8 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
 import com.thenetcircle.event_bus.dispatcher.emitter.EmitterSettings
 import com.thenetcircle.event_bus.pipeline._
-import com.typesafe.config.{Config, ConfigFactory}
+import com.thenetcircle.event_bus.pipeline.model.PipelineOutlet
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -39,23 +40,7 @@ object DispatcherSettings extends StrictLogging {
       val emitterSettings =
         config.as[Vector[Config]]("emitters").map(EmitterSettings(_))
 
-      val pipelineName = config.as[String]("pipeline.name")
-      val pipeline = PipelinePool().getPipeline(pipelineName).get
-      val pipelineFactory =
-        AbstractPipelineFactory.getConcreteFactory(pipeline.pipelineType)
-
-      val pipelineOutletSettings = pipelineFactory.createPipelineOutletSettings(
-        config
-          .as[Option[Config]]("pipeline.outlet")
-          .getOrElse(ConfigFactory.empty())
-      )
-
-      val pipelineCommitterSettings =
-        pipelineFactory.createPipelineCommitterSettings(
-          config
-            .as[Option[Config]]("pipeline.committer")
-            .getOrElse(ConfigFactory.empty())
-        )
+      val pipelineOutlet = PipelinePool().getPipelineOutlet(config.getConfig("pipeline")).get
 
       val materializerKey = "akka.stream.materializer"
       val materializerSettings: Option[ActorMaterializerSettings] = {
@@ -74,14 +59,7 @@ object DispatcherSettings extends StrictLogging {
           None
       }
 
-      DispatcherSettings(
-        name,
-        emitterSettings,
-        pipeline,
-        pipelineOutletSettings,
-        pipelineCommitterSettings,
-        materializerSettings
-      )
+      DispatcherSettings(name, emitterSettings, pipelineOutlet, materializerSettings)
     } catch {
       case ex: Throwable =>
         logger.error(s"Creating DispatcherSettings failed with error: ${ex.getMessage}")
@@ -92,7 +70,5 @@ object DispatcherSettings extends StrictLogging {
 
 final case class DispatcherSettings(name: String,
                                     emitterSettings: Vector[EmitterSettings],
-                                    pipeline: Pipeline,
-                                    pipelineOutletSettings: PipelineOutletSettings,
-                                    pipelineCommitterSettings: PipelineCommitterSettings,
+                                    pipelineOutlet: PipelineOutlet,
                                     materializerSettings: Option[ActorMaterializerSettings])

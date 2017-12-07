@@ -19,14 +19,10 @@ package com.thenetcircle.event_bus.transporter
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializerSettings
-import com.thenetcircle.event_bus.pipeline.{
-  Pipeline,
-  AbstractPipelineFactory,
-  PipelineInletSettings,
-  PipelinePool
-}
+import com.thenetcircle.event_bus.pipeline._
+import com.thenetcircle.event_bus.pipeline.model.PipelineInlet
 import com.thenetcircle.event_bus.transporter.receiver.ReceiverSettings
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -43,15 +39,7 @@ object TransporterSettings extends StrictLogging {
       val receiverSettings =
         config.as[Vector[Config]]("receivers").map(ReceiverSettings(_))
 
-      val pipelineName = config.as[String]("pipeline.name")
-      val pipeline = PipelinePool().getPipeline(pipelineName).get
-      val pipelineInletSettings = AbstractPipelineFactory
-        .getConcreteFactory(pipeline.pipelineType)
-        .createPipelineInletSettings(
-          config
-            .as[Option[Config]]("pipeline.inlet")
-            .getOrElse(ConfigFactory.empty())
-        )
+      val pipelineInlet = PipelinePool().getPipelineInlet(config.getConfig("pipeline")).get
 
       val transportParallelism = config.as[Int]("transport-parallelism")
       val commitParallelism = config.as[Int]("commit-parallelism")
@@ -75,8 +63,7 @@ object TransporterSettings extends StrictLogging {
         commitParallelism,
         transportParallelism,
         receiverSettings,
-        pipeline,
-        pipelineInletSettings,
+        pipelineInlet,
         materializerSettings
       )
     } catch {
@@ -91,6 +78,5 @@ final case class TransporterSettings(name: String,
                                      commitParallelism: Int,
                                      transportParallelism: Int,
                                      receiverSettings: Vector[ReceiverSettings],
-                                     pipeline: Pipeline,
-                                     pipelineInletSettings: PipelineInletSettings,
+                                     pipelineInlet: PipelineInlet,
                                      materializerSettings: Option[ActorMaterializerSettings])

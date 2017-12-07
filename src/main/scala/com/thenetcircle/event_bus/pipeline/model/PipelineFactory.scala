@@ -15,14 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.pipeline
+package com.thenetcircle.event_bus.pipeline.model
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineFactory
+import com.thenetcircle.event_bus.pipeline.model.PipelineType.PipelineType
 import com.typesafe.config.Config
 
-abstract class AbstractPipelineFactory(implicit system: ActorSystem) {
+abstract class PipelineFactory(implicit system: ActorSystem) {
 
   /** Creates a new [[Pipeline]]
     *
@@ -47,29 +47,12 @@ abstract class AbstractPipelineFactory(implicit system: ActorSystem) {
     * @param pipelineOutletConfig the TypeSafe [[Config]]
     */
   def createPipelineOutletSettings(pipelineOutletConfig: Config): PipelineOutletSettings
-
-  /** Creates [[PipelineCommitterSettings]] according to a TypeSafe [[Config]]
-    *
-    * @param pipelineCommitterConfig the TypeSafe [[Config]]
-    */
-  def createPipelineCommitterSettings(pipelineCommitterConfig: Config): PipelineCommitterSettings
-
 }
 
-object AbstractPipelineFactory {
-  /*def getConcreteFactoryByName(pipelineName: String)(
-      implicit system: ActorSystem): AbstractPipelineFactory =
-    PipelinePool().getPipelineType(pipelineName) match {
-      case Some(pipelineType) =>
-        AbstractPipelineFactory.getConcreteFactoryByType(pipelineType)
-      case None =>
-        throw new Exception(
-          s"""No matched pipeline factory of pipeline name "$pipelineName".""")
-    }*/
-
+object PipelineFactory {
   def getConcreteFactory(
       pipelineType: PipelineType
-  )(implicit system: ActorSystem): AbstractPipelineFactory =
+  )(implicit system: ActorSystem): PipelineFactory =
     pipelineType match {
       case PipelineType.Kafka => KafkaPipelineFactory()
       case _ =>

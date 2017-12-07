@@ -17,72 +17,74 @@
 
 package com.thenetcircle.event_bus.pipeline.kafka
 
+import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
+import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.Supervision.resumingDecider
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.event_extractor.{EventCommitter, EventExtractor, EventSourceType}
-import com.thenetcircle.event_bus.pipeline.PipelineOutlet
+import com.thenetcircle.event_bus.pipeline.model.{Pipeline, PipelineOutlet, PipelineOutletSettings}
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
-import com.thenetcircle.event_bus.Event
-import akka.stream.ActorAttributes.supervisionStrategy
-import akka.stream.Supervision.resumingDecider
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.FiniteDuration
 
 /** RightPort Implementation */
-private[kafka] final class KafkaPipelineOutlet(
-    val pipeline: KafkaPipeline,
-    val outletName: String,
-    val outletSettings: KafkaPipelineOutletSettings
-)(implicit materializer: Materializer)
+private[kafka] final class KafkaPipelineOutlet(val pipeline: KafkaPipeline,
+                                               val name: String,
+                                               val settings: KafkaPipelineOutletSettings)
     extends PipelineOutlet
     with Tracing
     with StrictLogging {
 
   require(
-    outletSettings.topics.isDefined || outletSettings.topicPattern.isDefined,
+    settings.topics.isDefined || settings.topicPattern.isDefined,
     "The outlet of KafkaPipeline needs to subscribe topics"
   )
 
-  implicit val executionContext: ExecutionContext =
-    materializer.executionContext
-
   /** Build ConsumerSettings */
   private val kafkaConsumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue] = {
-    val _settings = pipeline.pipelineSettings.consumerSettings
-      .withGroupId(outletSettings.groupId)
+    val _settings = pipeline.settings.consumerSettings
+      .withGroupId(settings.groupId)
 
-    outletSettings.pollInterval.foreach(_settings.withPollInterval)
-    outletSettings.pollTimeout.foreach(_settings.withPollTimeout)
-    outletSettings.stopTimeout.foreach(_settings.withStopTimeout)
-    outletSettings.closeTimeout.foreach(_settings.withCloseTimeout)
-    outletSettings.commitTimeout.foreach(_settings.withCommitTimeout)
-    outletSettings.wakeupTimeout.foreach(_settings.withWakeupTimeout)
-    outletSettings.maxWakeups.foreach(_settings.withMaxWakeups)
+    settings.pollInterval.foreach(_settings.withPollInterval)
+    settings.pollTimeout.foreach(_settings.withPollTimeout)
+    settings.stopTimeout.foreach(_settings.withStopTimeout)
+    settings.closeTimeout.foreach(_settings.withCloseTimeout)
+    settings.commitTimeout.foreach(_settings.withCommitTimeout)
+    settings.wakeupTimeout.foreach(_settings.withWakeupTimeout)
+    settings.maxWakeups.foreach(_settings.withMaxWakeups)
 
     _settings
   }
 
   private val subscription: AutoSubscription =
-    if (outletSettings.topics.isDefined) {
-      Subscriptions.topics(outletSettings.topics.get)
+    if (settings.topics.isDefined) {
+      Subscriptions.topics(settings.topics.get)
     } else {
-      Subscriptions.topicPattern(outletSettings.topicPattern.get)
+      Subscriptions.topicPattern(settings.topicPattern.get)
     }
 
-  override val stream: Source[Source[Event, NotUsed], NotUsed] =
+  override def stream()(
+      implicit materializer: Materializer
+  ): Source[Source[Event, NotUsed], NotUsed] = {
+
+    implicit val executionContext: ExecutionContext = materializer.executionContext
+
     // TODO: maybe use one consumer for one partition
     Consumer
       .committablePartitionedSource(kafkaConsumerSettings, subscription)
       .map {
         case (topicPartition, source) =>
           source
-            .mapAsync(outletSettings.extractParallelism) { msg =>
+            .mapAsync(settings.extractParallelism) { msg =>
               val (tracingId, extractor) =
                 msg.record
                   .key()
@@ -135,5 +137,48 @@ private[kafka] final class KafkaPipelineOutlet(
             }
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
-      .named(outletName)
+      .named(name)
+  }
+
+  /** Acknowledges the event to [[Pipeline]]
+    *
+    * @return the committing akka-stream stage
+    */
+  override def ackStream(): Sink[Event, NotUsed] = {
+    Flow[Event]
+      .collect {
+        case e if e.hasContext("kafkaCommittableOffset") =>
+          e.context("kafkaCommittableOffset")
+            .asInstanceOf[CommittableOffset] -> e.tracingId
+      }
+      .batch(max = settings.commitBatchMax, {
+        case (committableOffset, tracingId) =>
+          val batch = CommittableOffsetBatch.empty.updated(committableOffset)
+          val tracingList = List[Long](tracingId)
+          batch -> tracingList
+      }) {
+        case ((batch, tracingList), (committableOffset, tracingId)) =>
+          batch.updated(committableOffset) -> tracingList.+:(tracingId)
+      }
+      .mapAsync(settings.commitParallelism)(result => {
+        result._2.foreach(tracer.record(_, TracingSteps.PIPELINE_COMMITTED))
+        result._1.commitScaladsl()
+      })
+      .to(Sink.ignore)
+  }
 }
+
+case class KafkaPipelineOutletSettings(groupId: String,
+                                       extractParallelism: Int,
+                                       commitParallelism: Int,
+                                       commitBatchMax: Int,
+                                       topics: Option[Set[String]],
+                                       topicPattern: Option[String],
+                                       pollInterval: Option[FiniteDuration],
+                                       pollTimeout: Option[FiniteDuration],
+                                       stopTimeout: Option[FiniteDuration],
+                                       closeTimeout: Option[FiniteDuration],
+                                       commitTimeout: Option[FiniteDuration],
+                                       wakeupTimeout: Option[FiniteDuration],
+                                       maxWakeups: Option[Int])
+    extends PipelineOutletSettings

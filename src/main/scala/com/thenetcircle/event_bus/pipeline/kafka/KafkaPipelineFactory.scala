@@ -19,19 +19,19 @@ package com.thenetcircle.event_bus.pipeline.kafka
 
 import akka.actor.ActorSystem
 import akka.kafka.{ConsumerSettings, ProducerSettings}
-import com.thenetcircle.event_bus.pipeline._
 import com.thenetcircle.event_bus.pipeline.kafka.extended.{
   EventSerializer,
   KafkaKeyDeserializer,
   KafkaKeySerializer
 }
+import com.thenetcircle.event_bus.pipeline.model.{PipelineFactory, PipelineSettings}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration.FiniteDuration
 
-class KafkaPipelineFactory(implicit system: ActorSystem) extends AbstractPipelineFactory {
+class KafkaPipelineFactory(implicit system: ActorSystem) extends PipelineFactory {
 
   override def createPipeline(pipelineSettings: PipelineSettings): KafkaPipeline =
     KafkaPipeline(pipelineSettings.asInstanceOf[KafkaPipelineSettings])
@@ -104,6 +104,8 @@ class KafkaPipelineFactory(implicit system: ActorSystem) extends AbstractPipelin
     KafkaPipelineOutletSettings(
       groupId = config.as[String]("group-id"),
       extractParallelism = config.as[Int]("extract-parallelism"),
+      commitParallelism = config.as[Int]("commit-parallelism"),
+      commitBatchMax = config.as[Int]("commit-batch-max"),
       topics = config.as[Option[Set[String]]]("topics"),
       topicPattern = config.as[Option[String]]("topicPattern"),
       pollInterval = config.as[Option[FiniteDuration]]("poll-interval"),
@@ -113,20 +115,6 @@ class KafkaPipelineFactory(implicit system: ActorSystem) extends AbstractPipelin
       commitTimeout = config.as[Option[FiniteDuration]]("commit-timeout"),
       wakeupTimeout = config.as[Option[FiniteDuration]]("wakeup-timeout"),
       maxWakeups = config.as[Option[Int]]("max-wakeups")
-    )
-  }
-
-  override def createPipelineCommitterSettings(
-      pipelineCommitterConfig: Config
-  ): KafkaPipelineCommitterSettings = {
-    val config = pipelineCommitterConfig.withFallback(
-      system.settings.config
-        .getConfig("event-bus.pipeline.kafka.committer")
-    )
-
-    KafkaPipelineCommitterSettings(
-      commitParallelism = config.as[Int]("commit-parallelism"),
-      commitBatchMax = config.as[Int]("commit-batch-max")
     )
   }
 

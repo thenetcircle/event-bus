@@ -17,13 +17,14 @@
 
 package com.thenetcircle.event_bus.pipeline
 import akka.kafka.{ConsumerSettings, ProducerSettings}
-import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
+import com.thenetcircle.event_bus.pipeline.model.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka._
 import com.thenetcircle.event_bus.pipeline.kafka.extended.{
   EventSerializer,
   KafkaKeyDeserializer,
   KafkaKeySerializer
 }
+import com.thenetcircle.event_bus.pipeline.model.{PipelineSettings, PipelineType}
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
@@ -80,11 +81,11 @@ class PipelinePoolSpec extends AkkaStreamSpec {
       testPipelinePool
         .getPipeline(pipelineName)
         .get
-        .pipelineSettings shouldBe _settings
+        .settings shouldBe _settings
       testPipelinePool
         .getPipeline(pipelineName)
         .get
-        .pipelineType shouldBe PipelineType.Kafka
+        ._type shouldBe PipelineType.Kafka
     })
 
   }

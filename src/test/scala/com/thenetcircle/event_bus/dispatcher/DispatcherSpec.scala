@@ -22,8 +22,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.dispatcher.emitter.{Emitter, EmitterSettings, EmitterType}
-import com.thenetcircle.event_bus.pipeline.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline._
+import com.thenetcircle.event_bus.pipeline.model._
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.{Event, createFlowFromSink, createTestEvent}
 import com.typesafe.config.ConfigFactory
@@ -44,7 +44,7 @@ class DispatcherSpec extends AkkaStreamSpec {
 
     val testCommitter = TestSubscriber.probe[Event]()
 
-    val pipeline = createPipeline(
+    val pipelineOutlet = createPipelineOutlet(
       Source[Source[Event, NotUsed]](
         Source.fromPublisher(testSource1) :: Source
           .fromPublisher(testSource2) :: Source
@@ -70,7 +70,7 @@ class DispatcherSpec extends AkkaStreamSpec {
       }
     }
 
-    val dispatcher = createDispatcher(Vector(emitter), pipeline)
+    val dispatcher = createDispatcher(Vector(emitter), pipelineOutlet)
 
     dispatcher.run()
 
@@ -139,7 +139,7 @@ class DispatcherSpec extends AkkaStreamSpec {
     val testSink4 = TestSubscriber.probe[Event]()
     val testSink5 = TestSubscriber.probe[Event]()
 
-    val pipeline = createPipeline(
+    val pipelineOutlet = createPipelineOutlet(
       Source[Source[Event, NotUsed]](
         testSource1 :: testSource2 :: testSource3 :: testSource4 :: Nil
       ),
@@ -182,7 +182,7 @@ class DispatcherSpec extends AkkaStreamSpec {
         }
       )
 
-    val dispatcher = createDispatcher(emitters, pipeline)
+    val dispatcher = createDispatcher(emitters, pipelineOutlet)
     dispatcher.run()
 
     for (i <- 1 to 10) {
@@ -200,7 +200,8 @@ class DispatcherSpec extends AkkaStreamSpec {
 
   it should "process maximum specific sub-streams at a time" in {}
 
-  private def createDispatcher(emitters: Vector[Emitter], pipeline: Pipeline): Dispatcher = {
+  private def createDispatcher(emitters: Vector[Emitter],
+                               pipelineOutlet: PipelineOutlet): Dispatcher = {
 
     val dispatcherSettings =
       DispatcherSettings(ConfigFactory.parseString("""
@@ -221,36 +222,48 @@ class DispatcherSpec extends AkkaStreamSpec {
                                     |}
                                   """.stripMargin))
 
-    new Dispatcher(dispatcherSettings, pipeline, emitters)
+    new Dispatcher(dispatcherSettings, pipelineOutlet, emitters)
   }
 
-  private def createPipeline(outletStream: => Source[Source[Event, NotUsed], NotUsed],
-                             committer: => Sink[Event, NotUsed]): Pipeline = {
-    val testPipeline = PipelinePool().getPipeline("TestPipeline").get
+  private def createPipelineOutlet(outletStream: => Source[Source[Event, NotUsed], NotUsed],
+                                   ackStream: => Sink[Event, NotUsed]): PipelineOutlet = {
+    /*val testPipeline = PipelinePool().getPipeline("TestPipeline").get
     new Pipeline {
-      override val pipelineType: PipelineType = testPipeline.pipelineType
-      override val pipelineSettings: PipelineSettings =
-        testPipeline.pipelineSettings
+      override val _type: PipelineType = testPipeline._type
+      override val settings: PipelineSettings =
+        testPipeline.settings
 
-      override def getNewInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet =
-        testPipeline.getNewInlet(pipelineInletSettings)
+      override def createInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet =
+        testPipeline.createInlet(pipelineInletSettings)
 
-      override def getNewOutlet(
-          pipelineOutletSettings: PipelineOutletSettings
-      )(implicit materializer: Materializer): PipelineOutlet =
+      override def createOutlet(pipelineOutletSettings: PipelineOutletSettings): PipelineOutlet =
         new PipelineOutlet {
           override val pipeline: Pipeline = testPipeline
-          override val outletName: String = "TestOutlet"
-          override val outletSettings: PipelineOutletSettings =
+          override val name: String = "TestOutlet"
+          override val settings: PipelineOutletSettings =
             new PipelineOutletSettings {}
 
-          override val stream: Source[Source[Event, NotUsed], NotUsed] =
+          override def stream()(
+              implicit materializer: Materializer
+          ): Source[Source[Event, NotUsed], NotUsed] =
             outletStream
-        }
 
-      override def getCommitter(
-          pipelineCommitterSettings: PipelineCommitterSettings
-      ): Sink[Event, NotUsed] = committer
+          override def ackStream(): Sink[Event, NotUsed] = ackStream
+        }
+    }*/
+
+    new PipelineOutlet {
+      override val pipeline: Pipeline = PipelinePool().getPipeline("TestPipeline").get
+      override val name: String = "TestOutlet"
+      override val settings: PipelineOutletSettings =
+        new PipelineOutletSettings {}
+
+      override def stream()(
+          implicit materializer: Materializer
+      ): Source[Source[Event, NotUsed], NotUsed] =
+        outletStream
+
+      override def ackStream(): Sink[Event, NotUsed] = ackStream
     }
   }
 }

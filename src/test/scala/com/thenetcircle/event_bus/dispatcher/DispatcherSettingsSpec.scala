@@ -18,11 +18,8 @@
 package com.thenetcircle.event_bus.dispatcher
 
 import com.thenetcircle.event_bus.dispatcher.emitter.HttpEmitterSettings
-import com.thenetcircle.event_bus.pipeline.PipelineType
-import com.thenetcircle.event_bus.pipeline.kafka.{
-  KafkaPipelineOutletSettings,
-  KafkaPipelineSettings
-}
+import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineOutletSettings
+import com.thenetcircle.event_bus.pipeline.model.PipelineType
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 
@@ -44,8 +41,6 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |    outlet {
                                              |      group-id = TestDispatcher
                                              |      extract-parallelism = 10
-                                             |    }
-                                             |    committer {
                                              |      commit-parallelism = 10
                                              |      commit-batch-max = 10
                                              |    }
@@ -67,10 +62,9 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
     settings.emitterSettings(0).name shouldEqual "TestEmitter"
     settings.emitterSettings(0) shouldBe a[HttpEmitterSettings]
 
-    settings.pipeline.pipelineType shouldEqual PipelineType.Kafka
-    settings.pipeline.pipelineSettings.name shouldEqual "TestPipeline"
-    settings.pipeline.pipelineSettings shouldBe a[KafkaPipelineSettings]
-    settings.pipelineOutletSettings shouldBe a[KafkaPipelineOutletSettings]
+    settings.pipelineOutlet.pipeline._type shouldEqual PipelineType.Kafka
+    settings.pipelineOutlet.pipeline.settings.name shouldEqual "TestPipeline"
+    settings.pipelineOutlet.settings shouldBe a[KafkaPipelineOutletSettings]
 
     settings.materializerSettings shouldBe defined
     settings.materializerSettings.get.initialInputBufferSize shouldEqual 16
@@ -94,8 +88,6 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |    outlet {
                                              |      group-id = TestDispatcher
                                              |      extract-parallelism = 10
-                                             |    }
-                                             |    committer {
                                              |      commit-parallelism = 10
                                              |      commit-batch-max = 10
                                              |    }

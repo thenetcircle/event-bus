@@ -16,9 +16,8 @@
  */
 
 package com.thenetcircle.event_bus.transporter
-
-import com.thenetcircle.event_bus.pipeline.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka.KafkaPipelineSettings
+import com.thenetcircle.event_bus.pipeline.model.PipelineType
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.transporter.receiver.HttpReceiverSettings
 import com.typesafe.config.ConfigFactory
@@ -38,7 +37,7 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
                                              |      name = TestReceiver1
                                              |      interface = 127.0.0.1
                                              |      port = 8080
-                                             |    }
+                                             |    },
                                              |    {
                                              |      type = http
                                              |      name = TestReceiver2
@@ -48,7 +47,7 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
                                              |  ]
                                              |  pipeline {
                                              |    name = TestPipeline
-                                             |    inlet-settings {}
+                                             |    inlet {}
                                              |  }
                                              |  akka.stream.materializer {
                                              |    initial-input-buffer-size = 16
@@ -80,9 +79,9 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
     receiver2.interface shouldEqual "127.0.0.2"
     receiver2.port shouldEqual 8081
 
-    settings.pipeline.pipelineType shouldEqual PipelineType.Kafka
-    settings.pipeline.pipelineSettings.name shouldEqual "TestPipeline"
-    settings.pipeline.pipelineSettings shouldBe a[KafkaPipelineSettings]
+    settings.pipelineInlet.pipeline._type shouldEqual PipelineType.Kafka
+    settings.pipelineInlet.pipeline.settings.name shouldEqual "TestPipeline"
+    settings.pipelineInlet.pipeline.settings shouldBe a[KafkaPipelineSettings]
 
     settings.materializerSettings shouldBe defined
     settings.materializerSettings.get.initialInputBufferSize shouldEqual 16
@@ -106,7 +105,7 @@ class TransporterSettingsSpec extends AkkaStreamSpec {
                                              |  ]
                                              |  pipeline {
                                              |    name = TestPipeline
-                                             |    inlet-settings {}
+                                             |    inlet {}
                                              |  }
                                              |}
                                            """.stripMargin)
