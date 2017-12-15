@@ -27,6 +27,7 @@ import com.thenetcircle.event_bus.pipeline.model._
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus.{Event, createFlowFromSink, createTestEvent}
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.StrictLogging
 
 class DispatcherSpec extends AkkaStreamSpec {
 
@@ -217,6 +218,7 @@ class DispatcherSpec extends AkkaStreamSpec {
                                     |    name = TestPipeline
                                     |    outlet {
                                     |      group-id = "TestDispatcher"
+                                    |      topics = ["default"]
                                     |    }
                                     |  }
                                     |}
@@ -225,8 +227,8 @@ class DispatcherSpec extends AkkaStreamSpec {
     new Dispatcher(dispatcherSettings, pipelineOutlet, emitters)
   }
 
-  private def createPipelineOutlet(outletStream: => Source[Source[Event, NotUsed], NotUsed],
-                                   ackStream: => Sink[Event, NotUsed]): PipelineOutlet = {
+  private def createPipelineOutlet(_outletStream: => Source[Source[Event, NotUsed], NotUsed],
+                                   _ackStream: => Sink[Event, NotUsed]): PipelineOutlet = {
     /*val testPipeline = PipelinePool().getPipeline("TestPipeline").get
     new Pipeline {
       override val _type: PipelineType = testPipeline._type
@@ -252,7 +254,7 @@ class DispatcherSpec extends AkkaStreamSpec {
         }
     }*/
 
-    new PipelineOutlet {
+    new PipelineOutlet with StrictLogging {
       override val pipeline: Pipeline = PipelinePool().getPipeline("TestPipeline").get
       override val name: String = "TestOutlet"
       override val settings: PipelineOutletSettings =
@@ -260,10 +262,9 @@ class DispatcherSpec extends AkkaStreamSpec {
 
       override def stream()(
           implicit materializer: Materializer
-      ): Source[Source[Event, NotUsed], NotUsed] =
-        outletStream
+      ): Source[Source[Event, NotUsed], NotUsed] = _outletStream
 
-      override def ackStream(): Sink[Event, NotUsed] = ackStream
+      override def ackStream(): Sink[Event, NotUsed] = _ackStream
     }
   }
 }

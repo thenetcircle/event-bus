@@ -40,6 +40,7 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |    name = TestPipeline
                                              |    outlet {
                                              |      group-id = TestDispatcher
+                                             |      topics = ["default"]
                                              |      extract-parallelism = 10
                                              |      commit-parallelism = 10
                                              |      commit-batch-max = 10
@@ -87,6 +88,7 @@ class DispatcherSettingsSpec extends AkkaStreamSpec {
                                              |    name = TestPipeline
                                              |    outlet {
                                              |      group-id = TestDispatcher
+                                             |      topics = ["default"]
                                              |      extract-parallelism = 10
                                              |      commit-parallelism = 10
                                              |      commit-batch-max = 10

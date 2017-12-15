@@ -152,7 +152,7 @@ class TransporterSpec extends AkkaStreamSpec {
 
   def createTransporter(
       testSources: Vector[(ReceiverPriority, Source[Event, _])],
-      testPipelinePort: Vector[Sink[Event, _]],
+      testSinks: Vector[Sink[Event, _]],
       commitParallelism: Int = 1,
       transportParallelism: Int = 1
   )(implicit system: ActorSystem, materializer: Materializer): Transporter = {
@@ -195,18 +195,17 @@ class TransporterSpec extends AkkaStreamSpec {
       None
     )
 
-    var currentPipelinePortIndex = 0
+    var currentSinkIndex = 0
     val testPipeline = PipelinePool().getPipeline("TestPipeline").get
-    val pipelineInlet = {
-      val testPP = testPipelinePort(currentPipelinePortIndex)
-      currentPipelinePortIndex += 1
-      new PipelineInlet {
-        override val pipeline: Pipeline = testPipeline
-        override val name: String = "TestPipelineInlet"
-        override val settings: PipelineInletSettings =
-          new PipelineInletSettings {}
-        override def stream(): Flow[Event, Event, NotUsed] =
-          createFlowFromSink(testPP)
+    val pipelineInlet = new PipelineInlet {
+      override val pipeline: Pipeline = testPipeline
+      override val name: String = "TestPipelineInlet"
+      override val settings: PipelineInletSettings =
+        new PipelineInletSettings {}
+      override def stream(): Flow[Event, Event, NotUsed] = {
+        val testStream = testSinks(currentSinkIndex)
+        currentSinkIndex += 1
+        createFlowFromSink(testStream)
       }
     }
     new Transporter(settings, testReceivers, pipelineInlet)
