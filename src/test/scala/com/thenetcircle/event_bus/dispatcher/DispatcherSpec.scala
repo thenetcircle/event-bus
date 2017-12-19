@@ -229,30 +229,6 @@ class DispatcherSpec extends AkkaStreamSpec {
 
   private def createPipelineOutlet(_outletStream: => Source[Source[Event, NotUsed], NotUsed],
                                    _ackStream: => Sink[Event, NotUsed]): PipelineOutlet = {
-    /*val testPipeline = PipelinePool().getPipeline("TestPipeline").get
-    new Pipeline {
-      override val _type: PipelineType = testPipeline._type
-      override val settings: PipelineSettings =
-        testPipeline.settings
-
-      override def createInlet(pipelineInletSettings: PipelineInletSettings): PipelineInlet =
-        testPipeline.createInlet(pipelineInletSettings)
-
-      override def createOutlet(pipelineOutletSettings: PipelineOutletSettings): PipelineOutlet =
-        new PipelineOutlet {
-          override val pipeline: Pipeline = testPipeline
-          override val name: String = "TestOutlet"
-          override val settings: PipelineOutletSettings =
-            new PipelineOutletSettings {}
-
-          override def stream()(
-              implicit materializer: Materializer
-          ): Source[Source[Event, NotUsed], NotUsed] =
-            outletStream
-
-          override def ackStream(): Sink[Event, NotUsed] = ackStream
-        }
-    }*/
 
     new PipelineOutlet with StrictLogging {
       override val pipeline: Pipeline = PipelinePool().getPipeline("TestPipeline").get
