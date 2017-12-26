@@ -10,6 +10,7 @@ branches:
     - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 
 before_deploy:
+  - git fetch --tags
   - sbt universal:packageBin
 deploy:
   provider: releases
