@@ -1,16 +1,13 @@
 import Dependencies._
 
-val releaseVersion = "2.0-SNAPSHOT"
-
 def itFilter(name: String): Boolean = name endsWith "ISpec"
 def unitFilter(name: String): Boolean = (name endsWith "Spec") && !itFilter(name)
 
 lazy val eventBus = (project in file("."))
-  .enablePlugins(JavaAppPackaging, SbtAspectj)
+  .enablePlugins(JavaAppPackaging, SbtAspectj, BuildInfoPlugin)
   .settings(
     organization := "com.thenetcircle",
     name := "event-bus",
-    version := releaseVersion,
     scalaVersion := "2.12.2",
     libraryDependencies ++= mainDependencies,
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value
@@ -28,7 +25,6 @@ lazy val stressTest = (project in file("stresstest"))
   .settings(
     organization := "com.thenetcircle",
     name := "event-bus-stresstest",
-    version := releaseVersion,
     scalaVersion := "2.11.8",
     libraryDependencies ++= stressTestDependencies
   )
