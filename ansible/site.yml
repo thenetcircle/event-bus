@@ -1,5 +1,0 @@
----
-- hosts: servers
-  gather_facts: False
-  roles:
-    - deployer

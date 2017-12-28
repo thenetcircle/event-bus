@@ -1,8 +1,0 @@
-[servers]
-thin
-
-[servers:vars]
-eventbus_home=/usr/local/tncdata/source/event-bus
-log_dir=/usr/local/tncdata/logs/eventbus
-daemon_user=tncdata
-remote_user=tncdata
