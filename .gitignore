@@ -6,3 +6,4 @@ target/
 /conf/
 /stresstest_receiver/
 /site/
+/ansible/
