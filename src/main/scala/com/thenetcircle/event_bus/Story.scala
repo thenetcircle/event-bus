@@ -24,7 +24,7 @@ import com.typesafe.config.Config
 class Story(settings: StorySettings,
             source: ISource,
             sink: ISink,
-            opsList: List[IOps] = List.empty,
+            opsList: List[IOperation] = List.empty,
             initStatus: StoryStatus = StoryStatus.INIT) {
 
   private var status: StoryStatus = initStatus

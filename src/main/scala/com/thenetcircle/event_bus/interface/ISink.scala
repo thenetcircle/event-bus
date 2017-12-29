@@ -17,4 +17,12 @@
 
 package com.thenetcircle.event_bus.interface
 
-trait ISink {}
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.Event
+
+trait ISink {
+
+  def plot: Flow[Event, Event, NotUsed]
+
+}

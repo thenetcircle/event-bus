@@ -45,7 +45,7 @@ class HttpSource(
     extends ISource
     with StrictLogging {
 
-  override val graph: Source[Event, _] =
+  override val plot: Source[Event, _] =
     httpBind
       .flatMapMerge(
         settings.maxConnections,
