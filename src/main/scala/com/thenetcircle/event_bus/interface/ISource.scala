@@ -21,6 +21,6 @@ import com.thenetcircle.event_bus.Event
 
 trait ISource {
 
-  def plot: Source[Event, _]
+  def plotGraph: Source[Event, _]
 
 }

@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.components.http
+package com.thenetcircle.event_bus.plots.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -45,7 +45,7 @@ class HttpSource(
     extends ISource
     with StrictLogging {
 
-  override val plot: Source[Event, _] =
+  override val plotGraph: Source[Event, _] =
     httpBind
       .flatMapMerge(
         settings.maxConnections,
