@@ -30,7 +30,6 @@ import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.event_extractor.{EventCommitter, EventExtractor, EventSourceType}
 import com.thenetcircle.event_bus.interface.ISource
-import com.thenetcircle.event_bus.pipeline.kafka.{ConsumerKey, ConsumerValue}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future}

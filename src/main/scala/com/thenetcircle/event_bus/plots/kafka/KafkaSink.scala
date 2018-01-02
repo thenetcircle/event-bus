@@ -24,8 +24,7 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.interface.ISink
-import com.thenetcircle.event_bus.pipeline.kafka.extended.KafkaPartitioner
-import com.thenetcircle.event_bus.pipeline.kafka.{KafkaKey, ProducerKey, ProducerValue}
+import com.thenetcircle.event_bus.plots.kafka.extended.{KafkaKey, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 

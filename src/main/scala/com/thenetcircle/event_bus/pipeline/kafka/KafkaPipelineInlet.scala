@@ -23,7 +23,7 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.pipeline.kafka.extended.KafkaPartitioner
+import com.thenetcircle.event_bus.plots.kafka.extended.KafkaPartitioner
 import com.thenetcircle.event_bus.pipeline.model.{PipelineInlet, PipelineInletSettings}
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}

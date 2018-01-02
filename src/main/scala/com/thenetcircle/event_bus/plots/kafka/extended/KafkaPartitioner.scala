@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.pipeline.kafka.extended
+package com.thenetcircle.event_bus.plots.kafka.extended
 
 import java.util
 

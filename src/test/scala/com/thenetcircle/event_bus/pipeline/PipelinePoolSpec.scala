@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.pipeline
 import akka.kafka.{ConsumerSettings, ProducerSettings}
 import com.thenetcircle.event_bus.pipeline.model.PipelineType.PipelineType
 import com.thenetcircle.event_bus.pipeline.kafka._
-import com.thenetcircle.event_bus.pipeline.kafka.extended.{
+import com.thenetcircle.event_bus.plots.kafka.extended.{
   EventSerializer,
   KafkaKeyDeserializer,
   KafkaKeySerializer

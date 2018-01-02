@@ -15,10 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.pipeline.kafka
+package com.thenetcircle.event_bus.plots.kafka.extended
+
 import com.thenetcircle.event_bus.Event
 import com.thenetcircle.event_bus.event_extractor.EventFormat
-import com.thenetcircle.event_bus.pipeline.kafka.KafkaKey._
+import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKey._
 
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {
   def this(data: KafkaKeyData) {
