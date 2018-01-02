@@ -1,8 +1,5 @@
 import Dependencies._
 
-def itFilter(name: String): Boolean = name endsWith "ISpec"
-def unitFilter(name: String): Boolean = (name endsWith "Spec") && !itFilter(name)
-
 lazy val eventBus = (project in file("."))
   .enablePlugins(JavaAppPackaging, SbtAspectj, BuildInfoPlugin)
   .settings(
@@ -12,12 +9,6 @@ lazy val eventBus = (project in file("."))
     libraryDependencies ++= mainDependencies,
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value
       .mkString(" ")}""""
-  )
-  .configs(IntegrationTest)
-  .settings(
-    Defaults.itSettings,
-    testOptions in Test := Seq(Tests.Filter(unitFilter)),
-    testOptions in IntegrationTest := Seq(Tests.Filter(itFilter))
   )
 
 lazy val stressTest = (project in file("stresstest"))
