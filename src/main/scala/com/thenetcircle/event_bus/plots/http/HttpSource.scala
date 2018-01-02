@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.plots.http
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
@@ -36,7 +37,9 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-case class HttpSourceSettings(maxConnections: Int, perConnectionParallelism: Int)
+case class HttpSourceSettings(maxConnections: Int,
+                              perConnectionParallelism: Int,
+                              commitParallelism: Int)
 
 class HttpSource(
     settings: HttpSourceSettings,
@@ -45,7 +48,7 @@ class HttpSource(
     extends ISource
     with StrictLogging {
 
-  override val plotGraph: Source[Event, _] =
+  override val outputGraph: Source[Event, NotUsed] =
     httpBind
       .flatMapMerge(
         settings.maxConnections,
@@ -79,6 +82,19 @@ class HttpSource(
           })
         }
       )
+      .mapMaterializedValue(m => NotUsed)
+
+  override def ackGraph: Flow[Event, Event, NotUsed] =
+    Flow[Event]
+      .filter(_.committer.isDefined)
+      .mapAsync(settings.commitParallelism)(event => {
+        event.committer.get
+          .commit()
+          .map(_ => {
+            logger.debug(s"Event(${event.metadata.uuid}, ${event.metadata.name}) is committed.")
+            event
+          })(materializer.executionContext)
+      })
 }
 
 object HttpSource extends StrictLogging {
@@ -97,7 +113,8 @@ object HttpSource extends StrictLogging {
 
       val settings = HttpSourceSettings(
         mergedConfig.as[Int]("max-connections"),
-        mergedConfig.as[Int]("pre-connection-parallelism")
+        mergedConfig.as[Int]("pre-connection-parallelism"),
+        mergedConfig.as[Int]("commit-parallelism")
       )
 
       val rootConfig = system.settings.config

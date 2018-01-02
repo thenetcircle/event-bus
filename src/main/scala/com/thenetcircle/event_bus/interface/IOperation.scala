@@ -16,5 +16,12 @@
  */
 
 package com.thenetcircle.event_bus.interface
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.Event
 
-trait IOperation {}
+trait IOperation {
+
+  def processGraph: Flow[Event, Event, NotUsed]
+
+}

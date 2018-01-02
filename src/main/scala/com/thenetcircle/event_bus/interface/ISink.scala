@@ -23,6 +23,6 @@ import com.thenetcircle.event_bus.Event
 
 trait ISink {
 
-  def plotGraph: Flow[Event, Event, NotUsed]
+  def inputGraph: Flow[Event, Event, NotUsed]
 
 }
