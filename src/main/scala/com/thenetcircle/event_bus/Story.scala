@@ -18,8 +18,8 @@
 package com.thenetcircle.event_bus
 
 import akka.NotUsed
-import akka.stream.ClosedShape
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink}
+import akka.stream.SourceShape
+import akka.stream.scaladsl.{Flow, GraphDSL, Sink, Source}
 import com.thenetcircle.event_bus.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.interface._
 import com.typesafe.config.Config
@@ -29,7 +29,8 @@ class Story(settings: StorySettings,
             sink: ISink,
             operations: List[IOperation] = List.empty,
             fallbacks: List[ISink] = List.empty,
-            initStatus: StoryStatus = StoryStatus.INIT) {
+            initStatus: StoryStatus = StoryStatus.INIT)
+    extends ISource {
 
   private var status: StoryStatus = initStatus
 
@@ -37,23 +38,27 @@ class Story(settings: StorySettings,
     status = _status
   }
 
-  private val internalStream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
+  override def outputGraph = Source.fromGraph(
     GraphDSL
       .create() { implicit builder =>
         import GraphDSL.Implicits._
 
+        val ackShape = builder.add(source.ackGraph)
+
         // format: off
 
-        source.outputGraph ~> sink.inputGraph ~> source.ackGraph ~> Sink.ignore
+        source.outputGraph ~> sink.inputGraph ~> ackShape.in
 
         // format: on
 
-        ClosedShape
+        SourceShape(ackShape.out)
       }
       .named(settings.name)
   )
 
-  def start(): NotUsed = internalStream.run()
+  override def ackGraph = Flow[Event]
+
+  def start(): NotUsed = outputGraph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
 }
 
 object Story {
