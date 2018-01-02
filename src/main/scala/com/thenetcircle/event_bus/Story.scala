@@ -17,6 +17,9 @@
 
 package com.thenetcircle.event_bus
 
+import akka.NotUsed
+import akka.stream.ClosedShape
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink}
 import com.thenetcircle.event_bus.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.interface._
 import com.typesafe.config.Config
@@ -24,7 +27,8 @@ import com.typesafe.config.Config
 class Story(settings: StorySettings,
             source: ISource,
             sink: ISink,
-            opsList: List[IOperation] = List.empty,
+            operations: List[IOperation] = List.empty,
+            fallbacks: List[ISink] = List.empty,
             initStatus: StoryStatus = StoryStatus.INIT) {
 
   private var status: StoryStatus = initStatus
@@ -33,8 +37,23 @@ class Story(settings: StorySettings,
     status = _status
   }
 
-  def run(): Unit = ???
+  private val internalStream: RunnableGraph[NotUsed] = RunnableGraph.fromGraph(
+    GraphDSL
+      .create() { implicit builder =>
+        import GraphDSL.Implicits._
 
+        // format: off
+
+        source.outputGraph ~> sink.inputGraph ~> source.ackGraph ~> Sink.ignore
+
+        // format: on
+
+        ClosedShape
+      }
+      .named(settings.name)
+  )
+
+  def start(): NotUsed = internalStream.run()
 }
 
 object Story {
@@ -43,7 +62,7 @@ object Story {
 
 }
 
-case class StorySettings(parallelism: Int)
+case class StorySettings(name: String)
 
 object StoryStatus extends Enumeration {
   type StoryStatus = Value

@@ -22,6 +22,6 @@ import com.thenetcircle.event_bus.Event
 
 trait IOperation {
 
-  def processGraph: Flow[Event, Event, NotUsed]
+  def operatingGraph: Flow[Event, Event, NotUsed]
 
 }

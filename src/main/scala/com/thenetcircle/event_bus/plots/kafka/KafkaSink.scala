@@ -28,11 +28,7 @@ import com.thenetcircle.event_bus.plots.kafka.extended.{KafkaKey, KafkaPartition
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
-import scala.concurrent.duration.FiniteDuration
-
-case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue],
-                             closeTimeout: Option[FiniteDuration],
-                             parallelism: Option[Int])
+case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
 class KafkaSink(settings: KafkaSinkSettings) extends ISink with StrictLogging {
 
