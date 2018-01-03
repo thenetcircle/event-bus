@@ -21,14 +21,15 @@ import java.text.SimpleDateFormat
 
 import io.jvm.uuid.UUID
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event.extractor.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.event.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor._
 import com.typesafe.scalalogging.StrictLogging
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ActivityStreamsExtractor extends EventExtractor with StrictLogging {
+class ActivityStreamsExtractor extends IExtractor with StrictLogging {
 
   import ActivityStreamsProtocol._
 
@@ -36,7 +37,7 @@ class ActivityStreamsExtractor extends EventExtractor with StrictLogging {
 
   override def extract(
       data: ByteString
-  )(implicit executor: ExecutionContext): Future[ExtractedData] = Future {
+  )(implicit executor: ExecutionContext): Future[ExtractedEvent] = Future {
     try {
       val jsonAst  = data.utf8String.parseJson
       val activity = jsonAst.convertTo[Activity]
@@ -57,8 +58,8 @@ class ActivityStreamsExtractor extends EventExtractor with StrictLogging {
         actor => Some(EventActor(actor.id.getOrElse(""), actor.objectType.getOrElse("")))
       )
 
-      ExtractedData(body = EventBody(data, format),
-                    metadata = EventMetaData(uuid, name, published, provider, actor))
+      ExtractedEvent(body = EventBody(data, format),
+                     metadata = EventMetaData(uuid, name, published, provider, actor))
     } catch {
       case ex: Throwable =>
         logger.warn(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")

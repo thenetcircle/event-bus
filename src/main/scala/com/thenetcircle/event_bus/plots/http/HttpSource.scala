@@ -26,11 +26,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.event.extractor.{EventExtractor, EventSourceType, ExtractedData}
+import com.thenetcircle.event_bus.event.extractor.{IExtractor}
 import com.thenetcircle.event_bus.story.interface.ISource
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.thenetcircle.event_bus.ChannelResolver
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.{Event, EventSourceType, ExtractedEvent}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -45,7 +45,7 @@ case class HttpSourceSettings(maxConnections: Int,
 class HttpSource(
     settings: HttpSourceSettings,
     httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _]
-)(implicit val system: ActorSystem, materializer: Materializer, eventExtractor: EventExtractor)
+)(implicit val system: ActorSystem, materializer: Materializer, eventExtractor: IExtractor)
     extends ISource
     with StrictLogging {
 
@@ -105,7 +105,7 @@ object HttpSource extends StrictLogging {
 
   def apply(config: Config)(implicit system: ActorSystem,
                             materializer: Materializer,
-                            eventExtractor: EventExtractor): HttpSource = {
+                            eventExtractor: IExtractor): HttpSource = {
     try {
 
       val mergedConfig: Config =
@@ -161,15 +161,15 @@ object HttpSource extends StrictLogging {
     *
     * '''Cancels when''' when any downstreams cancel
     */
-  final class HttpTransformer(eventExtractor: EventExtractor)(implicit system: ActorSystem,
-                                                              materializer: Materializer)
+  final class HttpTransformer(eventExtractor: IExtractor)(implicit system: ActorSystem,
+                                                          materializer: Materializer)
       extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
     // TODO: move it to param
     implicit val executionContext: ExecutionContext =
       materializer.executionContext
 
-    val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
+    val unmarshaller: Unmarshaller[HttpEntity, ExtractedEvent] =
       Unmarshaller.byteStringUnmarshaller.andThen(
         Unmarshaller.apply(_ => data => eventExtractor.extract(data))
       )
@@ -226,8 +226,8 @@ object HttpSource extends StrictLogging {
         }
 
         def getEventExtractingCallback(responsePromise: Promise[HttpResponse],
-                                       tracingId: Long): AsyncCallback[Try[ExtractedData]] =
-          getAsyncCallback[Try[ExtractedData]] {
+                                       tracingId: Long): AsyncCallback[Try[ExtractedEvent]] =
+          getAsyncCallback[Try[ExtractedEvent]] {
             case Success(extractedData) =>
               tracer.record(tracingId, TracingSteps.EXTRACTED)
 

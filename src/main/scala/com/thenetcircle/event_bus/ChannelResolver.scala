@@ -1,5 +1,5 @@
 package com.thenetcircle.event_bus
-import com.thenetcircle.event_bus.event.extractor.EventMetaData
+import com.thenetcircle.event_bus.event.EventMetaData
 
 class ChannelResolver {}
 

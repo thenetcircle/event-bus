@@ -16,8 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.plots.kafka.extended
-import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.EventFormat
+import com.thenetcircle.event_bus.event.{Event, EventFormat}
 import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKey._
 
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {

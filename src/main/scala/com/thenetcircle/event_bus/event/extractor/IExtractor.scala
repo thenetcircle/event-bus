@@ -18,10 +18,12 @@
 package com.thenetcircle.event_bus.event.extractor
 
 import akka.util.ByteString
+import com.thenetcircle.event_bus.event.{EventFormat, ExtractedEvent}
 import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
+
 import scala.concurrent.{ExecutionContext, Future}
 
-trait EventExtractor {
+trait IExtractor {
 
   /** Format of the extracted data
     *
@@ -31,25 +33,25 @@ trait EventExtractor {
 
   /** Extract metadata from data accroding to Format
     *
-    * @return ExtractedData
+    * @return ExtractedEvent
     */
-  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedData]
+  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedEvent]
 
 }
 
-object EventExtractor {
+object IExtractor {
 
   /** Default event extractor, based on ActivityStreams 1.0
     * http://activitystrea.ms/specs/json/1.0/
     */
-  implicit val activityStreamsExtractor: EventExtractor =
+  implicit val activityStreamsExtractor: IExtractor =
     new ActivityStreamsExtractor
 
-  /** Returns [[EventExtractor]] based on [[EventFormat]]
+  /** Returns [[IExtractor]] based on [[EventFormat]]
     *
     * @param format
     */
-  def apply(format: EventFormat): EventExtractor = format match {
+  def apply(format: EventFormat): IExtractor = format match {
     // case EventFormat.DefaultFormat => activityStreamsExtractor
     case _ => activityStreamsExtractor
   }

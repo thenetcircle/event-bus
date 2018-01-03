@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor._
 
 import scala.util.Random
