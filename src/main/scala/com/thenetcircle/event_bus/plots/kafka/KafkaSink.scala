@@ -37,7 +37,7 @@ class KafkaSink(settings: KafkaSinkSettings) extends ISink with StrictLogging {
   private val producerSettings = settings.producerSettings
     .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
 
-  override def inputGraph: Flow[Event, Event, NotUsed] =
+  override def graph: Flow[Event, Event, NotUsed] =
     Flow[Event]
       .map(event => {
         Message(getProducerRecordFromEvent(event), event)

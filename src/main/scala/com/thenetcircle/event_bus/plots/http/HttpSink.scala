@@ -93,7 +93,7 @@ class HttpSink(settings: HttpSinkSettings,
       }
   }
 
-  override def inputGraph: Flow[Event, Event, NotUsed] =
+  override def graph: Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 

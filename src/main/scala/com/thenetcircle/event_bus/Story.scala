@@ -18,52 +18,102 @@
 package com.thenetcircle.event_bus
 
 import akka.NotUsed
-import akka.stream.SourceShape
-import akka.stream.scaladsl.{Flow, GraphDSL, Sink, Source}
+import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
+import akka.stream.{FlowShape, Graph, SourceShape}
 import com.thenetcircle.event_bus.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.interface._
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
 
 class Story(settings: StorySettings,
             source: ISource,
             sink: ISink,
             operations: List[IOperation] = List.empty,
-            fallbacks: List[ISink] = List.empty,
+            fallback: Option[ISink] = None,
             initStatus: StoryStatus = StoryStatus.INIT)
-    extends ISource {
+    extends ISource
+    with StrictLogging {
 
+  val storyName                   = settings.name
   private var status: StoryStatus = initStatus
 
-  def updateStatus(_status: StoryStatus): Unit = {
+  private def updateStatus(_status: StoryStatus): Unit = {
     status = _status
   }
 
-  override def outputGraph = Source.fromGraph(
-    GraphDSL
-      .create() { implicit builder =>
-        import GraphDSL.Implicits._
+  def getStatus(): StoryStatus = status
 
-        val ackShape = builder.add(source.ackGraph)
+  var graphId = 0
+  private def decorateGraph(
+      graph: Graph[FlowShape[Event, Event], NotUsed]
+  ): Graph[FlowShape[Event, Event], NotUsed] = {
+    graphId = graphId + 1
+    Story.decorateGraph(graph, s"$storyName-$graphId", fallback)
+  }
 
-        // format: off
+  override val graph = Source
+    .fromGraph(
+      GraphDSL
+        .create() { implicit builder =>
+          import GraphDSL.Implicits._
 
-        source.outputGraph ~> sink.inputGraph ~> ackShape.in
+          // variables
+          val sourceGraph     = source.graph
+          var operationGraphs = Flow[Event]
+          operations.foreach(op => operationGraphs = operationGraphs.via(decorateGraph(op.graph)))
+          val sinkGraph = decorateGraph(sink.graph)
+          val ackGraph  = builder.add(decorateGraph(source.ackGraph))
 
-        // format: on
+          // workflow
+          sourceGraph ~> operationGraphs ~> sinkGraph ~> ackGraph.in
 
-        SourceShape(ackShape.out)
-      }
-      .named(settings.name)
-  )
+          // ports
+          SourceShape(ackGraph.out)
+        }
+    )
+    .named(storyName)
 
-  override def ackGraph = Flow[Event]
+  override val ackGraph = Flow[Event]
 
-  def start(): NotUsed = outputGraph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
+  def start(): NotUsed = graph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
 }
 
-object Story {
+object Story extends StrictLogging {
 
   def apply(config: Config): Story = ???
+
+  def decorateGraph(graph: Graph[FlowShape[Event, Event], NotUsed],
+                    graphId: String,
+                    fallback: Option[ISink] = None): Graph[FlowShape[Event, Event], NotUsed] = {
+
+    Flow.fromGraph(
+      GraphDSL
+        .create() { implicit builder =>
+          import GraphDSL.Implicits._
+
+          // variables
+          val mainGraph  = builder.add(graph)
+          val checkGraph = builder.add(new Partition[Event](2, e => if (e.isFailed()) 1 else 0))
+          var failedGraph = Flow[Event].map(_event => {
+            val logMessage =
+              s"Event ${_event.uniqueName} was processing failed on graph: $graphId." +
+                (if (fallback.isDefined) " Sending to fallback." else "")
+            logger.debug(logMessage)
+            _event
+          })
+          fallback.foreach(f => failedGraph = failedGraph.via(f.graph))
+
+          // workflow
+          // format: off
+          mainGraph ~> checkGraph.in
+                       checkGraph.out(1) ~> failedGraph
+          // format: on
+
+          // ports
+          FlowShape(mainGraph.in, checkGraph.out(0))
+        }
+    )
+  }
 
 }
 
@@ -72,10 +122,10 @@ case class StorySettings(name: String)
 object StoryStatus extends Enumeration {
   type StoryStatus = Value
 
-  val INIT = Value(1, "INIT")
+  val INIT      = Value(1, "INIT")
   val DEPLOYING = Value(2, "DEPLOYING")
-  val RUNNING = Value(3, "RUNNING")
-  val FAILED = Value(4, "FAILED")
-  val STOPPING = Value(5, "STOPPING")
-  val STOPPED = Value(6, "STOPPED")
+  val RUNNING   = Value(3, "RUNNING")
+  val FAILED    = Value(4, "FAILED")
+  val STOPPING  = Value(5, "STOPPING")
+  val STOPPED   = Value(6, "STOPPED")
 }

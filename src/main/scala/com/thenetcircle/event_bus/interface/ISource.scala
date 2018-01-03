@@ -18,13 +18,13 @@
 package com.thenetcircle.event_bus.interface
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.{FlowShape, Graph, SourceShape}
 import com.thenetcircle.event_bus.Event
 
 trait ISource {
 
-  def outputGraph: Source[Event, NotUsed]
+  def graph: Graph[SourceShape[Event], NotUsed]
 
-  def ackGraph: Flow[Event, Event, NotUsed]
+  def ackGraph: Graph[FlowShape[Event, Event], NotUsed]
 
 }

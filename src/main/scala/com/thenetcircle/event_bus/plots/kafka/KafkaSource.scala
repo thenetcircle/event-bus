@@ -47,10 +47,8 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit materializer: Material
     extends ISource
     with StrictLogging {
 
-  require(
-    settings.topics.isDefined || settings.topicPattern.isDefined,
-    "The outlet of KafkaPipeline needs to subscribe topics"
-  )
+  require(settings.topics.isDefined || settings.topicPattern.isDefined,
+          "The outlet of KafkaPipeline needs to subscribe topics")
 
   private val subscription: AutoSubscription =
     if (settings.topics.isDefined) {
@@ -61,7 +59,7 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit materializer: Material
 
   private val consumerSettings = settings.consumerSettings.withGroupId(settings.groupId)
 
-  override def outputGraph: Source[Event, NotUsed] = {
+  override def graph: Source[Event, NotUsed] = {
 
     implicit val executionContext: ExecutionContext = materializer.executionContext
 
@@ -90,19 +88,17 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit materializer: Material
       .withAttributes(supervisionStrategy(resumingDecider))
       .map {
         case (msg, extractedData) =>
-          Event(
-            metadata = extractedData.metadata,
-            body = extractedData.body,
-            channel = extractedData.channel.getOrElse(msg.record.topic()),
-            sourceType = EventSourceType.Kafka,
-            Long.MinValue,
-            context = Map("kafkaCommittableOffset" -> msg.committableOffset),
-            committer = Some(new EventCommitter {
-              override def commit(): Future[Done] = {
-                msg.committableOffset.commitScaladsl()
-              }
-            })
-          )
+          Event(metadata = extractedData.metadata,
+                body = extractedData.body,
+                channel = extractedData.channel.getOrElse(msg.record.topic()),
+                sourceType = EventSourceType.Kafka,
+                Long.MinValue,
+                context = Map("kafkaCommittableOffset" -> msg.committableOffset),
+                committer = Some(new EventCommitter {
+                  override def commit(): Future[Done] = {
+                    msg.committableOffset.commitScaladsl()
+                  }
+                }))
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
   }
@@ -123,14 +119,12 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit materializer: Material
         }
       ) {
         case ((batchCommitter, eventList), event) =>
-          (
-            if (event.hasContext("kafkaCommittableOffset"))
-              batchCommitter.updated(
-                event.context("kafkaCommittableOffset").asInstanceOf[CommittableOffset]
-              )
-            else batchCommitter,
-            eventList.+:(event)
-          )
+          (if (event.hasContext("kafkaCommittableOffset"))
+             batchCommitter.updated(
+               event.context("kafkaCommittableOffset").asInstanceOf[CommittableOffset]
+             )
+           else batchCommitter,
+           eventList.+:(event))
       }
       .mapAsync(settings.commitParallelism) {
         case (batchCommitter, eventList) =>

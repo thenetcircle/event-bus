@@ -38,4 +38,8 @@ case class Event(metadata: EventMetaData,
   def addContext(key: String, value: Any): Event =
     copy(context = context + (key -> value))
 
+  def isFailed(): Boolean = false
+
+  def uniqueName: String = ""
+
 }

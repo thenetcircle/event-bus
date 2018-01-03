@@ -18,11 +18,11 @@
 package com.thenetcircle.event_bus.interface
 
 import akka.NotUsed
-import akka.stream.scaladsl.Flow
+import akka.stream.{FlowShape, Graph}
 import com.thenetcircle.event_bus.Event
 
 trait ISink {
 
-  def inputGraph: Flow[Event, Event, NotUsed]
+  def graph: Graph[FlowShape[Event, Event], NotUsed]
 
 }
