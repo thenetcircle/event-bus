@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.plots.http
+package com.thenetcircle.event_bus.impl.http
 
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 

@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.plots.http
+package com.thenetcircle.event_bus.impl.http
 
 import akka.NotUsed
 import akka.actor.ActorSystem
@@ -29,7 +29,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.plots.http.HttpSource.{failedResponse, successfulResponse}
+import com.thenetcircle.event_bus.impl.http.HttpSource.{failedResponse, successfulResponse}
 import com.thenetcircle.event_bus.story.interface.ISource
 import com.thenetcircle.event_bus.tracing.Tracing
 import com.typesafe.config.Config

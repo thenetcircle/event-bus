@@ -15,16 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.plots.kafka.extended
+package com.thenetcircle.event_bus.impl.kafka.extended
 
 import java.util
 
-import org.apache.kafka.common.serialization.Deserializer
+import com.thenetcircle.event_bus.event.Event
+import org.apache.kafka.common.serialization.Serializer
 
-class KafkaKeyDeserializer extends Deserializer[KafkaKey] {
-  override def deserialize(topic: String, data: Array[Byte]): KafkaKey =
-    new KafkaKey(new String(data, "UTF-8"))
+class EventSerializer extends Serializer[Event] {
+  override def serialize(topic: String, data: Event): Array[Byte] =
+    data.body.data.toArray
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
-  override def close(): Unit = {}
+  override def close(): Unit                                                 = {}
 }

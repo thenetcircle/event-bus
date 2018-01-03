@@ -1,9 +1,10 @@
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.impl.kafka
+
 import com.thenetcircle.event_bus.event.EventMetaData
 
-class ChannelResolver {}
+class TopicResolver {}
 
-object ChannelResolver {
+object TopicResolver {
 
   val defaultChannel = "event-default"
 
