@@ -15,23 +15,32 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.pipeline.model
-
+package com.thenetcircle.event_bus.extractor
 import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
-object PipelineType extends Enumeration {
-  type PipelineType = Value
-
-  val Kafka = Value(1, "Kafka")
-
-  def apply(name: String): PipelineType = name.toUpperCase match {
-    case "KAFKA" => Kafka
+sealed trait EventFormat
+object EventFormat {
+  type DefaultFormat = DefaultFormat.type
+  object DefaultFormat extends EventFormat {
+    override def toString: String = "default"
   }
 
-  implicit val pipelineTypeReader: ValueReader[PipelineType] =
-    new ValueReader[PipelineType] {
+  type TestFormat = TestFormat.type
+  object TestFormat extends EventFormat {
+    override def toString: String = "test"
+  }
+
+  def apply(formatString: String): EventFormat =
+    formatString.toLowerCase match {
+      case "default" => DefaultFormat
+      case "test"    => TestFormat
+      case _         => DefaultFormat
+    }
+
+  implicit val eventFormatReader: ValueReader[EventFormat] =
+    new ValueReader[EventFormat] {
       override def read(config: Config, path: String) =
-        apply(config.getString(path))
+        EventFormat(config.getString(path))
     }
 }

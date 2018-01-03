@@ -25,10 +25,10 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event_extractor._
+import com.thenetcircle.event_bus.extractor._
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.thenetcircle.event_bus._
-import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.extractor.EventFormat.DefaultFormat
 
 import scala.concurrent.duration._
 
@@ -114,24 +114,22 @@ class HttpReceiverSpec extends AkkaStreamSpec {
   private def getReceivers: (TestPublisher.Probe[HttpRequest],
                              TestSubscriber.Probe[HttpResponse],
                              TestSubscriber.Probe[Event]) = {
-    val settings = HttpReceiverSettings(
-      "test-receiver",
-      ReceiverPriority.Normal,
-      1000,
-      10,
-      EventFormat.DefaultFormat,
-      ServerSettings(system),
-      "127.0.0.1",
-      8888
-    )
+    val settings = HttpReceiverSettings("test-receiver",
+                                        ReceiverPriority.Normal,
+                                        1000,
+                                        10,
+                                        EventFormat.DefaultFormat,
+                                        ServerSettings(system),
+                                        "127.0.0.1",
+                                        8888)
 
-    val in = TestPublisher.probe[HttpRequest]()
+    val in   = TestPublisher.probe[HttpRequest]()
     val out0 = TestSubscriber.probe[HttpResponse]()
 
     val handler = Source.single(
       Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0), Source.fromPublisher(in))
     )
-    val hep = new HttpReceiver(settings, handler)
+    val hep  = new HttpReceiver(settings, handler)
     val out1 = hep.stream.toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)

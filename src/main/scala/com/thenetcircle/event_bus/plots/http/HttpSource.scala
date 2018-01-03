@@ -26,7 +26,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.event_extractor.{EventExtractor, EventSourceType, ExtractedData}
+import com.thenetcircle.event_bus.extractor.{EventExtractor, EventSourceType, ExtractedData}
 import com.thenetcircle.event_bus.interface.ISource
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
 import com.thenetcircle.event_bus.{ChannelResolver, Event}
@@ -50,26 +50,26 @@ class HttpSource(
 
   override val graph: Source[Event, NotUsed] =
     httpBind
-      .flatMapMerge(
-        settings.maxConnections,
-        httpBindFlow => {
-          Source.fromGraph(GraphDSL.create() {
-            implicit builder =>
-              import GraphDSL.Implicits._
+      .flatMapMerge(settings.maxConnections,
+                    httpBindFlow => {
+                      Source.fromGraph(GraphDSL.create() {
+                        implicit builder =>
+                          import GraphDSL.Implicits._
 
-              val requester = builder.add(httpBindFlow)
-              val transformer =
-                builder.add(new HttpSource.HttpTransformer(eventExtractor))
+                          val requester = builder.add(httpBindFlow)
+                          val transformer =
+                            builder.add(new HttpSource.HttpTransformer(eventExtractor))
 
-              val unpackFlow =
-                Flow[Future[HttpResponse]].mapAsync(settings.perConnectionParallelism)(identity)
-              val debugFlow = Flow[HttpRequest].map(request => {
-                logger.debug(s"received a new Request")
-                request
-              })
+                          val unpackFlow =
+                            Flow[Future[HttpResponse]]
+                              .mapAsync(settings.perConnectionParallelism)(identity)
+                          val debugFlow = Flow[HttpRequest].map(request => {
+                            logger.debug(s"received a new Request")
+                            request
+                          })
 
-              /** ----- work flow ----- */
-              // format: off
+                          /** ----- work flow ----- */
+                          // format: off
               // since Http().bind using join, The direction is a bit different
 
               requester ~> debugFlow ~> transformer.in
@@ -78,10 +78,9 @@ class HttpSource(
 
               // format: on
 
-              SourceShape(transformer.out1)
-          })
-        }
-      )
+                          SourceShape(transformer.out1)
+                      })
+                    })
       .mapMaterializedValue(m => NotUsed)
 
   override def ackGraph: Flow[Event, Event, NotUsed] =
@@ -111,11 +110,9 @@ object HttpSource extends StrictLogging {
       val mergedConfig: Config =
         config.withFallback(system.settings.config.getConfig("event-bus.source.http"))
 
-      val settings = HttpSourceSettings(
-        mergedConfig.as[Int]("max-connections"),
-        mergedConfig.as[Int]("pre-connection-parallelism"),
-        mergedConfig.as[Int]("commit-parallelism")
-      )
+      val settings = HttpSourceSettings(mergedConfig.as[Int]("max-connections"),
+                                        mergedConfig.as[Int]("pre-connection-parallelism"),
+                                        mergedConfig.as[Int]("commit-parallelism"))
 
       val rootConfig = system.settings.config
       val serverSettings: ServerSettings =
@@ -125,7 +122,7 @@ object HttpSource extends StrictLogging {
           ServerSettings(rootConfig)
         }
       val interface = mergedConfig.as[String]("interface")
-      val port = mergedConfig.as[Int]("port")
+      val port      = mergedConfig.as[Int]("port")
 
       logger.info(s"Creating a new HttpSource(${interface}:${port}) with settings ${settings}")
 
@@ -176,9 +173,9 @@ object HttpSource extends StrictLogging {
         Unmarshaller.apply(_ => data => eventExtractor.extract(data))
       )
 
-    val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
+    val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
     val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
-    val out1: Outlet[Event] = Outlet("outlet-event")
+    val out1: Outlet[Event]                = Outlet("outlet-event")
 
     override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
       new FanOutShape2(in, out0, out1)
@@ -233,13 +230,13 @@ object HttpSource extends StrictLogging {
             case Success(extractedData) =>
               tracer.record(tracingId, TracingSteps.EXTRACTED)
 
-              val event = Event(
-                extractedData.metadata,
-                extractedData.body,
-                extractedData.channel.getOrElse(ChannelResolver.getChannel(extractedData.metadata)),
-                EventSourceType.Http,
-                tracingId
-              ).withCommitter(() => {
+              val event = Event(extractedData.metadata,
+                                extractedData.body,
+                                extractedData.channel.getOrElse(
+                                  ChannelResolver.getChannel(extractedData.metadata)
+                                ),
+                                EventSourceType.Http,
+                                tracingId).withCommitter(() => {
                 tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
                 responsePromise.success(successfulResponse).future
               })

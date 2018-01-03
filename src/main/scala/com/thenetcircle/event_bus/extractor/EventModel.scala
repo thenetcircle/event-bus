@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.event_extractor
+package com.thenetcircle.event_bus.extractor
 
 import akka.util.ByteString
 import scala.concurrent.Future
@@ -49,7 +49,7 @@ case class EventActor(id: String, objectType: String)
 sealed trait EventSourceType
 object EventSourceType {
   case object Redis extends EventSourceType
-  case object AMQP extends EventSourceType
+  case object AMQP  extends EventSourceType
   case object Kafka extends EventSourceType
-  case object Http extends EventSourceType
+  case object Http  extends EventSourceType
 }

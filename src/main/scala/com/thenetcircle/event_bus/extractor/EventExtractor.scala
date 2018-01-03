@@ -15,10 +15,10 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.event_extractor
+package com.thenetcircle.event_bus.extractor
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event_extractor.activity_streams.ActivityStreamsExtractor
+import com.thenetcircle.event_bus.extractor.activitystreams.ActivityStreamsExtractor
 import scala.concurrent.{ExecutionContext, Future}
 
 trait EventExtractor {

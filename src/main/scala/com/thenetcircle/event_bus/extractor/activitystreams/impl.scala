@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.event_extractor.activity_streams
+package com.thenetcircle.event_bus.extractor.activitystreams
 
 import spray.json._
 
@@ -43,5 +43,5 @@ case class ActivityObject(id: Option[String],
 
 object ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val activityObjectFormat = jsonFormat2(ActivityObject)
-  implicit val activityFormat = jsonFormat6(Activity)
+  implicit val activityFormat       = jsonFormat6(Activity)
 }

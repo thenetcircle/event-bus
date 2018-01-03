@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.plots.kafka.extended
 
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.event_extractor.EventFormat
+import com.thenetcircle.event_bus.extractor.EventFormat
 import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKey._
 
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {
@@ -47,7 +47,7 @@ object KafkaKey {
     */
   def parseRawData(rawData: String): Option[KafkaKeyData] =
     if (rawData.charAt(rawData.length - 1) == '|') {
-      val parsed = rawData.split('|')
+      val parsed      = rawData.split('|')
       val eventFormat = EventFormat(parsed(0))
 
       val tracingId =

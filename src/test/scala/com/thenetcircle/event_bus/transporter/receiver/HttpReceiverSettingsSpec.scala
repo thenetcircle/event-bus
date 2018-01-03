@@ -16,7 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.transporter.receiver
-import com.thenetcircle.event_bus.event_extractor.EventFormat
+import com.thenetcircle.event_bus.extractor.EventFormat
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
 import com.typesafe.config.ConfigFactory
 

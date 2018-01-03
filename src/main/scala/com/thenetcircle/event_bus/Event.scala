@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus
 
-import com.thenetcircle.event_bus.event_extractor._
+import com.thenetcircle.event_bus.extractor._
 import scala.concurrent.Future
 
 case class Event(metadata: EventMetaData,

@@ -27,8 +27,8 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.event_extractor.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.event_extractor.{EventCommitter, EventExtractor, EventSourceType}
+import com.thenetcircle.event_bus.extractor.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.extractor.{EventCommitter, EventExtractor, EventSourceType}
 import com.thenetcircle.event_bus.interface.ISource
 import com.typesafe.scalalogging.StrictLogging
 

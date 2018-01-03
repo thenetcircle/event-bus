@@ -25,7 +25,7 @@ import akka.http.scaladsl.settings.ServerSettings
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.event_extractor.EventFormat
+import com.thenetcircle.event_bus.extractor.EventFormat
 import com.thenetcircle.event_bus.pipeline._
 import com.thenetcircle.event_bus.pipeline.model._
 import com.thenetcircle.event_bus.testkit.AkkaStreamSpec
@@ -41,10 +41,10 @@ class TransporterSpec extends AkkaStreamSpec {
   behavior of "Transporter"
 
   it should "be delivered according to the priority of the Receiver" in {
-    val eventsCount = 20000
-    val testLowEvent = createTestEvent("testEvent1")
+    val eventsCount     = 20000
+    val testLowEvent    = createTestEvent("testEvent1")
     val testNormalEvent = createTestEvent("testEvent2")
-    val testHighEvent = createTestEvent("testEvent3")
+    val testHighEvent   = createTestEvent("testEvent3")
 
     val testPipelinePort = TestSubscriber.probe[Event]()
 
@@ -61,16 +61,12 @@ class TransporterSpec extends AkkaStreamSpec {
     val testHighSource =
       Source.fromIterator(() => Seq.fill(eventsCount)(testHighEvent).iterator)
 
-    createTransporter(
-      Vector(
-        (ReceiverPriority.Low, testLowSource1),
-        (ReceiverPriority.Low, testLowSource2),
-        (ReceiverPriority.High, testHighSource),
-        (ReceiverPriority.Normal, testNormalSource1),
-        (ReceiverPriority.Normal, testNormalSource2)
-      ),
-      Vector(Sink.fromSubscriber(testPipelinePort))
-    ).run()
+    createTransporter(Vector((ReceiverPriority.Low, testLowSource1),
+                             (ReceiverPriority.Low, testLowSource2),
+                             (ReceiverPriority.High, testHighSource),
+                             (ReceiverPriority.Normal, testNormalSource1),
+                             (ReceiverPriority.Normal, testNormalSource2)),
+                      Vector(Sink.fromSubscriber(testPipelinePort))).run()
 
     var collected = Seq.empty[Event]
     for (_ <- 1 to eventsCount) {
@@ -78,9 +74,9 @@ class TransporterSpec extends AkkaStreamSpec {
       collected :+= testPipelinePort.expectNext()
     }
 
-    val lows = collected.count(_ == testLowEvent).toDouble
+    val lows    = collected.count(_ == testLowEvent).toDouble
     val normals = collected.count(_ == testNormalEvent).toDouble
-    val highs = collected.count(_ == testHighEvent).toDouble
+    val highs   = collected.count(_ == testHighEvent).toDouble
 
     (highs / lows).round shouldEqual 6
     (highs / normals).round shouldEqual 2
@@ -90,11 +86,9 @@ class TransporterSpec extends AkkaStreamSpec {
   it should "commit event after transported" in {
     val testPublisher = TestPublisher.probe[Event]()
 
-    createTransporter(
-      Vector((ReceiverPriority.Normal, Source.fromPublisher(testPublisher))),
-      Vector(Sink.ignore),
-      commitParallelism = 10
-    ).run()
+    createTransporter(Vector((ReceiverPriority.Normal, Source.fromPublisher(testPublisher))),
+                      Vector(Sink.ignore),
+                      commitParallelism = 10).run()
 
     var result = new AtomicInteger(0)
 
@@ -127,11 +121,9 @@ class TransporterSpec extends AkkaStreamSpec {
     val testSink2 = TestSubscriber.probe[Event]()
 
     createTransporter(
-      Vector(
-        (ReceiverPriority.High, testSource1),
-        (ReceiverPriority.Normal, testSource2),
-        (ReceiverPriority.Low, testSource3)
-      ),
+      Vector((ReceiverPriority.High, testSource1),
+             (ReceiverPriority.Normal, testSource2),
+             (ReceiverPriority.Low, testSource3)),
       Vector(Sink.fromSubscriber(testSink1), Sink.fromSubscriber(testSink2)),
       commitParallelism = 10,
       transportParallelism = 2
@@ -156,50 +148,48 @@ class TransporterSpec extends AkkaStreamSpec {
       commitParallelism: Int = 1,
       transportParallelism: Int = 1
   )(implicit system: ActorSystem, materializer: Materializer): Transporter = {
-    val receiverSettings = HttpReceiverSettings(
-      "TestHttpReceiver",
-      ReceiverPriority.Normal,
-      100,
-      10,
-      EventFormat.DefaultFormat,
-      ServerSettings(system),
-      "localhost",
-      8888
-    )
+    val receiverSettings = HttpReceiverSettings("TestHttpReceiver",
+                                                ReceiverPriority.Normal,
+                                                100,
+                                                10,
+                                                EventFormat.DefaultFormat,
+                                                ServerSettings(system),
+                                                "localhost",
+                                                8888)
 
     val testReceivers = testSources.map(
       _source =>
         new Receiver {
           override val settings: ReceiverSettings = new ReceiverSettings {
-            override val name = s"TestReceiver-${_source._1}"
-            override val priority = _source._1
+            override val name         = s"TestReceiver-${_source._1}"
+            override val priority     = _source._1
             override val receiverType = ReceiverType.HTTP
-            override val eventFormat = EventFormat.DefaultFormat
+            override val eventFormat  = EventFormat.DefaultFormat
           }
 
           override def stream: Source[Event, _] = _source._2
       }
     )
 
-    val settings = TransporterSettings(
-      "TestTransporter",
-      commitParallelism,
-      transportParallelism,
-      Vector(receiverSettings),
-      PipelinePool().getPipelineInlet(ConfigFactory.parseString(s"""
+    val settings = TransporterSettings("TestTransporter",
+                                       commitParallelism,
+                                       transportParallelism,
+                                       Vector(receiverSettings),
+                                       PipelinePool()
+                                         .getPipelineInlet(ConfigFactory.parseString(s"""
            |{
            |  name = TestPipeline
            |  inlet {}
            |}
-         """.stripMargin)).get,
-      None
-    )
+         """.stripMargin))
+                                         .get,
+                                       None)
 
     var currentSinkIndex = 0
-    val testPipeline = PipelinePool().getPipeline("TestPipeline").get
+    val testPipeline     = PipelinePool().getPipeline("TestPipeline").get
     val pipelineInlet = new PipelineInlet {
       override val pipeline: Pipeline = testPipeline
-      override val name: String = "TestPipelineInlet"
+      override val name: String       = "TestPipelineInlet"
       override val settings: PipelineInletSettings =
         new PipelineInletSettings {}
       override def stream(): Flow[Event, Event, NotUsed] = {
