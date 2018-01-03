@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.impl.kafka
+package com.thenetcircle.event_bus.connectors.kafka
 
 import akka.NotUsed
 import akka.kafka.ProducerMessage.Message
@@ -24,7 +24,7 @@ import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.story.interface.ISink
-import com.thenetcircle.event_bus.impl.kafka.extended.{KafkaKey, KafkaPartitioner}
+import com.thenetcircle.event_bus.connectors.kafka.extended.{KafkaKey, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
