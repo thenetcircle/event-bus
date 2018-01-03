@@ -15,13 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.story
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
-import akka.stream.{FlowShape, Graph, SourceShape}
-import com.thenetcircle.event_bus.StoryStatus.StoryStatus
-import com.thenetcircle.event_bus.interface._
+import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.interface._
+import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
@@ -34,16 +35,15 @@ class Story(settings: StorySettings,
     extends ISource
     with StrictLogging {
 
-  val storyName                   = settings.name
-  private var status: StoryStatus = initStatus
+  val storyName: String = settings.name
 
+  private var status: StoryStatus = initStatus
   private def updateStatus(_status: StoryStatus): Unit = {
     status = _status
   }
-
   def getStatus(): StoryStatus = status
 
-  var graphId = 0
+  private var graphId = 0
   private def decorateGraph(
       graph: Graph[FlowShape[Event, Event], NotUsed]
   ): Graph[FlowShape[Event, Event], NotUsed] = {
@@ -75,7 +75,8 @@ class Story(settings: StorySettings,
 
   override val ackGraph = Flow[Event]
 
-  def start(): NotUsed = graph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
+  def start()(implicit materializer: Materializer): NotUsed =
+    graph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
 }
 
 object Story extends StrictLogging {

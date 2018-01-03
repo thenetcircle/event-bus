@@ -21,15 +21,14 @@ import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream.ActorAttributes.supervisionStrategy
-import akka.stream.Materializer
 import akka.stream.Supervision.resumingDecider
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.extractor.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.extractor.{EventCommitter, EventExtractor, EventSourceType}
-import com.thenetcircle.event_bus.interface.ISource
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.extractor.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.event.extractor.{EventCommitter, EventExtractor, EventSourceType}
+import com.thenetcircle.event_bus.story.interface.ISource
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -43,7 +42,7 @@ case class KafkaSourceSettings(groupId: String,
                                topics: Option[Set[String]],
                                topicPattern: Option[String])
 
-class KafkaSource(settings: KafkaSourceSettings)(implicit materializer: Materializer)
+class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionContext)
     extends ISource
     with StrictLogging {
 
@@ -60,8 +59,6 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit materializer: Material
   private val consumerSettings = settings.consumerSettings.withGroupId(settings.groupId)
 
   override def graph: Source[Event, NotUsed] = {
-
-    implicit val executionContext: ExecutionContext = materializer.executionContext
 
     // TODO: maybe use one consumer for one partition
     Consumer

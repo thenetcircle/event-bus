@@ -17,23 +17,12 @@
 
 package com.thenetcircle.event_bus
 
-import akka.http.scaladsl.Http
-import com.thenetcircle.event_bus.dispatcher.{Dispatcher, DispatcherSettings}
-import com.thenetcircle.event_bus.pipeline.PipelinePool
-import com.thenetcircle.event_bus.tracing.Tracer
-import com.thenetcircle.event_bus.transporter.{Transporter, TransporterSettings}
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
-import kamon.Kamon
-import net.ceedubs.ficus.Ficus._
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext}
-
-object EventBus extends App with StrictLogging {
+object Runner extends App with StrictLogging {
 
   // Initialization
-  logger.info("Application is initializing.")
+  /*logger.info("Application is initializing.")
 
   Kamon.start()
   protected implicit val system = akka.actor.ActorSystem()
@@ -84,6 +73,6 @@ object EventBus extends App with StrictLogging {
         Dispatcher(dispatcherSettings).run()
         logger.info(s"Dispatcher ${dispatcherSettings.name} launched.")
       })
-  )
+  )*/
 
 }

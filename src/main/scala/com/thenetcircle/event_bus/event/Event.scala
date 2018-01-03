@@ -15,9 +15,9 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.event
 
-import com.thenetcircle.event_bus.extractor._
+import com.thenetcircle.event_bus.event.extractor._
 import scala.concurrent.Future
 
 case class Event(metadata: EventMetaData,

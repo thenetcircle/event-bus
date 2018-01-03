@@ -15,14 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.extractor
+package com.thenetcircle.event_bus.event.extractor
 
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.extractor.EventFormat.{DefaultFormat, TestFormat}
-import com.thenetcircle.event_bus.extractor.activitystreams.ActivityStreamsExtractor
-import com.thenetcircle.event_bus.testkit.AsyncUnitSpec
+import com.thenetcircle.event_bus.event.extractor.EventFormat.{DefaultFormat, TestFormat}
+import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
+import com.thenetcircle.event_bus.base.AsyncUnitSpec
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 

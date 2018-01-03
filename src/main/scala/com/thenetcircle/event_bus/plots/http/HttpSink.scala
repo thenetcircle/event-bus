@@ -27,8 +27,8 @@ import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.interface.ISink
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.interface.ISink
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 

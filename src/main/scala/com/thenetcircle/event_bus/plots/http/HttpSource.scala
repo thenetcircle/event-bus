@@ -26,10 +26,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.extractor.{EventExtractor, EventSourceType, ExtractedData}
-import com.thenetcircle.event_bus.interface.ISource
+import com.thenetcircle.event_bus.event.extractor.{EventExtractor, EventSourceType, ExtractedData}
+import com.thenetcircle.event_bus.story.interface.ISource
 import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
-import com.thenetcircle.event_bus.{ChannelResolver, Event}
+import com.thenetcircle.event_bus.ChannelResolver
+import com.thenetcircle.event_bus.event.Event
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._

@@ -15,15 +15,12 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.testkit
+package com.thenetcircle.event_bus.base
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.pipeline.PipelinePool
-import com.thenetcircle.event_bus.tracing.Tracer
-import com.typesafe.config.{Config, ConfigFactory}
-import net.ceedubs.ficus.Ficus._
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -46,11 +43,11 @@ abstract class AkkaStreamSpec(_system: ActorSystem)
     this(ActorSystem("eventbus-test", ConfigFactory.load("application-test.conf")))
 
   override def beforeAll(): Unit = {
-    PipelinePool.init(
+    /*PipelinePool.init(
       _system.settings.config
         .as[List[Config]]("event-bus.runtime.pipeline-pool")
     )
-    Tracer.init(_system)
+    Tracer.init(_system)*/
   }
 
   override def afterAll(): Unit =

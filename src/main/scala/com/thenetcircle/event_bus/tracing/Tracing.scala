@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.tracing
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event.Event
 
 trait Tracing {
   lazy val tracer: Tracer = Tracer()

@@ -22,8 +22,8 @@ import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.Event
-import com.thenetcircle.event_bus.interface.ISink
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.interface.ISink
 import com.thenetcircle.event_bus.plots.kafka.extended.{KafkaKey, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
@@ -51,17 +51,15 @@ object KafkaSink {
   private def getProducerRecordFromEvent(
       event: Event
   ): ProducerRecord[ProducerKey, ProducerValue] = {
-    val topic: String = event.channel
-    val timestamp: Long = event.metadata.published
-    val key: ProducerKey = KafkaKey(event)
+    val topic: String        = event.channel
+    val timestamp: Long      = event.metadata.published
+    val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event
 
-    new ProducerRecord[ProducerKey, ProducerValue](
-      topic,
-      null,
-      timestamp.asInstanceOf[java.lang.Long],
-      key,
-      value
-    )
+    new ProducerRecord[ProducerKey, ProducerValue](topic,
+                                                   null,
+                                                   timestamp.asInstanceOf[java.lang.Long],
+                                                   key,
+                                                   value)
   }
 }

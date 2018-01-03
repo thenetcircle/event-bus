@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.tracing
 
 import akka.actor.ActorSystem
 import com.github.levkhomich.akka.tracing.{TracingExtension, TracingExtensionImpl, TracingSupport}
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event.Event
 
 import scala.util.Random
 

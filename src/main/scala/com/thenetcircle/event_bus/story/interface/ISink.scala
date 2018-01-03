@@ -15,8 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.testkit
+package com.thenetcircle.event_bus.story.interface
 
-import org.scalatest._
+import akka.NotUsed
+import akka.stream.{FlowShape, Graph}
+import com.thenetcircle.event_bus.event.Event
 
-trait AsyncUnitSpec extends AsyncFlatSpecLike with Matchers with BeforeAndAfterAll with Inside {}
+trait ISink {
+
+  def graph: Graph[FlowShape[Event, Event], NotUsed]
+
+}

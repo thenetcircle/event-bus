@@ -15,11 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.story.interface
 
 import akka.NotUsed
 import akka.stream.{FlowShape, Graph, SourceShape}
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event.Event
 
 trait ISource {
 

@@ -15,14 +15,8 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.base
 
-import akka.NotUsed
-import akka.stream.{FlowShape, Graph}
-import com.thenetcircle.event_bus.Event
+import org.scalatest._
 
-trait ISink {
-
-  def graph: Graph[FlowShape[Event, Event], NotUsed]
-
-}
+trait UnitSpec extends FlatSpecLike with Matchers with BeforeAndAfterAll {}

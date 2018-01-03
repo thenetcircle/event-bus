@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.extractor
+package com.thenetcircle.event_bus.event.extractor
 
 import akka.util.ByteString
 import scala.concurrent.Future

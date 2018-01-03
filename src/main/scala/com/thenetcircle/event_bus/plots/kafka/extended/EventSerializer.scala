@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.plots.kafka.extended
 
 import java.util
 
-import com.thenetcircle.event_bus.Event
+import com.thenetcircle.event_bus.event.Event
 import org.apache.kafka.common.serialization.Serializer
 
 class EventSerializer extends Serializer[Event] {
@@ -27,5 +27,5 @@ class EventSerializer extends Serializer[Event] {
     data.body.data.toArray
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
-  override def close(): Unit = {}
+  override def close(): Unit                                                 = {}
 }

@@ -15,14 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.extractor.activitystreams
+package com.thenetcircle.event_bus.event.extractor.activitystreams
 
 import java.text.SimpleDateFormat
 
 import io.jvm.uuid.UUID
 import akka.util.ByteString
-import com.thenetcircle.event_bus.extractor.EventFormat.DefaultFormat
-import com.thenetcircle.event_bus.extractor._
+import com.thenetcircle.event_bus.event.extractor.EventFormat.DefaultFormat
+import com.thenetcircle.event_bus.event.extractor._
 import com.typesafe.scalalogging.StrictLogging
 import spray.json._
 

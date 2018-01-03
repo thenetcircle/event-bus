@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.extractor.activitystreams
+package com.thenetcircle.event_bus.event.extractor.activitystreams
 
 import spray.json._
 
