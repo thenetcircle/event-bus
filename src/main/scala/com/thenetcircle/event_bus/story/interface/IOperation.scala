@@ -17,11 +17,13 @@
 
 package com.thenetcircle.event_bus.story.interface
 import akka.NotUsed
-import akka.stream.{FlowShape, Graph}
+import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
+
+import scala.concurrent.ExecutionContext
 
 trait IOperation {
 
-  def graph: Graph[FlowShape[Event, Event], NotUsed]
+  def graph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed]
 
 }

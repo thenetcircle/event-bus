@@ -22,21 +22,16 @@ import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
 import com.thenetcircle.event_bus.event.extractor._
-
-import scala.util.Random
 
 package object event_bus {
   def createTestEvent(name: String = "TestEvent",
                       time: Long = 111,
-                      sourceType: EventSourceType = EventSourceType.Http,
                       body: String = "body",
-                      format: EventFormat = EventFormat.DefaultFormat): Event =
-    Event(EventMetaData("uuid", name, time, Some("publisher"), Some(EventActor("222", "user"))),
-          EventBody(ByteString(body), format),
-          "channel",
-          sourceType,
-          Random.nextLong())
+                      format: EventFormat = EventFormat.ACTIVITYSTREAMS): Event =
+    Event(EventMetaData("uuid", name, time, Some("publisher"), Some("222")),
+          EventBody(ByteString(body), format))
 
   def createFlowFromSink(sink: Sink[Event, _]): Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>

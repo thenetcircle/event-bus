@@ -28,6 +28,8 @@ import com.thenetcircle.event_bus.plots.kafka.extended.{KafkaKey, KafkaPartition
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
+import scala.concurrent.ExecutionContext
+
 case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
 class KafkaSink(settings: KafkaSinkSettings) extends ISink with StrictLogging {
@@ -37,7 +39,7 @@ class KafkaSink(settings: KafkaSinkSettings) extends ISink with StrictLogging {
   private val producerSettings = settings.producerSettings
     .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
 
-  override def graph: Flow[Event, Event, NotUsed] =
+  override def graph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
     Flow[Event]
       .map(event => {
         Message(getProducerRecordFromEvent(event), event)
@@ -51,7 +53,8 @@ object KafkaSink {
   private def getProducerRecordFromEvent(
       event: Event
   ): ProducerRecord[ProducerKey, ProducerValue] = {
-    val topic: String        = event.channel
+    // TODO: use channel detective
+    val topic: String        = event.metadata.channel.getOrElse("event-default")
     val timestamp: Long      = event.metadata.published
     val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event

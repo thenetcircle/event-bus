@@ -21,10 +21,13 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
 import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.extractor.IExtractor
 import com.thenetcircle.event_bus.story.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+
+import scala.concurrent.ExecutionContext
 
 class Story(settings: StorySettings,
             source: ISource,
@@ -51,31 +54,37 @@ class Story(settings: StorySettings,
     Story.decorateGraph(graph, s"$storyName-$graphId", fallback)
   }
 
-  override val graph = Source
-    .fromGraph(
-      GraphDSL
-        .create() { implicit builder =>
-          import GraphDSL.Implicits._
+  override def graph(implicit executor: ExecutionContext,
+                     extractor: IExtractor): Source[Event, NotUsed] =
+    Source
+      .fromGraph(
+        GraphDSL
+          .create() { implicit builder =>
+            import GraphDSL.Implicits._
 
-          // variables
-          val sourceGraph     = source.graph
-          var operationGraphs = Flow[Event]
-          operations.foreach(op => operationGraphs = operationGraphs.via(decorateGraph(op.graph)))
-          val sinkGraph = decorateGraph(sink.graph)
-          val ackGraph  = builder.add(decorateGraph(source.ackGraph))
+            // variables
+            val sourceGraph     = source.graph
+            var operationGraphs = Flow[Event]
+            operations
+              .foreach(op => operationGraphs = operationGraphs.via(decorateGraph(op.graph)))
+            val sinkGraph = decorateGraph(sink.graph)
+            val ackGraph  = builder.add(decorateGraph(source.ackGraph))
 
-          // workflow
-          sourceGraph ~> operationGraphs ~> sinkGraph ~> ackGraph.in
+            // workflow
+            sourceGraph ~> operationGraphs ~> sinkGraph ~> ackGraph.in
 
-          // ports
-          SourceShape(ackGraph.out)
-        }
-    )
-    .named(storyName)
+            // ports
+            SourceShape(ackGraph.out)
+          }
+      )
+      .named(storyName)
 
-  override val ackGraph = Flow[Event]
+  override def ackGraph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
+    Flow[Event]
 
-  def start()(implicit materializer: Materializer): NotUsed =
+  def start()(implicit materializer: Materializer,
+              executor: ExecutionContext,
+              extractor: IExtractor): NotUsed =
     graph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
 }
 
@@ -83,9 +92,11 @@ object Story extends StrictLogging {
 
   def apply(config: Config): Story = ???
 
-  def decorateGraph(graph: Graph[FlowShape[Event, Event], NotUsed],
-                    graphId: String,
-                    fallback: Option[ISink] = None): Graph[FlowShape[Event, Event], NotUsed] = {
+  def decorateGraph(
+      graph: Graph[FlowShape[Event, Event], NotUsed],
+      graphId: String,
+      fallback: Option[ISink] = None
+  )(implicit executor: ExecutionContext): Graph[FlowShape[Event, Event], NotUsed] = {
 
     Flow.fromGraph(
       GraphDSL
@@ -94,7 +105,7 @@ object Story extends StrictLogging {
 
           // variables
           val mainGraph  = builder.add(graph)
-          val checkGraph = builder.add(new Partition[Event](2, e => if (e.isFailed()) 1 else 0))
+          val checkGraph = builder.add(new Partition[Event](2, e => if (e.isFailed) 1 else 0))
           var failedGraph = Flow[Event].map(_event => {
             val logMessage =
               s"Event ${_event.uniqueName} was processing failed on graph: $graphId." +

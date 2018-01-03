@@ -56,10 +56,10 @@ class Tracer(te: TracingExtensionImpl) {
     record(tracingId, "UUID", event.metadata.uuid)
     record(tracingId, "name", event.metadata.name)
     event.metadata.provider.foreach(record(tracingId, "provider", _))
-    event.metadata.actor
-      .foreach(actor => record(tracingId, "actor", s"${actor.objectType}-${actor.id}"))
+    /*event.metadata.actor
+      .foreach(actor => record(tracingId, "actor", s"${actor.objectType}-${actor.id}"))*/
     record(tracingId, "timestamp", event.metadata.published.toString)
-    record(tracingId, "channel", event.channel)
+    // record(tracingId, "channel", event.channel)
   }
 }
 

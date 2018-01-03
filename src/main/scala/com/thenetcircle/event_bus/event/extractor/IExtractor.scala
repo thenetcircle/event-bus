@@ -18,8 +18,10 @@
 package com.thenetcircle.event_bus.event.extractor
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event.{EventFormat, ExtractedEvent}
-import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
+import com.thenetcircle.event_bus.event.{EventBody, EventMetaData}
+import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.typesafe.config.Config
+import net.ceedubs.ficus.readers.ValueReader
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -33,26 +35,27 @@ trait IExtractor {
 
   /** Extract metadata from data accroding to Format
     *
-    * @return ExtractedEvent
+    * @return ExtractedData
     */
-  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedEvent]
+  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedData]
 
 }
 
-object IExtractor {
+case class ExtractedData(metadata: EventMetaData, body: EventBody)
 
-  /** Default event extractor, based on ActivityStreams 1.0
-    * http://activitystrea.ms/specs/json/1.0/
-    */
-  implicit val activityStreamsExtractor: IExtractor =
-    new ActivityStreamsExtractor
+object EventFormat extends Enumeration {
+  type EventFormat = Value
 
-  /** Returns [[IExtractor]] based on [[EventFormat]]
-    *
-    * @param format
-    */
-  def apply(format: EventFormat): IExtractor = format match {
-    // case EventFormat.DefaultFormat => activityStreamsExtractor
-    case _ => activityStreamsExtractor
+  val TEST            = Value(-1, "TEST")
+  val ACTIVITYSTREAMS = Value(1, "ACTIVITYSTREAMS")
+
+  def apply(name: String): EventFormat = name.toUpperCase match {
+    case "ACTIVITYSTREAMS" => ACTIVITYSTREAMS
   }
+
+  implicit val eventFormatReader: ValueReader[EventFormat] =
+    new ValueReader[EventFormat] {
+      override def read(config: Config, path: String) =
+        EventFormat(config.getString(path))
+    }
 }

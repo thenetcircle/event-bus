@@ -46,12 +46,9 @@ case class HttpSinkSettings(host: String,
 
 class HttpSink(settings: HttpSinkSettings,
                connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
-               fallbacker: Sink[Event, _])(implicit val materializer: Materializer)
+               fallbacker: Sink[Event, _])
     extends ISink
     with StrictLogging {
-
-  implicit val executionContext: ExecutionContext =
-    materializer.executionContext
 
   val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
     Flow[Event].map(buildRequest).via(connectionPool)
@@ -65,40 +62,12 @@ class HttpSink(settings: HttpSinkSettings,
     (request, event)
   }
 
-  def responseChecker(response: HttpResponse, event: Event): Future[Boolean] = {
-    response.entity
-    // TODO: timeout is too much?
-    // TODO: unify ExecutionContext
-    // TODO: use Unmarshaller
-      .toStrict(3.seconds)
-      .map { entity =>
-        val result: Boolean = {
-          response.status.isSuccess() && (settings.expectedResponse match {
-            case Some(expectedResponse) =>
-              entity.data.utf8String == expectedResponse
-            case None => true
-          })
-        }
-
-        if (!result) {
-          logger.warn(
-            s"Event (${event.metadata} - ${event.channel}) sent failed " +
-              s"to ${settings.defaultRequest.protocol.value}://${settings.host}:${settings.port}${settings.defaultRequest.uri} " +
-              s"with unexpected response: ${entity.data.utf8String}."
-          )
-          false
-        } else {
-          true
-        }
-      }
-  }
-
-  override def graph: Flow[Event, Event, NotUsed] =
+  override def graph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
       val retryEngine =
-        builder.add(new HttpRetryEngine[Event](settings.maxRetryTimes, responseChecker))
+        builder.add(new HttpRetryEngine[Event](settings.maxRetryTimes, settings.expectedResponse))
 
       /** --- work flow --- */
       // format: off
@@ -184,14 +153,13 @@ object HttpSink extends StrictLogging {
         throw ex
     }
   }
-
 }
 
 
 final class HttpRetryEngine[T <: Event](
                                            maxRetryTimes: Int,
-                                           responseChecker: (HttpResponse, T) => Future[Boolean]
-                                       )(implicit executionContext: ExecutionContext)
+  expectedResponse: Option[String] = None
+                                       )(implicit executor: ExecutionContext)
     extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]]
 {
   val incoming: Inlet[T]          = Inlet("incoming")
@@ -246,7 +214,7 @@ final class HttpRetryEngine[T <: Event](
             case (responseTry, event) =>
               responseTry match {
                 case Success(response) =>
-                  responseChecker(response, event).onComplete(getAsyncCallback(responseHandler(event)).invoke)
+                  checkResponse(response, event).onComplete(getAsyncCallback(responseHandler(event)).invoke)
 
                 case Failure(ex) =>
                   log.error(
@@ -306,6 +274,32 @@ final class HttpRetryEngine[T <: Event](
         retryTimes.set(0)
         if (isClosed(incoming)) completeStage()
         else if (isWaitingPull) tryPull(incoming)
+      }
+
+      def checkResponse(response: HttpResponse, event: Event): Future[Boolean] = {
+        response.entity
+          // TODO: timeout is too much?
+          // TODO: unify ExecutionContext
+          // TODO: use Unmarshaller
+          .toStrict(3.seconds)(materializer)
+          .map { entity =>
+            val result: Boolean = {
+              response.status.isSuccess() && (expectedResponse match {
+                case Some(expectedResponse) =>
+                  entity.data.utf8String == expectedResponse
+                case None => true
+              })
+            }
+
+            if (!result) {
+              log.warning(
+                s"""Event "${event.uniqueName}" sent failed with unexpected response: ${entity.data.utf8String}."""
+              )
+              false
+            } else {
+              true
+            }
+          }
       }
     }
 }

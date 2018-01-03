@@ -26,11 +26,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.event.extractor.{IExtractor}
+import com.thenetcircle.event_bus.event.extractor.{ExtractedData, IExtractor}
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.plots.http.HttpSource.{failedResponse, successfulResponse}
 import com.thenetcircle.event_bus.story.interface.ISource
-import com.thenetcircle.event_bus.tracing.{Tracing, TracingSteps}
-import com.thenetcircle.event_bus.ChannelResolver
-import com.thenetcircle.event_bus.event.{Event, EventSourceType, ExtractedEvent}
+import com.thenetcircle.event_bus.tracing.Tracing
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -42,14 +42,13 @@ case class HttpSourceSettings(maxConnections: Int,
                               perConnectionParallelism: Int,
                               commitParallelism: Int)
 
-class HttpSource(
-    settings: HttpSourceSettings,
-    httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _]
-)(implicit val system: ActorSystem, materializer: Materializer, eventExtractor: IExtractor)
+class HttpSource(settings: HttpSourceSettings,
+                 httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _])
     extends ISource
     with StrictLogging {
 
-  override val graph: Source[Event, NotUsed] =
+  override def graph(implicit executor: ExecutionContext,
+                     extractor: IExtractor): Source[Event, NotUsed] =
     httpBind
       .flatMapMerge(settings.maxConnections,
                     httpBindFlow => {
@@ -57,34 +56,34 @@ class HttpSource(
                         implicit builder =>
                           import GraphDSL.Implicits._
 
-                          val requester = builder.add(httpBindFlow)
-                          val transformer =
-                            builder.add(new HttpSource.HttpTransformer(eventExtractor))
+                          val client         = builder.add(httpBindFlow)
+                          val requestHandler = builder.add(new HttpRequestHandler())
 
                           val unpackFlow =
                             Flow[Future[HttpResponse]]
                               .mapAsync(settings.perConnectionParallelism)(identity)
+
                           val debugFlow = Flow[HttpRequest].map(request => {
                             logger.debug(s"received a new Request")
                             request
                           })
 
                           /** ----- work flow ----- */
+                          // since Http().bind using join, The direction is a bit different
                           // format: off
-              // since Http().bind using join, The direction is a bit different
 
-              requester ~> debugFlow ~> transformer.in
+                          client ~> debugFlow ~> requestHandler.in
 
-                                        transformer.out0 ~> unpackFlow ~> requester
+                                                 requestHandler.out0 ~> unpackFlow ~> client
 
-              // format: on
+                          // format: on
 
-                          SourceShape(transformer.out1)
+                          SourceShape(requestHandler.out1)
                       })
                     })
       .mapMaterializedValue(m => NotUsed)
 
-  override def ackGraph: Flow[Event, Event, NotUsed] =
+  override def ackGraph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
     Flow[Event]
       .filter(_.committer.isDefined)
       .mapAsync(settings.commitParallelism)(event => {
@@ -93,7 +92,7 @@ class HttpSource(
           .map(_ => {
             logger.debug(s"Event(${event.metadata.uuid}, ${event.metadata.name}) is committed.")
             event
-          })(materializer.executionContext)
+          })
       })
 }
 
@@ -104,8 +103,7 @@ object HttpSource extends StrictLogging {
   val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
 
   def apply(config: Config)(implicit system: ActorSystem,
-                            materializer: Materializer,
-                            eventExtractor: IExtractor): HttpSource = {
+                            materializer: Materializer): HttpSource = {
     try {
 
       val mergedConfig: Config =
@@ -139,121 +137,100 @@ object HttpSource extends StrictLogging {
         throw ex
     }
   }
+}
 
-  /** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
-    * and a [[Event]] with a committer to complete the [[Future]]
-    *
-    * {{{
-    *                             +------------+
-    *            In[HttpRequest] ~~>           |
-    *                             |           ~~> Out1[Event]
-    * Out0[Future[HttpResponse]] <~~           |
-    *                             +------------+
-    * }}}
-    *
-    * '''Emits when'''
-    *   a incoming [[HttpRequest]] successful transformed to a [[Event]],
-    *   the Future of [[HttpResponse]] will always emit to out0
-    *
-    * '''Backpressures when''' any of the outputs backpressure
-    *
-    * '''Completes when''' upstream completes
-    *
-    * '''Cancels when''' when any downstreams cancel
-    */
-  final class HttpTransformer(eventExtractor: IExtractor)(implicit system: ActorSystem,
-                                                          materializer: Materializer)
-      extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
+/** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
+  * and a [[Event]] with a committer to complete the [[Future]]
+  *
+  * {{{
+  *                             +------------+
+  *            In[HttpRequest] ~~>           |
+  *                             |           ~~> Out1[Event]
+  * Out0[Future[HttpResponse]] <~~           |
+  *                             +------------+
+  * }}}
+  *
+  * '''Emits when'''
+  *   a incoming [[HttpRequest]] successful transformed to a [[Event]],
+  *   the Future of [[HttpResponse]] will always emit to out0
+  *
+  * '''Backpressures when''' any of the outputs backpressure
+  *
+  * '''Completes when''' upstream completes
+  *
+  * '''Cancels when''' when any downstreams cancel
+  */
+final class HttpRequestHandler()(implicit executor: ExecutionContext, extractor: IExtractor)
+    extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
-    // TODO: move it to param
-    implicit val executionContext: ExecutionContext =
-      materializer.executionContext
+  val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
+    Unmarshaller.byteStringUnmarshaller.andThen(
+      Unmarshaller.apply(_ => data => extractor.extract(data))
+    )
 
-    val unmarshaller: Unmarshaller[HttpEntity, ExtractedEvent] =
-      Unmarshaller.byteStringUnmarshaller.andThen(
-        Unmarshaller.apply(_ => data => eventExtractor.extract(data))
-      )
+  val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
+  val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
+  val out1: Outlet[Event]                = Outlet("outlet-event")
 
-    val in: Inlet[HttpRequest]             = Inlet("inlet-http-request")
-    val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
-    val out1: Outlet[Event]                = Outlet("outlet-event")
+  override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
+    new FanOutShape2(in, out0, out1)
 
-    override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
-      new FanOutShape2(in, out0, out1)
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+    new GraphStageLogic(shape) with StageLogging with Tracing {
 
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) with StageLogging with Tracing {
-
-        def tryPullIn(): Unit =
-          if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
-            log.debug("tryPull in")
-            tryPull(in)
-          }
-
-        setHandler(in, new InHandler {
-          override def onPush(): Unit = {
-            log.debug("onPush in -> push out0")
-            push(out0, requestPreprocess(grab(in)))
-          }
-        })
-
-        setHandler(out0, new OutHandler {
-          override def onPull(): Unit = {
-            log.debug("onPull out0")
-            tryPullIn()
-          }
-        })
-
-        setHandler(out1, new OutHandler {
-          override def onPull(): Unit = {
-            log.debug("onPull out1")
-            tryPullIn()
-          }
-        })
-
-        def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
-          val tracingId = tracer.newTracing()
-          tracer.record(tracingId, TracingSteps.NEW_REQUEST)
-
-          val responsePromise = Promise[HttpResponse]
-          val extractedDataFuture =
-            unmarshaller.apply(request.entity)(executionContext, materializer)
-          val callback =
-            getEventExtractingCallback(responsePromise, tracingId)
-          extractedDataFuture.onComplete(result => callback.invoke(result))
-
-          responsePromise.future
+      def tryPullIn(): Unit =
+        if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
+          log.debug("tryPull in")
+          tryPull(in)
         }
 
-        def getEventExtractingCallback(responsePromise: Promise[HttpResponse],
-                                       tracingId: Long): AsyncCallback[Try[ExtractedEvent]] =
-          getAsyncCallback[Try[ExtractedEvent]] {
-            case Success(extractedData) =>
-              tracer.record(tracingId, TracingSteps.EXTRACTED)
+      setHandler(in, new InHandler {
+        override def onPush(): Unit = {
+          log.debug("onPush in -> push out0")
+          push(out0, requestPreprocess(grab(in)))
+        }
+      })
 
-              val event = Event(extractedData.metadata,
-                                extractedData.body,
-                                extractedData.channel.getOrElse(
-                                  ChannelResolver.getChannel(extractedData.metadata)
-                                ),
-                                EventSourceType.Http,
-                                tracingId).withCommitter(() => {
-                tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
-                responsePromise.success(successfulResponse).future
-              })
+      setHandler(out0, new OutHandler {
+        override def onPull(): Unit = {
+          log.debug("onPull out0")
+          tryPullIn()
+        }
+      })
 
-              tracer.record(tracingId, event)
+      setHandler(out1, new OutHandler {
+        override def onPull(): Unit = {
+          log.debug("onPull out1")
+          tryPullIn()
+        }
+      })
 
-              log.debug("push out1")
-              push(out1, event)
+      def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
+        val responsePromise = Promise[HttpResponse]
+        val extractedDataFuture =
+          unmarshaller.apply(request.entity)(executor, materializer)
+        val callback = getEventExtractingCallback(responsePromise)
+        extractedDataFuture.onComplete(result => callback.invoke(result))
 
-            case Failure(ex) =>
-              log.info(s"Request send failed with error: ${ex.getMessage}")
-              tracer.record(tracingId, ex)
-              tracer.record(tracingId, TracingSteps.RECEIVER_COMMITTED)
-              responsePromise.success(failedResponse)
-              tryPullIn()
-          }
+        responsePromise.future
       }
-  }
+
+      def getEventExtractingCallback(
+          responsePromise: Promise[HttpResponse]
+      ): AsyncCallback[Try[ExtractedData]] =
+        getAsyncCallback[Try[ExtractedData]] {
+          case Success(extractedData) =>
+            val event = Event(extractedData.metadata, extractedData.body).withCommitter(() => {
+              responsePromise.success(successfulResponse).future
+            })
+
+            log.debug("push out1")
+            push(out1, event)
+
+          case Failure(ex) =>
+            log.info(s"Request send failed with error: ${ex.getMessage}")
+            responsePromise.success(failedResponse)
+            tryPullIn()
+        }
+    }
 }

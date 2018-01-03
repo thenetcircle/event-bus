@@ -21,8 +21,8 @@ import java.text.SimpleDateFormat
 
 import io.jvm.uuid.UUID
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event.EventFormat.DefaultFormat
 import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
 import com.thenetcircle.event_bus.event.extractor._
 import com.typesafe.scalalogging.StrictLogging
 import spray.json._
@@ -33,11 +33,11 @@ class ActivityStreamsExtractor extends IExtractor with StrictLogging {
 
   import ActivityStreamsProtocol._
 
-  override val format: EventFormat = DefaultFormat
+  override val format: EventFormat = EventFormat.ACTIVITYSTREAMS
 
   override def extract(
       data: ByteString
-  )(implicit executor: ExecutionContext): Future[ExtractedEvent] = Future {
+  )(implicit executor: ExecutionContext): Future[ExtractedData] = Future {
     try {
       val jsonAst  = data.utf8String.parseJson
       val activity = jsonAst.convertTo[Activity]
@@ -54,12 +54,10 @@ class ActivityStreamsExtractor extends IExtractor with StrictLogging {
           System.currentTimeMillis()
       }
       val provider = activity.provider.flatMap(_.id)
-      val actor = activity.actor.flatMap(
-        actor => Some(EventActor(actor.id.getOrElse(""), actor.objectType.getOrElse("")))
-      )
+      val actor    = activity.actor.flatMap(actor => Some(actor.id.getOrElse("")))
 
-      ExtractedEvent(body = EventBody(data, format),
-                     metadata = EventMetaData(uuid, name, published, provider, actor))
+      ExtractedData(metadata = EventMetaData(uuid, name, published, provider, actor),
+                    body = EventBody(data, format))
     } catch {
       case ex: Throwable =>
         logger.warn(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")

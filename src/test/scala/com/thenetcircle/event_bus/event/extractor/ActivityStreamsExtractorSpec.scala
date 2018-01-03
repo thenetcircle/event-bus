@@ -22,19 +22,19 @@ import java.text.SimpleDateFormat
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
 import com.thenetcircle.event_bus.base.AsyncUnitSpec
-import com.thenetcircle.event_bus.event.EventFormat.{DefaultFormat, TestFormat}
 import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 
 class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
 
-  private val defaultFormatExtractor: IExtractor =
-    IExtractor(DefaultFormat)
+  private val activityStreamsExtractor: IExtractor =
+    ExtractorFactory.getExtractor(EventFormat.ACTIVITYSTREAMS)
 
   private val testFormatExtractor: IExtractor =
     new ActivityStreamsExtractor {
-      override val format: EventFormat = TestFormat
+      override val format: EventFormat = EventFormat.TEST
     }
 
   behavior of "IExtractor"
@@ -44,7 +44,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
         |abc
       """.stripMargin)
     recoverToSucceededIf[JsonParser.ParsingException] {
-      defaultFormatExtractor.extract(data)
+      activityStreamsExtractor.extract(data)
     }.map(r => assert(r == Succeeded))
   }
 
@@ -56,7 +56,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
       """.stripMargin)
     // Object is missing required member 'title'
     recoverToSucceededIf[DeserializationException] {
-      defaultFormatExtractor.extract(data)
+      activityStreamsExtractor.extract(data)
     }.map(r => assert(r == Succeeded))
   }
 
@@ -67,10 +67,10 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
          |}
       """.stripMargin)
 
-    defaultFormatExtractor.extract(data) map { _data =>
+    activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case ExtractedEvent(body, metadata, _) =>
-          body shouldEqual EventBody(data, DefaultFormat)
+        case ExtractedData(metadata, body) =>
+          body shouldEqual EventBody(data, EventFormat.ACTIVITYSTREAMS)
           metadata.name shouldEqual "user.login"
       }
     }
@@ -90,17 +90,17 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
         |}
       """.stripMargin)
 
-    defaultFormatExtractor.extract(data) map { _data =>
+    activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case ExtractedEvent(body, metadata, _) =>
-          body shouldEqual EventBody(data, DefaultFormat)
+        case ExtractedData(metadata, body) =>
+          body shouldEqual EventBody(data, EventFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData("ED-providerId-message.send-actorId-59e704843e9cb",
                                              "message.send",
                                              new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
                                                .parse(time)
                                                .getTime,
                                              Some("providerId"),
-                                             Some(EventActor("actorId", "actorType")))
+                                             Some("actorId"))
       }
     }
   }
@@ -168,17 +168,17 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
          |}
       """.stripMargin)
 
-    defaultFormatExtractor.extract(data) map { _data =>
+    activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case ExtractedEvent(body, metadata, _) =>
-          body shouldEqual EventBody(data, DefaultFormat)
+        case ExtractedData(metadata, body) =>
+          body shouldEqual EventBody(data, EventFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData("ED-providerId-message.send-actorId-59e704843e9cb",
                                              "message.send",
                                              new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
                                                .parse(time)
                                                .getTime,
                                              Some("providerId"),
-                                             Some(EventActor("actorId", "actorType")))
+                                             Some("actorId"))
       }
     }
   }
@@ -191,8 +191,8 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
       """.stripMargin)
     testFormatExtractor.extract(data) map { d =>
       inside(d) {
-        case ExtractedEvent(body, _, _) =>
-          body shouldEqual EventBody(data, TestFormat)
+        case ExtractedData(_, body) =>
+          body shouldEqual EventBody(data, EventFormat.TEST)
       }
     }
   }

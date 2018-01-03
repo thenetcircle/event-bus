@@ -38,7 +38,6 @@ class KafkaPartitioner extends Partitioner {
 
     val event = value.asInstanceOf[Event]
     val keyBytes = event.metadata.actor
-      .map(actor => s"${actor.objectType}-${actor.id}")
       .getOrElse(Random.nextString(6))
       .getBytes("UTF-8")
 

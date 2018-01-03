@@ -26,7 +26,7 @@ trait Tracing {
 
   def tracingFlow(step: TracingStep): Flow[Event, Event, NotUsed] =
     Flow[Event].map(event => {
-      tracer.record(event.tracingId, step)
+      // tracer.record(event.tracingId, step)
       event
     })
 }
