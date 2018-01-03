@@ -20,10 +20,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 
-import scala.concurrent.ExecutionContext
-
 trait IOperation {
 
-  def graph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed]
+  def graph: Flow[Event, Event, NotUsed]
 
 }

@@ -21,13 +21,10 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
 import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.IExtractor
-import com.thenetcircle.event_bus.story.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
+import com.thenetcircle.event_bus.story.interface._
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
-
-import scala.concurrent.ExecutionContext
 
 class Story(settings: StorySettings,
             source: ISource,
@@ -54,8 +51,7 @@ class Story(settings: StorySettings,
     Story.decorateGraph(graph, s"$storyName-$graphId", fallback)
   }
 
-  override def graph(implicit executor: ExecutionContext,
-                     extractor: IExtractor): Source[Event, NotUsed] =
+  override def graph: Source[Event, NotUsed] =
     Source
       .fromGraph(
         GraphDSL
@@ -79,12 +75,9 @@ class Story(settings: StorySettings,
       )
       .named(storyName)
 
-  override def ackGraph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
-    Flow[Event]
+  override def ackGraph: Flow[Event, Event, NotUsed] = Flow[Event]
 
-  def start()(implicit materializer: Materializer,
-              executor: ExecutionContext,
-              extractor: IExtractor): NotUsed =
+  def start()(implicit materializer: Materializer): NotUsed =
     graph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
 }
 
@@ -92,11 +85,9 @@ object Story extends StrictLogging {
 
   def apply(config: Config): Story = ???
 
-  def decorateGraph(
-      graph: Graph[FlowShape[Event, Event], NotUsed],
-      graphId: String,
-      fallback: Option[ISink] = None
-  )(implicit executor: ExecutionContext): Graph[FlowShape[Event, Event], NotUsed] = {
+  def decorateGraph(graph: Graph[FlowShape[Event, Event], NotUsed],
+                    graphId: String,
+                    fallback: Option[ISink] = None): Graph[FlowShape[Event, Event], NotUsed] = {
 
     Flow.fromGraph(
       GraphDSL

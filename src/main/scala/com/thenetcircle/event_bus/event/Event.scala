@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.event
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.EventStatus.EventStatus
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
 import scala.concurrent.Future
 
@@ -57,7 +57,7 @@ case class EventMetaData(uuid: String,
   def withChannel(_channel: String): EventMetaData = copy(channel = Some(_channel))
 }
 
-case class EventBody(data: ByteString, format: EventFormat)
+case class EventBody(data: ByteString, format: DataFormat)
 
 trait EventCommitter {
   def commit(): Future[Any]

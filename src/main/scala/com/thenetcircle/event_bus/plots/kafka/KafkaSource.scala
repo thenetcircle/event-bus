@@ -25,7 +25,7 @@ import akka.stream.Supervision.resumingDecider
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.event.extractor.{ExtractorFactory, IExtractor}
+import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
 import com.thenetcircle.event_bus.event.{Event, EventCommitter}
 import com.thenetcircle.event_bus.story.interface.ISource
 import com.typesafe.scalalogging.StrictLogging
@@ -41,7 +41,9 @@ case class KafkaSourceSettings(groupId: String,
                                topics: Option[Set[String]],
                                topicPattern: Option[String])
 
-class KafkaSource(settings: KafkaSourceSettings) extends ISource with StrictLogging {
+class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionContext)
+    extends ISource
+    with StrictLogging {
 
   require(settings.topics.isDefined || settings.topicPattern.isDefined,
           "The outlet of KafkaPipeline needs to subscribe topics")
@@ -55,8 +57,7 @@ class KafkaSource(settings: KafkaSourceSettings) extends ISource with StrictLogg
 
   private val consumerSettings = settings.consumerSettings.withGroupId(settings.groupId)
 
-  override def graph(implicit executor: ExecutionContext,
-                     extractor: IExtractor): Source[Event, NotUsed] = {
+  override def graph: Source[Event, NotUsed] = {
 
     // TODO: maybe use one consumer for one partition
     Consumer
@@ -96,7 +97,7 @@ class KafkaSource(settings: KafkaSourceSettings) extends ISource with StrictLogg
   }
 
   // TODO: find a better way of the "kafkaCommittableOffset" part
-  override def ackGraph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] = {
+  override def ackGraph: Flow[Event, Event, NotUsed] = {
     Flow[Event]
       .batch(
         max = settings.commitBatchMax, {

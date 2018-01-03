@@ -22,14 +22,14 @@ import akka.stream.FlowShape
 import akka.stream.scaladsl.{Broadcast, Flow, GraphDSL, Sink}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event._
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor._
 
 package object event_bus {
   def createTestEvent(name: String = "TestEvent",
                       time: Long = 111,
                       body: String = "body",
-                      format: EventFormat = EventFormat.ACTIVITYSTREAMS): Event =
+                      format: DataFormat = DataFormat.ACTIVITYSTREAMS): Event =
     Event(EventMetaData("uuid", name, time, Some("publisher"), Some("222")),
           EventBody(ByteString(body), format))
 

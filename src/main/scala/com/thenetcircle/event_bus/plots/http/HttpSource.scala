@@ -26,8 +26,9 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.event.extractor.{ExtractedData, IExtractor}
+import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.plots.http.HttpSource.{failedResponse, successfulResponse}
 import com.thenetcircle.event_bus.story.interface.ISource
 import com.thenetcircle.event_bus.tracing.Tracing
@@ -40,15 +41,19 @@ import scala.util.{Failure, Success, Try}
 
 case class HttpSourceSettings(maxConnections: Int,
                               perConnectionParallelism: Int,
-                              commitParallelism: Int)
+                              commitParallelism: Int,
+                              format: DataFormat)
 
-class HttpSource(settings: HttpSourceSettings,
-                 httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _])
+class HttpSource(
+    settings: HttpSourceSettings,
+    httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _]
+)(implicit executor: ExecutionContext)
     extends ISource
     with StrictLogging {
 
-  override def graph(implicit executor: ExecutionContext,
-                     extractor: IExtractor): Source[Event, NotUsed] =
+  implicit val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
+
+  override def graph: Source[Event, NotUsed] =
     httpBind
       .flatMapMerge(settings.maxConnections,
                     httpBindFlow => {
@@ -83,7 +88,7 @@ class HttpSource(settings: HttpSourceSettings,
                     })
       .mapMaterializedValue(m => NotUsed)
 
-  override def ackGraph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
+  override def ackGraph: Flow[Event, Event, NotUsed] =
     Flow[Event]
       .filter(_.committer.isDefined)
       .mapAsync(settings.commitParallelism)(event => {
@@ -103,7 +108,8 @@ object HttpSource extends StrictLogging {
   val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
 
   def apply(config: Config)(implicit system: ActorSystem,
-                            materializer: Materializer): HttpSource = {
+                            materializer: Materializer,
+                            executor: ExecutionContext): HttpSource = {
     try {
 
       val mergedConfig: Config =
@@ -111,7 +117,8 @@ object HttpSource extends StrictLogging {
 
       val settings = HttpSourceSettings(mergedConfig.as[Int]("max-connections"),
                                         mergedConfig.as[Int]("pre-connection-parallelism"),
-                                        mergedConfig.as[Int]("commit-parallelism"))
+                                        mergedConfig.as[Int]("commit-parallelism"),
+                                        mergedConfig.as[DataFormat]("format"))
 
       val rootConfig = system.settings.config
       val serverSettings: ServerSettings =

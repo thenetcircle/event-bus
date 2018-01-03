@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 import io.jvm.uuid.UUID
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event._
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor._
 import com.typesafe.scalalogging.StrictLogging
 import spray.json._
@@ -33,7 +33,7 @@ class ActivityStreamsExtractor extends IExtractor with StrictLogging {
 
   import ActivityStreamsProtocol._
 
-  override val format: EventFormat = EventFormat.ACTIVITYSTREAMS
+  override val format: DataFormat = DataFormat.ACTIVITYSTREAMS
 
   override def extract(
       data: ByteString

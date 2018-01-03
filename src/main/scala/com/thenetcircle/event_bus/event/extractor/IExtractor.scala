@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.event.extractor
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.{EventBody, EventMetaData}
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
 
@@ -31,7 +31,7 @@ trait IExtractor {
     *
     * @return EventFormat
     */
-  def format: EventFormat
+  def format: DataFormat
 
   /** Extract metadata from data accroding to Format
     *
@@ -43,19 +43,19 @@ trait IExtractor {
 
 case class ExtractedData(metadata: EventMetaData, body: EventBody)
 
-object EventFormat extends Enumeration {
-  type EventFormat = Value
+object DataFormat extends Enumeration {
+  type DataFormat = Value
 
   val TEST            = Value(-1, "TEST")
   val ACTIVITYSTREAMS = Value(1, "ACTIVITYSTREAMS")
 
-  def apply(name: String): EventFormat = name.toUpperCase match {
+  def apply(name: String): DataFormat = name.toUpperCase match {
     case "ACTIVITYSTREAMS" => ACTIVITYSTREAMS
   }
 
-  implicit val eventFormatReader: ValueReader[EventFormat] =
-    new ValueReader[EventFormat] {
+  implicit val eventFormatReader: ValueReader[DataFormat] =
+    new ValueReader[DataFormat] {
       override def read(config: Config, path: String) =
-        EventFormat(config.getString(path))
+        DataFormat(config.getString(path))
     }
 }

@@ -23,18 +23,18 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
 import com.thenetcircle.event_bus.base.AsyncUnitSpec
 import com.thenetcircle.event_bus.event._
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 
 class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
 
   private val activityStreamsExtractor: IExtractor =
-    ExtractorFactory.getExtractor(EventFormat.ACTIVITYSTREAMS)
+    ExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)
 
   private val testFormatExtractor: IExtractor =
     new ActivityStreamsExtractor {
-      override val format: EventFormat = EventFormat.TEST
+      override val format: DataFormat = DataFormat.TEST
     }
 
   behavior of "IExtractor"
@@ -70,7 +70,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
         case ExtractedData(metadata, body) =>
-          body shouldEqual EventBody(data, EventFormat.ACTIVITYSTREAMS)
+          body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata.name shouldEqual "user.login"
       }
     }
@@ -93,7 +93,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
         case ExtractedData(metadata, body) =>
-          body shouldEqual EventBody(data, EventFormat.ACTIVITYSTREAMS)
+          body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData("ED-providerId-message.send-actorId-59e704843e9cb",
                                              "message.send",
                                              new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
@@ -171,7 +171,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
         case ExtractedData(metadata, body) =>
-          body shouldEqual EventBody(data, EventFormat.ACTIVITYSTREAMS)
+          body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData("ED-providerId-message.send-actorId-59e704843e9cb",
                                              "message.send",
                                              new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
@@ -192,7 +192,7 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
     testFormatExtractor.extract(data) map { d =>
       inside(d) {
         case ExtractedData(_, body) =>
-          body shouldEqual EventBody(data, EventFormat.TEST)
+          body shouldEqual EventBody(data, DataFormat.TEST)
       }
     }
   }

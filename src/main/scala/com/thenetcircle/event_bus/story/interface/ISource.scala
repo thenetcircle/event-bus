@@ -20,14 +20,11 @@ package com.thenetcircle.event_bus.story.interface
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Source}
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.IExtractor
-
-import scala.concurrent.ExecutionContext
 
 trait ISource {
 
-  def graph(implicit executor: ExecutionContext, extractor: IExtractor): Source[Event, NotUsed]
+  def graph: Source[Event, NotUsed]
 
-  def ackGraph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed]
+  def ackGraph: Flow[Event, Event, NotUsed]
 
 }

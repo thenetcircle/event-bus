@@ -32,14 +32,16 @@ import scala.concurrent.ExecutionContext
 
 case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
-class KafkaSink(settings: KafkaSinkSettings) extends ISink with StrictLogging {
+class KafkaSink(settings: KafkaSinkSettings)(implicit executor: ExecutionContext)
+    extends ISink
+    with StrictLogging {
 
   import KafkaSink._
 
   private val producerSettings = settings.producerSettings
     .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
 
-  override def graph(implicit executor: ExecutionContext): Flow[Event, Event, NotUsed] =
+  override def graph: Flow[Event, Event, NotUsed] =
     Flow[Event]
       .map(event => {
         Message(getProducerRecordFromEvent(event), event)

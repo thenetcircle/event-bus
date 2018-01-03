@@ -17,8 +17,8 @@
 
 package com.thenetcircle.event_bus.plots.kafka.extended
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.EventFormat
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKey._
 
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {
@@ -48,7 +48,7 @@ object KafkaKey {
   def parseRawData(rawData: String): Option[KafkaKeyData] =
     if (rawData.charAt(rawData.length - 1) == '|') {
       val parsed      = rawData.split('|')
-      val eventFormat = EventFormat(parsed(0))
+      val eventFormat = DataFormat(parsed(0))
 
       val tracingId =
         if (parsed.isDefinedAt(1) && parsed(1) != "") Some(parsed(1).toLong)
@@ -60,5 +60,5 @@ object KafkaKey {
     }
 
   /** Holds real data of the key of a kafka message */
-  case class KafkaKeyData(eventFormat: EventFormat, tracingId: Option[Long])
+  case class KafkaKeyData(eventFormat: DataFormat, tracingId: Option[Long])
 }

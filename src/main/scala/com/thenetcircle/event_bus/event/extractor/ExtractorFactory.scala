@@ -16,14 +16,14 @@
  */
 
 package com.thenetcircle.event_bus.event.extractor
-import com.thenetcircle.event_bus.event.extractor.EventFormat.EventFormat
+import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
 
 import scala.collection.mutable
 
 object ExtractorFactory {
 
-  private val registeredExtractors: mutable.Map[EventFormat, IExtractor] = mutable.Map.empty
+  private val registeredExtractors: mutable.Map[DataFormat, IExtractor] = mutable.Map.empty
 
   def registerExtractor(extractor: IExtractor): Unit = {
     registeredExtractors += (extractor.format -> extractor)
@@ -31,12 +31,12 @@ object ExtractorFactory {
 
   registerExtractor(new ActivityStreamsExtractor())
 
-  val defaultExtractor: IExtractor = getExtractor(EventFormat.ACTIVITYSTREAMS)
+  val defaultExtractor: IExtractor = getExtractor(DataFormat.ACTIVITYSTREAMS)
 
-  /** Returns [[IExtractor]] based on [[EventFormat]]
+  /** Returns [[IExtractor]] based on [[DataFormat]]
     *
     * @param format
     */
-  def getExtractor(format: EventFormat): IExtractor = registeredExtractors(format)
+  def getExtractor(format: DataFormat): IExtractor = registeredExtractors(format)
 
 }
