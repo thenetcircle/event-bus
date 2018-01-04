@@ -25,9 +25,11 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.base.AkkaStreamSpec
+import com.thenetcircle.event_bus.connectors.http.HttpSource.successfulResponse
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData}
 
+import scala.concurrent.Promise
 import scala.concurrent.duration._
 
 class HttpSourceSpec extends AkkaStreamSpec {
@@ -94,10 +96,7 @@ class HttpSourceSpec extends AkkaStreamSpec {
       Some("123")
     )
     event.body shouldEqual EventBody(ByteString(data), DataFormat.ACTIVITYSTREAMS)
-
-    out1.request(1) // after process, request new one before commit
-
-    event.committer.foreach(_.commit())
+    event.context("responsePromise").asInstanceOf[Promise[HttpResponse]].success(successfulResponse)
 
     val res = out0.expectNext()
     res.status shouldEqual StatusCodes.OK
@@ -111,15 +110,15 @@ class HttpSourceSpec extends AkkaStreamSpec {
                              TestSubscriber.Probe[HttpResponse],
                              TestSubscriber.Probe[Event]) = {
 
-    val settings = HttpSourceSettings(1000, 10, 10, DataFormat.ACTIVITYSTREAMS)
+    val settings = HttpSourceSettings("0.0.0.0", 80, DataFormat.ACTIVITYSTREAMS, 1000, 10)
 
-    val in   = TestPublisher.probe[HttpRequest]()
+    val in = TestPublisher.probe[HttpRequest]()
     val out0 = TestSubscriber.probe[HttpResponse]()
 
     val httpBind = Source.single(
       Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0), Source.fromPublisher(in))
     )
-    val h    = new HttpSource(settings, httpBind)
+    val h = new HttpSource(settings, Some(httpBind))
     val out1 = h.graph.toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)

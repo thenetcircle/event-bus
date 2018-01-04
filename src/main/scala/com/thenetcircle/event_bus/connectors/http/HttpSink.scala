@@ -25,11 +25,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream._
-import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
+import akka.stream.scaladsl.{Flow, GraphDSL, Merge}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.story.interface.{IBuilder, ISink}
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.immutable.Seq
@@ -37,286 +37,307 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class HttpSink(settings: HttpSinkSettings,
-               connectionPool: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _],
-               fallbacker: Sink[Event, _])(implicit executor: ExecutionContext)
+case class HttpSinkSettings(host: String,
+                            port: Int,
+                            maxRetryTimes: Int,
+                            defaultRequest: HttpRequest,
+                            expectedResponse: Option[String] = None,
+                            connectionPoolSettingsOption: Option[ConnectionPoolSettings] = None)
+
+class HttpSink(
+    settings: HttpSinkSettings,
+    overriddenSendingFlow: Option[Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _]] = None
+)(implicit system: ActorSystem, materializer: Materializer, executor: ExecutionContext)
     extends ISink
     with StrictLogging {
 
   import HttpSink._
 
-  val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
-    Flow[Event].map(buildRequest).via(connectionPool)
+  // TODO: double check when it creates a new pool
+  private val sendingFlow =
+    overriddenSendingFlow.getOrElse(settings.connectionPoolSettingsOption match {
+      case Some(_poolSettings) =>
+        Http().cachedHostConnectionPool[Event](settings.host, settings.port, _poolSettings)
+      case None => Http().cachedHostConnectionPool[Event](settings.host, settings.port)
+    })
 
-  def buildRequest(event: Event): (HttpRequest, Event) = {
-    val request =
-      settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+  private val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
+    Flow[Event]
+      .map(event => {
+        // build request from settings
+        val request =
+          settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+        logger.debug(s"Sending new request to EndPoint")
+        (request, event)
+      })
+      .via(sendingFlow)
 
-    logger.debug(s"Sending new request to EndPoint")
-
-    (request, event)
+  private def checkResponse(statusCode: StatusCode, response: String): Boolean = {
+    statusCode.isSuccess() && (settings.expectedResponse match {
+      case Some(ep) => response == ep
+      case None     => true
+    })
   }
 
   override def graph: Flow[Event, Event, NotUsed] =
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
+      val input = builder.add(Flow[Event])
       val retryEngine =
-        builder.add(new HttpRetryEngine[Event](settings.maxRetryTimes, settings.expectedResponse))
+        builder.add(new HttpRetryEngine[Event](settings.maxRetryTimes, checkResponse))
+      val output = builder.add(Merge[Event](2))
+      val failureHandler = builder.add(Flow[Event].map(e => e.withStatus(EventStatus.FAILED)))
 
-      /** --- work flow --- */
+      // workflow (check if the result is expected, otherwise will retry)
       // format: off
 
-        /** check if the result is expected, otherwise will retry */
+            input.out ~> retryEngine.incoming
+                         retryEngine.ready  ~> sender ~> retryEngine.result
+                                                         retryEngine.succeed ~> output.in(0)
+                                                         retryEngine.failed  ~> failureHandler ~> output.in(1)
 
-            retryEngine.ready ~> sender ~> retryEngine.result
-            retryEngine.failed ~> fallbacker
+      // format: on
 
-            // format on
+      FlowShape(input.in, output.out)
 
-            FlowShape(retryEngine.incoming, retryEngine.succeed)
-        })
-
+    })
 }
 
 object HttpSink {
-    final class HttpRetryEngine[T <: Event](
-                                               maxRetryTimes: Int,
-                                               expectedResponse: Option[String] = None
-                                           )(implicit executor: ExecutionContext)
-        extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]] {
-        val incoming: Inlet[T] = Inlet("incoming")
-        val result: Inlet[(Try[HttpResponse], T)] = Inlet("result")
-        val ready: Outlet[T] = Outlet("ready")
-        val succeed: Outlet[T] = Outlet("succeed")
-        val failed: Outlet[T] = Outlet("failed")
+  final class HttpRetryEngine[T <: Event](
+      maxRetryTimes: Int,
+      responseCheckFunc: (StatusCode, String) => Boolean
+  )(implicit executor: ExecutionContext)
+      extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]] {
+    val incoming: Inlet[T] = Inlet("incoming")
+    val result: Inlet[(Try[HttpResponse], T)] = Inlet("result")
+    val ready: Outlet[T] = Outlet("ready")
+    val succeed: Outlet[T] = Outlet("succeed")
+    val failed: Outlet[T] = Outlet("failed")
 
-        override def shape: HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T] =
-            HttpRetryEngineShape(incoming, result, ready, succeed, failed)
+    override def shape: HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T] =
+      HttpRetryEngineShape(incoming, result, ready, succeed, failed)
 
-        override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-            new GraphStageLogic(shape) with StageLogging {
-                val retryTimes: AtomicInteger = new AtomicInteger(0)
+    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+      new GraphStageLogic(shape) with StageLogging {
+        val retryTimes: AtomicInteger = new AtomicInteger(0)
 
-                val isPending: AtomicBoolean = new AtomicBoolean(false)
-                var isWaitingPull: Boolean = false
+        val isPending: AtomicBoolean = new AtomicBoolean(false)
+        var isWaitingPull: Boolean = false
 
-                setHandler(incoming, new InHandler {
-                    override def onPush() = {
-                        log.debug(s"onPush incoming -> push ready")
-                        push(ready, grab(incoming))
-                        isPending.set(true)
-                    }
-
-                    override def onUpstreamFinish() = {
-                        log.debug("onUpstreamFinish")
-                        if (!isPending.get()) {
-                            log.debug("completeStage")
-                            completeStage()
-                        }
-                    }
-                })
-
-                setHandler(ready, new OutHandler {
-                    override def onPull() = {
-                        log.debug("onPull ready")
-                        if (!isPending.get()) {
-                            log.debug("tryPull incoming")
-                            tryPull(incoming)
-                        }
-                        else {
-                            log.debug("set waitingPull to true")
-                            isWaitingPull = true
-                        }
-                    }
-                })
-
-                setHandler(result, new InHandler {
-                    override def onPush() = {
-                        log.debug("onPush result")
-                        grab(result) match {
-                            case (responseTry, event) =>
-                                responseTry match {
-                                    case Success(response) =>
-                                        checkResponse(response, event).onComplete(getAsyncCallback(responseHandler(event)).invoke)
-
-                                    case Failure(ex) =>
-                                        log.error(
-                                            s"Event ${event.metadata.name} sent failed with error: ${ex.getMessage}.")
-                                        failureHandler(event)
-                                }
-                        }
-                    }
-                })
-
-                setHandler(failed, new OutHandler {
-                    override def onPull() = {
-                        log.debug("onPull failed")
-                        if (!hasBeenPulled(result) && isAvailable(succeed)) {
-                            log.debug("tryPull result")
-                            tryPull(result)
-                        }
-                    }
-                })
-
-                setHandler(succeed, new OutHandler {
-                    override def onPull() = {
-                        log.debug("onPull succeed")
-                        if (!hasBeenPulled(result) && isAvailable(failed)) {
-                            log.debug("tryPull result")
-                            tryPull(result)
-                        }
-                    }
-                })
-
-                def responseHandler(event: T): (Try[Boolean]) => Unit = {
-                    case Success(true) =>
-                        pushResultTo(succeed, event)
-                    case Success(false) =>
-                        failureHandler(event)
-                    case Failure(ex) =>
-                        log.error(s"Parse response error: ${ex.getMessage}")
-                        pushResultTo(failed, event)
-                }
-
-                def failureHandler(event: T): Unit = {
-                    if (retryTimes.incrementAndGet() >= maxRetryTimes) {
-                        log.error(s"Event sent failed after retried $maxRetryTimes times.")
-                        pushResultTo(failed, event)
-                    }
-                    else {
-                        log.debug("emit ready & tryPull result")
-                        emit(ready, event)
-                        tryPull(result)
-                    }
-                }
-
-                def pushResultTo(outlet: Outlet[T], result: T): Unit = {
-                    log.debug(s"push result $result to $outlet")
-                    push(outlet, result)
-                    isPending.set(false)
-                    retryTimes.set(0)
-                    if (isClosed(incoming)) completeStage()
-                    else if (isWaitingPull) tryPull(incoming)
-                }
-
-                def checkResponse(response: HttpResponse, event: Event): Future[Boolean] = {
-                    response.entity
-                        // TODO: timeout is too much?
-                        // TODO: unify ExecutionContext
-                        // TODO: use Unmarshaller
-                        .toStrict(3.seconds)(materializer)
-                        .map { entity =>
-                            val result: Boolean = {
-                                response.status.isSuccess() && (expectedResponse match {
-                                    case Some(expectedResponse) =>
-                                        entity.data.utf8String == expectedResponse
-                                    case None => true
-                                })
-                            }
-
-                            if (!result) {
-                                log.warning(
-                                    s"""Event "${event.uniqueName}" sent failed with unexpected response: ${entity.data.utf8String}."""
-                                )
-                                false
-                            } else {
-                                true
-                            }
-                        }
-                }
+        setHandler(
+          incoming,
+          new InHandler {
+            override def onPush() = {
+              log.debug(s"onPush incoming -> push ready")
+              push(ready, grab(incoming))
+              isPending.set(true)
             }
-    }
 
-    final case class HttpRetryEngineShape[Incoming, Result, Ready, Succeed, Failed](
-                                                                                       incoming: Inlet[Incoming],
-                                                                                       result: Inlet[Result],
-                                                                                       ready: Outlet[Ready],
-                                                                                       succeed: Outlet[Succeed],
-                                                                                       failed: Outlet[Failed]
-                                                                                   ) extends Shape {
+            override def onUpstreamFinish() = {
+              log.debug("onUpstreamFinish")
+              if (!isPending.get()) {
+                log.debug("completeStage")
+                completeStage()
+              }
+            }
+          }
+        )
 
-        override val inlets: Seq[Inlet[_]] = incoming :: result :: Nil
-        override val outlets: Seq[Outlet[_]] = ready :: succeed :: failed :: Nil
+        setHandler(
+          ready,
+          new OutHandler {
+            override def onPull() = {
+              log.debug("onPull ready")
+              if (!isPending.get()) {
+                log.debug("tryPull incoming")
+                tryPull(incoming)
+              } else {
+                log.debug("set waitingPull to true")
+                isWaitingPull = true
+              }
+            }
+          }
+        )
 
-        override def deepCopy(): Shape = HttpRetryEngineShape(incoming, result, ready, succeed, failed)
-    }
+        setHandler(
+          result,
+          new InHandler {
+            override def onPush() = {
+              log.debug("onPush result")
+              grab(result) match {
+                case (responseTry, event) =>
+                  responseTry match {
+                    case Success(response) =>
+                      checkResponse(response, event).onComplete(
+                        getAsyncCallback(responseHandler(event)).invoke
+                      )
+
+                    case Failure(ex) =>
+                      log.error(
+                        s"Event ${event.metadata.name} sent failed with error: ${ex.getMessage}."
+                      )
+                      failureHandler(event)
+                  }
+              }
+            }
+          }
+        )
+
+        setHandler(
+          failed,
+          new OutHandler {
+            override def onPull() = {
+              log.debug("onPull failed")
+              if (!hasBeenPulled(result) && isAvailable(succeed)) {
+                log.debug("tryPull result")
+                tryPull(result)
+              }
+            }
+          }
+        )
+
+        setHandler(
+          succeed,
+          new OutHandler {
+            override def onPull() = {
+              log.debug("onPull succeed")
+              if (!hasBeenPulled(result) && isAvailable(failed)) {
+                log.debug("tryPull result")
+                tryPull(result)
+              }
+            }
+          }
+        )
+
+        def responseHandler(event: T): (Try[Boolean]) => Unit = {
+          case Success(true) =>
+            pushResultTo(succeed, event)
+          case Success(false) =>
+            failureHandler(event)
+          case Failure(ex) =>
+            log.error(s"Parse response error: ${ex.getMessage}")
+            pushResultTo(failed, event)
+        }
+
+        def failureHandler(event: T): Unit = {
+          if (retryTimes.incrementAndGet() >= maxRetryTimes) {
+            log.error(s"Event sent failed after retried $maxRetryTimes times.")
+            pushResultTo(failed, event)
+          } else {
+            log.debug("emit ready & tryPull result")
+            emit(ready, event)
+            tryPull(result)
+          }
+        }
+
+        def pushResultTo(outlet: Outlet[T], result: T): Unit = {
+          log.debug(s"push result $result to $outlet")
+          push(outlet, result)
+          isPending.set(false)
+          retryTimes.set(0)
+          if (isClosed(incoming)) completeStage()
+          else if (isWaitingPull) tryPull(incoming)
+        }
+
+        def checkResponse(response: HttpResponse, event: Event): Future[Boolean] = {
+          response.entity
+            .toStrict(3.seconds)(materializer)
+            .map { entity =>
+              val result: Boolean = responseCheckFunc(response.status, entity.data.utf8String)
+              if (!result && retryTimes.get() == 0) {
+                log.warning(
+                  s"""Event "${event.uniqueName}" sent failed with unexpected response: ${entity.data.utf8String}."""
+                )
+              }
+              result
+            }
+        }
+      }
+  }
+
+  final case class HttpRetryEngineShape[Incoming, Result, Ready, Succeed, Failed](
+      incoming: Inlet[Incoming],
+      result: Inlet[Result],
+      ready: Outlet[Ready],
+      succeed: Outlet[Succeed],
+      failed: Outlet[Failed]
+  ) extends Shape {
+
+    override val inlets: Seq[Inlet[_]] = incoming :: result :: Nil
+    override val outlets: Seq[Outlet[_]] = ready :: succeed :: failed :: Nil
+
+    override def deepCopy(): Shape = HttpRetryEngineShape(incoming, result, ready, succeed, failed)
+  }
 }
 
-case class HttpSinkSettings(host: String,
-                            port: Int,
-                            maxRetryTimes: Int,
-                            defaultRequest: HttpRequest,
-                            // TODO: set to optional
-                            expectedResponse: Option[String] = None)
+class HttpSinkBuilder()(implicit system: ActorSystem,
+                        materializer: Materializer,
+                        executor: ExecutionContext)
+    extends IBuilder
+    with StrictLogging {
 
-class HttpSinkBuilder()(implicit system: ActorSystem, materializer: Materializer, executor: ExecutionContext) extends IBuilder with StrictLogging {
+  override def buildFromConfig(config: Config): HttpSink = {
 
-    override def buildFromConfig(config: Config): HttpSink = {
-        val config: Config =
-            _config.withFallback(system.settings.config.getConfig("event-bus.sink.http"))
+    val defaultConfig: Config = ConfigFactory.parseString("""
+          |{
+          |  max-retry-times = 10
+          |  request {
+          |    port = 80
+          |    method = POST
+          |    uri = /
+          |  }
+          |  # expected-response = "OK"
+          |  akka.http.host-connection-pool {
+          |    #max-connections = 4
+          |    max-retries = 0
+          |    #max-open-requests = 32
+          |    #pipelining-limit = 1
+          |    #idle-timeout = 30 s
+          |  }
+          |}
+        """.stripMargin)
 
-        logger.info(s"Creating a new HttpSinkSettings according to config: $config")
+    val mergedConfig: Config = config.withFallback(defaultConfig)
 
-        try {
-            val requestMethod = if (config.hasPath("request.method")) {
-                config.getString("request.method").toUpperCase() match {
-                    case "POST" => HttpMethods.POST
-                    case "GET" => HttpMethods.GET
-                    case unacceptedMethod =>
-                        throw new IllegalArgumentException(
-                            s"Http request method $unacceptedMethod is unsupported."
-                        )
-                }
-            } else {
-                HttpMethods.POST
-            }
-            val requsetUri =
-                if (config.hasPath("request.uri")) Uri(config.getString("request.uri"))
-                else Uri./
+    try {
+      val requestMethod = mergedConfig.getString("request.method").toUpperCase() match {
+        case "POST" => HttpMethods.POST
+        case "GET"  => HttpMethods.GET
+        case unacceptedMethod =>
+          throw new IllegalArgumentException(
+            s"Http request method $unacceptedMethod is unsupported."
+          )
+      }
+      val requsetUri = Uri(mergedConfig.getString("request.uri"))
+      val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
 
-            val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
+      val expectedResponse =
+        if (mergedConfig.hasPath("expected-response-data"))
+          Some(mergedConfig.getString("expected-response-data"))
+        else None
 
-            val expectedResponse =
-                if (config.hasPath("expected-response-data"))
-                    Some(config.getString("expected-response-data"))
-                else None
+      val connectionPoolSettings =
+        if (mergedConfig.hasPath("akka.http.host-connection-pool"))
+          Some(ConnectionPoolSettings(mergedConfig.withFallback(system.settings.config)))
+        else None
 
-            val settings = HttpSinkSettings(
-                config.getString("request.host"),
-                config.getInt("request.port"),
-                config.getInt("max-retry-times"),
-                defaultRequest,
-                expectedResponse
-            )
+      new HttpSink(
+        HttpSinkSettings(
+          mergedConfig.getString("request.host"),
+          mergedConfig.getInt("request.port"),
+          mergedConfig.getInt("max-retry-times"),
+          defaultRequest,
+          expectedResponse,
+          connectionPoolSettings
+        )
+      )
 
-            val rootConfig =
-                system.settings.config
-            val connectionPoolSettings: ConnectionPoolSettings =
-                if (config.hasPath("akka.http.host-connection-pool")) {
-                    ConnectionPoolSettings(
-                        config
-                            .withFallback(rootConfig)
-                    )
-                } else {
-                    ConnectionPoolSettings(rootConfig)
-                }
-
-            // TODO: check when it creates a new pool
-            val connectionPool = Http().cachedHostConnectionPool[Event](
-                settings.host,
-                settings.port,
-                connectionPoolSettings)
-
-            // TODO: implementation of fallbacker
-            val fallbacker: Sink[Event, NotUsed] = Flow[Event].to(Sink.ignore)
-
-            new HttpSink(settings, connectionPool, fallbacker)
-
-        } catch {
-            case ex: Throwable =>
-                logger.error(s"Creating HttpSinkSettings failed with error: ${ex.getMessage}")
-                throw ex
-        }
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"Creating HttpSinkSettings failed with error: ${ex.getMessage}")
+        throw ex
     }
+  }
 }

@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.connectors.kafka
 
+import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
@@ -24,13 +25,12 @@ import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream.Supervision.resumingDecider
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
-import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
-import com.thenetcircle.event_bus.event.{Event, EventCommitter}
 import com.thenetcircle.event_bus.story.interface.ISource
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class KafkaSourceSettings(groupId: String,
                                extractParallelism: Int,
@@ -45,8 +45,10 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
     extends ISource
     with StrictLogging {
 
-  require(settings.topics.isDefined || settings.topicPattern.isDefined,
-          "The outlet of KafkaPipeline needs to subscribe topics")
+  require(
+    settings.topics.isDefined || settings.topicPattern.isDefined,
+    "The outlet of KafkaPipeline needs to subscribe topics"
+  )
 
   private val subscription: AutoSubscription =
     if (settings.topics.isDefined) {
@@ -84,14 +86,11 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
       .withAttributes(supervisionStrategy(resumingDecider))
       .map {
         case (msg, extractedData) =>
-          Event(metadata = extractedData.metadata.withChannel(msg.record.topic()),
-                body = extractedData.body,
-                context = Map("kafkaCommittableOffset" -> msg.committableOffset),
-                committer = Some(new EventCommitter {
-                  override def commit(): Future[Done] = {
-                    msg.committableOffset.commitScaladsl()
-                  }
-                }))
+          Event(
+            metadata = extractedData.metadata.withChannel(msg.record.topic()),
+            body = extractedData.body,
+            context = Map("committableOffset" -> msg.committableOffset)
+          )
       }
       .mapMaterializedValue[NotUsed](m => NotUsed)
   }
@@ -102,22 +101,18 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
       .batch(
         max = settings.commitBatchMax, {
           case event =>
-            val batchCommitter = if (event.hasContext("kafkaCommittableOffset")) {
-              CommittableOffsetBatch.empty
-                .updated(event.context("kafkaCommittableOffset").asInstanceOf[CommittableOffset])
-            } else {
-              CommittableOffsetBatch.empty
+            val batchCommitter = event.getContext[CommittableOffset]("committableOffset") match {
+              case Some(co) => CommittableOffsetBatch.empty.updated(co)
+              case None     => CommittableOffsetBatch.empty
             }
             (batchCommitter, List[Event](event))
         }
       ) {
         case ((batchCommitter, eventList), event) =>
-          (if (event.hasContext("kafkaCommittableOffset"))
-             batchCommitter.updated(
-               event.context("kafkaCommittableOffset").asInstanceOf[CommittableOffset]
-             )
-           else batchCommitter,
-           eventList.+:(event))
+          (event.getContext[CommittableOffset]("committableOffset") match {
+            case Some(co) => batchCommitter.updated(co)
+            case None     => batchCommitter
+          }, eventList.+:(event))
       }
       .mapAsync(settings.commitParallelism) {
         case (batchCommitter, eventList) =>

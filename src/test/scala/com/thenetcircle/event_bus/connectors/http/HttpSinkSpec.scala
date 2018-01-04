@@ -20,12 +20,12 @@ package com.thenetcircle.event_bus.connectors.http
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.scaladsl.{Flow, Keep, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import com.thenetcircle.event_bus.base.AkkaStreamSpec
 import com.thenetcircle.event_bus.createTestEvent
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
@@ -40,7 +40,6 @@ class HttpSinkSpec extends AkkaStreamSpec {
       .run()
 
   def createHttpSink(expectedResponse: Option[String] = None,
-                     fallback: Sink[Event, _] = Sink.ignore,
                      maxRetryTimes: Int = 1,
                      defaultRequest: HttpRequest = HttpRequest(),
                      defaultResponse: Try[HttpResponse] = Success(HttpResponse()))(
@@ -50,10 +49,12 @@ class HttpSinkSpec extends AkkaStreamSpec {
             (defaultResponse, event)
         }
   )(implicit system: ActorSystem, materializer: Materializer): HttpSink = {
-    val httpSinkSettings = createHttpSinkSettings(maxRetryTimes = maxRetryTimes,
-                                                  defaultRequest = defaultRequest,
-                                                  expectedResponse = expectedResponse)
-    new HttpSink(httpSinkSettings, sender, fallback)
+    val httpSinkSettings = createHttpSinkSettings(
+      maxRetryTimes = maxRetryTimes,
+      defaultRequest = defaultRequest,
+      expectedResponse = expectedResponse
+    )
+    new HttpSink(httpSinkSettings, Some(sender))
   }
 
   def createHttpSinkSettings(
@@ -68,19 +69,15 @@ class HttpSinkSpec extends AkkaStreamSpec {
   behavior of "HttpSink"
 
   it must "delivery successfully to the target with proper HttpResponse" in {
-    val fallback = TestSubscriber.probe[Event]()
-    val httpSink =
-      createHttpSink(fallback = Sink.fromSubscriber(fallback))()
-    val (incoming, succeed) = run(httpSink)
+    val httpSink = createHttpSink()()
+    val (incoming, result) = run(httpSink)
 
     val testEvent = createTestEvent()
 
-    fallback.request(1)
-    succeed.request(1)
+    result.request(1)
     incoming.expectRequest()
     incoming.sendNext(testEvent)
-    succeed.expectNext(testEvent)
-    fallback.expectNoMsg(100.millisecond)
+    result.expectNext(testEvent)
   }
 
   it should "retry multiple times before goes to failed/fallback" in {
@@ -90,19 +87,17 @@ class HttpSinkSpec extends AkkaStreamSpec {
         senderTimes += 1
         (Failure(new Exception("failed response")), event)
     }
-    val fallback = TestSubscriber.probe[Event]()
-    val httpSink =
-      createHttpSink(fallback = Sink.fromSubscriber(fallback), maxRetryTimes = 10)(sender)
-    val (incoming, succeed) = run(httpSink)
+    val httpSink = createHttpSink(maxRetryTimes = 10)(sender)
+    val (incoming, result) = run(httpSink)
 
     val testEvent = createTestEvent()
 
-    fallback.request(1)
-    succeed.request(1)
+    result.request(1)
     incoming.sendNext(testEvent)
-    succeed.expectNoMsg(100.millisecond)
-    fallback.expectNext(testEvent)
-    fallback.expectNoMsg(100.millisecond)
+
+    val _event = result.expectNext()
+    _event shouldEqual testEvent.withStatus(EventStatus.FAILED)
+
     senderTimes shouldEqual 10
   }
 
@@ -121,33 +116,21 @@ class HttpSinkSpec extends AkkaStreamSpec {
           yield createTestEvent(name = s"TestEvent$i")).iterator
     )
 
-    val fallback = TestSubscriber.probe[Event]()
-    val httpSink =
-      createHttpSink(fallback = Sink.fromSubscriber(fallback), maxRetryTimes = 1)(sender)
+    val httpSink = createHttpSink(maxRetryTimes = 1)(sender)
 
-    val succeed = source
+    val result = source
       .via(httpSink.graph)
       .toMat(TestSink.probe[Event])(Keep.right)
       .run()
 
-    succeed.request(1)
     for (i <- 1 to 10) {
-      fallback.request(1)
-      val _event = fallback.expectNext()
+      val _event = result.requestNext()
 
       _event.metadata.name shouldEqual s"TestEvent$i"
-
-      if (i < 10) succeed.expectNoMsg(100.millisecond)
+      _event.isFailed shouldEqual true
     }
 
-    fallback.expectComplete()
-    succeed.expectComplete()
-
-    /*incoming.sendNext(testEvent)
-        succeed.expectNoMsg(100.millisecond)
-        fallback.expectNext(testEvent)
-        fallback.expectNoMsg(100.millisecond)
-        senderTimes shouldEqual 10*/
+    result.expectComplete()
   }
 
   it should "properly support multiple ports" in {
@@ -158,21 +141,11 @@ class HttpSinkSpec extends AkkaStreamSpec {
         (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
     }
 
-    val fallback = TestSubscriber.probe[Event]()
-
-    val httpSink =
-      createHttpSink(fallback = Sink.fromSubscriber(fallback), expectedResponse = Some("OK"))(
-        sender
-      )
+    val httpSink = createHttpSink(expectedResponse = Some("OK"))(sender)
 
     val (in1, out1) = run(httpSink)
-    fallback.expectSubscription().request(1)
-
     val (in2, out2) = run(httpSink)
-    fallback.expectSubscription().request(1)
-
     val (in3, out3) = run(httpSink)
-    fallback.expectSubscription().request(1)
 
     val okEvent = createTestEvent(body = "OK")
     val koEvent = createTestEvent(body = "KO")
@@ -196,7 +169,6 @@ class HttpSinkSpec extends AkkaStreamSpec {
     out1.expectNoMsg(100.millisecond)
     out2.expectNoMsg(100.millisecond)
 
-    fallback.expectNoMsg(100.millisecond)
     senderTimes shouldEqual 3
 
     out1.request(1)
@@ -205,9 +177,8 @@ class HttpSinkSpec extends AkkaStreamSpec {
     in3.sendNext(koEvent)
     out1.expectNoMsg(100.millisecond)
     out2.expectNoMsg(100.millisecond)
-    out3.expectNoMsg(100.millisecond)
 
-    fallback.expectNext(koEvent)
+    out3.expectNext() shouldEqual koEvent.withStatus(EventStatus.FAILED)
   }
 
   it should "goes to the target if succeed after several tries" in {
@@ -222,26 +193,21 @@ class HttpSinkSpec extends AkkaStreamSpec {
         }
         (response, event)
     }
-    val fallback = TestSubscriber.probe[Event]()
+
     val httpSink =
-      createHttpSink(fallback = Sink.fromSubscriber(fallback),
-                     maxRetryTimes = 10,
-                     expectedResponse = Some("OK"))(sender)
+      createHttpSink(maxRetryTimes = 10, expectedResponse = Some("OK"))(sender)
 
     val (testSource, testSink) = run(httpSink)
-    val testEvent              = createTestEvent(body = "OK")
+    val testEvent = createTestEvent(body = "OK")
 
     testSink.request(1)
-    fallback.request(1)
     testSource.sendNext(testEvent)
     testSink.expectNext(testEvent)
-    fallback.expectNoMsg(100.microsecond)
     senderTimes shouldEqual 6
 
     testSink.request(1)
     testSource.sendNext(testEvent)
     testSink.expectNext(testEvent)
-    fallback.expectNoMsg(100.microsecond)
     senderTimes shouldEqual 7
   }
 
@@ -252,11 +218,9 @@ class HttpSinkSpec extends AkkaStreamSpec {
         senderTimes += 1
         (Success(HttpResponse(entity = HttpEntity(event.body.data))), event)
     }
-    val fallback = TestSubscriber.probe[Event]()
+
     val httpSink =
-      createHttpSink(fallback = Sink.fromSubscriber(fallback),
-                     maxRetryTimes = 10,
-                     expectedResponse = Some("OK"))(sender)
+      createHttpSink(maxRetryTimes = 10, expectedResponse = Some("OK"))(sender)
 
     val okEvent = createTestEvent(name = "okEvent", body = "OK")
     val koEvent = createTestEvent(name = "koEvent", body = "KO")
@@ -272,47 +236,35 @@ class HttpSinkSpec extends AkkaStreamSpec {
         .via(httpSink.graph)
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
-    val fallbackSub1 = fallback.expectSubscription()
 
     val sink2 =
       source2
         .via(httpSink.graph)
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
-    val fallbackSub2 = fallback.expectSubscription()
 
     val sink3 =
       source3
         .via(httpSink.graph)
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
-    val fallbackSub3 = fallback.expectSubscription()
 
-    fallbackSub1.request(1)
     for (i <- 1 to 100) {
       sink1.request(1)
       sink1.expectNext(okEvent)
     }
-    fallback.expectComplete()
     sink1.expectComplete()
 
-    sink2.request(1)
     for (i <- 1 to 10) {
-      fallbackSub2.request(1)
-      fallback.expectNext(koEvent)
+      sink2.request(1)
+      sink2.expectNext(koEvent.withStatus(EventStatus.FAILED))
     }
-    fallback.expectComplete()
 
-    fallbackSub3.request(1)
     for (i <- 1 to 100) {
-      sink3.request(1)
-      fallback.expectNext(koEvent)
-
-      fallbackSub3.request(1)
-      sink3.expectNext(okEvent)
+      sink3.request(2)
+      sink3.expectNext(koEvent.withStatus(EventStatus.FAILED), okEvent)
     }
     sink3.expectComplete()
-    fallback.expectComplete()
   }
 
   // TODO: test abnormal cases, like exception, cancel, error, complete etc...

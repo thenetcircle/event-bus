@@ -21,30 +21,22 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.event.EventStatus.EventStatus
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
-import scala.concurrent.Future
-
 case class Event(metadata: EventMetaData,
                  body: EventBody,
                  context: Map[String, Any] = Map.empty,
-                 committer: Option[EventCommitter] = None,
                  status: EventStatus = EventStatus.PROCESSING,
                  version: Option[String] = None) {
 
-  def withCommitter(commitFunction: () => Future[Any]): Event =
-    copy(committer = Some(new EventCommitter {
-      override def commit(): Future[Any] = commitFunction()
-    }))
-
-  def hasContext(key: String): Boolean = context.isDefinedAt(key)
-  def addContext(key: String, value: Any): Event =
-    copy(context = context + (key -> value))
-
-  def isFailed: Boolean                       = status == EventStatus.FAILED
-  def withStatus(_status: EventStatus): Event = copy(status = _status)
-
+  def uniqueName: String = s"${metadata.name}-${metadata.uuid}"
   def withNewVersion(_version: String): Event = copy(version = Some(_version))
 
-  def uniqueName: String = ""
+  def isFailed: Boolean = status == EventStatus.FAILED
+  def withStatus(_status: EventStatus): Event = copy(status = _status)
+
+  def hasContext(key: String): Boolean = context.isDefinedAt(key)
+  def addContext[T](key: String, value: T): Event = copy(context = context + (key -> value))
+  def getContext[T](key: String): Option[T] =
+    if (hasContext(key)) Some(context(key).asInstanceOf[T]) else None
 
 }
 
@@ -59,13 +51,9 @@ case class EventMetaData(uuid: String,
 
 case class EventBody(data: ByteString, format: DataFormat)
 
-trait EventCommitter {
-  def commit(): Future[Any]
-}
-
 object EventStatus extends Enumeration {
   type EventStatus = Value
 
   val PROCESSING = Value(1, "PROCESSING")
-  val FAILED     = Value(2, "FAILED")
+  val FAILED = Value(2, "FAILED")
 }
