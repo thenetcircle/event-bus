@@ -17,14 +17,10 @@
 
 package com.thenetcircle.event_bus.story.interface
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
-import com.thenetcircle.event_bus.event.Event
+import com.typesafe.config.Config
 
-trait ISource extends IStage {
+trait IBuilder {
 
-  def graph: Source[Event, NotUsed]
-
-  def ackGraph: Flow[Event, Event, NotUsed]
+  def buildFromConfig(config: Config): IStage
 
 }

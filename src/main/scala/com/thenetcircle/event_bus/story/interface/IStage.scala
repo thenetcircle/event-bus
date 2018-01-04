@@ -15,6 +15,6 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus.story.interface
 
-class StoryManager {}
+trait IStage {}

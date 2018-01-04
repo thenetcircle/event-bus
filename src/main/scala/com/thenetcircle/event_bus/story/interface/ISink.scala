@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 
-trait ISink {
+trait ISink extends IStage {
 
   def graph: Flow[Event, Event, NotUsed]
 
