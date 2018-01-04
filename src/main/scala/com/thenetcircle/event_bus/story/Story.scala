@@ -145,22 +145,58 @@ object StoryStatus extends Enumeration {
 
 class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext) extends PlotBuilder {
 
-  override def buildFromConfig(config: Config): Story = {
+  val defaultConfig: Config = ConfigFactory.parseString("""
+        |{
+        |  # name = ...
+        |  # source { type = ..., settings {} }
+        |  # ops = []
+        |  # sink { type = ..., settings {} }
+        |  # fallback {}
+        |}
+      """.stripMargin)
 
-    val defaultConfig: Config =
-      ConfigFactory.parseString("""
-                                  |{
-                                  |  name = "DefaultStory"
-                                  |  source {}
-                                  |  ops = [{}]
-                                  |  sink {}
-                                  |  # fallback {}
-                                  |}
-                                """.stripMargin)
+  override def buildFromConfig(config: Config): Story = {
 
     val mergedConfig = config.withFallback(defaultConfig)
 
     val storySettings = StorySettings(mergedConfig.as[String]("name"))
+
+    // exceptions handler
+    val sourcePlot = BuilderFactory
+      .getSourcePlotBuilder(mergedConfig.as[String]("source.type"))
+      .map(builder => builder.buildFromConfig(mergedConfig.getConfig("source.settings")))
+      .get
+
+    val sinkPlot = BuilderFactory
+      .getSinkPlotBuilder(mergedConfig.as[String]("sink.type"))
+      .map(builder => builder.buildFromConfig(mergedConfig.getConfig("sink.settings")))
+      .get
+
+    val opPlots = mergedConfig
+      .as[Option[List[Config]]]("ops")
+      .map(
+        configList =>
+          configList.map(
+            opConfig =>
+              BuilderFactory
+                .getOpPlotBuilder(opConfig.as[String]("type"))
+                .map(builder => builder.buildFromConfig(opConfig.getConfig("settings")))
+                .get
+        )
+      )
+      .getOrElse(List.empty[Plot])
+
+    val fallback = mergedConfig
+      .as[Option[Config]]("fallback")
+      .map(
+        fc =>
+          BuilderFactory
+            .getSinkPlotBuilder(fc.as[String]("type"))
+            .map(builder => builder.buildFromConfig(fc.getConfig("settings")))
+            .get
+      )
+
+    new Story(storySettings, sourcePlot, sinkPlot, opPlots, fallback)
 
   }
 
