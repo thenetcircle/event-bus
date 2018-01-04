@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.connectors.kafka
+package com.thenetcircle.event_bus.plots.kafka
 
 import akka.NotUsed
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}

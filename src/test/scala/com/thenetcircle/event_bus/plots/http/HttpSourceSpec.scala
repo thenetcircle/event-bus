@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.connectors.http
+package com.thenetcircle.event_bus.plots.http
 
 import java.text.SimpleDateFormat
 
@@ -25,7 +25,7 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.base.AkkaStreamSpec
-import com.thenetcircle.event_bus.connectors.http.HttpSource.successfulResponse
+import com.thenetcircle.event_bus.plots.http.HttpSource.successfulResponse
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData}
 

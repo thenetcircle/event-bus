@@ -1,4 +1,4 @@
-package com.thenetcircle.event_bus.connectors.kafka
+package com.thenetcircle.event_bus.plots.kafka
 
 import com.thenetcircle.event_bus.event.EventMetaData
 

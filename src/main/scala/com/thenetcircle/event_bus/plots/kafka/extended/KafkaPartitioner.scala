@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.connectors.kafka.extended
+package com.thenetcircle.event_bus.plots.kafka.extended
 
 import java.util
 
@@ -34,7 +34,7 @@ class KafkaPartitioner extends Partitioner {
                          valueBytes: Array[Byte],
                          cluster: Cluster): Int = {
     val partitions: util.List[PartitionInfo] = cluster.partitionsForTopic(topic)
-    val numPartitions: Int                   = partitions.size
+    val numPartitions: Int = partitions.size
 
     val event = value.asInstanceOf[Event]
     val keyBytes = event.metadata.actor
@@ -45,5 +45,5 @@ class KafkaPartitioner extends Partitioner {
   }
 
   override def configure(configs: util.Map[String, _]): Unit = {}
-  override def close(): Unit                                 = {}
+  override def close(): Unit = {}
 }

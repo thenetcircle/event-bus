@@ -25,6 +25,8 @@ import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
+case class StorySettings(name: String)
+
 class Story(settings: StorySettings,
             sourcePlot: SourcePlot,
             sinkPlot: SinkPlot,
@@ -115,8 +117,6 @@ object Story extends StrictLogging {
   }
 
 }
-
-case class StorySettings(name: String)
 
 object StoryStatus extends Enumeration {
   type StoryStatus = Value

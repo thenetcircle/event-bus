@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.connectors.http
+package com.thenetcircle.event_bus.plots.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
