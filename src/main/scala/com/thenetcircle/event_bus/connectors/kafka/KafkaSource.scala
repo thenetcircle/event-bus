@@ -27,7 +27,7 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
-import com.thenetcircle.event_bus.story.interface.ISource
+import com.thenetcircle.event_bus.interface.SourcePlot
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
@@ -42,7 +42,7 @@ case class KafkaSourceSettings(groupId: String,
                                topicPattern: Option[String])
 
 class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionContext)
-    extends ISource
+    extends SourcePlot
     with StrictLogging {
 
   require(
@@ -59,7 +59,7 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
 
   private val consumerSettings = settings.consumerSettings.withGroupId(settings.groupId)
 
-  override def graph: Source[Event, NotUsed] = {
+  override def getGraph(): Source[Event, NotUsed] = {
 
     // TODO: maybe use one consumer for one partition
     Consumer
@@ -96,7 +96,7 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
   }
 
   // TODO: find a better way of the "kafkaCommittableOffset" part
-  override def ackGraph: Flow[Event, Event, NotUsed] = {
+  override def getCommittingGraph(): Flow[Event, Event, NotUsed] = {
     Flow[Event]
       .batch(
         max = settings.commitBatchMax, {

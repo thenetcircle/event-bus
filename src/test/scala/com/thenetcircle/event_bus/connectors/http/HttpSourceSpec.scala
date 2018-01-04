@@ -119,7 +119,7 @@ class HttpSourceSpec extends AkkaStreamSpec {
       Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0), Source.fromPublisher(in))
     )
     val h = new HttpSource(settings, Some(httpBind))
-    val out1 = h.graph.toMat(TestSink.probe[Event])(Keep.right).run()
+    val out1 = h.getGraph().toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)
 

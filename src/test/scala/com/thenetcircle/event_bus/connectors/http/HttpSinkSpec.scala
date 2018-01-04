@@ -35,7 +35,7 @@ class HttpSinkSpec extends AkkaStreamSpec {
   def run(httpSink: HttpSink): (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
     TestSource
       .probe[Event]
-      .viaMat(httpSink.graph)(Keep.left)
+      .viaMat(httpSink.getGraph())(Keep.left)
       .toMat(TestSink.probe[Event])(Keep.both)
       .run()
 
@@ -119,7 +119,7 @@ class HttpSinkSpec extends AkkaStreamSpec {
     val httpSink = createHttpSink(maxRetryTimes = 1)(sender)
 
     val result = source
-      .via(httpSink.graph)
+      .via(httpSink.getGraph())
       .toMat(TestSink.probe[Event])(Keep.right)
       .run()
 
@@ -233,19 +233,19 @@ class HttpSinkSpec extends AkkaStreamSpec {
 
     val sink1 =
       source1
-        .via(httpSink.graph)
+        .via(httpSink.getGraph())
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
 
     val sink2 =
       source2
-        .via(httpSink.graph)
+        .via(httpSink.getGraph())
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
 
     val sink3 =
       source3
-        .via(httpSink.graph)
+        .via(httpSink.getGraph())
         .toMat(TestSink.probe[Event])(Keep.right)
         .run()
 

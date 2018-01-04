@@ -23,7 +23,7 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.story.interface.ISink
+import com.thenetcircle.event_bus.interface.SinkPlot
 import com.thenetcircle.event_bus.connectors.kafka.extended.{KafkaKey, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
@@ -33,7 +33,7 @@ import scala.concurrent.ExecutionContext
 case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
 class KafkaSink(settings: KafkaSinkSettings)(implicit executor: ExecutionContext)
-    extends ISink
+    extends SinkPlot
     with StrictLogging {
 
   import KafkaSink._
@@ -41,7 +41,7 @@ class KafkaSink(settings: KafkaSinkSettings)(implicit executor: ExecutionContext
   private val producerSettings = settings.producerSettings
     .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
 
-  override def graph: Flow[Event, Event, NotUsed] =
+  override def getGraph(): Flow[Event, Event, NotUsed] =
     Flow[Event]
       .map(event => {
         Message(getProducerRecordFromEvent(event), event)
@@ -56,15 +56,17 @@ object KafkaSink {
       event: Event
   ): ProducerRecord[ProducerKey, ProducerValue] = {
     // TODO: use channel detective
-    val topic: String        = event.metadata.channel.getOrElse("event-default")
-    val timestamp: Long      = event.metadata.published
-    val key: ProducerKey     = KafkaKey(event)
+    val topic: String = event.metadata.channel.getOrElse("event-default")
+    val timestamp: Long = event.metadata.published
+    val key: ProducerKey = KafkaKey(event)
     val value: ProducerValue = event
 
-    new ProducerRecord[ProducerKey, ProducerValue](topic,
-                                                   null,
-                                                   timestamp.asInstanceOf[java.lang.Long],
-                                                   key,
-                                                   value)
+    new ProducerRecord[ProducerKey, ProducerValue](
+      topic,
+      null,
+      timestamp.asInstanceOf[java.lang.Long],
+      key,
+      value
+    )
   }
 }

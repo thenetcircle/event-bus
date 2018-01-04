@@ -15,14 +15,6 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.interface
+package com.thenetcircle.event_bus.interface
 
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.event.Event
-
-trait ISink extends IStage {
-
-  def graph: Flow[Event, Event, NotUsed]
-
-}
+trait Plot {}

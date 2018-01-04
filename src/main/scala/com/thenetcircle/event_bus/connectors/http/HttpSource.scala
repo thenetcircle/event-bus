@@ -29,7 +29,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.story.interface.{IBuilder, ISource}
+import com.thenetcircle.event_bus.interface.{PlotBuilder, SourcePlot}
 import com.thenetcircle.event_bus.tracing.Tracing
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -49,7 +49,7 @@ class HttpSource(
     settings: HttpSourceSettings,
     overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
 )(implicit system: ActorSystem, materializer: Materializer, executor: ExecutionContext)
-    extends ISource
+    extends SourcePlot
     with StrictLogging {
 
   import HttpSource._
@@ -68,7 +68,7 @@ class HttpSource(
           .map(_.flow)
     })
 
-  override def graph: Source[Event, NotUsed] =
+  override def getGraph(): Source[Event, NotUsed] =
     httpBind
       .flatMapMerge(
         settings.maxConnections,
@@ -99,7 +99,7 @@ class HttpSource(
       )
       .mapMaterializedValue(m => NotUsed)
 
-  override def ackGraph: Flow[Event, Event, NotUsed] =
+  override def getCommittingGraph(): Flow[Event, Event, NotUsed] =
     Flow[Event].map(event => {
       event
         .getContext[Promise[HttpResponse]]("responsePromise")
@@ -215,7 +215,7 @@ object HttpSource {
 class HttpSourceBuilder()(implicit system: ActorSystem,
                           materializer: Materializer,
                           executor: ExecutionContext)
-    extends IBuilder
+    extends PlotBuilder
     with StrictLogging {
 
   override def buildFromConfig(config: Config): HttpSource = {

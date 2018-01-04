@@ -15,6 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.interface
+package com.thenetcircle.event_bus.interface
 
-trait IStage {}
+import akka.NotUsed
+import akka.stream.scaladsl.{Flow, Source}
+import com.thenetcircle.event_bus.event.Event
+
+trait SourcePlot extends Plot {
+
+  def getGraph(): Source[Event, NotUsed]
+
+  def getCommittingGraph(): Flow[Event, Event, NotUsed]
+
+}

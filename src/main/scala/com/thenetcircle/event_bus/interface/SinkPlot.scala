@@ -15,12 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.interface
+package com.thenetcircle.event_bus.interface
 
-import com.typesafe.config.Config
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.event.Event
 
-trait IBuilder {
+trait SinkPlot extends Plot {
 
-  def buildFromConfig(config: Config): IStage
+  def getGraph(): Flow[Event, Event, NotUsed]
 
 }

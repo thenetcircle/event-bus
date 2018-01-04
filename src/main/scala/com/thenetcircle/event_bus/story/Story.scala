@@ -21,18 +21,17 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
 import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
-import com.thenetcircle.event_bus.story.interface._
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
 class Story(settings: StorySettings,
-            source: ISource,
-            sink: ISink,
-            operations: List[IOperation] = List.empty,
-            fallback: Option[ISink] = None,
+            sourcePlot: SourcePlot,
+            sinkPlot: SinkPlot,
+            opPlots: List[OpPlot] = List.empty,
+            fallback: Option[SinkPlot] = None,
             initStatus: StoryStatus = StoryStatus.INIT)
-    extends ISource
+    extends SourcePlot
     with StrictLogging {
 
   val storyName: String = settings.name
@@ -51,7 +50,7 @@ class Story(settings: StorySettings,
     Story.decorateGraph(graph, s"$storyName-$graphId", fallback)
   }
 
-  override def graph: Source[Event, NotUsed] =
+  override def getGraph(): Source[Event, NotUsed] =
     Source
       .fromGraph(
         GraphDSL
@@ -59,35 +58,32 @@ class Story(settings: StorySettings,
             import GraphDSL.Implicits._
 
             // variables
-            val sourceGraph     = source.graph
-            var operationGraphs = Flow[Event]
-            operations
-              .foreach(op => operationGraphs = operationGraphs.via(decorateGraph(op.graph)))
-            val sinkGraph = decorateGraph(sink.graph)
-            val ackGraph  = builder.add(decorateGraph(source.ackGraph))
+            val source = sourcePlot.getGraph()
+            var operations = Flow[Event]
+            opPlots.foreach(op => operations = operations.via(decorateGraph(op.getGraph())))
+            val sink = decorateGraph(sinkPlot.getGraph())
+            val committing = builder.add(decorateGraph(sourcePlot.getCommittingGraph()))
 
             // workflow
-            sourceGraph ~> operationGraphs ~> sinkGraph ~> ackGraph.in
+            source ~> operations ~> sink ~> committing
 
             // ports
-            SourceShape(ackGraph.out)
+            SourceShape(committing.out)
           }
       )
       .named(storyName)
 
-  override def ackGraph: Flow[Event, Event, NotUsed] = Flow[Event]
+  override def getCommittingGraph(): Flow[Event, Event, NotUsed] = Flow[Event]
 
   def start()(implicit materializer: Materializer): NotUsed =
-    graph.runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
+    getGraph().runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
 }
 
 object Story extends StrictLogging {
 
-  def apply(config: Config): Story = ???
-
   def decorateGraph(graph: Graph[FlowShape[Event, Event], NotUsed],
                     graphId: String,
-                    fallback: Option[ISink] = None): Graph[FlowShape[Event, Event], NotUsed] = {
+                    fallback: Option[SinkPlot] = None): Graph[FlowShape[Event, Event], NotUsed] = {
 
     Flow.fromGraph(
       GraphDSL
@@ -95,7 +91,7 @@ object Story extends StrictLogging {
           import GraphDSL.Implicits._
 
           // variables
-          val mainGraph  = builder.add(graph)
+          val mainGraph = builder.add(graph)
           val checkGraph = builder.add(new Partition[Event](2, e => if (e.isFailed) 1 else 0))
           var failedGraph = Flow[Event].map(_event => {
             val logMessage =
@@ -104,7 +100,7 @@ object Story extends StrictLogging {
             logger.debug(logMessage)
             _event
           })
-          fallback.foreach(f => failedGraph = failedGraph.via(f.graph))
+          fallback.foreach(f => failedGraph = failedGraph.via(f.getGraph()))
 
           // workflow
           // format: off
@@ -125,10 +121,10 @@ case class StorySettings(name: String)
 object StoryStatus extends Enumeration {
   type StoryStatus = Value
 
-  val INIT      = Value(1, "INIT")
+  val INIT = Value(1, "INIT")
   val DEPLOYING = Value(2, "DEPLOYING")
-  val RUNNING   = Value(3, "RUNNING")
-  val FAILED    = Value(4, "FAILED")
-  val STOPPING  = Value(5, "STOPPING")
-  val STOPPED   = Value(6, "STOPPED")
+  val RUNNING = Value(3, "RUNNING")
+  val FAILED = Value(4, "FAILED")
+  val STOPPING = Value(5, "STOPPING")
+  val STOPPED = Value(6, "STOPPED")
 }
