@@ -18,12 +18,26 @@
 package com.thenetcircle.event_bus.story
 
 import akka.NotUsed
+import akka.actor.ActorSystem
+import akka.kafka.ConsumerSettings
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
 import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface._
+import com.thenetcircle.event_bus.plots.kafka.{
+  ConsumerKey,
+  ConsumerValue,
+  KafkaSource,
+  KafkaSourceSettings
+}
+import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKeyDeserializer
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
+import net.ceedubs.ficus.Ficus._
+
+import scala.concurrent.ExecutionContext
 
 case class StorySettings(name: String)
 
@@ -127,4 +141,27 @@ object StoryStatus extends Enumeration {
   val FAILED = Value(4, "FAILED")
   val STOPPING = Value(5, "STOPPING")
   val STOPPED = Value(6, "STOPPED")
+}
+
+class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext) extends PlotBuilder {
+
+  override def buildFromConfig(config: Config): Story = {
+
+    val defaultConfig: Config =
+      ConfigFactory.parseString("""
+                                  |{
+                                  |  name = "DefaultStory"
+                                  |  source {}
+                                  |  ops = [{}]
+                                  |  sink {}
+                                  |  # fallback {}
+                                  |}
+                                """.stripMargin)
+
+    val mergedConfig = config.withFallback(defaultConfig)
+
+    val storySettings = StorySettings(mergedConfig.as[String]("name"))
+
+  }
+
 }
