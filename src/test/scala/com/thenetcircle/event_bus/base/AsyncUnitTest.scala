@@ -19,4 +19,4 @@ package com.thenetcircle.event_bus.base
 
 import org.scalatest._
 
-trait AsyncUnitSpec extends AsyncFlatSpecLike with Matchers with BeforeAndAfterAll with Inside {}
+trait AsyncUnitTest extends AsyncFlatSpecLike with Matchers with BeforeAndAfterAll with Inside {}

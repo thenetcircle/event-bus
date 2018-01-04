@@ -19,4 +19,4 @@ package com.thenetcircle.event_bus.base
 
 import org.scalatest._
 
-trait UnitSpec extends FlatSpecLike with Matchers with BeforeAndAfterAll {}
+trait UnitTest extends FlatSpecLike with Matchers with BeforeAndAfterAll {}

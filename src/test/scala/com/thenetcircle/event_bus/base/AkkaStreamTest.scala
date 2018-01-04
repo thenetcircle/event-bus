@@ -25,10 +25,10 @@ import com.typesafe.config.ConfigFactory
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaStreamSpec(_system: ActorSystem)
+abstract class AkkaStreamTest(_system: ActorSystem)
     extends TestKit(_system)
     with ImplicitSender
-    with UnitSpec {
+    with UnitTest {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1, maxSize = 1)

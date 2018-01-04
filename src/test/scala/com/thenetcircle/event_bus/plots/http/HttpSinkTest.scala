@@ -23,14 +23,14 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Keep, Source}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
-import com.thenetcircle.event_bus.base.AkkaStreamSpec
+import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.createTestEvent
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class HttpSinkSpec extends AkkaStreamSpec {
+class HttpSinkTest extends AkkaStreamTest {
 
   def run(httpSink: HttpSink): (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
     TestSource

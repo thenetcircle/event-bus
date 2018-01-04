@@ -21,13 +21,13 @@ import java.text.SimpleDateFormat
 
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
-import com.thenetcircle.event_bus.base.AsyncUnitSpec
+import com.thenetcircle.event_bus.base.AsyncUnitTest
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import org.scalatest.Succeeded
 import spray.json.{DeserializationException, JsonParser}
 
-class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
+class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
   private val activityStreamsExtractor: IExtractor =
     ExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)
@@ -94,13 +94,15 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
       inside(_data) {
         case ExtractedData(metadata, body) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
-          metadata shouldEqual EventMetaData("ED-providerId-message.send-actorId-59e704843e9cb",
-                                             "message.send",
-                                             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-                                               .parse(time)
-                                               .getTime,
-                                             Some("providerId"),
-                                             Some("actorId"))
+          metadata shouldEqual EventMetaData(
+            "ED-providerId-message.send-actorId-59e704843e9cb",
+            "message.send",
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
+              .parse(time)
+              .getTime,
+            Some("providerId"),
+            Some("actorId")
+          )
       }
     }
   }
@@ -172,13 +174,15 @@ class ActivityStreamsExtractorSpec extends AsyncUnitSpec {
       inside(_data) {
         case ExtractedData(metadata, body) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
-          metadata shouldEqual EventMetaData("ED-providerId-message.send-actorId-59e704843e9cb",
-                                             "message.send",
-                                             new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-                                               .parse(time)
-                                               .getTime,
-                                             Some("providerId"),
-                                             Some("actorId"))
+          metadata shouldEqual EventMetaData(
+            "ED-providerId-message.send-actorId-59e704843e9cb",
+            "message.send",
+            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
+              .parse(time)
+              .getTime,
+            Some("providerId"),
+            Some("actorId")
+          )
       }
     }
   }

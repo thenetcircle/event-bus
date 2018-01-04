@@ -24,7 +24,7 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.base.AkkaStreamSpec
+import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.plots.http.HttpSource.successfulResponse
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData}
@@ -32,7 +32,7 @@ import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData}
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class HttpSourceSpec extends AkkaStreamSpec {
+class HttpSourceTest extends AkkaStreamTest {
 
   behavior of "HttpSource"
 
