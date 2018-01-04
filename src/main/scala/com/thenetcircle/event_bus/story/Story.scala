@@ -143,7 +143,7 @@ object StoryStatus extends Enumeration {
   val STOPPED = Value(6, "STOPPED")
 }
 
-class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext) extends PlotBuilder {
+class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext) extends Builder {
 
   val defaultConfig: Config = ConfigFactory.parseString("""
         |{
@@ -184,7 +184,7 @@ class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext) e
                 .get
         )
       )
-      .getOrElse(List.empty[Plot])
+      .getOrElse(List.empty[OpPlot])
 
     val fallback = mergedConfig
       .as[Option[Config]]("fallback")

@@ -24,7 +24,7 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{PlotBuilder, SinkPlot}
+import com.thenetcircle.event_bus.interface.{SinkPlot, SinkPlotBuilder}
 import com.thenetcircle.event_bus.plots.kafka.extended.{
   EventSerializer,
   KafkaKey,
@@ -79,7 +79,7 @@ object KafkaSink {
 }
 
 class KafkaSinkBuilder()(implicit system: ActorSystem, executor: ExecutionContext)
-    extends PlotBuilder {
+    extends SinkPlotBuilder {
 
   override def buildFromConfig(config: Config): KafkaSink = {
 

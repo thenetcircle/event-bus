@@ -28,7 +28,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.interface.{PlotBuilder, SinkPlot}
+import com.thenetcircle.event_bus.interface.{Builder, SinkPlot, SinkPlotBuilder}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -275,7 +275,7 @@ object HttpSink {
 class HttpSinkBuilder()(implicit system: ActorSystem,
                         materializer: Materializer,
                         executor: ExecutionContext)
-    extends PlotBuilder
+    extends SinkPlotBuilder
     with StrictLogging {
 
   override def buildFromConfig(config: Config): HttpSink = {

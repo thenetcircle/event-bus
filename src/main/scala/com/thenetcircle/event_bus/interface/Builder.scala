@@ -19,8 +19,14 @@ package com.thenetcircle.event_bus.interface
 
 import com.typesafe.config.Config
 
-trait PlotBuilder {
+trait Builder[T <: Plot] {
 
-  def buildFromConfig(config: Config): Plot
+  def buildFromConfig(config: Config): T
 
 }
+
+trait SourcePlotBuilder extends Builder[SourcePlot]
+
+trait OpPlotBuilder extends Builder[OpPlot]
+
+trait SinkPlotBuilder extends Builder[SinkPlot]

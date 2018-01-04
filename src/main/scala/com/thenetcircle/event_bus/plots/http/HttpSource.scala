@@ -26,10 +26,10 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.interface.{PlotBuilder, SourcePlot}
+import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
+import com.thenetcircle.event_bus.interface.{SourcePlot, SourcePlotBuilder}
 import com.thenetcircle.event_bus.tracing.Tracing
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -215,7 +215,7 @@ object HttpSource {
 class HttpSourceBuilder()(implicit system: ActorSystem,
                           materializer: Materializer,
                           executor: ExecutionContext)
-    extends PlotBuilder
+    extends SourcePlotBuilder
     with StrictLogging {
 
   override def buildFromConfig(config: Config): HttpSource = {

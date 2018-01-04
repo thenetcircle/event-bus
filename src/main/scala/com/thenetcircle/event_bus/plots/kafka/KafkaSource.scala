@@ -28,7 +28,7 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
-import com.thenetcircle.event_bus.interface.{PlotBuilder, SourcePlot}
+import com.thenetcircle.event_bus.interface.{SourcePlot, SourcePlotBuilder}
 import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -129,7 +129,7 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
 }
 
 class KafkaSourceBuilder()(implicit system: ActorSystem, executor: ExecutionContext)
-    extends PlotBuilder {
+    extends SourcePlotBuilder {
 
   override def buildFromConfig(config: Config): KafkaSource = {
 
