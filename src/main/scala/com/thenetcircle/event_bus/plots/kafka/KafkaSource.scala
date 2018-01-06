@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus.plots.kafka
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
@@ -26,16 +25,11 @@ import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream.Supervision.resumingDecider
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
+import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
-import com.thenetcircle.event_bus.interface.{SourcePlot, SourcePlotBuilder}
-import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKeyDeserializer
-import com.typesafe.config.{Config, ConfigFactory}
+import com.thenetcircle.event_bus.interface.ISource
 import com.typesafe.scalalogging.StrictLogging
-import net.ceedubs.ficus.Ficus._
-import org.apache.kafka.common.serialization.ByteArrayDeserializer
-
-import scala.concurrent.ExecutionContext
 
 case class KafkaSourceSettings(groupId: String,
                                extractParallelism: Int,
@@ -46,14 +40,16 @@ case class KafkaSourceSettings(groupId: String,
                                topics: Option[Set[String]],
                                topicPattern: Option[String])
 
-class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionContext)
-    extends SourcePlot
+class KafkaSource(settings: KafkaSourceSettings)(implicit runningContext: RunningContext)
+    extends ISource
     with StrictLogging {
 
   require(
     settings.topics.isDefined || settings.topicPattern.isDefined,
     "The outlet of KafkaPipeline needs to subscribe topics"
   )
+
+  import runningContext._
 
   private val subscription: AutoSubscription =
     if (settings.topics.isDefined) {
@@ -126,55 +122,4 @@ class KafkaSource(settings: KafkaSourceSettings)(implicit executor: ExecutionCon
       .mapConcat(identity)
       .mapMaterializedValue(m => NotUsed)
   }
-}
-
-class KafkaSourceBuilder()(implicit system: ActorSystem, executor: ExecutionContext)
-    extends SourcePlotBuilder {
-
-  override def buildFromConfig(config: Config): KafkaSource = {
-
-    val defaultConfig: Config =
-      ConfigFactory.parseString("""
-          |{
-          |  # group-id = ...
-          |  # topics = []
-          |  # topic-pattern = event-* # supports wildcard
-          |  extract-parallelism = 3
-          |  commit-parallelism = 3
-          |  commit-batch-max = 20
-          |  max-partitions = 1000
-          |  akka.kafka.consumer {
-          |    #use-dispatcher = "akka.kafka.default-dispatcher"
-          |    kafka-clients {
-          |      client.id = "EventBus-Consumer"
-          |    }
-          |  }
-          |}
-        """.stripMargin)
-
-    val mergedConfig = config.withFallback(defaultConfig)
-
-    val consumerConfig = mergedConfig
-      .getConfig("akka.kafka.consumer")
-      .withFallback(system.settings.config.getConfig("akka.kafka.consumer"))
-
-    val settings = KafkaSourceSettings(
-      groupId = config.as[String]("group-id"),
-      extractParallelism = config.as[Int]("extract-parallelism"),
-      commitParallelism = config.as[Int]("commit-parallelism"),
-      commitBatchMax = config.as[Int]("commit-batch-max"),
-      maxPartitions = config.as[Int]("max-partitions"),
-      consumerSettings = ConsumerSettings[ConsumerKey, ConsumerValue](
-        consumerConfig,
-        new KafkaKeyDeserializer,
-        new ByteArrayDeserializer
-      ),
-      topics = config.as[Option[Set[String]]]("topics"),
-      topicPattern = config.as[Option[String]]("topic-pattern")
-    )
-
-    new KafkaSource(settings)
-
-  }
-
 }

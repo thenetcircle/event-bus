@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus.plots.http
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.settings.ServerSettings
@@ -26,14 +25,13 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Source}
 import akka.stream.stage._
+import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
-import com.thenetcircle.event_bus.interface.{SourcePlot, SourcePlotBuilder}
+import com.thenetcircle.event_bus.interface.ISource
 import com.thenetcircle.event_bus.tracing.Tracing
-import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
@@ -43,16 +41,18 @@ case class HttpSourceSettings(interface: String,
                               format: DataFormat,
                               maxConnections: Int,
                               perConnectionParallelism: Int,
-                              serverSettingsOption: Option[ServerSettings] = None)
+                              serverSettingsOption: Option[ServerSettings] = None,
+                              succeededResponse: String = "ok",
+                              errorResponse: String = "ko")
 
 class HttpSource(
     settings: HttpSourceSettings,
     overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
-)(implicit system: ActorSystem, materializer: Materializer, executor: ExecutionContext)
-    extends SourcePlot
+)(implicit runningContext: RunningContext)
+    extends ISource
     with StrictLogging {
 
-  import HttpSource._
+  import runningContext._
 
   implicit val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
 
@@ -78,7 +78,15 @@ class HttpSource(
               import GraphDSL.Implicits._
 
               val client = builder.add(httpBindFlow)
-              val requestHandler = builder.add(new HttpRequestHandler())
+              val requestHandler = builder.add(
+                new HttpRequestHandler(
+                  ex =>
+                    HttpResponse(
+                      StatusCodes.BadRequest,
+                      entity = HttpEntity(settings.errorResponse)
+                  )
+                )
+              )
               val responseHolder =
                 Flow[Future[HttpResponse]]
                   .mapAsync(settings.perConnectionParallelism)(identity)
@@ -103,159 +111,106 @@ class HttpSource(
     Flow[Event].map(event => {
       event
         .getContext[Promise[HttpResponse]]("responsePromise")
-        .foreach(p => p.success(successfulResponse))
+        .foreach(p => p.success(HttpResponse(entity = HttpEntity(settings.succeededResponse))))
       event
     })
 }
 
-object HttpSource {
+/** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
+  * and a [[Event]] with a committer to complete the [[Future]]
+  *
+  * {{{
+  *                             +------------+
+  *            In[HttpRequest] ~~>           |
+  *                             |           ~~> Out1[Event]
+  * Out0[Future[HttpResponse]] <~~           |
+  *                             +------------+
+  * }}}
+  *
+  * '''Emits when'''
+  * a incoming [[HttpRequest]] successful transformed to a [[Event]],
+  * the Future of [[HttpResponse]] will always emit to out0
+  *
+  * '''Backpressures when''' any of the outputs backpressure
+  *
+  * '''Completes when''' upstream completes
+  *
+  * '''Cancels when''' when any downstreams cancel
+  */
+final class HttpRequestHandler(buildErrorResponseFunc: Throwable => HttpResponse)(
+    implicit executor: ExecutionContext,
+    extractor: IExtractor
+) extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
 
-  val failedResponse =
-    HttpResponse(StatusCodes.BadRequest, entity = HttpEntity("ko"))
-  val successfulResponse = HttpResponse(entity = HttpEntity("ok"))
-
-  /** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
-    * and a [[Event]] with a committer to complete the [[Future]]
-    *
-    * {{{
-    *                             +------------+
-    *            In[HttpRequest] ~~>           |
-    *                             |           ~~> Out1[Event]
-    * Out0[Future[HttpResponse]] <~~           |
-    *                             +------------+
-    * }}}
-    *
-    * '''Emits when'''
-    * a incoming [[HttpRequest]] successful transformed to a [[Event]],
-    * the Future of [[HttpResponse]] will always emit to out0
-    *
-    * '''Backpressures when''' any of the outputs backpressure
-    *
-    * '''Completes when''' upstream completes
-    *
-    * '''Cancels when''' when any downstreams cancel
-    */
-  final class HttpRequestHandler()(implicit executor: ExecutionContext, extractor: IExtractor)
-      extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
-
-    val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
-      Unmarshaller.byteStringUnmarshaller.andThen(
-        Unmarshaller.apply(_ => data => extractor.extract(data))
-      )
-
-    val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
-    val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
-    val out1: Outlet[Event] = Outlet("outlet-event")
-
-    override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
-      new FanOutShape2(in, out0, out1)
-
-    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-      new GraphStageLogic(shape) with StageLogging with Tracing {
-
-        def tryPullIn(): Unit =
-          if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
-            log.debug("tryPull in")
-            tryPull(in)
-          }
-
-        setHandler(in, new InHandler {
-          override def onPush(): Unit = {
-            log.debug("onPush in -> push out0")
-            push(out0, requestPreprocess(grab(in)))
-          }
-        })
-
-        setHandler(out0, new OutHandler {
-          override def onPull(): Unit = {
-            log.debug("onPull out0")
-            tryPullIn()
-          }
-        })
-
-        setHandler(out1, new OutHandler {
-          override def onPull(): Unit = {
-            log.debug("onPull out1")
-            tryPullIn()
-          }
-        })
-
-        def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
-          val responsePromise = Promise[HttpResponse]
-          val extractedDataFuture =
-            unmarshaller.apply(request.entity)(executor, materializer)
-          val callback = getEventExtractingCallback(responsePromise)
-          extractedDataFuture.onComplete(result => callback.invoke(result))
-
-          responsePromise.future
-        }
-
-        def getEventExtractingCallback(
-            responsePromise: Promise[HttpResponse]
-        ): AsyncCallback[Try[ExtractedData]] =
-          getAsyncCallback[Try[ExtractedData]] {
-            case Success(extractedData) =>
-              val event = Event(
-                metadata = extractedData.metadata,
-                body = extractedData.body,
-                context = Map("responsePromise" -> responsePromise)
-              )
-              log.debug("push out1")
-              push(out1, event)
-
-            case Failure(ex) =>
-              log.info(s"Request send failed with error: ${ex.getMessage}")
-              responsePromise.success(failedResponse)
-              tryPullIn()
-          }
-      }
-  }
-}
-
-class HttpSourceBuilder()(implicit system: ActorSystem,
-                          materializer: Materializer,
-                          executor: ExecutionContext)
-    extends SourcePlotBuilder
-    with StrictLogging {
-
-  override def buildFromConfig(config: Config): HttpSource = {
-
-    val defaultConfig: Config = ConfigFactory.parseString(
-      """ 
-        |{
-        |  # interface = ...
-        |  # port = ...
-        |  format = default
-        |  max-connections = 1000
-        |  pre-connection-parallelism = 10
-        |  # akka.http.server {} // override "akka.http.server" default settings
-        |}
-      """.stripMargin
+  val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
+    Unmarshaller.byteStringUnmarshaller.andThen(
+      Unmarshaller.apply(_ => data => extractor.extract(data))
     )
 
-    try {
-      val mergedConfig: Config = config.withFallback(defaultConfig)
+  val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
+  val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
+  val out1: Outlet[Event] = Outlet("outlet-event")
 
-      val serverSettingsOption: Option[ServerSettings] =
-        if (mergedConfig.hasPath("akka.http.server"))
-          Some(ServerSettings(mergedConfig.withFallback(system.settings.config)))
-        else None
+  override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
+    new FanOutShape2(in, out0, out1)
 
-      new HttpSource(
-        HttpSourceSettings(
-          mergedConfig.as[String]("interface"),
-          mergedConfig.as[Int]("port"),
-          mergedConfig.as[DataFormat]("format"),
-          mergedConfig.as[Int]("max-connections"),
-          mergedConfig.as[Int]("pre-connection-parallelism"),
-          serverSettingsOption
-        )
-      )
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+    new GraphStageLogic(shape) with StageLogging with Tracing {
 
-    } catch {
-      case ex: Throwable =>
-        logger.error(s"Creating a HttpSource failed with error: ${ex.getMessage}")
-        throw ex
+      def tryPullIn(): Unit =
+        if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
+          log.debug("tryPull in")
+          tryPull(in)
+        }
+
+      setHandler(in, new InHandler {
+        override def onPush(): Unit = {
+          log.debug("onPush in -> push out0")
+          push(out0, requestPreprocess(grab(in)))
+        }
+      })
+
+      setHandler(out0, new OutHandler {
+        override def onPull(): Unit = {
+          log.debug("onPull out0")
+          tryPullIn()
+        }
+      })
+
+      setHandler(out1, new OutHandler {
+        override def onPull(): Unit = {
+          log.debug("onPull out1")
+          tryPullIn()
+        }
+      })
+
+      def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
+        val responsePromise = Promise[HttpResponse]
+        val extractedDataFuture =
+          unmarshaller.apply(request.entity)(executor, materializer)
+        val callback = getEventExtractingCallback(responsePromise)
+        extractedDataFuture.onComplete(result => callback.invoke(result))
+
+        responsePromise.future
+      }
+
+      def getEventExtractingCallback(
+          responsePromise: Promise[HttpResponse]
+      ): AsyncCallback[Try[ExtractedData]] =
+        getAsyncCallback[Try[ExtractedData]] {
+          case Success(extractedData) =>
+            val event = Event(
+              metadata = extractedData.metadata,
+              body = extractedData.body,
+              context = Map("responsePromise" -> responsePromise)
+            )
+            log.debug("push out1")
+            push(out1, event)
+
+          case Failure(ex) =>
+            log.info(s"Request send failed with error: ${ex.getMessage}")
+            responsePromise.success(buildErrorResponseFunc(ex))
+            tryPullIn()
+        }
     }
-  }
 }

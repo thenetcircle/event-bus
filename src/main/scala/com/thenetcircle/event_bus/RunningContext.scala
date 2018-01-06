@@ -15,6 +15,13 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 
-trait Plot {}
+import scala.concurrent.ExecutionContext
+
+class RunningContext(val appContext: AppContext,
+                     implicit val actorSystem: ActorSystem,
+                     implicit val materializer: Materializer,
+                     implicit val executor: ExecutionContext)

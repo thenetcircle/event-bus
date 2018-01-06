@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
+import com.thenetcircle.event_bus.AppContext
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
@@ -35,6 +36,8 @@ abstract class AkkaStreamTest(_system: ActorSystem)
   )
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
+  implicit val testAppContext: AppContext =
+    new AppContext("event-bus-test", "2.x", true, "test", ConfigFactory.load())
 
   implicit val executionContext: ExecutionContext =
     materializer.executionContext

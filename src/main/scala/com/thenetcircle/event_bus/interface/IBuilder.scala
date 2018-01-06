@@ -16,17 +16,21 @@
  */
 
 package com.thenetcircle.event_bus.interface
+import com.thenetcircle.event_bus.RunningContext
+import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
-import com.typesafe.config.Config
+trait IBuilder[T <: IPlot] {
 
-trait Builder[T <: Plot] {
+  def build(configString: String)(implicit runningContext: RunningContext): T
 
-  def buildFromConfig(config: Config): T
+  private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
+  def convertStringToConfig(configString: String): Config =
+    ConfigFactory.parseString(configString, parseOptions)
 
 }
 
-trait SourcePlotBuilder extends Builder[SourcePlot]
+trait ISourceBuilder extends IBuilder[ISource]
 
-trait OpPlotBuilder extends Builder[OpPlot]
+trait IOpBuilder extends IBuilder[IOp]
 
-trait SinkPlotBuilder extends Builder[SinkPlot]
+trait ISinkBuilder extends IBuilder[ISink]

@@ -15,31 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.interface
 
-import com.typesafe.scalalogging.StrictLogging
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.event.Event
 
-object Runner extends App with StrictLogging {
+trait ISink extends IPlot {
 
-  // Initialization
-  logger.info("Application is initializing.")
-
-  implicit val globalAppContext: AppContext = AppContext("2.0.0")
-
-  // Kamon.start()
-  sys.addShutdownHook({
-    logger.info("Application is shutting down...")
-
-    // Kamon.shutdown()
-
-    globalAppContext.shutdown()
-
-    /*Http()
-      .shutdownAllConnectionPools()
-      .map(_ => {
-        globalActorSystem.terminate()
-        Await.result(globalActorSystem.whenTerminated, 60.seconds)
-      })(ExecutionContext.global)*/
-  })
+  def getGraph(): Flow[Event, Event, NotUsed]
 
 }

@@ -15,18 +15,6 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tracing
+package com.thenetcircle.event_bus.interface
 
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.event.Event
-
-trait Tracing {
-  lazy val tracer: Tracer = Tracer()
-
-  def tracingFlow(step: TracingStep): Flow[Event, Event, NotUsed] =
-    Flow[Event].map(event => {
-      // tracer.record(event.tracingId, step)
-      event
-    })
-}
+trait IPlot {}

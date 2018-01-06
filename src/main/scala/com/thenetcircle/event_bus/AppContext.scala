@@ -1,31 +1,57 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
+import com.typesafe.config.{Config, ConfigFactory}
+
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+final class AppContext(appName: String,
+                       version: String,
+                       debug: Boolean = false,
+                       appEnv: String,
+                       appConfig: Config,
+                       actorSystem: ActorSystem) {
+
+  def getEnv(): String = appEnv
+  def getName(): String = appName
+  def getVersion(): String = version
+  def getConfig(): Config = appConfig
+  def getActorSystem(): ActorSystem = actorSystem
+
+  def isDebug(): Boolean = debug
+  def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
+  def isTest(): Boolean = appEnv.toLowerCase == "test"
+  def isProd(): Boolean = appEnv.toLowerCase == "production" || appEnv.toLowerCase == "prod"
+
+  private val shutdownHooks = new ListBuffer[() => Unit]
+  def addShutdownHook(body: => Unit) {
+    shutdownHooks += (() => body)
+  }
+  def shutdown(): Unit = {
+    for (hook <- shutdownHooks) hook()
+    actorSystem.terminate()
+    Await.result(actorSystem.whenTerminated, 60.seconds)
+  }
+
+}
 
 object AppContext {
 
-  private var inited = false
-  private var debug: Boolean = false
-  private var env: String = "unknown"
-  private var version: String = "unknown"
-  private var actorSystem: ActorSystem = _
+  def apply(verion: String): AppContext = {
+    val appConfig = ConfigFactory.load()
+    val appName = appConfig.getString("app.name")
+    val actorSystem = ActorSystem(appName, appConfig)
 
-  def init(verion: String)(implicit system: ActorSystem): Unit = if (!inited) {
-    version = verion
-    actorSystem = system
-    debug = system.settings.config.getBoolean("app.debug")
-    env = system.settings.config.getString("app.env")
-    inited = true
+    new AppContext(
+      appName,
+      verion,
+      appConfig.getBoolean("app.debug"),
+      appConfig.getString("app.env"),
+      appConfig,
+      actorSystem
+    )
   }
-
-  def isDebug(): Boolean = debug
-
-  def getEnv(): String = env
-  def isDev(): Boolean = env.toUpperCase == "DEVELOPMENT"
-  def isProd(): Boolean = env.toUpperCase == "PRODUCTION"
-
-  def getVersion(): String = version
-
-  def getActorSystem(): ActorSystem = actorSystem
 
 }

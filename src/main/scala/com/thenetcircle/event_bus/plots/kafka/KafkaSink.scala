@@ -18,29 +18,21 @@
 package com.thenetcircle.event_bus.plots.kafka
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{SinkPlot, SinkPlotBuilder}
-import com.thenetcircle.event_bus.plots.kafka.extended.{
-  EventSerializer,
-  KafkaKey,
-  KafkaKeySerializer,
-  KafkaPartitioner
-}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.thenetcircle.event_bus.interface.ISink
+import com.thenetcircle.event_bus.plots.kafka.extended.{KafkaKey, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
-import scala.concurrent.ExecutionContext
-
 case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
-class KafkaSink(settings: KafkaSinkSettings)(implicit executor: ExecutionContext)
-    extends SinkPlot
+class KafkaSink(settings: KafkaSinkSettings)(implicit runningContext: RunningContext)
+    extends ISink
     with StrictLogging {
 
   import KafkaSink._
@@ -76,40 +68,4 @@ object KafkaSink {
       value
     )
   }
-}
-
-class KafkaSinkBuilder()(implicit system: ActorSystem, executor: ExecutionContext)
-    extends SinkPlotBuilder {
-
-  override def buildFromConfig(config: Config): KafkaSink = {
-
-    val defaultConfig: Config =
-      ConfigFactory.parseString("""
-        |{
-        |  akka.kafka.producer {
-        |    # use-dispatcher = "akka.kafka.default-dispatcher"
-        |    kafka-clients {
-        |      client.id = "EventBus-Producer"
-        |    }
-        |  }
-        |}
-      """.stripMargin)
-
-    val mergedConfig = config.withFallback(defaultConfig)
-
-    val producerConfig = mergedConfig
-      .getConfig("akka.kafka.producer")
-      .withFallback(system.settings.config.getConfig("akka.kafka.producer"))
-
-    val sinkSettings = KafkaSinkSettings(
-      ProducerSettings[ProducerKey, ProducerValue](
-        producerConfig,
-        new KafkaKeySerializer,
-        new EventSerializer
-      )
-    )
-
-    new KafkaSink(sinkSettings)
-  }
-
 }

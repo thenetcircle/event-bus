@@ -20,7 +20,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 
-trait OpPlot extends Plot {
+trait IOp extends IPlot {
 
   def getGraph(): Flow[Event, Event, NotUsed]
 

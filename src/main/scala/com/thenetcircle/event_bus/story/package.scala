@@ -15,16 +15,21 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
-import com.thenetcircle.event_bus.event.Event
+package object story {
 
-trait SourcePlot extends Plot {
+  case class StorySettings(name: String)
 
-  def getGraph(): Source[Event, NotUsed]
+  object StoryStatus extends Enumeration {
+    type StoryStatus = Value
 
-  def getCommittingGraph(): Flow[Event, Event, NotUsed]
+    val INIT = Value(1, "INIT")
+    val DEPLOYING = Value(2, "DEPLOYING")
+    val RUNNING = Value(3, "RUNNING")
+    val FAILED = Value(4, "FAILED")
+    val STOPPING = Value(5, "STOPPING")
+    val STOPPED = Value(6, "STOPPED")
+  }
 
 }

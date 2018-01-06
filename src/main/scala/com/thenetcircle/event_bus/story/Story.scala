@@ -18,27 +18,20 @@
 package com.thenetcircle.event_bus.story
 
 import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
 import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
-import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import net.ceedubs.ficus.Ficus._
-
-import scala.concurrent.ExecutionContext
-
-case class StorySettings(name: String)
 
 class Story(settings: StorySettings,
-            sourcePlot: SourcePlot,
-            sinkPlot: SinkPlot,
-            opPlots: List[OpPlot] = List.empty,
-            fallback: Option[SinkPlot] = None,
+            source: ISource,
+            sink: ISink,
+            ops: List[IOp] = List.empty,
+            fallback: Option[ISink] = None,
             initStatus: StoryStatus = StoryStatus.INIT)
-    extends SourcePlot
+    extends ISource
     with StrictLogging {
 
   val storyName: String = settings.name
@@ -65,17 +58,17 @@ class Story(settings: StorySettings,
             import GraphDSL.Implicits._
 
             // variables
-            val source = sourcePlot.getGraph()
-            var operations = Flow[Event]
-            opPlots.foreach(op => operations = operations.via(decorateGraph(op.getGraph())))
-            val sink = decorateGraph(sinkPlot.getGraph())
-            val committing = builder.add(decorateGraph(sourcePlot.getCommittingGraph()))
+            val _source = source.getGraph()
+            var _ops = Flow[Event]
+            ops.foreach(op => _ops = _ops.via(decorateGraph(op.getGraph())))
+            val _sink = decorateGraph(sink.getGraph())
+            val _committing = builder.add(decorateGraph(source.getCommittingGraph()))
 
             // workflow
-            source ~> operations ~> sink ~> committing
+            _source ~> _ops ~> _sink ~> _committing
 
             // ports
-            SourceShape(committing.out)
+            SourceShape(_committing.out)
           }
       )
       .named(storyName)
@@ -90,7 +83,7 @@ object Story extends StrictLogging {
 
   def decorateGraph(graph: Graph[FlowShape[Event, Event], NotUsed],
                     graphId: String,
-                    fallback: Option[SinkPlot] = None): Graph[FlowShape[Event, Event], NotUsed] = {
+                    fallback: Option[ISink] = None): Graph[FlowShape[Event, Event], NotUsed] = {
 
     Flow.fromGraph(
       GraphDSL
@@ -119,77 +112,6 @@ object Story extends StrictLogging {
           FlowShape(mainGraph.in, checkGraph.out(0))
         }
     )
-  }
-
-}
-
-object StoryStatus extends Enumeration {
-  type StoryStatus = Value
-
-  val INIT = Value(1, "INIT")
-  val DEPLOYING = Value(2, "DEPLOYING")
-  val RUNNING = Value(3, "RUNNING")
-  val FAILED = Value(4, "FAILED")
-  val STOPPING = Value(5, "STOPPING")
-  val STOPPED = Value(6, "STOPPED")
-}
-
-class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext)
-    extends SourcePlotBuilder {
-
-  val defaultConfig: Config = ConfigFactory.parseString("""
-        |{
-        |  # name = ...
-        |  # source { type = ..., settings {} }
-        |  # ops = []
-        |  # sink { type = ..., settings {} }
-        |  # fallback {}
-        |}
-      """.stripMargin)
-
-  override def buildFromConfig(config: Config): Story = {
-
-    val mergedConfig = config.withFallback(defaultConfig)
-
-    val storySettings = StorySettings(mergedConfig.as[String]("name"))
-
-    // exceptions handler
-    val sourcePlot = BuilderFactory
-      .getSourcePlotBuilder(mergedConfig.as[String]("source.type"))
-      .map(builder => builder.buildFromConfig(mergedConfig.getConfig("source.settings")))
-      .get
-
-    val sinkPlot = BuilderFactory
-      .getSinkPlotBuilder(mergedConfig.as[String]("sink.type"))
-      .map(builder => builder.buildFromConfig(mergedConfig.getConfig("sink.settings")))
-      .get
-
-    val opPlots = mergedConfig
-      .as[Option[List[Config]]]("ops")
-      .map(
-        configList =>
-          configList.map(
-            opConfig =>
-              BuilderFactory
-                .getOpPlotBuilder(opConfig.as[String]("type"))
-                .map(builder => builder.buildFromConfig(opConfig.getConfig("settings")))
-                .get
-        )
-      )
-      .getOrElse(List.empty[OpPlot])
-
-    val fallback = mergedConfig
-      .as[Option[Config]]("fallback")
-      .map(
-        fc =>
-          BuilderFactory
-            .getSinkPlotBuilder(fc.as[String]("type"))
-            .map(builder => builder.buildFromConfig(fc.getConfig("settings")))
-            .get
-      )
-
-    new Story(storySettings, sourcePlot, sinkPlot, opPlots, fallback)
-
   }
 
 }
