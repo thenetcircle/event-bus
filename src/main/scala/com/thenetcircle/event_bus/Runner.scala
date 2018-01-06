@@ -17,62 +17,33 @@
 
 package com.thenetcircle.event_bus
 
+import akka.http.scaladsl.Http
 import com.typesafe.scalalogging.StrictLogging
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 object Runner extends App with StrictLogging {
 
   // Initialization
-  /*logger.info("Application is initializing.")
+  logger.info("Application is initializing.")
 
-  Kamon.start()
-  protected implicit val system = akka.actor.ActorSystem()
+  implicit val actorSystem = akka.actor.ActorSystem("event-bus")
+  AppContext.init("2.0.0")
 
-  PipelinePool.init(system.settings.config.as[List[Config]]("event-bus.runtime.pipeline-pool"))
-  Tracer.init(system)
-
-  logger.info("Application initialization done.")
+  // Kamon.start()
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
 
-    logger.info("Kamon is shutting down...")
-    Kamon.shutdown()
+    // Kamon.shutdown()
 
-    logger.info("ActorSystem is shutting down...")
     Http()
       .shutdownAllConnectionPools()
-      .map(_ => terminateActorSystemAndWait)(ExecutionContext.global)
+      .map(_ => {
+        actorSystem.terminate()
+        Await.result(actorSystem.whenTerminated, 60.seconds)
+      })(ExecutionContext.global)
   })
-
-  protected def terminateActorSystemAndWait = {
-    system.terminate()
-    Await.result(system.whenTerminated, 60.seconds)
-  }
-
-  // Launch transporters
-  logger.info(s"Running transporters.")
-  val transportersConfig = system.settings.config
-    .as[Option[List[Config]]]("event-bus.runtime.transporters")
-  transportersConfig.foreach(
-    configList =>
-      configList.foreach(c => {
-        val transporterSettings = TransporterSettings(c)
-        Transporter(transporterSettings).run()
-        logger.info(s"Transporter ${transporterSettings.name} launched.")
-      })
-  )
-
-  // Launch dispatchers
-  logger.info(s"Running dispatchers.")
-  val dispatchersConfig = system.settings.config
-    .as[Option[List[Config]]]("event-bus.runtime.dispatchers")
-  dispatchersConfig.foreach(
-    configList =>
-      configList.foreach(c => {
-        val dispatcherSettings = DispatcherSettings(c)
-        Dispatcher(dispatcherSettings).run()
-        logger.info(s"Dispatcher ${dispatcherSettings.name} launched.")
-      })
-  )*/
 
 }

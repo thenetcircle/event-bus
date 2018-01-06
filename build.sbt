@@ -7,8 +7,9 @@ lazy val eventBus = (project in file("."))
     name := "event-bus",
     scalaVersion := "2.12.2",
     libraryDependencies ++= mainDependencies,
-    bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value
-      .mkString(" ")}""""
+    bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}"""",
+    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
+    buildInfoPackage := "com.thenetcircle.event_bus"
   )
 
 lazy val stressTest = (project in file("stresstest"))

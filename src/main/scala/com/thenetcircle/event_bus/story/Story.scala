@@ -19,22 +19,13 @@ package com.thenetcircle.event_bus.story
 
 import akka.NotUsed
 import akka.actor.ActorSystem
-import akka.kafka.ConsumerSettings
 import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
 import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface._
-import com.thenetcircle.event_bus.plots.kafka.{
-  ConsumerKey,
-  ConsumerValue,
-  KafkaSource,
-  KafkaSourceSettings
-}
-import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKeyDeserializer
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.ExecutionContext
@@ -143,7 +134,8 @@ object StoryStatus extends Enumeration {
   val STOPPED = Value(6, "STOPPED")
 }
 
-class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext) extends Builder {
+class StoryBuilder()(implicit system: ActorSystem, executor: ExecutionContext)
+    extends SourcePlotBuilder {
 
   val defaultConfig: Config = ConfigFactory.parseString("""
         |{
