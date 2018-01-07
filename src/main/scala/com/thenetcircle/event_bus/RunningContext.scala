@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus
+
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 

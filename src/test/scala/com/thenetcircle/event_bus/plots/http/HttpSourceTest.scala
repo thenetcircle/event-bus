@@ -25,7 +25,6 @@ import akka.stream.testkit.scaladsl.TestSink
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.plots.http.HttpSource.successfulResponse
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData}
 
@@ -96,7 +95,10 @@ class HttpSourceTest extends AkkaStreamTest {
       Some("123")
     )
     event.body shouldEqual EventBody(ByteString(data), DataFormat.ACTIVITYSTREAMS)
-    event.context("responsePromise").asInstanceOf[Promise[HttpResponse]].success(successfulResponse)
+    event
+      .context("responsePromise")
+      .asInstanceOf[Promise[HttpResponse]]
+      .success(HttpResponse(entity = HttpEntity("ok")))
 
     val res = out0.expectNext()
     res.status shouldEqual StatusCodes.OK

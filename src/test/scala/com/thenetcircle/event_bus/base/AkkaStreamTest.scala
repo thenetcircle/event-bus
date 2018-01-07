@@ -20,38 +20,32 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.AppContext
+import com.thenetcircle.event_bus.{AppContext, RunningContext}
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaStreamTest(_system: ActorSystem)
-    extends TestKit(_system)
+abstract class AkkaStreamTest(_appContext: AppContext)
+    extends TestKit(ActorSystem(_appContext.getName(), _appContext.getConfig()))
     with ImplicitSender
     with UnitTest {
 
-  implicit val materializer: ActorMaterializer = ActorMaterializer(
-    ActorMaterializerSettings(_system).withInputBuffer(initialSize = 1, maxSize = 1)
-  )
-
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  implicit val testAppContext: AppContext =
-    new AppContext("event-bus-test", "2.x", true, "test", ConfigFactory.load())
-
-  implicit val executionContext: ExecutionContext =
+  implicit val appContext: AppContext = _appContext
+  implicit val materializer: ActorMaterializer = ActorMaterializer(
+    ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
+  )
+  implicit val executor: ExecutionContext =
     materializer.executionContext
+  implicit val runningContext: RunningContext =
+    new RunningContext(appContext, system, materializer, executor)
 
-  def this() =
-    this(ActorSystem("eventbus-test", ConfigFactory.load("application-test.conf")))
-
-  override def beforeAll(): Unit = {
-    /*PipelinePool.init(
-      _system.settings.config
-        .as[List[Config]]("event-bus.runtime.pipeline-pool")
-    )
-    Tracer.init(_system)*/
+  def this() = {
+    this(new AppContext("event-bus-test", "2.x", true, "test", ConfigFactory.load()))
   }
+
+  override def beforeAll(): Unit = {}
 
   override def afterAll(): Unit =
     TestKit.shutdownActorSystem(system)

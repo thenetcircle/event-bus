@@ -1,24 +1,19 @@
 package com.thenetcircle.event_bus
 
-import akka.actor.ActorSystem
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 final class AppContext(appName: String,
                        version: String,
                        debug: Boolean = false,
                        appEnv: String,
-                       appConfig: Config,
-                       actorSystem: ActorSystem) {
+                       appConfig: Config) {
 
   def getEnv(): String = appEnv
   def getName(): String = appName
   def getVersion(): String = version
   def getConfig(): Config = appConfig
-  def getActorSystem(): ActorSystem = actorSystem
 
   def isDebug(): Boolean = debug
   def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
@@ -31,8 +26,6 @@ final class AppContext(appName: String,
   }
   def shutdown(): Unit = {
     for (hook <- shutdownHooks) hook()
-    actorSystem.terminate()
-    Await.result(actorSystem.whenTerminated, 60.seconds)
   }
 
 }
@@ -42,15 +35,13 @@ object AppContext {
   def apply(verion: String): AppContext = {
     val appConfig = ConfigFactory.load()
     val appName = appConfig.getString("app.name")
-    val actorSystem = ActorSystem(appName, appConfig)
 
     new AppContext(
       appName,
       verion,
       appConfig.getBoolean("app.debug"),
       appConfig.getString("app.env"),
-      appConfig,
-      actorSystem
+      appConfig
     )
   }
 

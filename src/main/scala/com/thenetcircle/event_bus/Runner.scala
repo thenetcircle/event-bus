@@ -17,7 +17,11 @@
 
 package com.thenetcircle.event_bus
 
+import akka.actor.ActorSystem
 import com.typesafe.scalalogging.StrictLogging
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object Runner extends App with StrictLogging {
 
@@ -25,12 +29,17 @@ object Runner extends App with StrictLogging {
   logger.info("Application is initializing.")
 
   implicit val globalAppContext: AppContext = AppContext("2.0.0")
+  implicit val actorSystem: ActorSystem =
+    ActorSystem(globalAppContext.getName(), globalAppContext.getConfig())
 
   // Kamon.start()
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
 
     // Kamon.shutdown()
+
+    actorSystem.terminate()
+    Await.result(actorSystem.whenTerminated, 60.seconds)
 
     globalAppContext.shutdown()
 

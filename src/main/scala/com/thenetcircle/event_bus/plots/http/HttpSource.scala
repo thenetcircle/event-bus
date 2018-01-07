@@ -30,7 +30,6 @@ import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
 import com.thenetcircle.event_bus.interface.ISource
-import com.thenetcircle.event_bus.tracing.Tracing
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -155,7 +154,7 @@ final class HttpRequestHandler(buildErrorResponseFunc: Throwable => HttpResponse
     new FanOutShape2(in, out0, out1)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-    new GraphStageLogic(shape) with StageLogging with Tracing {
+    new GraphStageLogic(shape) with StageLogging {
 
       def tryPullIn(): Unit =
         if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
