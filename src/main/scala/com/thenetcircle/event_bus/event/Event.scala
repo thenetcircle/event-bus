@@ -38,6 +38,8 @@ case class Event(metadata: EventMetaData,
   def getContext[T](key: String): Option[T] =
     if (hasContext(key)) Some(context(key).asInstanceOf[T]) else None
 
+  def withChannel(_channel: String): Event = copy(metadata = metadata.withChannel(_channel))
+
 }
 
 case class EventMetaData(uuid: String,
