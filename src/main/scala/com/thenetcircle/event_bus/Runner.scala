@@ -38,10 +38,10 @@ object Runner extends App with StrictLogging {
 
     // Kamon.shutdown()
 
+    globalAppContext.shutdown()
+
     actorSystem.terminate()
     Await.result(actorSystem.whenTerminated, 60.seconds)
-
-    globalAppContext.shutdown()
 
     /*Http()
       .shutdownAllConnectionPools()
