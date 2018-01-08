@@ -215,13 +215,13 @@ final class HttpRetryEngine[T <: Event](
         case Success(false) =>
           failureHandler(event)
         case Failure(ex) =>
-          log.error(s"Parse response error: ${ex.getMessage}")
+          log.warning(s"Parse response error: ${ex.getMessage}")
           pushResultTo(failed, event)
       }
 
       def failureHandler(event: T): Unit = {
         if (retryTimes.incrementAndGet() >= maxRetryTimes) {
-          log.error(s"Event sent failed after retried $maxRetryTimes times.")
+          log.warning(s"Event sent failed after retried $maxRetryTimes times.")
           pushResultTo(failed, event)
         } else {
           log.debug("emit ready & tryPull result")
