@@ -6,17 +6,17 @@ lazy val eventBus = (project in file("."))
     organization := "com.thenetcircle",
     name := "event-bus",
     scalaVersion := "2.12.2",
-    libraryDependencies ++= mainDependencies,
+    libraryDependencies ++= coreDependencies,
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}"""",
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
     buildInfoPackage := "com.thenetcircle.event_bus"
   )
 
-lazy val stressTest = (project in file("stresstest"))
+lazy val benchmark = (project in file("benchmark"))
   .enablePlugins(GatlingPlugin)
   .settings(
     organization := "com.thenetcircle",
-    name := "event-bus-stresstest",
+    name := "event-bus-benchmark",
     scalaVersion := "2.11.8",
-    libraryDependencies ++= stressTestDependencies
+    libraryDependencies ++= benchmarkDependencies
   )

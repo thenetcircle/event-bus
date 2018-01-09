@@ -34,7 +34,7 @@ object Dependencies {
   private val kamonLogReporter = "io.kamon" %% "kamon-log-reporter" % kamonVersion
   private val kamonSystemMetrics = "io.kamon" %% "kamon-system-metrics" % kamonVersion
 
-  val mainDependencies = Seq(
+  val coreDependencies = Seq(
     akka,
     akkaStream,
     akkaStreamTestkit,
@@ -56,5 +56,5 @@ object Dependencies {
     kamonSystemMetrics
   )
 
-  val stressTestDependencies = Seq(gatlingChartsHighcharts, gatlingTestFramework, akkaHttp)
+  val benchmarkDependencies = Seq(gatlingChartsHighcharts, gatlingTestFramework, akkaHttp)
 }

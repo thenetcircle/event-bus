@@ -4,6 +4,6 @@ target/
 /backup/
 /log/
 /conf/
-/stresstest_receiver/
+/test_receiver/
 /site/
 /ansible/
