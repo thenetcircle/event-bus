@@ -6,8 +6,6 @@ import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{IOp, IOpBuilder}
 
-import scala.util.matching.Regex
-
 class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) extends IOp {
 
   private var topicMapping = _topicMapping
@@ -16,29 +14,30 @@ class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) ex
   def updateTopicMapping(_topicMapping: Map[String, String]): Unit =
     topicMapping = _topicMapping
 
-  private def resolveTopic(event: Event): Event = {
-    val RMatch = new Regex(event.metadata.name)
-    val topicOption = topicMapping.collectFirst {
-      case (RMatch(_), v) => v
-    }
-    event.withChannel(topicOption.getOrElse(topicMapping.getOrElse("all", defaultTopic)))
+  // TODO: performance test
+  def resolveEvent(event: Event): Event = {
+    val eventName = event.metadata.name
+    val topicOption = topicMapping
+      .find { case (key, _) => eventName matches key }
+      .map(_._2)
+    event.withChannel(topicOption.getOrElse(defaultTopic))
   }
 
-  override def getGraph(): Flow[Event, Event, NotUsed] = Flow[Event].map(resolveTopic)
+  override def getGraph(): Flow[Event, Event, NotUsed] = Flow[Event].map(resolveEvent)
 
 }
 
 class TopicResolverBuilder extends IOpBuilder {
 
   /**
-    * Builds TopicResolver
-    *
-    * examples:
-    * {
-    *   "community_name": "...",
-    *   "default_topic": "..."
-    * }
-    */
+   * Builds TopicResolver
+   *
+   * examples:
+   * {
+   *   "community_name": "...",
+   *   "default_topic": "..."
+   * }
+   */
   override def build(configString: String)(implicit runningContext: RunningContext) = {
 
     val config = convertStringToConfig(configString)
