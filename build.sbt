@@ -1,6 +1,6 @@
 import Dependencies._
 
-lazy val eventBus = (project in file("."))
+lazy val core = (project in file("core"))
   .enablePlugins(JavaAppPackaging, SbtAspectj, BuildInfoPlugin)
   .settings(
     organization := "com.thenetcircle",

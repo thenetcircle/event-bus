@@ -32,6 +32,8 @@ object Runner extends App with StrictLogging {
   implicit val actorSystem: ActorSystem =
     ActorSystem(globalAppContext.getName(), globalAppContext.getConfig())
 
+  args.foreach(println)
+
   // Kamon.start()
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
