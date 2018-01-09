@@ -25,7 +25,7 @@ trait IBuilder[T <: IPlot] {
 
   private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
   def convertStringToConfig(configString: String): Config =
-    ConfigFactory.parseString(configString, parseOptions)
+    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
 
 }
 

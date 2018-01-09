@@ -31,7 +31,7 @@ import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
-class KafkaSink(settings: KafkaSinkSettings)(implicit runningContext: RunningContext)
+class KafkaSink(val settings: KafkaSinkSettings)(implicit runningContext: RunningContext)
     extends ISink
     with StrictLogging {
 

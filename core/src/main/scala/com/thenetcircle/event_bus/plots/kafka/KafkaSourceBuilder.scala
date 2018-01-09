@@ -33,14 +33,53 @@ class KafkaSourceBuilder() extends ISourceBuilder {
       |  # "group-id": "...",
       |  # "topics": [],
       |  # "topic-pattern": "event-*", # supports wildcard
+      |
       |  "extract-parallelism": 3,
       |  "commit-parallelism": 3,
       |  "commit-batch-max": 20,
       |  "max-partitions": 1000,
-      |  "akka.kafka.consumer": {
-      |    # "use-dispatcher": "akka.kafka.default-dispatcher",
+      |
+      |  "consumer": {
+      |    # Tuning property of scheduled polls.
+      |    "poll-interval": "50ms",
+      |
+      |    # Tuning property of the `KafkaConsumer.poll` parameter.
+      |    # Note that non-zero value means that blocking of the thread that
+      |    # is executing the stage will be blocked.
+      |    "poll-timeout": "50ms",
+      |
+      |    # The stage will be await outstanding offset commit requests before
+      |    # shutting down, but if that takes longer than this timeout it will
+      |    # stop forcefully.
+      |    "stop-timeout": "30s",
+      |
+      |    # How long to wait for `KafkaConsumer.close`
+      |    "close-timeout": "20s",
+      |
+      |    # If offset commit requests are not completed within this timeout
+      |    # the returned Future is completed `TimeoutException`.
+      |    "commit-timeout": "15s",
+      |
+      |    # If the KafkaConsumer can't connect to the broker the poll will be
+      |    # aborted after this timeout. The KafkaConsumerActor will throw
+      |    # org.apache.kafka.common.errors.WakeupException which will be ignored
+      |    # until max-wakeups limit gets exceeded.
+      |    "wakeup-timeout": "3s",
+      |
+      |    # After exceeding maxinum wakeups the consumer will stop and the stage will fail.
+      |    "max-wakeups": 10,
+      |
+      |    # Fully qualified config path which holds the dispatcher configuration
+      |    # to be used by the KafkaConsumerActor. Some blocking may occur.
+      |    "use-dispatcher": "akka.kafka.default-dispatcher",
+      |
+      |    # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
+      |    # can be defined in this configuration section.
       |    "kafka-clients": {
-      |      "client.id": "EventBus-Consumer"
+      |      "client": { "id": "EventBus-Consumer" },
+      |
+      |      # Disable auto-commit by default
+      |      "enable": { "auto": { "commit": false } }
       |    }
       |  }
       |}
@@ -52,7 +91,7 @@ class KafkaSourceBuilder() extends ISourceBuilder {
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 
     val consumerConfig = config
-      .getConfig("akka.kafka.consumer")
+      .getConfig("consumer")
       .withFallback(runningContext.appContext.getConfig().getConfig("akka.kafka.consumer"))
 
     val settings = KafkaSourceSettings(

@@ -43,7 +43,7 @@ class HttpSourceBuilder() extends ISourceBuilder with StrictLogging {
       |  "max-connections": 1000,
       |  "pre-connection-parallelism": 10
       |}
-    """.stripMargin.replaceAll("""\s*\#.*""", "")
+    """.stripMargin
   )
 
   override def build(configString: String)(implicit runningContext: RunningContext): HttpSource = {

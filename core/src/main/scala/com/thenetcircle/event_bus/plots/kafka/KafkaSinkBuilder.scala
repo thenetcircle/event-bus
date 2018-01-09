@@ -27,10 +27,23 @@ class KafkaSinkBuilder() extends ISinkBuilder {
   val defaultConfig: Config = convertStringToConfig(
     """
       |{
-      |  "akka.kafka.producer": {
-      |    # "use-dispatcher": "akka.kafka.default-dispatcher",
+      |  "producer": {
+      |    # Tuning parameter of how many sends that can run in parallel.
+      |    "parallelism": 100,
+      |
+      |    # How long to wait for `KafkaProducer.close`
+      |    "close-timeout": "60s",
+      |
+      |    # Fully qualified config path which holds the dispatcher configuration
+      |    # to be used by the producer stages. Some blocking may occur.
+      |    # When this value is empty, the dispatcher configured for the stream
+      |    # will be used.
+      |    "use-dispatcher": "akka.kafka.default-dispatcher",
+      |
+      |    # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
+      |    # can be defined in this configuration section.
       |    "kafka-clients": {
-      |      "client.id": "EventBus-Producer"
+      |      "client": { "id": "EventBus-Producer" }
       |    }
       |  }
       |}
@@ -42,7 +55,7 @@ class KafkaSinkBuilder() extends ISinkBuilder {
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 
     val producerConfig = config
-      .getConfig("akka.kafka.producer")
+      .getConfig("producer")
       .withFallback(runningContext.appContext.getConfig().getConfig("akka.kafka.producer"))
 
     val sinkSettings = KafkaSinkSettings(

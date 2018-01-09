@@ -40,7 +40,7 @@ case class KafkaSourceSettings(groupId: String,
                                topics: Option[Set[String]],
                                topicPattern: Option[String])
 
-class KafkaSource(settings: KafkaSourceSettings)(implicit runningContext: RunningContext)
+class KafkaSource(val settings: KafkaSourceSettings)(implicit runningContext: RunningContext)
     extends ISource
     with StrictLogging {
 
