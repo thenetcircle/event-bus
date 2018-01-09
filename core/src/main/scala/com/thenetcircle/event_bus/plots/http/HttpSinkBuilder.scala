@@ -27,22 +27,27 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
 
   val defaultConfig: Config = convertStringToConfig("""
                                 |{
-                                |  "max-retry-times": 10,
                                 |  "request": {
+                                |    # "host": "...",
                                 |    "port": 80,
-                                |    "method": POST,
+                                |    "method": "POST",
                                 |    "uri": "/"
                                 |  },
+                                |  "max-retry-times": 10,
                                 |  # "expected-response": "OK",
-                                |  "akka.http.host-connection-pool": {
-                                |    # "max-connections": 4,
-                                |    "max-retries": 0,
-                                |    # "max-open-requests": 32,
-                                |    # "pipelining-limit": 1,
-                                |    # "idle-timeout": "30s"
+                                |  "akka": {
+                                |    "http": {
+                                |      "host-connection-pool": {
+                                |        # "max-connections": 4,
+                                |        # "max-open-requests": 32,
+                                |        # "pipelining-limit": 1,
+                                |        # "idle-timeout": "30s",
+                                |        "max-retries": 0
+                                |      }
+                                |    }
                                 |  }
                                 |}
-                              """.stripMargin)
+                              """.stripMargin.replaceAll("""\s*\#.*""", ""))
 
   override def build(configString: String)(implicit runningContext: RunningContext): HttpSink = {
 
@@ -61,8 +66,8 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
       val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
 
       val expectedResponse =
-        if (config.hasPath("expected-response-data"))
-          Some(config.getString("expected-response-data"))
+        if (config.hasPath("expected-response"))
+          Some(config.getString("expected-response"))
         else None
 
       val connectionPoolSettings =

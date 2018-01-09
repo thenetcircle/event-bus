@@ -1,15 +1,13 @@
 import Dependencies._
 
 lazy val core = (project in file("core"))
-  .enablePlugins(JavaAppPackaging, SbtAspectj, BuildInfoPlugin)
+  .enablePlugins(JavaAppPackaging, SbtAspectj)
   .settings(
     organization := "com.thenetcircle",
     name := "event-bus",
     scalaVersion := "2.12.2",
     libraryDependencies ++= coreDependencies,
-    bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}"""",
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "com.thenetcircle.event_bus"
+    bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}""""
   )
 
 lazy val benchmark = (project in file("benchmark"))

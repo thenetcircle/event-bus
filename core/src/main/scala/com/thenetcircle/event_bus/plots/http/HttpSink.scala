@@ -44,7 +44,7 @@ case class HttpSinkSettings(host: String,
                             connectionPoolSettingsOption: Option[ConnectionPoolSettings] = None)
 
 class HttpSink(
-    settings: HttpSinkSettings,
+    val settings: HttpSinkSettings,
     overriddenSendingFlow: Option[Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _]] = None
 )(implicit runningContext: RunningContext)
     extends ISink

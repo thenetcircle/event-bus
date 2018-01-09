@@ -8,12 +8,12 @@ final class AppContext(appName: String,
                        version: String,
                        debug: Boolean = false,
                        appEnv: String,
-                       appConfig: Config) {
+                       systemConfig: Config) {
 
   def getEnv(): String = appEnv
   def getName(): String = appName
   def getVersion(): String = version
-  def getConfig(): Config = appConfig
+  def getConfig(): Config = systemConfig
 
   def isDebug(): Boolean = debug
   def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
@@ -32,16 +32,19 @@ final class AppContext(appName: String,
 
 object AppContext {
 
-  def apply(verion: String): AppContext = {
-    val appConfig = ConfigFactory.load()
-    val appName = appConfig.getString("app.name")
+  def apply(): AppContext = apply(ConfigFactory.load())
+
+  def apply(systemConfig: Config): AppContext = {
+    systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
+
+    val appName = systemConfig.getString("app.name")
 
     new AppContext(
       appName,
-      verion,
-      appConfig.getBoolean("app.debug"),
-      appConfig.getString("app.env"),
-      appConfig
+      systemConfig.getString("app.version"),
+      systemConfig.getBoolean("app.debug"),
+      systemConfig.getString("app.env"),
+      systemConfig
     )
   }
 

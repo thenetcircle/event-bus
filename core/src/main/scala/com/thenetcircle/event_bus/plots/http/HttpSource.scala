@@ -40,12 +40,12 @@ case class HttpSourceSettings(interface: String,
                               format: DataFormat,
                               maxConnections: Int,
                               perConnectionParallelism: Int,
-                              serverSettingsOption: Option[ServerSettings] = None,
-                              succeededResponse: String = "ok",
-                              errorResponse: String = "ko")
+                              succeededResponse: String,
+                              errorResponse: String,
+                              serverSettingsOption: Option[ServerSettings] = None)
 
 class HttpSource(
-    settings: HttpSourceSettings,
+    val settings: HttpSourceSettings,
     overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
 )(implicit runningContext: RunningContext)
     extends ISource
@@ -90,7 +90,7 @@ class HttpSource(
                 Flow[Future[HttpResponse]]
                   .mapAsync(settings.perConnectionParallelism)(identity)
 
-              /** ----- work flow ----- */
+              // workflow
               // since Http().bind using join, The direction is a bit different
               // format: off
 
@@ -115,27 +115,28 @@ class HttpSource(
     })
 }
 
-/** Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
-  * and a [[Event]] with a committer to complete the [[Future]]
-  *
-  * {{{
-  *                             +------------+
-  *            In[HttpRequest] ~~>           |
-  *                             |           ~~> Out1[Event]
-  * Out0[Future[HttpResponse]] <~~           |
-  *                             +------------+
-  * }}}
-  *
-  * '''Emits when'''
-  * a incoming [[HttpRequest]] successful transformed to a [[Event]],
-  * the Future of [[HttpResponse]] will always emit to out0
-  *
-  * '''Backpressures when''' any of the outputs backpressure
-  *
-  * '''Completes when''' upstream completes
-  *
-  * '''Cancels when''' when any downstreams cancel
-  */
+/**
+ * Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
+ * and a [[Event]] with a committer to complete the [[Future]]
+ *
+ * {{{
+ *                             +------------+
+ *            In[HttpRequest] ~~>           |
+ *                             |           ~~> Out1[Event]
+ * Out0[Future[HttpResponse]] <~~           |
+ *                             +------------+
+ * }}}
+ *
+ * '''Emits when'''
+ * a incoming [[HttpRequest]] successful transformed to a [[Event]],
+ * the Future of [[HttpResponse]] will always emit to out0
+ *
+ * '''Backpressures when''' any of the outputs backpressure
+ *
+ * '''Completes when''' upstream completes
+ *
+ * '''Cancels when''' when any downstreams cancel
+ */
 final class HttpRequestHandler(buildErrorResponseFunc: Throwable => HttpResponse)(
     implicit executor: ExecutionContext,
     extractor: IExtractor

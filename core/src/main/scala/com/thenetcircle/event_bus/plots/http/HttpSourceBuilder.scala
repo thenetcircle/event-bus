@@ -31,15 +31,19 @@ class HttpSourceBuilder() extends ISourceBuilder with StrictLogging {
     """ 
       |{
       |  # "interface": "...",
-      |  # "port": "...",
-      |  "format": "default",
+      |  "port": 8000,
+      |  # "akka": {
+      |  #   "http": {
+      |  #     "server": {} // override "akka.http.server" default settings
+      |  #   }
+      |  # }
+      |  "succeeded-response": "ok",
+      |  "error-response": "ko",
+      |  "format": "ActivityStreams",
       |  "max-connections": 1000,
-      |  "pre-connection-parallelism": 10,
-      |  # "akka.http.server": {}, // override "akka.http.server" default settings
-      |  # "succeeded-response": "ok",
-      |  # "error-response": "ko"
+      |  "pre-connection-parallelism": 10
       |}
-    """.stripMargin
+    """.stripMargin.replaceAll("""\s*\#.*""", "")
   )
 
   override def build(configString: String)(implicit runningContext: RunningContext): HttpSource = {
@@ -59,9 +63,9 @@ class HttpSourceBuilder() extends ISourceBuilder with StrictLogging {
           config.as[DataFormat]("format"),
           config.as[Int]("max-connections"),
           config.as[Int]("pre-connection-parallelism"),
-          serverSettingsOption,
           config.as[String]("succeeded-response"),
-          config.as[String]("error-response")
+          config.as[String]("error-response"),
+          serverSettingsOption
         )
       )
 

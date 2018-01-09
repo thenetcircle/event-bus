@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
+import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Await
@@ -28,7 +29,7 @@ object Runner extends App with StrictLogging {
   // Initialization
   logger.info("Application is initializing.")
 
-  implicit val globalAppContext: AppContext = AppContext("2.0.0")
+  implicit val globalAppContext: AppContext = AppContext(ConfigFactory.load())
   implicit val actorSystem: ActorSystem =
     ActorSystem(globalAppContext.getName(), globalAppContext.getConfig())
 

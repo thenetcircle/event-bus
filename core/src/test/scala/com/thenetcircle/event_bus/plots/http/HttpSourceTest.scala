@@ -112,7 +112,8 @@ class HttpSourceTest extends AkkaStreamTest {
                              TestSubscriber.Probe[HttpResponse],
                              TestSubscriber.Probe[Event]) = {
 
-    val settings = HttpSourceSettings("0.0.0.0", 80, DataFormat.ACTIVITYSTREAMS, 1000, 10)
+    val settings =
+      HttpSourceSettings("0.0.0.0", 80, DataFormat.ACTIVITYSTREAMS, 1000, 10, "ok", "ko")
 
     val in = TestPublisher.probe[HttpRequest]()
     val out0 = TestSubscriber.probe[HttpResponse]()
