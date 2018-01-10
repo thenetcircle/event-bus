@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.plots.kafka
+
 import akka.kafka.ProducerSettings
 import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.interface.ISinkBuilder

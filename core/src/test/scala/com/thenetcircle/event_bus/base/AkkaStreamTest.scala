@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
+import com.thenetcircle.event_bus.story.BuilderFactory
 import com.thenetcircle.event_bus.{Environment, RunningContext}
 import com.typesafe.config.ConfigFactory
 
@@ -40,6 +41,8 @@ abstract class AkkaStreamTest(_env: Environment)
     materializer.executionContext
   implicit val runningContext: RunningContext =
     new RunningContext(environment, system, materializer, executor)
+
+  BuilderFactory.init(environment.getConfig())
 
   def this() = {
     this(new Environment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))

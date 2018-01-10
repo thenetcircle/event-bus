@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.RunningContext
-import com.thenetcircle.event_bus.factory.PlotBuilderFactory
 import com.thenetcircle.event_bus.interface.{IOp, ISourceBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -49,18 +48,18 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
 
       val storySettings = StorySettings(config.getString("name"))
 
-      val source = PlotBuilderFactory
+      val source = BuilderFactory
         .buildSource(config.getString("source.type"), config.getString("source.settings"))
         .get
 
-      val sink = PlotBuilderFactory
+      val sink = BuilderFactory
         .buildSink(config.getString("sink.type"), config.getString("sink.settings"))
         .get
 
       val ops = config
         .as[Option[List[Config]]]("ops")
         .map(_.map(_config => {
-          PlotBuilderFactory
+          BuilderFactory
             .buildOp(_config.getString("type"), _config.getString("settings"))
             .get
         }))
@@ -70,7 +69,7 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
         .as[Option[Config]]("fallback")
         .map(
           _config =>
-            PlotBuilderFactory
+            BuilderFactory
               .buildSink(_config.getString("type"), _config.getString("settings"))
               .get
         )

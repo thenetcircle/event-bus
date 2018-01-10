@@ -17,9 +17,8 @@
 
 package com.thenetcircle.event_bus.plots.resolvers
 
-import com.thenetcircle.event_bus.createTestEvent
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.plots.ops.TopicResolver
+import com.thenetcircle.event_bus.createTestEvent
 
 class TopicResolverTest extends AkkaStreamTest {
 

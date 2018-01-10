@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.interface
 import com.thenetcircle.event_bus.RunningContext
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
-trait IBuilder[T <: IPlot] {
+trait IBuilder[+T <: IPlot] {
 
   def build(configString: String)(implicit runningContext: RunningContext): T
 
