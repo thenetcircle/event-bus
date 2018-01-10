@@ -18,9 +18,9 @@
 package com.thenetcircle.event_bus.plots.kafka
 
 import akka.kafka.ProducerSettings
-import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.interface.ISinkBuilder
 import com.thenetcircle.event_bus.plots.kafka.extended.{EventSerializer, KafkaKeySerializer}
+import com.thenetcircle.event_bus.story.RunningContext
 import com.typesafe.config.Config
 
 class KafkaSinkBuilder() extends ISinkBuilder {

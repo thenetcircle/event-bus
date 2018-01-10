@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.story.BuilderFactory
-import com.thenetcircle.event_bus.{Environment, RunningContext}
+import com.thenetcircle.event_bus.story.{BuilderFactory, RunningContext}
+import com.thenetcircle.event_bus.Environment
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
@@ -56,7 +56,9 @@ abstract class AkkaStreamTest(_env: Environment)
 
   override def beforeAll(): Unit = {}
 
-  override def afterAll(): Unit =
+  override def afterAll(): Unit = {
+    environment.shutdown()
     TestKit.shutdownActorSystem(system)
+  }
 
 }

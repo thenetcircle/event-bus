@@ -17,10 +17,22 @@
 
 package com.thenetcircle.event_bus.story
 
-class StoryManager() {
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import com.thenetcircle.event_bus.Environment
 
-  def fetchStories(): Unit = {}
+import scala.concurrent.ExecutionContext
 
-  def runStories(): Unit = {}
+class RunningContext(environment: Environment,
+                     system: ActorSystem,
+                     materializer: Materializer,
+                     executor: ExecutionContext,
+                     builderFactory: BuilderFactory) {
+
+  def getEnvironment(): Environment = environment
+  def getActorSystem(): ActorSystem = system
+  def getMaterializer(): Materializer = materializer
+  def getExecutor(): ExecutionContext = executor
+  def getBuilderFactory(): BuilderFactory = builderFactory
 
 }

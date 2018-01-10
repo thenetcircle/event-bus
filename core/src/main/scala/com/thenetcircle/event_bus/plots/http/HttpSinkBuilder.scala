@@ -19,8 +19,8 @@ package com.thenetcircle.event_bus.plots.http
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
-import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.interface.ISinkBuilder
+import com.thenetcircle.event_bus.story.RunningContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 

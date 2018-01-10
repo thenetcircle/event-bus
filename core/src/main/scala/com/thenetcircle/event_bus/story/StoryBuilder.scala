@@ -17,7 +17,6 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.interface.{IOp, ISourceBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging

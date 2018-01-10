@@ -13,7 +13,9 @@ object Dependencies {
   private val akkaStreamKafka = "com.typesafe.akka" %% "akka-stream-kafka" % "0.17"
   private val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 
-  private val curator = "org.apache.curator" % "curator-recipes" % "4.0.0"
+  private val curator = "org.apache.curator" % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, curator need to exclude original one
+  private val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.11" exclude ("org.slf4j", "slf4j-log4j12")
+
   private val sprayJson = "io.spray" %% "spray-json" % "1.3.3"
   private val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"
   private val scalaTest = "org.scalatest" %% "scalatest" % "3.0.1" % Test
@@ -42,6 +44,7 @@ object Dependencies {
     akkaHttpTestkit,
     akkaStreamKafka,
     curator,
+    zookeeper,
     sprayJson,
     scalaLogging,
     logback,

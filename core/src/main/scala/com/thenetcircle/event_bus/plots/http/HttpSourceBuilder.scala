@@ -18,9 +18,9 @@
 package com.thenetcircle.event_bus.plots.http
 
 import akka.http.scaladsl.settings.ServerSettings
-import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interface.ISourceBuilder
+import com.thenetcircle.event_bus.story.RunningContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._

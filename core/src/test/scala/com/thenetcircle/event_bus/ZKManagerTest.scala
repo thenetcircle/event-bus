@@ -17,22 +17,19 @@
 
 package com.thenetcircle.event_bus
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.thenetcircle.event_bus.story.BuilderFactory
+import com.thenetcircle.event_bus.base.AkkaStreamTest
 
-import scala.concurrent.ExecutionContext
+class ZKManagerTest extends AkkaStreamTest {
 
-class RunningContext(environment: Environment,
-                     system: ActorSystem,
-                     materializer: Materializer,
-                     executor: ExecutionContext,
-                     builderFactory: BuilderFactory) {
+  behavior of "ZKManager"
 
-  def getEnvironment(): Environment = environment
-  def getActorSystem(): ActorSystem = system
-  def getMaterializer(): Materializer = materializer
-  def getExecutor(): ExecutionContext = executor
-  def getBuilderFactory(): BuilderFactory = builderFactory
+  it should "do proper initialization" in {
+
+    val zkmanager = new ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181")
+    zkmanager.registerRunner("abc")
+
+    Thread.sleep(10000)
+
+  }
 
 }

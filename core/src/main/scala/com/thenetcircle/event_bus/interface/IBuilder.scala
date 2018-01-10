@@ -16,7 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.interface
-import com.thenetcircle.event_bus.RunningContext
+import com.thenetcircle.event_bus.story.RunningContext
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
 trait IBuilder[+T <: IPlot] {

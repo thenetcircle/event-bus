@@ -25,10 +25,10 @@ import akka.stream.ActorAttributes.supervisionStrategy
 import akka.stream.Supervision.resumingDecider
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
-import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
 import com.thenetcircle.event_bus.interface.ISource
+import com.thenetcircle.event_bus.story.RunningContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext

@@ -19,9 +19,9 @@ package com.thenetcircle.event_bus.plots.resolvers
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{IOp, IOpBuilder}
+import com.thenetcircle.event_bus.story.RunningContext
 import com.typesafe.config.Config
 
 class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) extends IOp {
