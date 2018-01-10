@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.plots.http
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.settings.ServerSettings
@@ -47,13 +48,14 @@ case class HttpSourceSettings(interface: String,
 class HttpSource(
     val settings: HttpSourceSettings,
     overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
-)(implicit runningContext: RunningContext)
+)(implicit context: RunningContext)
     extends ISource
     with StrictLogging {
 
-  import runningContext._
-
+  implicit val system: ActorSystem = context.getActorSystem()
+  implicit val materializer: Materializer = context.getMaterializer()
   implicit val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
+  implicit val executor: ExecutionContext = context.getExecutor()
 
   private val httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _] =
     overriddenHttpBind.getOrElse(settings.serverSettingsOption match {

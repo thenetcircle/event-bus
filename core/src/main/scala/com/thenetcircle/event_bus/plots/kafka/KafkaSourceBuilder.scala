@@ -86,13 +86,13 @@ class KafkaSourceBuilder() extends ISourceBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit runningContext: RunningContext): KafkaSource = {
+  override def build(configString: String)(implicit context: RunningContext): KafkaSource = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 
     val consumerConfig = config
       .getConfig("consumer")
-      .withFallback(runningContext.environment.getConfig().getConfig("akka.kafka.consumer"))
+      .withFallback(context.getEnvironment().getConfig("akka.kafka.consumer"))
 
     val settings = KafkaSourceSettings(
       groupId = config.as[String]("group-id"),

@@ -40,26 +40,28 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
    * }
    * ```
    */
-  override def build(configString: String)(implicit runningContext: RunningContext): Story = {
+  def build(configString: String)(implicit context: RunningContext): Story = {
 
     try {
+
+      val builderFactory = context.getBuilderFactory()
 
       val config = convertStringToConfig(configString)
 
       val storySettings = StorySettings(config.getString("name"))
 
-      val source = BuilderFactory
+      val source = builderFactory
         .buildSource(config.getString("source.type"), config.getString("source.settings"))
         .get
 
-      val sink = BuilderFactory
+      val sink = builderFactory
         .buildSink(config.getString("sink.type"), config.getString("sink.settings"))
         .get
 
       val ops = config
         .as[Option[List[Config]]]("ops")
         .map(_.map(_config => {
-          BuilderFactory
+          builderFactory
             .buildOp(_config.getString("type"), _config.getString("settings"))
             .get
         }))
@@ -69,7 +71,7 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
         .as[Option[Config]]("fallback")
         .map(
           _config =>
-            BuilderFactory
+            builderFactory
               .buildSink(_config.getString("type"), _config.getString("settings"))
               .get
         )
@@ -85,5 +87,4 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
     }
 
   }
-
 }

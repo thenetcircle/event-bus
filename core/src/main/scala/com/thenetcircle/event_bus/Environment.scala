@@ -14,6 +14,7 @@ final class Environment(appName: String,
   def getAppName(): String = appName
   def getAppVersion(): String = appVersion
   def getConfig(): Config = systemConfig
+  def getConfig(path: String): Config = systemConfig.getConfig(path)
 
   def isDebug(): Boolean = debug
   def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"

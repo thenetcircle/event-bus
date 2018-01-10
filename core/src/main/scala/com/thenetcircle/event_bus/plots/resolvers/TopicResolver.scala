@@ -53,7 +53,7 @@ class TopicResolverBuilder() extends IOpBuilder {
       |}
     """.stripMargin)
 
-  override def build(configString: String)(implicit runningContext: RunningContext) = {
+  override def build(configString: String)(implicit context: RunningContext) = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 

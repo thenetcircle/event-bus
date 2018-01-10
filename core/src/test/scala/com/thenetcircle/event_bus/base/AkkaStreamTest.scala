@@ -34,15 +34,21 @@ abstract class AkkaStreamTest(_env: Environment)
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   implicit val environment: Environment = _env
+
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
   )
   implicit val executor: ExecutionContext =
     materializer.executionContext
-  implicit val runningContext: RunningContext =
-    new RunningContext(environment, system, materializer, executor)
 
-  BuilderFactory.init(environment.getConfig())
+  implicit val runningContext: RunningContext =
+    new RunningContext(
+      environment,
+      system,
+      materializer,
+      executor,
+      BuilderFactory(environment.getConfig())
+    )
 
   def this() = {
     this(new Environment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))

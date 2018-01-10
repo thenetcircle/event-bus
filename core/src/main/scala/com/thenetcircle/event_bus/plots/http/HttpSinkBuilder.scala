@@ -50,7 +50,7 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
                                 |}
                               """.stripMargin)
 
-  override def build(configString: String)(implicit runningContext: RunningContext): HttpSink = {
+  override def build(configString: String)(implicit context: RunningContext): HttpSink = {
 
     val config: Config = convertStringToConfig(configString).withFallback(defaultConfig)
 
@@ -73,7 +73,7 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
 
       val connectionPoolSettings =
         if (config.hasPath("akka.http.host-connection-pool"))
-          Some(ConnectionPoolSettings(config.withFallback(runningContext.environment.getConfig())))
+          Some(ConnectionPoolSettings(config.withFallback(context.getEnvironment().getConfig())))
         else None
 
       new HttpSink(

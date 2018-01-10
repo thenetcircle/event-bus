@@ -51,13 +51,13 @@ class KafkaSinkBuilder() extends ISinkBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit runningContext: RunningContext): KafkaSink = {
+  override def build(configString: String)(implicit context: RunningContext): KafkaSink = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 
     val producerConfig = config
       .getConfig("producer")
-      .withFallback(runningContext.environment.getConfig().getConfig("akka.kafka.producer"))
+      .withFallback(context.getEnvironment().getConfig("akka.kafka.producer"))
 
     val sinkSettings = KafkaSinkSettings(
       ProducerSettings[ProducerKey, ProducerValue](

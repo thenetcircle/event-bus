@@ -21,7 +21,7 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyn
 
 trait IBuilder[+T <: IPlot] {
 
-  def build(configString: String)(implicit runningContext: RunningContext): T
+  def build(configString: String)(implicit context: RunningContext): T
 
   private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
   def convertStringToConfig(configString: String): Config =

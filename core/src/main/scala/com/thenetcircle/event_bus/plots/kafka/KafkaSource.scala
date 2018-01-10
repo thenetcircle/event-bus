@@ -31,6 +31,8 @@ import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
 import com.thenetcircle.event_bus.interface.ISource
 import com.typesafe.scalalogging.StrictLogging
 
+import scala.concurrent.ExecutionContext
+
 case class KafkaSourceSettings(groupId: String,
                                extractParallelism: Int,
                                commitParallelism: Int,
@@ -40,7 +42,7 @@ case class KafkaSourceSettings(groupId: String,
                                topics: Option[Set[String]],
                                topicPattern: Option[String])
 
-class KafkaSource(val settings: KafkaSourceSettings)(implicit runningContext: RunningContext)
+class KafkaSource(val settings: KafkaSourceSettings)(implicit context: RunningContext)
     extends ISource
     with StrictLogging {
 
@@ -49,7 +51,7 @@ class KafkaSource(val settings: KafkaSourceSettings)(implicit runningContext: Ru
     "The outlet of KafkaPipeline needs to subscribe topics"
   )
 
-  import runningContext._
+  implicit val executor: ExecutionContext = context.getExecutor()
 
   private val subscription: AutoSubscription =
     if (settings.topics.isDefined) {

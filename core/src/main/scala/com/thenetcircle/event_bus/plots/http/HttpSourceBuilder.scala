@@ -46,14 +46,14 @@ class HttpSourceBuilder() extends ISourceBuilder with StrictLogging {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit runningContext: RunningContext): HttpSource = {
+  override def build(configString: String)(implicit context: RunningContext): HttpSource = {
 
     try {
       val config: Config = convertStringToConfig(configString).withFallback(defaultConfig)
 
       val serverSettingsOption: Option[ServerSettings] =
         if (config.hasPath("akka.http.server"))
-          Some(ServerSettings(config.withFallback(runningContext.environment.getConfig())))
+          Some(ServerSettings(config.withFallback(context.getEnvironment().getConfig())))
         else None
 
       new HttpSource(

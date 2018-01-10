@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.plots.http
 import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -46,11 +47,13 @@ case class HttpSinkSettings(host: String,
 class HttpSink(
     val settings: HttpSinkSettings,
     overriddenSendingFlow: Option[Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _]] = None
-)(implicit runningContext: RunningContext)
+)(implicit context: RunningContext)
     extends ISink
     with StrictLogging {
 
-  import runningContext._
+  implicit val system: ActorSystem = context.getActorSystem()
+  implicit val materializer: Materializer = context.getMaterializer()
+  implicit val executor: ExecutionContext = context.getExecutor()
 
   // TODO: double check when it creates a new pool
   private val sendingFlow =
