@@ -92,7 +92,7 @@ class KafkaSourceBuilder() extends ISourceBuilder {
 
     val consumerConfig = config
       .getConfig("consumer")
-      .withFallback(runningContext.appContext.getConfig().getConfig("akka.kafka.consumer"))
+      .withFallback(runningContext.environment.getConfig().getConfig("akka.kafka.consumer"))
 
     val settings = KafkaSourceSettings(
       groupId = config.as[String]("group-id"),

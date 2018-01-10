@@ -5,6 +5,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.RunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{IOp, IOpBuilder}
+import com.typesafe.config.Config
 
 class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) extends IOp {
 
@@ -27,24 +28,19 @@ class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) ex
 
 }
 
-class TopicResolverBuilder extends IOpBuilder {
+class TopicResolverBuilder() extends IOpBuilder {
 
-  /**
-   * Builds TopicResolver
-   *
-   * examples:
-   * {
-   *   "community_name": "...",
-   *   "default_topic": "..."
-   * }
-   */
+  val defaultConfig: Config = convertStringToConfig("""
+      |{
+      |  "default_topic": "event-default"
+      |}
+    """.stripMargin)
+
   override def build(configString: String)(implicit runningContext: RunningContext) = {
 
-    val config = convertStringToConfig(configString)
+    val config = convertStringToConfig(configString).withFallback(defaultConfig)
 
-    val communityName = config.getString("community_name")
     val defaultTopic = config.getString("default_topic")
-
     val _mapping: Map[String, String] = Map.empty
 
     new TopicResolver(_mapping, defaultTopic)

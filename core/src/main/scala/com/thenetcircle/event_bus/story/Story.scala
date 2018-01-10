@@ -25,11 +25,11 @@ import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
-class Story(settings: StorySettings,
-            source: ISource,
-            sink: ISink,
-            ops: List[IOp] = List.empty,
-            fallback: Option[ISink] = None,
+class Story(val settings: StorySettings,
+            val source: ISource,
+            val sink: ISink,
+            val ops: List[IOp] = List.empty,
+            val fallback: Option[ISink] = None,
             initStatus: StoryStatus = StoryStatus.INIT)
     extends ISource
     with StrictLogging {

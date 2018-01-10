@@ -4,15 +4,15 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
 
-final class AppContext(appName: String,
-                       version: String,
-                       debug: Boolean = false,
-                       appEnv: String,
-                       systemConfig: Config) {
+final class Environment(appName: String,
+                        appVersion: String,
+                        appEnv: String,
+                        debug: Boolean,
+                        systemConfig: Config) {
 
-  def getEnv(): String = appEnv
-  def getName(): String = appName
-  def getVersion(): String = version
+  def getAppEnv(): String = appEnv
+  def getAppName(): String = appName
+  def getAppVersion(): String = appVersion
   def getConfig(): Config = systemConfig
 
   def isDebug(): Boolean = debug
@@ -30,20 +30,20 @@ final class AppContext(appName: String,
 
 }
 
-object AppContext {
+object Environment {
 
-  def apply(): AppContext = apply(ConfigFactory.load())
+  def apply(): Environment = apply(ConfigFactory.load())
 
-  def apply(systemConfig: Config): AppContext = {
+  def apply(systemConfig: Config): Environment = {
     systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
 
     val appName = systemConfig.getString("app.name")
 
-    new AppContext(
+    new Environment(
       appName,
       systemConfig.getString("app.version"),
-      systemConfig.getBoolean("app.debug"),
       systemConfig.getString("app.env"),
+      systemConfig.getBoolean("app.debug"),
       systemConfig
     )
   }

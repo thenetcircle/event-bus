@@ -56,7 +56,7 @@ class KafkaSinkBuilder() extends ISinkBuilder {
 
     val producerConfig = config
       .getConfig("producer")
-      .withFallback(runningContext.appContext.getConfig().getConfig("akka.kafka.producer"))
+      .withFallback(runningContext.environment.getConfig().getConfig("akka.kafka.producer"))
 
     val sinkSettings = KafkaSinkSettings(
       ProducerSettings[ProducerKey, ProducerValue](

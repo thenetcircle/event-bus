@@ -53,7 +53,7 @@ class HttpSourceBuilder() extends ISourceBuilder with StrictLogging {
 
       val serverSettingsOption: Option[ServerSettings] =
         if (config.hasPath("akka.http.server"))
-          Some(ServerSettings(config.withFallback(runningContext.appContext.getConfig())))
+          Some(ServerSettings(config.withFallback(runningContext.environment.getConfig())))
         else None
 
       new HttpSource(

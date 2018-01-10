@@ -73,7 +73,7 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
 
       val connectionPoolSettings =
         if (config.hasPath("akka.http.host-connection-pool"))
-          Some(ConnectionPoolSettings(config.withFallback(runningContext.appContext.getConfig())))
+          Some(ConnectionPoolSettings(config.withFallback(runningContext.environment.getConfig())))
         else None
 
       new HttpSink(

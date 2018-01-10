@@ -20,6 +20,8 @@ package com.thenetcircle.event_bus
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -29,11 +31,13 @@ object Runner extends App with StrictLogging {
   // Initialization
   logger.info("Application is initializing.")
 
-  implicit val globalAppContext: AppContext = AppContext(ConfigFactory.load())
-  implicit val actorSystem: ActorSystem =
-    ActorSystem(globalAppContext.getName(), globalAppContext.getConfig())
+  implicit val environment: Environment = Environment(ConfigFactory.load())
+  implicit val system: ActorSystem =
+    ActorSystem(environment.getAppName(), environment.getConfig())
 
-  args.foreach(println)
+  val zkclient: CuratorFramework =
+    CuratorFrameworkFactory.newClient("", new ExponentialBackoffRetry(1000, 3))
+  zkclient.start()
 
   // Kamon.start()
   sys.addShutdownHook({
@@ -41,10 +45,12 @@ object Runner extends App with StrictLogging {
 
     // Kamon.shutdown()
 
-    globalAppContext.shutdown()
+    zkclient.close()
 
-    actorSystem.terminate()
-    Await.result(actorSystem.whenTerminated, 60.seconds)
+    environment.shutdown()
+
+    system.terminate()
+    Await.result(system.whenTerminated, 60.seconds)
 
     /*Http()
       .shutdownAllConnectionPools()

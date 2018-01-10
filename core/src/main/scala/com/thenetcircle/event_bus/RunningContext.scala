@@ -22,7 +22,7 @@ import akka.stream.Materializer
 
 import scala.concurrent.ExecutionContext
 
-class RunningContext(val appContext: AppContext,
-                     implicit val actorSystem: ActorSystem,
+class RunningContext(val environment: Environment,
+                     implicit val system: ActorSystem,
                      implicit val materializer: Materializer,
                      implicit val executor: ExecutionContext)

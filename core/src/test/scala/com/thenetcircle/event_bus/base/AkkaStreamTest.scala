@@ -20,29 +20,29 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.{AppContext, RunningContext}
+import com.thenetcircle.event_bus.{Environment, RunningContext}
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaStreamTest(_appContext: AppContext)
-    extends TestKit(ActorSystem(_appContext.getName(), _appContext.getConfig()))
+abstract class AkkaStreamTest(_env: Environment)
+    extends TestKit(ActorSystem(_env.getAppName(), _env.getConfig()))
     with ImplicitSender
     with UnitTest {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  implicit val appContext: AppContext = _appContext
+  implicit val environment: Environment = _env
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
   )
   implicit val executor: ExecutionContext =
     materializer.executionContext
   implicit val runningContext: RunningContext =
-    new RunningContext(appContext, system, materializer, executor)
+    new RunningContext(environment, system, materializer, executor)
 
   def this() = {
-    this(new AppContext("event-bus-test", "2.x", true, "test", ConfigFactory.load()))
+    this(new Environment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
   }
 
   override def beforeAll(): Unit = {}
