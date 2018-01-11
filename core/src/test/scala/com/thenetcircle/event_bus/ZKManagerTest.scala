@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus
 
 import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.misc.ZKManager
 
 class ZKManagerTest extends AkkaStreamTest {
 

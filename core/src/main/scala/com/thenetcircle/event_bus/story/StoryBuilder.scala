@@ -18,6 +18,8 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.interface.TaskABuilder
+import com.thenetcircle.event_bus.misc.ConfigStringParser
+import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -37,7 +39,7 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
    *   #   ...
    *   # ]
    *   # "taskC": ["taskC-type", "settings"]
-   *   # "alternativeC": [
+   *   # "fallbacks": [
    *     ["taskC-type", "settings"]
    *   ]
    * }
@@ -48,9 +50,10 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
     try {
 
       val builderFactory = context.getBuilderFactory()
-      val config = convertStringToConfig(configString)
+      val config = ConfigStringParser.convertStringToConfig(configString)
 
-      val storySettings = StorySettings(config.getString("name"))
+      val storyName = config.getString("name")
+      val storySettings = StorySettings()
 
       val AConfig = config.as[List[String]]("taskA")
       val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
@@ -65,13 +68,13 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
         case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
       }
 
-      val alternativeC = config
-        .as[Option[List[List[String]]]]("alternativeC")
+      val fallbacks = config
+        .as[Option[List[List[String]]]]("fallbacks")
         .map(_.map {
           case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
         })
 
-      new Story(storySettings, taskA, taskB, taskC, alternativeC)
+      new Story(storyName, storySettings, taskA, taskB, taskC, fallbacks)
 
     } catch {
 
@@ -82,4 +85,52 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
     }
 
   }
+
+  def build(
+      name: String,
+      storyConfigString: String,
+      taskAConfigString: String,
+      taskBConfigString: Option[String],
+      taskCConfigString: Option[String],
+      fallbackConfigString: Option[String],
+      initStatus: StoryStatus = StoryStatus.INIT
+  )(implicit builderFactory: TaskBuilderFactory): Story = {
+    try {
+
+      val config = ConfigStringParser.convertStringToConfig(configString)
+
+      val storyName = name
+      val storySettings = StorySettings()
+
+      val AConfig =
+        ConfigStringParser.convertStringToConfig(taskAConfigString).as[List[String]]("taskA")
+      val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
+
+      val taskB = config
+        .as[Option[List[List[String]]]]("taskB")
+        .map(_.map {
+          case _type :: _settings :: _ => builderFactory.buildTaskB(_type, _settings).get
+        })
+
+      val taskC = config.as[Option[List[String]]]("taskC").map {
+        case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
+      }
+
+      val fallbacks = config
+        .as[Option[List[List[String]]]]("fallbacks")
+        .map(_.map {
+          case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
+        })
+
+      new Story(storySettings, taskA, taskB, taskC, fallbacks)
+
+    } catch {
+
+      case ex: Throwable =>
+        logger.error(s"Creating Story failed with error: ${ex.getMessage}")
+        throw ex
+
+    }
+  }
+
 }

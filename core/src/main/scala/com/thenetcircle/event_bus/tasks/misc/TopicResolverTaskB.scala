@@ -21,6 +21,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{TaskB, TaskBBuilder}
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
 
@@ -47,7 +48,8 @@ class TopicResolverTaskB(_topicMapping: Map[String, String], defaultTopic: Strin
 
 class TopicResolverTaskBBuilder() extends TaskBBuilder {
 
-  val defaultConfig: Config = convertStringToConfig("""
+  val defaultConfig: Config =
+    ConfigStringParser.convertStringToConfig("""
       |{
       |  "default_topic": "event-default"
       |}
@@ -55,7 +57,7 @@ class TopicResolverTaskBBuilder() extends TaskBBuilder {
 
   override def build(configString: String)(implicit context: TaskExecutingContext) = {
 
-    val config = convertStringToConfig(configString).withFallback(defaultConfig)
+    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
     val defaultTopic = config.getString("default_topic")
     val _mapping: Map[String, String] = Map.empty

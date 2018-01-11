@@ -19,13 +19,14 @@ package com.thenetcircle.event_bus.tasks.kafka
 
 import akka.kafka.ProducerSettings
 import com.thenetcircle.event_bus.interface.TaskCBuilder
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKeySerializer}
 import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
 
 class KafkaTaskCBuilder() extends TaskCBuilder {
 
-  val defaultConfig: Config = convertStringToConfig(
+  val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
     """
       |{
       |  "producer": {
@@ -53,7 +54,7 @@ class KafkaTaskCBuilder() extends TaskCBuilder {
 
   override def build(configString: String)(implicit context: TaskExecutingContext): KafkaTaskC = {
 
-    val config = convertStringToConfig(configString).withFallback(defaultConfig)
+    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
     val producerConfig = config
       .getConfig("producer")

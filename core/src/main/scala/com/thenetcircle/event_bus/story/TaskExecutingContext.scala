@@ -19,17 +19,17 @@ package com.thenetcircle.event_bus.story
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import com.thenetcircle.event_bus.Environment
+import com.thenetcircle.event_bus.misc.ExecutionEnvironment
 
 import scala.concurrent.ExecutionContext
 
-class TaskExecutingContext(environment: Environment,
+class TaskExecutingContext(environment: ExecutionEnvironment,
                            system: ActorSystem,
                            materializer: Materializer,
                            executor: ExecutionContext,
                            builderFactory: TaskBuilderFactory) {
 
-  def getEnvironment(): Environment = environment
+  def getEnvironment(): ExecutionEnvironment = environment
   def getActorSystem(): ActorSystem = system
   def getMaterializer(): Materializer = materializer
   def getExecutor(): ExecutionContext = executor

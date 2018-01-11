@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
+import com.thenetcircle.event_bus.misc.{ExecutionEnvironment, ZKManager}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 
@@ -29,17 +30,14 @@ object StoryExecutor extends App with StrictLogging {
   logger.info("Application is initializing.")
 
   // Initialize Environment
-  implicit val environment: Environment = Environment(ConfigFactory.load())
-
-  // Check Executor Name
-  var executorName: String = if (args.length > 0) args(0) else ""
-  if (executorName.isEmpty)
-    executorName = environment.getConfig().getString("app.default-executor-name")
+  implicit val environment: ExecutionEnvironment =
+    ExecutionEnvironment(args, ConfigFactory.load())
 
   // Connecting Zookeeper
   val zKManager: ZKManager = ZKManager(environment.getConfig())
   zKManager.init()
-  zKManager.registerStoryExecutor(executorName)
+
+  val executorId: String = zKManager.registerStoryExecutor(environment.getExecutorGroup())
 
   // Create ActorSystem
   implicit val system: ActorSystem =

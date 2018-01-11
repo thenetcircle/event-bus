@@ -25,16 +25,15 @@ import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
-class Story(val settings: StorySettings,
+class Story(val name: String,
+            val settings: StorySettings,
             val taskA: TaskA,
             val taskB: Option[List[TaskB]] = None,
             val taskC: Option[TaskC] = None,
-            val alternativeC: Option[List[TaskC]] = None,
+            val fallbacks: Option[List[TaskC]] = None,
             initStatus: StoryStatus = StoryStatus.INIT)
     extends TaskA
     with StrictLogging {
-
-  val storyName: String = settings.name
 
   private var status: StoryStatus = initStatus
   private def updateStatus(_status: StoryStatus): Unit = {
@@ -47,7 +46,7 @@ class Story(val settings: StorySettings,
       graph: Graph[FlowShape[Event, Event], NotUsed]
   ): Graph[FlowShape[Event, Event], NotUsed] = {
     graphId = graphId + 1
-    Story.decorateGraph(graph, s"$storyName-$graphId", alternativeC)
+    Story.decorateGraph(graph, s"$name-$graphId", fallbacks)
   }
 
   override def getGraph(): Source[Event, NotUsed] =
@@ -76,7 +75,7 @@ class Story(val settings: StorySettings,
             SourceShape(ConfirmA.out)
           }
       )
-      .named(storyName)
+      .named(name)
 
   override def getCommittingGraph(): Flow[Event, Event, NotUsed] = Flow[Event]
 
@@ -89,7 +88,7 @@ object Story extends StrictLogging {
   def decorateGraph(
       graph: Graph[FlowShape[Event, Event], NotUsed],
       graphId: String,
-      alternativeC: Option[List[TaskC]] = None
+      fallbacks: Option[List[TaskC]] = None
   ): Graph[FlowShape[Event, Event], NotUsed] = {
 
     Flow.fromGraph(
@@ -103,12 +102,12 @@ object Story extends StrictLogging {
           var failedGraph = Flow[Event].map(_event => {
             val logMessage =
               s"Event ${_event.uniqueName} was processing failed on graph: $graphId." +
-                (if (alternativeC.isDefined) " Sending to alternativeC." else "")
+                (if (fallbacks.isDefined) " Sending to fallbacks." else "")
             logger.debug(logMessage)
             _event
           })
-          // TODO: use nested acGraph
-          alternativeC.foreach(acList => failedGraph = failedGraph.via(acList.head.getGraph()))
+          // TODO: use nested fallback graphs
+          fallbacks.foreach(acList => failedGraph = failedGraph.via(acList.head.getGraph()))
 
           // workflow
           // format: off

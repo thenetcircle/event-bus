@@ -20,13 +20,15 @@ package com.thenetcircle.event_bus.tasks.http
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import com.thenetcircle.event_bus.interface.TaskCBuilder
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
 class HttpTaskCBuilder() extends TaskCBuilder with StrictLogging {
 
-  val defaultConfig: Config = convertStringToConfig("""
+  val defaultConfig: Config =
+    ConfigStringParser.convertStringToConfig("""
                                 |{
                                 |  "request": {
                                 |    # "host": "...",
@@ -52,7 +54,8 @@ class HttpTaskCBuilder() extends TaskCBuilder with StrictLogging {
 
   override def build(configString: String)(implicit context: TaskExecutingContext): HttpTaskC = {
 
-    val config: Config = convertStringToConfig(configString).withFallback(defaultConfig)
+    val config: Config =
+      ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
     try {
       val requestMethod = config.getString("request.method").toUpperCase() match {

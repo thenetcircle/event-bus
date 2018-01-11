@@ -15,16 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus
+package com.thenetcircle.event_bus.misc
 
 import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
 
-class ZKManager(connectString: String)(implicit environment: Environment) {
+class ZKManager(connectString: String)(implicit environment: Environment) extends StrictLogging {
 
   val client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
@@ -38,28 +39,51 @@ class ZKManager(connectString: String)(implicit environment: Environment) {
     environment.addShutdownHook(client.close())
 
     // Check and Create root nodes
-    if (client.checkExists().forPath(relatedPath("stories")) == null) {
-      client.create().creatingParentsIfNeeded().forPath(relatedPath("stories"))
+    if (client.checkExists().forPath(getAbsPath("stories")) == null) {
+      client.create().creatingParentsIfNeeded().forPath(getAbsPath("stories"))
     }
-    if (client.checkExists().forPath(relatedPath("executors")) == null) {
-      client.create().creatingParentsIfNeeded().forPath(relatedPath("executors"))
+    if (client.checkExists().forPath(getAbsPath("executors")) == null) {
+      client.create().creatingParentsIfNeeded().forPath(getAbsPath("executors"))
     }
   }
 
-  def relatedPath(path: String): String = s"$rootPath/$path"
+  def getAbsPath(path: String): String = s"$rootPath/$path"
 
-  def registerStoryExecutor(name: String): Unit = {
+  def registerStoryExecutor(executorGroup: String): String = {
     val payload = ""
     client
       .create()
       .creatingParentsIfNeeded()
       .withProtection()
       .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-      .forPath(relatedPath(s"executors/$name/member"), payload.getBytes())
+      .forPath(getAbsPath(s"executors/$executorGroup/member"), payload.getBytes())
   }
 
-  def fetchStories(): List[String] = {
-    client.getChildren.forPath(relatedPath("stories")).asScala.toList
+  def getClient(): CuratorFramework = client
+
+  def getData(relativePath: String): Option[String] = {
+    try {
+      Some(client.getData.forPath(relativePath).mkString)
+    } catch {
+      case e: Throwable =>
+        logger.info(s"getData from $relativePath failed with error: ${e.getMessage}")
+        None
+    }
+  }
+
+  def getChildren(relativePath: String): Option[List[String]] = {
+    try {
+      Some(
+        client.getChildren
+          .forPath(getAbsPath(relativePath))
+          .asScala
+          .toList
+      )
+    } catch {
+      case e: Throwable =>
+        logger.info(s"getChildren from $relativePath failed with error: ${e.getMessage}")
+        None
+    }
   }
 
 }

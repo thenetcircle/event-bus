@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.interface._
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -45,6 +46,20 @@ class TaskBuilderFactory() {
 
   def getTaskCBuilder(sinkType: String): Option[TaskCBuilder] =
     taskCBuilers.get(sinkType.toLowerCase)
+
+  def parseTaskConfigString(configString: String): Option[List[String]] = {
+    try {
+      Some(ConfigStringParser.convertStringToConfig(configString).as[List[String]](""))
+    } catch {
+      case _: Throwable => None
+    }
+  }
+
+  def buildTaskA(configString: String)(implicit context: TaskExecutingContext): Option[TaskA] = {
+    parseTaskConfigString(configString).map {
+      case _category :: _configString :: _ => buildTaskA(_category, _configString)
+    }
+  }
 
   def buildTaskA(category: String,
                  configString: String)(implicit context: TaskExecutingContext): Option[TaskA] =

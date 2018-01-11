@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus
 
 package object story {
 
-  case class StorySettings(name: String)
+  case class StorySettings()
 
   object StoryStatus extends Enumeration {
     type StoryStatus = Value

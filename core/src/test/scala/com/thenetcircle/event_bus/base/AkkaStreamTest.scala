@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
+import com.thenetcircle.event_bus.misc.Environment
 import com.thenetcircle.event_bus.story.{TaskBuilderFactory, TaskExecutingContext}
-import com.thenetcircle.event_bus.Environment
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext

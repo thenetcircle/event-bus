@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.tasks.kafka
 
 import akka.kafka.ConsumerSettings
 import com.thenetcircle.event_bus.interface.TaskABuilder
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
@@ -27,7 +28,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 class KafkaTaskABuilder() extends TaskABuilder {
 
-  val defaultConfig: Config = convertStringToConfig(
+  val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
     """
       |{
       |  # "group-id": "...",
@@ -88,7 +89,7 @@ class KafkaTaskABuilder() extends TaskABuilder {
 
   override def build(configString: String)(implicit context: TaskExecutingContext): KafkaTaskA = {
 
-    val config = convertStringToConfig(configString).withFallback(defaultConfig)
+    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
     val consumerConfig = config
       .getConfig("consumer")

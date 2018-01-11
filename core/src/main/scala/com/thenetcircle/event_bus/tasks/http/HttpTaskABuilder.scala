@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.tasks.http
 import akka.http.scaladsl.settings.ServerSettings
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interface.TaskABuilder
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -27,7 +28,7 @@ import net.ceedubs.ficus.Ficus._
 
 class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
 
-  val defaultConfig: Config = convertStringToConfig(
+  val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
     """ 
       |{
       |  # "interface": "...",
@@ -49,7 +50,8 @@ class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
   override def build(configString: String)(implicit context: TaskExecutingContext): HttpTaskA = {
 
     try {
-      val config: Config = convertStringToConfig(configString).withFallback(defaultConfig)
+      val config: Config =
+        ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
       val serverSettingsOption: Option[ServerSettings] =
         if (config.hasPath("akka.http.server"))
