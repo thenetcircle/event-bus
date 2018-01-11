@@ -30,6 +30,15 @@ package object story {
     val FAILED = Value(4, "FAILED")
     val STOPPING = Value(5, "STOPPING")
     val STOPPED = Value(6, "STOPPED")
+
+    def apply(status: String): StoryStatus = status.toUpperCase match {
+      case "DEPLOYING" => DEPLOYING
+      case "RUNNING"   => RUNNING
+      case "FAILED"    => FAILED
+      case "STOPPING"  => STOPPING
+      case "STOPPED"   => STOPPED
+      case _           => INIT
+    }
   }
 
 }

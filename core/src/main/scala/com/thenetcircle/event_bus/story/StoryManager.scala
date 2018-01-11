@@ -17,10 +17,44 @@
 
 package com.thenetcircle.event_bus.story
 
-class StoryManager() {
+import com.thenetcircle.event_bus.misc.DaoFactory
+import com.thenetcircle.event_bus.story.StoryDAO.StoryInfo
 
-  def fetchStories(): Unit = {}
+class StoryManager(
+    daoFactory: DaoFactory,
+    taskBuilderFactory: TaskBuilderFactory,
+    taskContextFactory: TaskContextFactory
+)(implicit environment: ExecutionEnvironment) {
 
-  def runStories(): Unit = {}
+  val storyDAO = daoFactory.getStoryDAO()
 
+  def execute(): Unit = {}
+
+  def getStories(): List[Story] = {
+    val availableStories: List[StoryInfo] =
+      storyDAO.getAvailableStories(environment.getExecutorGroup())
+
+    availableStories.map(info => {
+      implicit val taskContext: TaskContext = taskContextFactory.newTaskExecutingContext()
+      new Story(
+        info.name,
+        StorySettings(),
+        taskBuilderFactory.buildTaskA(info.taskA).get,
+        info.taskB.flatMap(_v => taskBuilderFactory.buildTaskB(_v)),
+        info.taskC.flatMap(_v => taskBuilderFactory.buildTaskC(_v)),
+        info.fallbacks.flatMap(_v => taskBuilderFactory.buildFallbacks(_v)),
+        StoryStatus(info.status)
+      )
+    })
+  }
+
+}
+
+object StoryManager {
+  def apply(
+      daoFactory: DaoFactory,
+      taskBuilderFactory: TaskBuilderFactory,
+      taskContextFactory: TaskContextFactory
+  )(implicit environment: ExecutionEnvironment): StoryManager =
+    new StoryManager(daoFactory, taskBuilderFactory, taskContextFactory)
 }

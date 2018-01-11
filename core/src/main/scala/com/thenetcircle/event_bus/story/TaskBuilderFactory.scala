@@ -55,22 +55,29 @@ class TaskBuilderFactory() {
     }
   }
 
-  def buildTaskA(configString: String)(implicit context: TaskExecutingContext): Option[TaskA] = {
+  def buildTaskA(configString: String)(implicit context: TaskContext): Option[TaskA] = ???
+  /*{
     parseTaskConfigString(configString).map {
       case _category :: _configString :: _ => buildTaskA(_category, _configString)
     }
-  }
+  }*/
 
   def buildTaskA(category: String,
-                 configString: String)(implicit context: TaskExecutingContext): Option[TaskA] =
+                 configString: String)(implicit context: TaskContext): Option[TaskA] =
     getTaskABuilder(category).map(_builder => _builder.build(configString))
 
+  def buildTaskB(configString: String)(implicit context: TaskContext): Option[List[TaskB]] = ???
+
   def buildTaskB(category: String,
-                 configString: String)(implicit context: TaskExecutingContext): Option[TaskB] =
+                 configString: String)(implicit context: TaskContext): Option[TaskB] =
     getTaskBBuilder(category).map(_builder => _builder.build(configString))
 
+  def buildTaskC(configString: String)(implicit context: TaskContext): Option[TaskC] = ???
+
+  def buildFallbacks(configString: String)(implicit context: TaskContext): Option[List[TaskC]] = ???
+
   def buildTaskC(category: String,
-                 configString: String)(implicit context: TaskExecutingContext): Option[TaskC] =
+                 configString: String)(implicit context: TaskContext): Option[TaskC] =
     getTaskCBuilder(category).map(_builder => _builder.build(configString))
 
 }

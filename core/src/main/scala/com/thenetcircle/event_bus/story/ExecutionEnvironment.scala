@@ -15,16 +15,20 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.misc
+package com.thenetcircle.event_bus.story
 
-import com.typesafe.config.{Config, ConfigFactory}
+import akka.actor.ActorSystem
+import com.thenetcircle.event_bus.misc.Environment
+import com.typesafe.config.Config
 
-class ExecutionEnvironment(appName: String,
+class ExecutionEnvironment(executorGroup: String,
+                           executorId: String,
+                           appName: String,
                            appVersion: String,
                            appEnv: String,
                            debug: Boolean,
                            systemConfig: Config,
-                           executorGroup: String)
+                           actorSystem: ActorSystem)
     extends Environment(
       appName: String,
       appVersion: String,
@@ -34,32 +38,29 @@ class ExecutionEnvironment(appName: String,
     ) {
 
   def getExecutorGroup(): String = executorGroup
+  def getExecutorId(): String = executorId
+  def getActorSystem(): ActorSystem = actorSystem
 
 }
 
 object ExecutionEnvironment {
 
-  def apply(args: Array[String]): ExecutionEnvironment = apply(args, ConfigFactory.load())
-
-  def apply(args: Array[String], systemConfig: Config): ExecutionEnvironment = {
-
-    systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
-
-    // Check Executor Name
-    var executorGroup: String = if (args.length > 0) args(0) else ""
-    if (executorGroup.isEmpty)
-      executorGroup = systemConfig.getString("app.default-executor-group")
-
-    val appName = systemConfig.getString("app.name")
+  def apply(
+      executorGroup: String,
+      executorId: String
+  )(implicit environment: Environment, system: ActorSystem): ExecutionEnvironment = {
 
     new ExecutionEnvironment(
-      appName,
-      systemConfig.getString("app.version"),
-      systemConfig.getString("app.env"),
-      systemConfig.getBoolean("app.debug"),
-      systemConfig,
-      executorGroup
+      executorGroup,
+      executorId,
+      environment.getAppName(),
+      environment.getAppVersion(),
+      environment.getAppEnv(),
+      environment.isDebug(),
+      environment.getConfig(),
+      system
     )
+
   }
 
 }

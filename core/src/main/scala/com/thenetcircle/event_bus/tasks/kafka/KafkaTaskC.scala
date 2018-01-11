@@ -25,13 +25,13 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.TaskC
 import com.thenetcircle.event_bus.tasks.kafka.extended.{KafkaKey, KafkaPartitioner}
-import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 case class KafkaTaskCSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
-class KafkaTaskC(val settings: KafkaTaskCSettings)(implicit context: TaskExecutingContext)
+class KafkaTaskC(val settings: KafkaTaskCSettings)(implicit context: TaskContext)
     extends TaskC
     with StrictLogging {
 

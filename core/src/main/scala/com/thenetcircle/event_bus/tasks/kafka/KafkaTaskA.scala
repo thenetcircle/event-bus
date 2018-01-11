@@ -28,7 +28,7 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
 import com.thenetcircle.event_bus.interface.TaskA
-import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
@@ -42,7 +42,7 @@ case class KafkaTaskASettings(groupId: String,
                               topics: Option[Set[String]],
                               topicPattern: Option[String])
 
-class KafkaTaskA(val settings: KafkaTaskASettings)(implicit context: TaskExecutingContext)
+class KafkaTaskA(val settings: KafkaTaskASettings)(implicit context: TaskContext)
     extends TaskA
     with StrictLogging {
 

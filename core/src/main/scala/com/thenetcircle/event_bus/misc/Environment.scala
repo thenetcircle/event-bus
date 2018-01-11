@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
 
@@ -31,7 +31,6 @@ class Environment(appName: String,
   def getAppName(): String = appName
   def getAppVersion(): String = appVersion
   def getConfig(): Config = systemConfig
-  def getConfig(path: String): Config = systemConfig.getConfig(path)
 
   def isDebug(): Boolean = debug
   def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
@@ -44,6 +43,27 @@ class Environment(appName: String,
   }
   def shutdown(): Unit = {
     for (hook <- shutdownHooks) hook()
+  }
+
+}
+
+object Environment {
+
+  def apply(): Environment = apply(ConfigFactory.load())
+
+  def apply(systemConfig: Config): Environment = {
+
+    systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
+
+    val appName = systemConfig.getString("app.name")
+
+    new Environment(
+      appName,
+      systemConfig.getString("app.version"),
+      systemConfig.getString("app.env"),
+      systemConfig.getBoolean("app.debug"),
+      systemConfig
+    )
   }
 
 }

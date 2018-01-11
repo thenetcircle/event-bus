@@ -18,7 +18,13 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.misc.{ExecutionEnvironment, ZKManager}
+import com.thenetcircle.event_bus.misc.{DaoFactory, Environment, ZKManager}
+import com.thenetcircle.event_bus.story.{
+  ExecutionEnvironment,
+  StoryManager,
+  TaskBuilderFactory,
+  TaskContextFactory
+}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 
@@ -30,24 +36,36 @@ object StoryExecutor extends App with StrictLogging {
   logger.info("Application is initializing.")
 
   // Initialize Environment
-  implicit val environment: ExecutionEnvironment =
-    ExecutionEnvironment(args, ConfigFactory.load())
+  implicit val globalEnvironment: Environment = Environment(ConfigFactory.load())
+
+  // Check Executor Name
+  var executorGroup: String = if (args.length > 0) args(0) else ""
+  if (executorGroup.isEmpty)
+    executorGroup = globalEnvironment.getConfig().getString("app.default-executor-group")
 
   // Connecting Zookeeper
-  val zKManager: ZKManager = ZKManager(environment.getConfig())
+  val zKManager: ZKManager = ZKManager(globalEnvironment.getConfig())
   zKManager.init()
-
-  val executorId: String = zKManager.registerStoryExecutor(environment.getExecutorGroup())
+  val executorId: String = zKManager.registerStoryExecutor(executorGroup)
 
   // Create ActorSystem
   implicit val system: ActorSystem =
-    ActorSystem(environment.getAppName(), environment.getConfig())
+    ActorSystem(globalEnvironment.getAppName(), globalEnvironment.getConfig())
+
+  implicit val executionEnvironment: ExecutionEnvironment =
+    ExecutionEnvironment(executorGroup, executorId)
+
+  StoryManager(
+    DaoFactory(zKManager),
+    TaskBuilderFactory(globalEnvironment.getConfig()),
+    TaskContextFactory()
+  ).execute()
 
   // Kamon.start()
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
     // Kamon.shutdown()
-    environment.shutdown()
+    globalEnvironment.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)
     /*Http()

@@ -22,7 +22,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{TaskB, TaskBBuilder}
 import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.config.Config
 
 class TopicResolverTaskB(_topicMapping: Map[String, String], defaultTopic: String) extends TaskB {
@@ -55,7 +55,7 @@ class TopicResolverTaskBBuilder() extends TaskBBuilder {
       |}
     """.stripMargin)
 
-  override def build(configString: String)(implicit context: TaskExecutingContext) = {
+  override def build(configString: String)(implicit context: TaskContext) = {
 
     val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 

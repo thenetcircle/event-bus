@@ -45,7 +45,7 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
    * }
    * ```
    */
-  def build(configString: String)(implicit context: TaskExecutingContext): Story = {
+  def build(configString: String)(implicit context: TaskContext): Story = {
 
     try {
 

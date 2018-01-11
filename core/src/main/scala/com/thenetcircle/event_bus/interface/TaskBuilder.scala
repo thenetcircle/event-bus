@@ -17,11 +17,11 @@
 
 package com.thenetcircle.event_bus.interface
 
-import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.thenetcircle.event_bus.story.TaskContext
 
 trait TaskBuilder[+T <: Task] {
 
-  def build(configString: String)(implicit context: TaskExecutingContext): T
+  def build(configString: String)(implicit context: TaskContext): T
 
 }
 

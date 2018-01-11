@@ -16,45 +16,45 @@
  */
 
 package com.thenetcircle.event_bus.story
-import com.thenetcircle.event_bus.interface.TaskA
-import com.thenetcircle.event_bus.misc.{ConfigStringParser, ZKManager}
 
-class StoryDAO(zKManager: ZKManager, builderFactory: TaskBuilderFactory) {
+import com.thenetcircle.event_bus.misc.ZKManager
+import com.thenetcircle.event_bus.story.StoryDAO.StoryInfo
 
-  def fetchAvailableStories(executorGroup: String): List[Story] = {
+class StoryDAO(zKManager: ZKManager) {
+
+  def getAvailableStories(executorGroup: String): List[StoryInfo] = {
     zKManager
       .getChildren("stories")
       .map(_.filter(storyName => {
         zKManager
           .getData(s"stories/$storyName/assigned-executor-group")
           .getOrElse("default") == executorGroup
-      }).map(fetchStory))
-      .getOrElse(List.empty[Story])
+      }).map(getStoryInfo))
+      .getOrElse(List.empty[StoryInfo])
   }
 
-  def fetchStory(storyName: String): Story = {
+  def getStoryInfo(storyName: String): StoryInfo = {
     val storyRootPath = s"stories/$storyName"
-
-    val taskA: TaskA = zKManager.getData(s"$storyRootPath/A").flatMap(configString => {
-      val _config = ConfigStringParser.convertStringToConfig(configString).getStringList("")
-      builderFactory.buildTaskA(_config(0), _config(1))
-    }).get
-
-    val taskAConfigString: Option[String] = zKManager.getData(s"$storyRootPath/A")
-    if (taskAConfigString.isEmpty) {
-      throw new IllegalArgumentException(s"TaskA of Story $storyName does not exists.")
-    }
-    val taskA = builderFactory.buildTaskA()
-
+    val taskA: String = zKManager.getData(s"$storyRootPath/A").get
+    val settings: Option[String] = zKManager.getData(s"$storyRootPath/settings")
     val taskB: Option[String] = zKManager.getData(s"$storyRootPath/B")
     val taskC: Option[String] = zKManager.getData(s"$storyRootPath/C")
     val fallbacks: Option[String] = zKManager.getData(s"$storyRootPath/fallbacks")
+    val status: String = zKManager.getData(s"$storyRootPath/status").get
 
-    new Story(storyName, new StorySettings(), )
+    StoryInfo(storyName, taskA, status, taskB, taskC, fallbacks, settings)
   }
 
 }
 
 object StoryDAO {
   def apply(zKManager: ZKManager): StoryDAO = new StoryDAO(zKManager)
+
+  case class StoryInfo(name: String,
+                       taskA: String,
+                       status: String,
+                       taskB: Option[String],
+                       taskC: Option[String],
+                       fallbacks: Option[String],
+                       settings: Option[String])
 }

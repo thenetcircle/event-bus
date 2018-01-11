@@ -21,7 +21,7 @@ import akka.http.scaladsl.settings.ServerSettings
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interface.TaskABuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -47,7 +47,7 @@ class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: TaskExecutingContext): HttpTaskA = {
+  override def build(configString: String)(implicit context: TaskContext): HttpTaskA = {
 
     try {
       val config: Config =

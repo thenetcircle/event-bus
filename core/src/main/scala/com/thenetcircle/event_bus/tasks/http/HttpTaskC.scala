@@ -29,7 +29,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.interface.TaskC
-import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.immutable.Seq
@@ -47,7 +47,7 @@ case class HttpTaskCSettings(host: String,
 class HttpTaskC(
     val settings: HttpTaskCSettings,
     overriddenSendingFlow: Option[Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _]] = None
-)(implicit context: TaskExecutingContext)
+)(implicit context: TaskContext)
     extends TaskC
     with StrictLogging {
 
