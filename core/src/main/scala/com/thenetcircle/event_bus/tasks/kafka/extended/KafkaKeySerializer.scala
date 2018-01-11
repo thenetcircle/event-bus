@@ -15,13 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.event.Event
+package com.thenetcircle.event_bus.tasks.kafka.extended
 
-trait IOp extends ITask {
+import java.util
 
-  def getGraph(): Flow[Event, Event, NotUsed]
+import org.apache.kafka.common.serialization.Serializer
 
+class KafkaKeySerializer extends Serializer[KafkaKey] {
+  override def serialize(topic: String, data: KafkaKey): Array[Byte] = {
+    data.rawData.getBytes("UTF-8")
+  }
+
+  override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
+  override def close(): Unit = {}
 }

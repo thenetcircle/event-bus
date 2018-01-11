@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Source}
 import com.thenetcircle.event_bus.event.Event
 
-trait ISource extends IPlot {
+trait ISource extends ITask {
 
   def getGraph(): Source[Event, NotUsed]
 

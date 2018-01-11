@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.interface
 import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
-trait IBuilder[+T <: IPlot] {
+trait IBuilder[+T <: ITask] {
 
   def build(configString: String)(implicit context: StoryExecutingContext): T
 

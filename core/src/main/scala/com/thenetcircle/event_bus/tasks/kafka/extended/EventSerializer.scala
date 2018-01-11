@@ -15,13 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
+package com.thenetcircle.event_bus.tasks.kafka.extended
+
+import java.util
+
 import com.thenetcircle.event_bus.event.Event
+import org.apache.kafka.common.serialization.Serializer
 
-trait IOp extends ITask {
+class EventSerializer extends Serializer[Event] {
+  override def serialize(topic: String, data: Event): Array[Byte] =
+    data.body.data.toArray
 
-  def getGraph(): Flow[Event, Event, NotUsed]
-
+  override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
+  override def close(): Unit = {}
 }

@@ -9,7 +9,7 @@ class BuilderFactory() {
   private var opBuilders: Map[String, IOpBuilder] = Map.empty
   private var sinkBuilers: Map[String, ISinkBuilder] = Map.empty
 
-  def registerBuilder(plotType: String, builder: IBuilder[IPlot]): Unit = {
+  def registerBuilder(plotType: String, builder: IBuilder[ITask]): Unit = {
     builder match {
       case _: ISourceBuilder =>
         sourceBuilders += (plotType.toLowerCase -> builder.asInstanceOf[ISourceBuilder])
@@ -55,8 +55,9 @@ object BuilderFactory {
           case plotType :: builderClass :: _ =>
             builderFactory.registerBuilder(
               plotType,
-              Class.forName(builderClass).asInstanceOf[Class[IBuilder[IPlot]]].newInstance()
+              Class.forName(builderClass).asInstanceOf[Class[IBuilder[ITask]]].newInstance()
             )
+          case _ =>
         }
     })
 

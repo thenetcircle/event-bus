@@ -16,12 +16,5 @@
  */
 
 package com.thenetcircle.event_bus.interface
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.event.Event
 
-trait IOp extends ITask {
-
-  def getGraph(): Flow[Event, Event, NotUsed]
-
-}
+trait ITask {}

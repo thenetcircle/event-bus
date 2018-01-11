@@ -17,9 +17,9 @@
 
 package com.thenetcircle.event_bus.story
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.plots.http.{HttpSink, HttpSource}
-import com.thenetcircle.event_bus.plots.kafka.KafkaSink
-import com.thenetcircle.event_bus.plots.resolvers.TopicResolver
+import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSource}
+import com.thenetcircle.event_bus.tasks.kafka.KafkaSink
+import com.thenetcircle.event_bus.tasks.resolvers.TopicResolver
 
 class StoryBuilderTest extends AkkaStreamTest {
 

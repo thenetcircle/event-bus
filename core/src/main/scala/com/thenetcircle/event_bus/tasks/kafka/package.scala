@@ -15,13 +15,13 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
+package com.thenetcircle.event_bus.tasks
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey
 
-trait IOp extends ITask {
-
-  def getGraph(): Flow[Event, Event, NotUsed]
-
+package object kafka {
+  type ProducerKey = KafkaKey
+  type ProducerValue = Event
+  type ConsumerKey = KafkaKey
+  type ConsumerValue = Array[Byte]
 }
