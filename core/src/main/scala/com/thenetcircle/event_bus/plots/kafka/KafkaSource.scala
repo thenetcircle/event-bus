@@ -28,7 +28,7 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
 import com.thenetcircle.event_bus.interface.ISource
-import com.thenetcircle.event_bus.story.RunningContext
+import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
@@ -42,7 +42,7 @@ case class KafkaSourceSettings(groupId: String,
                                topics: Option[Set[String]],
                                topicPattern: Option[String])
 
-class KafkaSource(val settings: KafkaSourceSettings)(implicit context: RunningContext)
+class KafkaSource(val settings: KafkaSourceSettings)(implicit context: StoryExecutingContext)
     extends ISource
     with StrictLogging {
 

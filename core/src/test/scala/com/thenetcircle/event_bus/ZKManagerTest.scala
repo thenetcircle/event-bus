@@ -26,7 +26,12 @@ class ZKManagerTest extends AkkaStreamTest {
   it should "do proper initialization" in {
 
     val zkmanager = new ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181")
-    zkmanager.registerRunner("abc")
+
+    zkmanager.init()
+
+    zkmanager.registerStoryExecutor("test")
+
+    println(zkmanager.fetchStories())
 
     Thread.sleep(10000)
 

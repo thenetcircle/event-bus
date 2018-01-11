@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.plots.kafka
 import akka.kafka.ProducerSettings
 import com.thenetcircle.event_bus.interface.ISinkBuilder
 import com.thenetcircle.event_bus.plots.kafka.extended.{EventSerializer, KafkaKeySerializer}
-import com.thenetcircle.event_bus.story.RunningContext
+import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.config.Config
 
 class KafkaSinkBuilder() extends ISinkBuilder {
@@ -51,7 +51,7 @@ class KafkaSinkBuilder() extends ISinkBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: RunningContext): KafkaSink = {
+  override def build(configString: String)(implicit context: StoryExecutingContext): KafkaSink = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 

@@ -16,12 +16,13 @@
  */
 
 package com.thenetcircle.event_bus.interface
-import com.thenetcircle.event_bus.story.RunningContext
+
+import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
 trait IBuilder[+T <: IPlot] {
 
-  def build(configString: String)(implicit context: RunningContext): T
+  def build(configString: String)(implicit context: StoryExecutingContext): T
 
   private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
   def convertStringToConfig(configString: String): Config =

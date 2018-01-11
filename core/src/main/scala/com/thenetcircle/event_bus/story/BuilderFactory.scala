@@ -27,14 +27,15 @@ class BuilderFactory() {
   def getSinkBuilder(sinkType: String): Option[ISinkBuilder] = sinkBuilers.get(sinkType.toLowerCase)
 
   def buildSource(sourceType: String,
-                  configString: String)(implicit context: RunningContext): Option[ISource] =
+                  configString: String)(implicit context: StoryExecutingContext): Option[ISource] =
     getSourceBuilder(sourceType).map(_builder => _builder.build(configString))
 
-  def buildOp(opType: String, configString: String)(implicit context: RunningContext): Option[IOp] =
+  def buildOp(opType: String,
+              configString: String)(implicit context: StoryExecutingContext): Option[IOp] =
     getOpBuilder(opType).map(_builder => _builder.build(configString))
 
   def buildSink(sinkType: String,
-                configString: String)(implicit context: RunningContext): Option[ISink] =
+                configString: String)(implicit context: StoryExecutingContext): Option[ISink] =
     getSinkBuilder(sinkType).map(_builder => _builder.build(configString))
 
 }

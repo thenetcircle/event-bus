@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.plots.http
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import com.thenetcircle.event_bus.interface.ISinkBuilder
-import com.thenetcircle.event_bus.story.RunningContext
+import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
@@ -50,7 +50,7 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
                                 |}
                               """.stripMargin)
 
-  override def build(configString: String)(implicit context: RunningContext): HttpSink = {
+  override def build(configString: String)(implicit context: StoryExecutingContext): HttpSink = {
 
     val config: Config = convertStringToConfig(configString).withFallback(defaultConfig)
 

@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.plots.kafka
 import akka.kafka.ConsumerSettings
 import com.thenetcircle.event_bus.interface.ISourceBuilder
 import com.thenetcircle.event_bus.plots.kafka.extended.KafkaKeyDeserializer
-import com.thenetcircle.event_bus.story.RunningContext
+import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -86,7 +86,7 @@ class KafkaSourceBuilder() extends ISourceBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: RunningContext): KafkaSource = {
+  override def build(configString: String)(implicit context: StoryExecutingContext): KafkaSource = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 

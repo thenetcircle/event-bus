@@ -17,8 +17,7 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.interface.{IOp, ISourceBuilder}
-import com.typesafe.config.Config
+import com.thenetcircle.event_bus.interface.ISourceBuilder
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -32,50 +31,45 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
    * ```
    * {
    *   # "name": "..."
-   *   # "source": { "type": "...", "settings": {} }
-   *   # "ops": [ { "type": "", "settings": {} } ]
-   *   # "sink": { "type": "...", "settings": {} }
-   *   # "fallback": {}
+   *   # "source": ["source-type", "settings"]
+   *   # "ops": [
+   *   #   ["op-type", "settings"],
+   *   #   ...
+   *   # ]
+   *   # "sink": ["sink-type", "settings"]
+   *   # "fallback": ["sink-type", "settings"]
    * }
    * ```
    */
-  def build(configString: String)(implicit context: RunningContext): Story = {
+  def build(configString: String)(implicit context: StoryExecutingContext): Story = {
 
     try {
 
       val builderFactory = context.getBuilderFactory()
-
       val config = convertStringToConfig(configString)
 
       val storySettings = StorySettings(config.getString("name"))
 
-      val source = builderFactory
-        .buildSource(config.getString("source.type"), config.getString("source.settings"))
-        .get
-
-      val sink = builderFactory
-        .buildSink(config.getString("sink.type"), config.getString("sink.settings"))
-        .get
+      val sourceSettings = config.as[List[String]]("source")
+      val source = builderFactory.buildSource(sourceSettings(0), sourceSettings(1)).get
 
       val ops = config
-        .as[Option[List[Config]]]("ops")
-        .map(_.map(_config => {
+        .as[Option[List[List[String]]]]("ops")
+        .map(_.map(_list => {
           builderFactory
-            .buildOp(_config.getString("type"), _config.getString("settings"))
+            .buildOp(_list(0), _list(1))
             .get
         }))
-        .getOrElse(List.empty[IOp])
 
-      val fallback = config
-        .as[Option[Config]]("fallback")
-        .map(
-          _config =>
-            builderFactory
-              .buildSink(_config.getString("type"), _config.getString("settings"))
-              .get
-        )
+      val sink = config.as[Option[List[String]]]("sink").map {
+        case _type :: _settings :: _ => builderFactory.buildSink(_type, _settings).get
+      }
 
-      new Story(storySettings, source, sink, ops, fallback)
+      val fallback = config.as[Option[List[String]]]("fallback").map {
+        case _type :: _settings :: _ => builderFactory.buildSink(_type, _settings).get
+      }
+
+      new Story(storySettings, source, ops, sink, fallback)
 
     } catch {
 

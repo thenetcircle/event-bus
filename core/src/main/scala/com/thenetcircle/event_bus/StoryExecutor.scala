@@ -24,12 +24,24 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object Runner extends App with StrictLogging {
+object StoryExecutor extends App with StrictLogging {
 
-  // Initialization
   logger.info("Application is initializing.")
 
+  // Initialize Environment
   implicit val environment: Environment = Environment(ConfigFactory.load())
+
+  // Check Executor Name
+  var executorName: String = if (args.length > 0) args(0) else ""
+  if (executorName.isEmpty)
+    executorName = environment.getConfig().getString("app.default-executor-name")
+
+  // Connecting Zookeeper
+  val zKManager: ZKManager = ZKManager(environment.getConfig())
+  zKManager.init()
+  zKManager.registerStoryExecutor(executorName)
+
+  // Create ActorSystem
   implicit val system: ActorSystem =
     ActorSystem(environment.getAppName(), environment.getConfig())
 

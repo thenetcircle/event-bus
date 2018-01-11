@@ -23,11 +23,11 @@ import com.thenetcircle.event_bus.Environment
 
 import scala.concurrent.ExecutionContext
 
-class RunningContext(environment: Environment,
-                     system: ActorSystem,
-                     materializer: Materializer,
-                     executor: ExecutionContext,
-                     builderFactory: BuilderFactory) {
+class StoryExecutingContext(environment: Environment,
+                            system: ActorSystem,
+                            materializer: Materializer,
+                            executor: ExecutionContext,
+                            builderFactory: BuilderFactory) {
 
   def getEnvironment(): Environment = environment
   def getActorSystem(): ActorSystem = system

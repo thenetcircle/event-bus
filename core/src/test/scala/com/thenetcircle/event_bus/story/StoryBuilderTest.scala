@@ -32,19 +32,21 @@ class StoryBuilderTest extends AkkaStreamTest {
     val story = builder.build(
       """{
         |  "name": "testStory",
-        |  "source": {
-        |    "type": "http",
-        |    "settings": "{\"interface\": \"127.0.0.1\",\"akka\": {  \"http\": {    \"server\": {}  }},\"succeeded-response\": \"okoo\",\"error-response\": \"kooo\",\"max-connections\": 1001}"
-        |  },
-        |  "ops": [ { "type": "topic_resolver", "settings": "{}" } ],
-        |  "sink": {
-        |    "type": "kafka",
-        |    "settings": "{\"producer\": {  \"close-timeout\": \"100s\",  \"use-dispatcher\": \"test-dispatcher\"}}"
-        |  },
-        |  "fallback": {
-        |    "type": "http",
-        |    "settings": "{\"request\" : {\"host\": \"127.0.0.1\"}, \"expected-response\": \"TEST_RESPONSE\"}"
-        |  }
+        |  "source": [
+        |    "http",
+        |    "{\"interface\": \"127.0.0.1\",\"akka\": {  \"http\": {    \"server\": {}  }},\"succeeded-response\": \"okoo\",\"error-response\": \"kooo\",\"max-connections\": 1001}"
+        |  ],
+        |  "ops": [
+        |    ["topic_resolver", "{}"]
+        |  ],
+        |  "sink": [
+        |    "kafka",
+        |    "{\"producer\": {  \"close-timeout\": \"100s\",  \"use-dispatcher\": \"test-dispatcher\"}}"
+        |  ],
+        |  "fallback": [
+        |    "http",
+        |    "{\"request\" : {\"host\": \"127.0.0.1\"}, \"expected-response\": \"TEST_RESPONSE\"}"
+        |  ]
         |}""".stripMargin
     )
 
@@ -53,11 +55,11 @@ class StoryBuilderTest extends AkkaStreamTest {
     story.source.isInstanceOf[HttpSource]
     story.source.asInstanceOf[HttpSource].settings.interface shouldEqual "127.0.0.1"
 
-    story.ops.head.isInstanceOf[TopicResolver]
+    story.ops.get.head.isInstanceOf[TopicResolver]
 
-    story.sink.isInstanceOf[KafkaSink]
+    story.sink.get.isInstanceOf[KafkaSink]
 
-    story.fallback.isInstanceOf[Option[HttpSink]]
+    story.fallback.get.isInstanceOf[HttpSink]
 
   }
 

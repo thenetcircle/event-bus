@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{IOp, IOpBuilder}
-import com.thenetcircle.event_bus.story.RunningContext
+import com.thenetcircle.event_bus.story.StoryExecutingContext
 import com.typesafe.config.Config
 
 class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) extends IOp {
@@ -53,7 +53,7 @@ class TopicResolverBuilder() extends IOpBuilder {
       |}
     """.stripMargin)
 
-  override def build(configString: String)(implicit context: RunningContext) = {
+  override def build(configString: String)(implicit context: StoryExecutingContext) = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 

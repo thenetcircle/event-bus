@@ -27,8 +27,8 @@ import com.typesafe.scalalogging.StrictLogging
 
 class Story(val settings: StorySettings,
             val source: ISource,
-            val sink: ISink,
-            val ops: List[IOp] = List.empty,
+            val ops: Option[List[IOp]] = None,
+            val sink: Option[ISink] = None,
             val fallback: Option[ISink] = None,
             initStatus: StoryStatus = StoryStatus.INIT)
     extends ISource
@@ -59,10 +59,15 @@ class Story(val settings: StorySettings,
 
             // variables
             val _source = source.getGraph()
-            var _ops = Flow[Event]
-            ops.foreach(op => _ops = _ops.via(decorateGraph(op.getGraph())))
-            val _sink = decorateGraph(sink.getGraph())
             val _committing = builder.add(decorateGraph(source.getCommittingGraph()))
+            var _ops = ops
+              .map(_opList => {
+                var _chain = Flow[Event]
+                _opList.foreach(_op => _chain = _chain.via(decorateGraph(_op.getGraph())))
+                _chain
+              })
+              .getOrElse(Flow[Event])
+            val _sink = sink.map(s => decorateGraph(s.getGraph())).getOrElse(Flow[Event])
 
             // workflow
             _source ~> _ops ~> _sink ~> _committing

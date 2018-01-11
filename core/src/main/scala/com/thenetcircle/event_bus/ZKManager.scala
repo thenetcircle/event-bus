@@ -16,9 +16,13 @@
  */
 
 package com.thenetcircle.event_bus
+
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
+
+import scala.collection.JavaConverters._
 
 class ZKManager(connectString: String)(implicit environment: Environment) {
 
@@ -26,35 +30,52 @@ class ZKManager(connectString: String)(implicit environment: Environment) {
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
   val rootPath = s"/event-bus/${environment.getAppName()}"
 
-  init()
-
   // register itself to be a runner
   // update stories status
 
-  private def init(): Unit = {
+  def init(): Unit = {
     client.start()
     environment.addShutdownHook(client.close())
 
     // Check and Create root nodes
-    if (client.checkExists().forPath(rootPath) == null) {
-      client.create().creatingParentsIfNeeded().forPath(rootPath)
-    }
     if (client.checkExists().forPath(relatedPath("stories")) == null) {
-      client.create().forPath(relatedPath("stories"))
+      client.create().creatingParentsIfNeeded().forPath(relatedPath("stories"))
     }
-    if (client.checkExists().forPath(relatedPath("runners")) == null) {
-      client.create().forPath(relatedPath("runners"))
+    if (client.checkExists().forPath(relatedPath("executors")) == null) {
+      client.create().creatingParentsIfNeeded().forPath(relatedPath("executors"))
     }
   }
 
   def relatedPath(path: String): String = s"$rootPath/$path"
 
-  def registerRunner(payload: String): Unit = {
+  def registerStoryExecutor(name: String): Unit = {
+    val payload = ""
     client
       .create()
+      .creatingParentsIfNeeded()
       .withProtection()
       .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-      .forPath(relatedPath("runners/runner"), payload.getBytes())
+      .forPath(relatedPath(s"executors/$name/member"), payload.getBytes())
+  }
+
+  def fetchStories(): List[String] = {
+    client.getChildren.forPath(relatedPath("stories")).asScala.toList
+  }
+
+}
+
+object ZKManager {
+
+  def apply(config: Config)(implicit environment: Environment): ZKManager = {
+    config.checkValid(ConfigFactory.defaultReference, "app.zookeeper-server")
+    apply(config.getString("app.zookeeper-server"))
+  }
+
+  def apply(connectString: String)(implicit environment: Environment): ZKManager = {
+    if (connectString.isEmpty) {
+      throw new IllegalArgumentException("ConnectString is empty.")
+    }
+    new ZKManager(connectString)
   }
 
 }
