@@ -15,16 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.resolvers
+package com.thenetcircle.event_bus.tasks.misc
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{IOp, IOpBuilder}
-import com.thenetcircle.event_bus.story.StoryExecutingContext
+import com.thenetcircle.event_bus.interface.{TaskB, TaskBBuilder}
+import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
 
-class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) extends IOp {
+class TopicResolverTaskB(_topicMapping: Map[String, String], defaultTopic: String) extends TaskB {
 
   private var topicMapping = _topicMapping
 
@@ -45,7 +45,7 @@ class TopicResolver(_topicMapping: Map[String, String], defaultTopic: String) ex
 
 }
 
-class TopicResolverBuilder() extends IOpBuilder {
+class TopicResolverTaskBBuilder() extends TaskBBuilder {
 
   val defaultConfig: Config = convertStringToConfig("""
       |{
@@ -53,14 +53,14 @@ class TopicResolverBuilder() extends IOpBuilder {
       |}
     """.stripMargin)
 
-  override def build(configString: String)(implicit context: StoryExecutingContext) = {
+  override def build(configString: String)(implicit context: TaskExecutingContext) = {
 
     val config = convertStringToConfig(configString).withFallback(defaultConfig)
 
     val defaultTopic = config.getString("default_topic")
     val _mapping: Map[String, String] = Map.empty
 
-    new TopicResolver(_mapping, defaultTopic)
+    new TopicResolverTaskB(_mapping, defaultTopic)
 
   }
 

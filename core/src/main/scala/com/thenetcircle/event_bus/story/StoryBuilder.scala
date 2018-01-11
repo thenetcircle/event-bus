@@ -17,12 +17,12 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.interface.ISourceBuilder
+import com.thenetcircle.event_bus.interface.TaskABuilder
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 /** Builds Story By Config */
-class StoryBuilder() extends ISourceBuilder with StrictLogging {
+class StoryBuilder() extends TaskABuilder with StrictLogging {
 
   /**
    * Builds Story by String Config
@@ -31,17 +31,19 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
    * ```
    * {
    *   # "name": "..."
-   *   # "source": ["source-type", "settings"]
-   *   # "ops": [
+   *   # "taskA": ["taskA-type", "settings"]
+   *   # "taskB": [
    *   #   ["op-type", "settings"],
    *   #   ...
    *   # ]
-   *   # "sink": ["sink-type", "settings"]
-   *   # "fallback": ["sink-type", "settings"]
+   *   # "taskC": ["taskC-type", "settings"]
+   *   # "alternativeC": [
+   *     ["taskC-type", "settings"]
+   *   ]
    * }
    * ```
    */
-  def build(configString: String)(implicit context: StoryExecutingContext): Story = {
+  def build(configString: String)(implicit context: TaskExecutingContext): Story = {
 
     try {
 
@@ -50,26 +52,26 @@ class StoryBuilder() extends ISourceBuilder with StrictLogging {
 
       val storySettings = StorySettings(config.getString("name"))
 
-      val sourceSettings = config.as[List[String]]("source")
-      val source = builderFactory.buildSource(sourceSettings(0), sourceSettings(1)).get
+      val AConfig = config.as[List[String]]("taskA")
+      val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
 
-      val ops = config
-        .as[Option[List[List[String]]]]("ops")
-        .map(_.map(_list => {
-          builderFactory
-            .buildOp(_list(0), _list(1))
-            .get
-        }))
+      val taskB = config
+        .as[Option[List[List[String]]]]("taskB")
+        .map(_.map {
+          case _type :: _settings :: _ => builderFactory.buildTaskB(_type, _settings).get
+        })
 
-      val sink = config.as[Option[List[String]]]("sink").map {
-        case _type :: _settings :: _ => builderFactory.buildSink(_type, _settings).get
+      val taskC = config.as[Option[List[String]]]("taskC").map {
+        case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
       }
 
-      val fallback = config.as[Option[List[String]]]("fallback").map {
-        case _type :: _settings :: _ => builderFactory.buildSink(_type, _settings).get
-      }
+      val alternativeC = config
+        .as[Option[List[List[String]]]]("alternativeC")
+        .map(_.map {
+          case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
+        })
 
-      new Story(storySettings, source, ops, sink, fallback)
+      new Story(storySettings, taskA, taskB, taskC, alternativeC)
 
     } catch {
 

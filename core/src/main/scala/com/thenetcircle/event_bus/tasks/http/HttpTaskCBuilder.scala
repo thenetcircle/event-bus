@@ -19,12 +19,12 @@ package com.thenetcircle.event_bus.tasks.http
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
-import com.thenetcircle.event_bus.interface.ISinkBuilder
-import com.thenetcircle.event_bus.story.StoryExecutingContext
+import com.thenetcircle.event_bus.interface.TaskCBuilder
+import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
-class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
+class HttpTaskCBuilder() extends TaskCBuilder with StrictLogging {
 
   val defaultConfig: Config = convertStringToConfig("""
                                 |{
@@ -50,7 +50,7 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
                                 |}
                               """.stripMargin)
 
-  override def build(configString: String)(implicit context: StoryExecutingContext): HttpSink = {
+  override def build(configString: String)(implicit context: TaskExecutingContext): HttpTaskC = {
 
     val config: Config = convertStringToConfig(configString).withFallback(defaultConfig)
 
@@ -76,8 +76,8 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
           Some(ConnectionPoolSettings(config.withFallback(context.getEnvironment().getConfig())))
         else None
 
-      new HttpSink(
-        HttpSinkSettings(
+      new HttpTaskC(
+        HttpTaskCSettings(
           config.getString("request.host"),
           config.getInt("request.port"),
           config.getInt("max-retry-times"),
@@ -89,7 +89,7 @@ class HttpSinkBuilder() extends ISinkBuilder with StrictLogging {
 
     } catch {
       case ex: Throwable =>
-        logger.error(s"Creating HttpSinkSettings failed with error: ${ex.getMessage}")
+        logger.error(s"Creating HttpTaskCSettings failed with error: ${ex.getMessage}")
         throw ex
     }
 

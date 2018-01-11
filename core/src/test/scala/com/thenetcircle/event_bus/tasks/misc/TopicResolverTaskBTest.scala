@@ -15,16 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.resolvers
+package com.thenetcircle.event_bus.tasks.misc
 
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.createTestEvent
 
-class TopicResolverTest extends AkkaStreamTest {
+class TopicResolverTaskBTest extends AkkaStreamTest {
 
-  behavior of "TopicResolver"
+  behavior of "TopicResolverTaskB"
 
-  val resolver = new TopicResolver(
+  val resolver = new TopicResolverTaskB(
     Map("""message\..*""" -> "topic-message", """user\.[^\.]+\.kick""" -> "topic-user"),
     "event-default"
   )

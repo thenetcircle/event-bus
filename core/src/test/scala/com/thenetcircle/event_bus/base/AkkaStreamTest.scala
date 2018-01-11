@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.story.{BuilderFactory, StoryExecutingContext}
+import com.thenetcircle.event_bus.story.{TaskBuilderFactory, TaskExecutingContext}
 import com.thenetcircle.event_bus.Environment
 import com.typesafe.config.ConfigFactory
 
@@ -41,13 +41,13 @@ abstract class AkkaStreamTest(_env: Environment)
   implicit val executor: ExecutionContext =
     materializer.executionContext
 
-  implicit val storyExecutingContext: StoryExecutingContext =
-    new StoryExecutingContext(
+  implicit val storyExecutingContext: TaskExecutingContext =
+    new TaskExecutingContext(
       environment,
       system,
       materializer,
       executor,
-      BuilderFactory(environment.getConfig())
+      TaskBuilderFactory(environment.getConfig())
     )
 
   def this() = {

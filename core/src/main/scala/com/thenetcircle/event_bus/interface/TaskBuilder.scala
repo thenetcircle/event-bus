@@ -17,4 +17,21 @@
 
 package com.thenetcircle.event_bus.interface
 
-trait ITask {}
+import com.thenetcircle.event_bus.story.TaskExecutingContext
+import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
+
+trait TaskBuilder[+T <: Task] {
+
+  def build(configString: String)(implicit context: TaskExecutingContext): T
+
+  private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
+  def convertStringToConfig(configString: String): Config =
+    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
+
+}
+
+trait TaskABuilder extends TaskBuilder[TaskA]
+
+trait TaskBBuilder extends TaskBuilder[TaskB]
+
+trait TaskCBuilder extends TaskBuilder[TaskC]

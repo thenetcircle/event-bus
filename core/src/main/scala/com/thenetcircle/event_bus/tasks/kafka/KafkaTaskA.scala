@@ -27,28 +27,28 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
-import com.thenetcircle.event_bus.interface.ISource
-import com.thenetcircle.event_bus.story.StoryExecutingContext
+import com.thenetcircle.event_bus.interface.TaskA
+import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
 
-case class KafkaSourceSettings(groupId: String,
-                               extractParallelism: Int,
-                               commitParallelism: Int,
-                               commitBatchMax: Int,
-                               maxPartitions: Int,
-                               consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
-                               topics: Option[Set[String]],
-                               topicPattern: Option[String])
+case class KafkaTaskASettings(groupId: String,
+                              extractParallelism: Int,
+                              commitParallelism: Int,
+                              commitBatchMax: Int,
+                              maxPartitions: Int,
+                              consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
+                              topics: Option[Set[String]],
+                              topicPattern: Option[String])
 
-class KafkaSource(val settings: KafkaSourceSettings)(implicit context: StoryExecutingContext)
-    extends ISource
+class KafkaTaskA(val settings: KafkaTaskASettings)(implicit context: TaskExecutingContext)
+    extends TaskA
     with StrictLogging {
 
   require(
     settings.topics.isDefined || settings.topicPattern.isDefined,
-    "The outlet of KafkaPipeline needs to subscribe topics"
+    "topics or topicPattern is required"
   )
 
   implicit val executor: ExecutionContext = context.getExecutor()

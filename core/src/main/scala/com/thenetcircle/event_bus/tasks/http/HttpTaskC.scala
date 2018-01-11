@@ -28,8 +28,8 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.interface.ISink
-import com.thenetcircle.event_bus.story.StoryExecutingContext
+import com.thenetcircle.event_bus.interface.TaskC
+import com.thenetcircle.event_bus.story.TaskExecutingContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.immutable.Seq
@@ -37,18 +37,18 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-case class HttpSinkSettings(host: String,
-                            port: Int,
-                            maxRetryTimes: Int,
-                            defaultRequest: HttpRequest,
-                            expectedResponse: Option[String] = None,
-                            connectionPoolSettingsOption: Option[ConnectionPoolSettings] = None)
+case class HttpTaskCSettings(host: String,
+                             port: Int,
+                             maxRetryTimes: Int,
+                             defaultRequest: HttpRequest,
+                             expectedResponse: Option[String] = None,
+                             connectionPoolSettingsOption: Option[ConnectionPoolSettings] = None)
 
-class HttpSink(
-    val settings: HttpSinkSettings,
+class HttpTaskC(
+    val settings: HttpTaskCSettings,
     overriddenSendingFlow: Option[Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _]] = None
-)(implicit context: StoryExecutingContext)
-    extends ISink
+)(implicit context: TaskExecutingContext)
+    extends TaskC
     with StrictLogging {
 
   implicit val system: ActorSystem = context.getActorSystem()

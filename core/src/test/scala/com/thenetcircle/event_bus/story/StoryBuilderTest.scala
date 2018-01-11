@@ -17,9 +17,9 @@
 
 package com.thenetcircle.event_bus.story
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSource}
-import com.thenetcircle.event_bus.tasks.kafka.KafkaSink
-import com.thenetcircle.event_bus.tasks.resolvers.TopicResolver
+import com.thenetcircle.event_bus.tasks.http.{HttpTaskC, HttpTaskA}
+import com.thenetcircle.event_bus.tasks.kafka.KafkaTaskC
+import com.thenetcircle.event_bus.tasks.misc.TopicResolverTaskB
 
 class StoryBuilderTest extends AkkaStreamTest {
 
@@ -32,34 +32,33 @@ class StoryBuilderTest extends AkkaStreamTest {
     val story = builder.build(
       """{
         |  "name": "testStory",
-        |  "source": [
+        |  "taskA": [
         |    "http",
         |    "{\"interface\": \"127.0.0.1\",\"akka\": {  \"http\": {    \"server\": {}  }},\"succeeded-response\": \"okoo\",\"error-response\": \"kooo\",\"max-connections\": 1001}"
         |  ],
-        |  "ops": [
+        |  "taskB": [
         |    ["topic_resolver", "{}"]
         |  ],
-        |  "sink": [
+        |  "taskC": [
         |    "kafka",
         |    "{\"producer\": {  \"close-timeout\": \"100s\",  \"use-dispatcher\": \"test-dispatcher\"}}"
         |  ],
-        |  "fallback": [
-        |    "http",
-        |    "{\"request\" : {\"host\": \"127.0.0.1\"}, \"expected-response\": \"TEST_RESPONSE\"}"
+        |  "alternativeC": [
+        |    ["http", "{\"request\" : {\"host\": \"127.0.0.1\"}, \"expected-response\": \"TEST_RESPONSE\"}"]
         |  ]
         |}""".stripMargin
     )
 
     story.settings.name shouldEqual "testStory"
 
-    story.source.isInstanceOf[HttpSource]
-    story.source.asInstanceOf[HttpSource].settings.interface shouldEqual "127.0.0.1"
+    story.taskA.isInstanceOf[HttpTaskA] shouldEqual true
+    story.taskA.asInstanceOf[HttpTaskA].settings.interface shouldEqual "127.0.0.1"
 
-    story.ops.get.head.isInstanceOf[TopicResolver]
+    story.taskB.get.head.isInstanceOf[TopicResolverTaskB] shouldEqual true
 
-    story.sink.get.isInstanceOf[KafkaSink]
+    story.taskC.get.isInstanceOf[KafkaTaskC] shouldEqual true
 
-    story.fallback.get.isInstanceOf[HttpSink]
+    story.alternativeC.get.head.isInstanceOf[HttpTaskC] shouldEqual true
 
   }
 

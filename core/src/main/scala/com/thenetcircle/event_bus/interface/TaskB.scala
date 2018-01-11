@@ -16,22 +16,12 @@
  */
 
 package com.thenetcircle.event_bus.interface
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.event.Event
 
-import com.thenetcircle.event_bus.story.StoryExecutingContext
-import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
+trait TaskB extends Task {
 
-trait IBuilder[+T <: ITask] {
-
-  def build(configString: String)(implicit context: StoryExecutingContext): T
-
-  private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
-  def convertStringToConfig(configString: String): Config =
-    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
+  def getGraph(): Flow[Event, Event, NotUsed]
 
 }
-
-trait ISourceBuilder extends IBuilder[ISource]
-
-trait IOpBuilder extends IBuilder[IOp]
-
-trait ISinkBuilder extends IBuilder[ISink]
