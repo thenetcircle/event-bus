@@ -20,11 +20,11 @@ package com.thenetcircle.event_bus.tasks.http
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 
-class HttpTaskABuilderTest extends AkkaStreamTest {
+class HttpSourceBuilderTest extends AkkaStreamTest {
 
-  behavior of "HttpTaskABuilder"
+  behavior of "HttpSourceBuilder"
 
-  val builder = new HttpTaskABuilder
+  val builder = new HttpSourceBuilder
 
   it should "build correct HttpSource with the default config" in {
 

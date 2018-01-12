@@ -29,27 +29,27 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
-import com.thenetcircle.event_bus.interface.TaskA
+import com.thenetcircle.event_bus.interface.SourceTask
 import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success, Try}
 
-case class HttpTaskASettings(interface: String,
-                             port: Int,
-                             format: DataFormat,
-                             maxConnections: Int,
-                             perConnectionParallelism: Int,
-                             succeededResponse: String,
-                             errorResponse: String,
-                             serverSettingsOption: Option[ServerSettings] = None)
+case class HttpSourceSettings(interface: String,
+                              port: Int,
+                              format: DataFormat,
+                              maxConnections: Int,
+                              perConnectionParallelism: Int,
+                              succeededResponse: String,
+                              errorResponse: String,
+                              serverSettingsOption: Option[ServerSettings] = None)
 
-class HttpTaskA(
-    val settings: HttpTaskASettings,
+class HttpSource(
+    val settings: HttpSourceSettings,
     overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
 )(implicit context: TaskContext)
-    extends TaskA
+    extends SourceTask
     with StrictLogging {
 
   implicit val system: ActorSystem = context.getActorSystem()

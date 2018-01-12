@@ -24,28 +24,30 @@ import net.ceedubs.ficus.Ficus._
 
 class TaskBuilderFactory() {
 
-  private var taskABuilders: Map[String, TaskABuilder] = Map.empty
-  private var taskBBuilders: Map[String, TaskBBuilder] = Map.empty
-  private var taskCBuilers: Map[String, TaskCBuilder] = Map.empty
+  private var sourceTaskBuilders: Map[String, SourceTaskBuilder] = Map.empty
+  private var transformTaskBuilders: Map[String, TransformTaskBuilder] = Map.empty
+  private var sinkTaskBuilers: Map[String, SinkTaskBuilder] = Map.empty
 
   def registerBuilder(category: String, builder: TaskBuilder[Task]): Unit = {
     builder match {
-      case _: TaskABuilder =>
-        taskABuilders += (category.toLowerCase -> builder.asInstanceOf[TaskABuilder])
-      case _: TaskBBuilder =>
-        taskBBuilders += (category.toLowerCase -> builder.asInstanceOf[TaskBBuilder])
-      case _: TaskCBuilder =>
-        taskCBuilers += (category.toLowerCase -> builder.asInstanceOf[TaskCBuilder])
+      case _: SourceTaskBuilder =>
+        sourceTaskBuilders += (category.toLowerCase -> builder.asInstanceOf[SourceTaskBuilder])
+      case _: TransformTaskBuilder =>
+        transformTaskBuilders += (category.toLowerCase -> builder
+          .asInstanceOf[TransformTaskBuilder])
+      case _: SinkTaskBuilder =>
+        sinkTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[SinkTaskBuilder])
     }
   }
 
-  def getTaskABuilder(category: String): Option[TaskABuilder] =
-    taskABuilders.get(category.toLowerCase)
+  def getSourceTaskBuilder(category: String): Option[SourceTaskBuilder] =
+    sourceTaskBuilders.get(category.toLowerCase)
 
-  def getTaskBBuilder(opType: String): Option[TaskBBuilder] = taskBBuilders.get(opType.toLowerCase)
+  def getTransformTaskBuilder(category: String): Option[TransformTaskBuilder] =
+    transformTaskBuilders.get(category.toLowerCase)
 
-  def getTaskCBuilder(sinkType: String): Option[TaskCBuilder] =
-    taskCBuilers.get(sinkType.toLowerCase)
+  def getSinkTaskBuilder(category: String): Option[SinkTaskBuilder] =
+    sinkTaskBuilers.get(category.toLowerCase)
 
   def parseTaskConfigString(configString: String): Option[List[String]] = {
     try {
@@ -55,30 +57,32 @@ class TaskBuilderFactory() {
     }
   }
 
-  def buildTaskA(configString: String)(implicit context: TaskContext): Option[TaskA] = ???
+  def buildSourceTask(configString: String)(implicit context: TaskContext): Option[SourceTask] = ???
   /*{
     parseTaskConfigString(configString).map {
       case _category :: _configString :: _ => buildTaskA(_category, _configString)
     }
   }*/
 
-  def buildTaskA(category: String,
-                 configString: String)(implicit context: TaskContext): Option[TaskA] =
-    getTaskABuilder(category).map(_builder => _builder.build(configString))
+  def buildSourceTask(category: String,
+                      configString: String)(implicit context: TaskContext): Option[SourceTask] =
+    getSourceTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildTaskB(configString: String)(implicit context: TaskContext): Option[List[TaskB]] = ???
+  def buildTransformTask(
+      configString: String
+  )(implicit context: TaskContext): Option[TransformTask] =
+    ???
 
-  def buildTaskB(category: String,
-                 configString: String)(implicit context: TaskContext): Option[TaskB] =
-    getTaskBBuilder(category).map(_builder => _builder.build(configString))
+  def buildTransformTask(category: String, configString: String)(
+      implicit context: TaskContext
+  ): Option[TransformTask] =
+    getTransformTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildTaskC(configString: String)(implicit context: TaskContext): Option[TaskC] = ???
+  def buildSinkTask(configString: String)(implicit context: TaskContext): Option[SinkTask] = ???
 
-  def buildFallbacks(configString: String)(implicit context: TaskContext): Option[List[TaskC]] = ???
-
-  def buildTaskC(category: String,
-                 configString: String)(implicit context: TaskContext): Option[TaskC] =
-    getTaskCBuilder(category).map(_builder => _builder.build(configString))
+  def buildSinkTask(category: String,
+                    configString: String)(implicit context: TaskContext): Option[SinkTask] =
+    getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
 
 }
 
@@ -90,7 +94,7 @@ object TaskBuilderFactory {
 
     config.checkValid(ConfigFactory.defaultReference, "app.supported-builders")
 
-    List("A", "B", "C").foreach(prefix => {
+    List("source", "transform", "sink").foreach(prefix => {
       config
         .as[List[List[String]]](s"app.supported-builders.$prefix")
         .foreach {

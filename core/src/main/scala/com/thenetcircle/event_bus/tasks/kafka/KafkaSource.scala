@@ -27,23 +27,23 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
-import com.thenetcircle.event_bus.interface.TaskA
+import com.thenetcircle.event_bus.interface.SourceTask
 import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
 
-case class KafkaTaskASettings(groupId: String,
-                              extractParallelism: Int,
-                              commitParallelism: Int,
-                              commitBatchMax: Int,
-                              maxPartitions: Int,
-                              consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
-                              topics: Option[Set[String]],
-                              topicPattern: Option[String])
+case class KafkaSourceSettings(groupId: String,
+                               extractParallelism: Int,
+                               commitParallelism: Int,
+                               commitBatchMax: Int,
+                               maxPartitions: Int,
+                               consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
+                               topics: Option[Set[String]],
+                               topicPattern: Option[String])
 
-class KafkaTaskA(val settings: KafkaTaskASettings)(implicit context: TaskContext)
-    extends TaskA
+class KafkaSource(val settings: KafkaSourceSettings)(implicit context: TaskContext)
+    extends SourceTask
     with StrictLogging {
 
   require(

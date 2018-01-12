@@ -15,33 +15,33 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.kafka
-
+package com.thenetcircle.event_bus.tasks.http
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 
-import scala.concurrent.duration._
+class HttpSinkBuilderTest extends AkkaStreamTest {
 
-class KafkaTaskCBuilderTest extends AkkaStreamTest {
+  behavior of "HttpSinkBuilder"
 
-  behavior of "KafkaTaskCBuilder"
+  val builder = new HttpSinkBuilder
 
-  val builder = new KafkaTaskCBuilder
-
-  it should "build correct KafkaTaskC with the default config" in {
+  it should "build correct HttpSink with the default config" in {
 
     val sink = builder.build("""{
-        |  "producer": {
-        |    "close-timeout": "100s",
-        |    "use-dispatcher": "test-dispatcher"
-        |  }
+        |  "request" : {
+        |    "host": "127.0.0.1"
+        |  },
+        |  "expected-response": "TEST_RESPONSE"
         |}""".stripMargin)
 
     val settings = sink.settings
 
-    settings.producerSettings.parallelism shouldEqual 100
-    settings.producerSettings.closeTimeout shouldEqual 100.seconds
-    settings.producerSettings.dispatcher shouldEqual "test-dispatcher"
-    settings.producerSettings.properties("client.id") shouldEqual "EventBus-Producer"
+    settings.host shouldEqual "127.0.0.1"
+    settings.port shouldEqual 80
+    settings.maxRetryTimes shouldEqual 10
+    settings.defaultRequest shouldEqual HttpRequest(method = HttpMethods.POST, uri = Uri("/"))
+    settings.expectedResponse shouldEqual Some("TEST_RESPONSE")
+    settings.connectionPoolSettingsOption shouldBe defined
 
   }
 

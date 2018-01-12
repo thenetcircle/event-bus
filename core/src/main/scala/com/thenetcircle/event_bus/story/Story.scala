@@ -27,12 +27,12 @@ import com.typesafe.scalalogging.StrictLogging
 
 class Story(val name: String,
             val settings: StorySettings,
-            val taskA: TaskA,
-            val taskB: Option[List[TaskB]] = None,
-            val taskC: Option[TaskC] = None,
-            val fallbacks: Option[List[TaskC]] = None,
-            initStatus: StoryStatus = StoryStatus.INIT)
-    extends TaskA
+            initStatus: StoryStatus = StoryStatus.INIT,
+            val sourceTask: SourceTask,
+            val sinkTask: Option[SinkTask] = None,
+            val transformTasks: Option[List[TransformTask]] = None,
+            val fallbackTasks: Option[List[SinkTask]] = None)
+    extends SourceTask
     with StrictLogging {
 
   private var status: StoryStatus = initStatus
@@ -46,7 +46,7 @@ class Story(val name: String,
       graph: Graph[FlowShape[Event, Event], NotUsed]
   ): Graph[FlowShape[Event, Event], NotUsed] = {
     graphId = graphId + 1
-    Story.decorateGraph(graph, s"$name-$graphId", fallbacks)
+    Story.decorateGraph(graph, s"$name-$graphId", fallbackTasks)
   }
 
   override def getGraph(): Source[Event, NotUsed] =
@@ -57,22 +57,22 @@ class Story(val name: String,
             import GraphDSL.Implicits._
 
             // variables
-            val A = taskA.getGraph()
-            val ConfirmA = builder.add(decorateGraph(taskA.getCommittingGraph()))
-            var B = taskB
+            val source = sourceTask.getGraph()
+            var transformations = transformTasks
               .map(_bList => {
                 var _bChain = Flow[Event]
                 _bList.foreach(_b => _bChain = _bChain.via(decorateGraph(_b.getGraph())))
                 _bChain
               })
               .getOrElse(Flow[Event])
-            val C = taskC.map(s => decorateGraph(s.getGraph())).getOrElse(Flow[Event])
+            val sink = sinkTask.map(s => decorateGraph(s.getGraph())).getOrElse(Flow[Event])
+            val confirmation = builder.add(decorateGraph(sourceTask.getCommittingGraph()))
 
             // workflow
-            A ~> B ~> C ~> ConfirmA
+            source ~> transformations ~> sink ~> confirmation
 
             // ports
-            SourceShape(ConfirmA.out)
+            SourceShape(confirmation.out)
           }
       )
       .named(name)
@@ -88,7 +88,7 @@ object Story extends StrictLogging {
   def decorateGraph(
       graph: Graph[FlowShape[Event, Event], NotUsed],
       graphId: String,
-      fallbacks: Option[List[TaskC]] = None
+      fallbackTasks: Option[List[SinkTask]] = None
   ): Graph[FlowShape[Event, Event], NotUsed] = {
 
     Flow.fromGraph(
@@ -102,12 +102,12 @@ object Story extends StrictLogging {
           var failedGraph = Flow[Event].map(_event => {
             val logMessage =
               s"Event ${_event.uniqueName} was processing failed on graph: $graphId." +
-                (if (fallbacks.isDefined) " Sending to fallbacks." else "")
+                (if (fallbackTasks.isDefined) " Sending to fallbackTasks." else "")
             logger.debug(logMessage)
             _event
           })
           // TODO: use nested fallback graphs
-          fallbacks.foreach(acList => failedGraph = failedGraph.via(acList.head.getGraph()))
+          fallbackTasks.foreach(acList => failedGraph = failedGraph.via(acList.head.getGraph()))
 
           // workflow
           // format: off

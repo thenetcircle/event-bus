@@ -18,13 +18,13 @@
 package com.thenetcircle.event_bus.tasks.kafka
 
 import akka.kafka.ProducerSettings
-import com.thenetcircle.event_bus.interface.TaskCBuilder
+import com.thenetcircle.event_bus.interface.SinkTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKeySerializer}
 import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.config.Config
 
-class KafkaTaskCBuilder() extends TaskCBuilder {
+class KafkaSinkBuilder() extends SinkTaskBuilder {
 
   val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
     """
@@ -52,7 +52,7 @@ class KafkaTaskCBuilder() extends TaskCBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: TaskContext): KafkaTaskC = {
+  override def build(configString: String)(implicit context: TaskContext): KafkaSink = {
 
     val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
@@ -60,7 +60,7 @@ class KafkaTaskCBuilder() extends TaskCBuilder {
       .getConfig("producer")
       .withFallback(context.getEnvironment().getConfig().getConfig("akka.kafka.producer"))
 
-    val sinkSettings = KafkaTaskCSettings(
+    val sinkSettings = KafkaSinkSettings(
       ProducerSettings[ProducerKey, ProducerValue](
         producerConfig,
         new KafkaKeySerializer,
@@ -68,7 +68,7 @@ class KafkaTaskCBuilder() extends TaskCBuilder {
       )
     )
 
-    new KafkaTaskC(sinkSettings)
+    new KafkaSink(sinkSettings)
   }
 
 }

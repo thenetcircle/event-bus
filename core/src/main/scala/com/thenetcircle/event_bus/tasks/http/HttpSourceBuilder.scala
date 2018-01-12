@@ -19,14 +19,14 @@ package com.thenetcircle.event_bus.tasks.http
 
 import akka.http.scaladsl.settings.ServerSettings
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.interface.TaskABuilder
+import com.thenetcircle.event_bus.interface.SourceTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
-class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
+class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
 
   val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
     """ 
@@ -47,7 +47,7 @@ class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: TaskContext): HttpTaskA = {
+  override def build(configString: String)(implicit context: TaskContext): HttpSource = {
 
     try {
       val config: Config =
@@ -58,8 +58,8 @@ class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
           Some(ServerSettings(config.withFallback(context.getEnvironment().getConfig())))
         else None
 
-      new HttpTaskA(
-        HttpTaskASettings(
+      new HttpSource(
+        HttpSourceSettings(
           config.as[String]("interface"),
           config.as[Int]("port"),
           config.as[DataFormat]("format"),
@@ -73,7 +73,7 @@ class HttpTaskABuilder() extends TaskABuilder with StrictLogging {
 
     } catch {
       case ex: Throwable =>
-        logger.error(s"Creating a HttpTaskA failed with error: ${ex.getMessage}")
+        logger.error(s"Creating a HttpSource failed with error: ${ex.getMessage}")
         throw ex
     }
   }

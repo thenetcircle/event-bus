@@ -25,8 +25,8 @@ trait TaskBuilder[+T <: Task] {
 
 }
 
-trait TaskABuilder extends TaskBuilder[TaskA]
+trait SourceTaskBuilder extends TaskBuilder[SourceTask]
 
-trait TaskBBuilder extends TaskBuilder[TaskB]
+trait TransformTaskBuilder extends TaskBuilder[TransformTask]
 
-trait TaskCBuilder extends TaskBuilder[TaskC]
+trait SinkTaskBuilder extends TaskBuilder[SinkTask]

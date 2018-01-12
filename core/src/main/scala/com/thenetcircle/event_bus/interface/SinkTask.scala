@@ -18,13 +18,11 @@
 package com.thenetcircle.event_bus.interface
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 
-trait TaskA extends Task {
+trait SinkTask extends Task {
 
-  def getGraph(): Source[Event, NotUsed]
-
-  def getCommittingGraph(): Flow[Event, Event, NotUsed]
+  def getGraph(): Flow[Event, Event, NotUsed]
 
 }

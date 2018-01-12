@@ -39,9 +39,9 @@ class StoryManager(
       new Story(
         info.name,
         StorySettings(),
-        taskBuilderFactory.buildTaskA(info.taskA).get,
-        info.taskB.flatMap(_v => taskBuilderFactory.buildTaskB(_v)),
-        info.taskC.flatMap(_v => taskBuilderFactory.buildTaskC(_v)),
+        taskBuilderFactory.buildTaskA(info.source).get,
+        info.transforms.flatMap(_v => taskBuilderFactory.buildTaskB(_v)),
+        info.sink.flatMap(_v => taskBuilderFactory.buildTaskC(_v)),
         info.fallbacks.flatMap(_v => taskBuilderFactory.buildFallbacks(_v)),
         StoryStatus(info.status)
       )

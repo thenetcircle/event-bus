@@ -16,12 +16,11 @@
  */
 
 package com.thenetcircle.event_bus.interface
-
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 
-trait TaskC extends Task {
+trait TransformTask extends Task {
 
   def getGraph(): Flow[Event, Event, NotUsed]
 

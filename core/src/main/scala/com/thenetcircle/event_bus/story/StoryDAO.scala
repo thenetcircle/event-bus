@@ -35,14 +35,15 @@ class StoryDAO(zKManager: ZKManager) {
 
   def getStoryInfo(storyName: String): StoryInfo = {
     val storyRootPath = s"stories/$storyName"
-    val taskA: String = zKManager.getData(s"$storyRootPath/A").get
-    val settings: Option[String] = zKManager.getData(s"$storyRootPath/settings")
-    val taskB: Option[String] = zKManager.getData(s"$storyRootPath/B")
-    val taskC: Option[String] = zKManager.getData(s"$storyRootPath/C")
-    val fallbacks: Option[String] = zKManager.getData(s"$storyRootPath/fallbacks")
-    val status: String = zKManager.getData(s"$storyRootPath/status").get
 
-    StoryInfo(storyName, taskA, status, taskB, taskC, fallbacks, settings)
+    val status: String = zKManager.getData(s"$storyRootPath/status").get
+    val settings: String = zKManager.getData(s"$storyRootPath/settings").get
+    val source: String = zKManager.getData(s"$storyRootPath/source").get
+    val sink: String = zKManager.getData(s"$storyRootPath/sink").get
+    val transforms: Option[String] = zKManager.getData(s"$storyRootPath/transforms")
+    val fallbacks: Option[String] = zKManager.getData(s"$storyRootPath/fallbacks")
+
+    StoryInfo(storyName, status, settings, source, sink, transforms, fallbacks)
   }
 
 }
@@ -51,10 +52,10 @@ object StoryDAO {
   def apply(zKManager: ZKManager): StoryDAO = new StoryDAO(zKManager)
 
   case class StoryInfo(name: String,
-                       taskA: String,
                        status: String,
-                       taskB: Option[String],
-                       taskC: Option[String],
-                       fallbacks: Option[String],
-                       settings: Option[String])
+                       settings: String,
+                       source: String,
+                       sink: String,
+                       transforms: Option[List[String]],
+                       fallbacks: Option[List[String]])
 }

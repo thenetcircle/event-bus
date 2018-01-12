@@ -30,9 +30,9 @@ import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
-class HttpTaskCTest extends AkkaStreamTest {
+class HttpSinkTest extends AkkaStreamTest {
 
-  def run(httpSink: HttpTaskC): (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
+  def run(httpSink: HttpSink): (TestPublisher.Probe[Event], TestSubscriber.Probe[Event]) =
     TestSource
       .probe[Event]
       .viaMat(httpSink.getGraph())(Keep.left)
@@ -48,13 +48,13 @@ class HttpTaskCTest extends AkkaStreamTest {
           case (_, event) =>
             (defaultResponse, event)
         }
-  )(implicit system: ActorSystem, materializer: Materializer): HttpTaskC = {
+  )(implicit system: ActorSystem, materializer: Materializer): HttpSink = {
     val httpSinkSettings = createHttpSinkSettings(
       maxRetryTimes = maxRetryTimes,
       defaultRequest = defaultRequest,
       expectedResponse = expectedResponse
     )
-    new HttpTaskC(httpSinkSettings, Some(sender))
+    new HttpSink(httpSinkSettings, Some(sender))
   }
 
   def createHttpSinkSettings(
@@ -63,10 +63,10 @@ class HttpTaskCTest extends AkkaStreamTest {
       maxRetryTimes: Int = 10,
       defaultRequest: HttpRequest = HttpRequest(),
       expectedResponse: Option[String] = None
-  )(implicit system: ActorSystem): HttpTaskCSettings =
-    HttpTaskCSettings(host, port, maxRetryTimes, defaultRequest, expectedResponse)
+  )(implicit system: ActorSystem): HttpSinkSettings =
+    HttpSinkSettings(host, port, maxRetryTimes, defaultRequest, expectedResponse)
 
-  behavior of "HttpTaskC"
+  behavior of "HttpSink"
 
   it must "delivery successfully to the target with proper HttpResponse" in {
     val httpSink = createHttpSink()()

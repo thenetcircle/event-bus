@@ -23,19 +23,19 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.TaskC
+import com.thenetcircle.event_bus.interface.SinkTask
 import com.thenetcircle.event_bus.tasks.kafka.extended.{KafkaKey, KafkaPartitioner}
 import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
-case class KafkaTaskCSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
+case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
-class KafkaTaskC(val settings: KafkaTaskCSettings)(implicit context: TaskContext)
-    extends TaskC
+class KafkaSink(val settings: KafkaSinkSettings)(implicit context: TaskContext)
+    extends SinkTask
     with StrictLogging {
 
-  import KafkaTaskC._
+  import KafkaSink._
 
   private val producerSettings = settings.producerSettings
     .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
@@ -50,7 +50,7 @@ class KafkaTaskC(val settings: KafkaTaskCSettings)(implicit context: TaskContext
       .map(msg => msg.message.passThrough)
 }
 
-object KafkaTaskC {
+object KafkaSink {
   private def getProducerRecordFromEvent(
       event: Event
   ): ProducerRecord[ProducerKey, ProducerValue] = {

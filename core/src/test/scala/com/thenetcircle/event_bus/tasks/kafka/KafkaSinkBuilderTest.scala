@@ -21,31 +21,27 @@ import com.thenetcircle.event_bus.base.AkkaStreamTest
 
 import scala.concurrent.duration._
 
-class KafkaTaskABuilderTest extends AkkaStreamTest {
+class KafkaSinkBuilderTest extends AkkaStreamTest {
 
-  behavior of "KafkaTaskABuilder"
+  behavior of "KafkaSinkBuilder"
 
-  val builder = new KafkaTaskABuilder
+  val builder = new KafkaSinkBuilder
 
-  it should "build correct KafkaTaskA with the default config" in {
+  it should "build correct KafkaSink with the default config" in {
 
     val sink = builder.build("""{
-        |  "group-id": "test-group",
-        |  "topics": [ "abc", "def" ],
-        |  "commit-batch-max": 100,
-        |  "consumer": {
-        |    "poll-timeout": "50ms"
+        |  "producer": {
+        |    "close-timeout": "100s",
+        |    "use-dispatcher": "test-dispatcher"
         |  }
         |}""".stripMargin)
 
     val settings = sink.settings
 
-    settings.groupId shouldEqual "test-group"
-    settings.topics shouldEqual Some(Set("abc", "def"))
-    settings.commitBatchMax shouldEqual 100
-    settings.consumerSettings.pollTimeout shouldEqual 50.milliseconds
-    settings.consumerSettings.dispatcher shouldEqual "akka.kafka.default-dispatcher"
-    settings.consumerSettings.properties("client.id") shouldEqual "EventBus-Consumer"
+    settings.producerSettings.parallelism shouldEqual 100
+    settings.producerSettings.closeTimeout shouldEqual 100.seconds
+    settings.producerSettings.dispatcher shouldEqual "test-dispatcher"
+    settings.producerSettings.properties("client.id") shouldEqual "EventBus-Producer"
 
   }
 

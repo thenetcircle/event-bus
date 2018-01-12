@@ -17,14 +17,14 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.interface.TaskABuilder
+import com.thenetcircle.event_bus.interface.SourceTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 /** Builds Story By Config */
-class StoryBuilder() extends TaskABuilder with StrictLogging {
+class StoryBuilder() extends SourceTaskBuilder with StrictLogging {
 
   /**
    * Builds Story by String Config
@@ -33,14 +33,14 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
    * ```
    * {
    *   # "name": "..."
-   *   # "taskA": ["taskA-type", "settings"]
-   *   # "taskB": [
+   *   # "sourceTask": ["sourceTask-type", "settings"]
+   *   # "transformTasks": [
    *   #   ["op-type", "settings"],
    *   #   ...
    *   # ]
-   *   # "taskC": ["taskC-type", "settings"]
-   *   # "fallbacks": [
-   *     ["taskC-type", "settings"]
+   *   # "sinkTask": ["sinkTask-type", "settings"]
+   *   # "fallbackTasks": [
+   *     ["sinkTask-type", "settings"]
    *   ]
    * }
    * ```
@@ -55,21 +55,21 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
       val storyName = config.getString("name")
       val storySettings = StorySettings()
 
-      val AConfig = config.as[List[String]]("taskA")
+      val AConfig = config.as[List[String]]("sourceTask")
       val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
 
       val taskB = config
-        .as[Option[List[List[String]]]]("taskB")
+        .as[Option[List[List[String]]]]("transformTasks")
         .map(_.map {
           case _type :: _settings :: _ => builderFactory.buildTaskB(_type, _settings).get
         })
 
-      val taskC = config.as[Option[List[String]]]("taskC").map {
+      val taskC = config.as[Option[List[String]]]("sinkTask").map {
         case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
       }
 
       val fallbacks = config
-        .as[Option[List[List[String]]]]("fallbacks")
+        .as[Option[List[List[String]]]]("fallbackTasks")
         .map(_.map {
           case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
         })
@@ -103,21 +103,21 @@ class StoryBuilder() extends TaskABuilder with StrictLogging {
       val storySettings = StorySettings()
 
       val AConfig =
-        ConfigStringParser.convertStringToConfig(taskAConfigString).as[List[String]]("taskA")
+        ConfigStringParser.convertStringToConfig(taskAConfigString).as[List[String]]("sourceTask")
       val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
 
       val taskB = config
-        .as[Option[List[List[String]]]]("taskB")
+        .as[Option[List[List[String]]]]("transformTasks")
         .map(_.map {
           case _type :: _settings :: _ => builderFactory.buildTaskB(_type, _settings).get
         })
 
-      val taskC = config.as[Option[List[String]]]("taskC").map {
+      val taskC = config.as[Option[List[String]]]("sinkTask").map {
         case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
       }
 
       val fallbacks = config
-        .as[Option[List[List[String]]]]("fallbacks")
+        .as[Option[List[List[String]]]]("fallbackTasks")
         .map(_.map {
           case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
         })

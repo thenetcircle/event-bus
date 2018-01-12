@@ -20,12 +20,13 @@ package com.thenetcircle.event_bus.tasks.misc
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{TaskB, TaskBBuilder}
+import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskContext
 import com.typesafe.config.Config
 
-class TopicResolverTaskB(_topicMapping: Map[String, String], defaultTopic: String) extends TaskB {
+class TopicResolverTransform(_topicMapping: Map[String, String], defaultTopic: String)
+    extends TransformTask {
 
   private var topicMapping = _topicMapping
 
@@ -46,7 +47,7 @@ class TopicResolverTaskB(_topicMapping: Map[String, String], defaultTopic: Strin
 
 }
 
-class TopicResolverTaskBBuilder() extends TaskBBuilder {
+class TopicResolverTransformBuilder() extends TransformTaskBuilder {
 
   val defaultConfig: Config =
     ConfigStringParser.convertStringToConfig("""
@@ -62,7 +63,7 @@ class TopicResolverTaskBBuilder() extends TaskBBuilder {
     val defaultTopic = config.getString("default_topic")
     val _mapping: Map[String, String] = Map.empty
 
-    new TopicResolverTaskB(_mapping, defaultTopic)
+    new TopicResolverTransform(_mapping, defaultTopic)
 
   }
 

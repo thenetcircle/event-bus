@@ -20,11 +20,11 @@ package com.thenetcircle.event_bus.tasks.misc
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.createTestEvent
 
-class TopicResolverTaskBTest extends AkkaStreamTest {
+class TopicResolverTransformTest extends AkkaStreamTest {
 
-  behavior of "TopicResolverTaskB"
+  behavior of "TopicResolverTransform"
 
-  val resolver = new TopicResolverTaskB(
+  val resolver = new TopicResolverTransform(
     Map("""message\..*""" -> "topic-message", """user\.[^\.]+\.kick""" -> "topic-user"),
     "event-default"
   )

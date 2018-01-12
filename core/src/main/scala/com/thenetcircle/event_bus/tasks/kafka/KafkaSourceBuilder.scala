@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.tasks.kafka
 
 import akka.kafka.ConsumerSettings
-import com.thenetcircle.event_bus.interface.TaskABuilder
+import com.thenetcircle.event_bus.interface.SourceTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.thenetcircle.event_bus.story.TaskContext
@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
-class KafkaTaskABuilder() extends TaskABuilder {
+class KafkaSourceBuilder() extends SourceTaskBuilder {
 
   val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
     """
@@ -87,7 +87,7 @@ class KafkaTaskABuilder() extends TaskABuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: TaskContext): KafkaTaskA = {
+  override def build(configString: String)(implicit context: TaskContext): KafkaSource = {
 
     val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
@@ -95,7 +95,7 @@ class KafkaTaskABuilder() extends TaskABuilder {
       .getConfig("consumer")
       .withFallback(context.getEnvironment().getConfig().getConfig("akka.kafka.consumer"))
 
-    val settings = KafkaTaskASettings(
+    val settings = KafkaSourceSettings(
       groupId = config.as[String]("group-id"),
       extractParallelism = config.as[Int]("extract-parallelism"),
       commitParallelism = config.as[Int]("commit-parallelism"),
@@ -110,7 +110,7 @@ class KafkaTaskABuilder() extends TaskABuilder {
       topicPattern = config.as[Option[String]]("topic-pattern")
     )
 
-    new KafkaTaskA(settings)
+    new KafkaSource(settings)
 
   }
 

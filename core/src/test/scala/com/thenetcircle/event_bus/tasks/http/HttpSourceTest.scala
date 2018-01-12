@@ -31,9 +31,9 @@ import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData}
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class HttpTaskATest extends AkkaStreamTest {
+class HttpSourceTest extends AkkaStreamTest {
 
-  behavior of "HttpTaskA"
+  behavior of "HttpSource"
 
   it should "return a BadRequest of HttpResponse when empty request coming" in {
     val (in, out0, out1) = getTestPorts
@@ -113,7 +113,7 @@ class HttpTaskATest extends AkkaStreamTest {
                              TestSubscriber.Probe[Event]) = {
 
     val settings =
-      HttpTaskASettings("0.0.0.0", 80, DataFormat.ACTIVITYSTREAMS, 1000, 10, "ok", "ko")
+      HttpSourceSettings("0.0.0.0", 80, DataFormat.ACTIVITYSTREAMS, 1000, 10, "ok", "ko")
 
     val in = TestPublisher.probe[HttpRequest]()
     val out0 = TestSubscriber.probe[HttpResponse]()
@@ -121,7 +121,7 @@ class HttpTaskATest extends AkkaStreamTest {
     val httpBind = Source.single(
       Flow.fromSinkAndSourceCoupled(Sink.fromSubscriber(out0), Source.fromPublisher(in))
     )
-    val h = new HttpTaskA(settings, Some(httpBind))
+    val h = new HttpSource(settings, Some(httpBind))
     val out1 = h.getGraph().toMat(TestSink.probe[Event])(Keep.right).run()
 
     (in, out0, out1)
