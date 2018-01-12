@@ -19,18 +19,19 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.thenetcircle.event_bus.story.StoryDAO.StoryInfo
+import org.apache.curator.framework.recipes.leader.LeaderLatch
 
 class StoryDAO(zKManager: ZKManager) {
 
-  def getAvailableStories(executorGroup: String): List[StoryInfo] = {
+  def getAvailableStories(executorGroup: String): List[String] = {
     zKManager
       .getChildren("stories")
       .map(_.filter(storyName => {
         zKManager
           .getData(s"stories/$storyName/assigned-executor-group")
           .getOrElse("default") == executorGroup
-      }).map(getStoryInfo))
-      .getOrElse(List.empty[StoryInfo])
+      }))
+      .getOrElse(List.empty[String])
   }
 
   def getStoryInfo(storyName: String): StoryInfo = {
@@ -40,10 +41,18 @@ class StoryDAO(zKManager: ZKManager) {
     val settings: String = zKManager.getData(s"$storyRootPath/settings").get
     val source: String = zKManager.getData(s"$storyRootPath/source").get
     val sink: String = zKManager.getData(s"$storyRootPath/sink").get
-    val transforms: Option[String] = zKManager.getData(s"$storyRootPath/transforms")
-    val fallbacks: Option[String] = zKManager.getData(s"$storyRootPath/fallbacks")
+    val transforms: Option[List[String]] =
+      zKManager.getChildrenData(s"$storyRootPath/transforms").map(_.map(_._2))
+    val fallbacks: Option[List[String]] =
+      zKManager.getChildrenData(s"$storyRootPath/fallbacks").map(_.map(_._2))
 
     StoryInfo(storyName, status, settings, source, sink, transforms, fallbacks)
+  }
+
+  def hasLeadership(storyName: String): Boolean = {
+
+    val leaderLatch = new LeaderLatch(zKManager.client, )
+
   }
 
 }

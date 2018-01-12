@@ -26,26 +26,29 @@ class StoryManager(
     taskContextFactory: TaskContextFactory
 )(implicit environment: ExecutionEnvironment) {
 
-  val storyDAO = daoFactory.getStoryDAO()
+  val storyDAO: StoryDAO = daoFactory.getStoryDAO()
 
-  def execute(): Unit = {}
+  def execute(): Unit = {
 
-  def getStories(): List[Story] = {
-    val availableStories: List[StoryInfo] =
+    val candidateStories: List[String] =
       storyDAO.getAvailableStories(environment.getExecutorGroup())
 
-    availableStories.map(info => {
-      implicit val taskContext: TaskContext = taskContextFactory.newTaskExecutingContext()
-      new Story(
-        info.name,
-        StorySettings(),
-        taskBuilderFactory.buildTaskA(info.source).get,
-        info.transforms.flatMap(_v => taskBuilderFactory.buildTaskB(_v)),
-        info.sink.flatMap(_v => taskBuilderFactory.buildTaskC(_v)),
-        info.fallbacks.flatMap(_v => taskBuilderFactory.buildFallbacks(_v)),
-        StoryStatus(info.status)
-      )
-    })
+    candidateStories.foreach(storyName => {})
+
+  }
+
+  def createStory(storyName: String): Story = {
+    val storyInfo: StoryInfo = storyDAO.getStoryInfo(storyName)
+    implicit val taskContext: TaskContext = taskContextFactory.newTaskExecutingContext()
+    new Story(
+      storyInfo.name,
+      StorySettings(),
+      StoryStatus(storyInfo.status),
+      taskBuilderFactory.buildSourceTask(storyInfo.source).get,
+      taskBuilderFactory.buildSinkTask(storyInfo.sink).get,
+      storyInfo.transforms.map(_.flatMap(_v => taskBuilderFactory.buildTransformTask(_v))),
+      storyInfo.fallbacks.map(_.flatMap(_v => taskBuilderFactory.buildSinkTask(_v)))
+    )
   }
 
 }

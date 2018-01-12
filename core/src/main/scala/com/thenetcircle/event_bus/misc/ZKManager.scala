@@ -19,11 +19,13 @@ package com.thenetcircle.event_bus.misc
 
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.curator.framework.recipes.leader.LeaderLatch
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
+import scala.concurrent.duration._
 
 class ZKManager(connectString: String)(implicit environment: Environment) extends StrictLogging {
 
@@ -84,6 +86,20 @@ class ZKManager(connectString: String)(implicit environment: Environment) extend
         logger.info(s"getChildren from $relativePath failed with error: ${e.getMessage}")
         None
     }
+  }
+
+  def getChildrenData(relativePath: String): Option[List[(String, String)]] = {
+    getChildren(relativePath).map(
+      _.flatMap(childName => getData(childName).map(data => childName -> data))
+    )
+  }
+
+  def getLeadership(relativePath: String, timeout: FiniteDuration, id: Option[String]): Boolean = {
+
+    val leanderLatch = if (id.isDefined) {
+      new LeaderLatch()
+    }
+
   }
 
 }

@@ -25,11 +25,13 @@ import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
+case class StorySettings()
+
 class Story(val name: String,
             val settings: StorySettings,
             initStatus: StoryStatus = StoryStatus.INIT,
             val sourceTask: SourceTask,
-            val sinkTask: Option[SinkTask] = None,
+            val sinkTask: SinkTask,
             val transformTasks: Option[List[TransformTask]] = None,
             val fallbackTasks: Option[List[SinkTask]] = None)
     extends SourceTask
@@ -65,7 +67,8 @@ class Story(val name: String,
                 _bChain
               })
               .getOrElse(Flow[Event])
-            val sink = sinkTask.map(s => decorateGraph(s.getGraph())).getOrElse(Flow[Event])
+            // val sink = sinkTask.map(s => decorateGraph(s.getGraph())).getOrElse(Flow[Event])
+            val sink = decorateGraph(sinkTask.getGraph())
             val confirmation = builder.add(decorateGraph(sourceTask.getCommittingGraph()))
 
             // workflow
