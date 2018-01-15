@@ -51,7 +51,7 @@ class KafkaSource(val settings: KafkaSourceSettings)(implicit context: TaskRunni
     "topics or topicPattern is required"
   )
 
-  implicit val executor: ExecutionContext = context.getExecutor()
+  implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
   private val subscription: AutoSubscription =
     if (settings.topics.isDefined) {

@@ -17,15 +17,12 @@
 
 package com.thenetcircle.event_bus.story
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSource}
-import com.thenetcircle.event_bus.tasks.kafka.KafkaSink
-import com.thenetcircle.event_bus.tasks.misc.TopicResolverTransform
 
 class StoryBuilderTest extends AkkaStreamTest {
 
   behavior of "StoryBuilder"
 
-  val builder = new StoryBuilder
+  /*val builder = new StoryBuilder
 
   it should "build correct Story based on config" in {
 
@@ -60,6 +57,6 @@ class StoryBuilderTest extends AkkaStreamTest {
 
     story.fallbackTasks.get.head.isInstanceOf[HttpSink] shouldEqual true
 
-  }
+  }*/
 
 }

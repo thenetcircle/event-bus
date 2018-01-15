@@ -36,7 +36,7 @@ class StoryScheduler(storyManager: StoryManager)(implicit environment: RunningEn
       implicit val taskRunningContext: TaskRunningContext =
         taskRunningContextFactory.createTaskRunningContext()
 
-      val story = storyManager.createStory(storyName)
+      val story = storyManager.buildStory(storyName)
       val storyRunner = system.actorOf(StoryRunner.props(story), storyName)
 
       storyRunners += storyRunner

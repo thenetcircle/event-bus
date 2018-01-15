@@ -31,7 +31,7 @@ object StoryRunningApp extends App with StrictLogging {
   logger.info("Application is initializing.")
 
   // Initialize BaseEnvironment
-  implicit val baseEnvironment: BaseEnvironment = BaseEnvironment(ConfigFactory.load())
+  val baseEnvironment: BaseEnvironment = BaseEnvironment(ConfigFactory.load())
 
   // Check Executor Name
   var runnerGroup: String = if (args.length > 0) args(0) else ""
@@ -39,7 +39,7 @@ object StoryRunningApp extends App with StrictLogging {
     runnerGroup = baseEnvironment.getConfig().getString("app.default-runner-group")
 
   // Connecting Zookeeper
-  val zKManager: ZKManager = ZKManager(baseEnvironment.getConfig())
+  val zKManager: ZKManager = ZKManager(baseEnvironment.getConfig())(baseEnvironment)
   zKManager.init()
   val runnerId: String = zKManager.registerStoryExecutor(runnerGroup)
 
@@ -47,19 +47,19 @@ object StoryRunningApp extends App with StrictLogging {
   implicit val system: ActorSystem =
     ActorSystem(baseEnvironment.getAppName(), baseEnvironment.getConfig())
 
-  implicit val executionEnvironment: RunningEnvironment =
-    RunningEnvironment(runnerGroup, runnerId)
-
-  val storyManager = StoryManager(zKManager, TaskBuilderFactory(baseEnvironment.getConfig()))
-
-  StoryScheduler(storyManager).execute()
+  implicit val runningEnvironment: RunningEnvironment =
+    RunningEnvironment(runnerGroup, runnerId)(baseEnvironment, system)
 
   // Kamon.start()
+
+  // Schedule Stories
+  val storyManager = StoryManager(zKManager, TaskBuilderFactory(runningEnvironment.getConfig()))
+  StoryScheduler(storyManager).execute()
+
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
     // Kamon.shutdown()
-    baseEnvironment.shutdown()
-    executionEnvironment.shutdown()
+    runningEnvironment.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)
     /*Http()

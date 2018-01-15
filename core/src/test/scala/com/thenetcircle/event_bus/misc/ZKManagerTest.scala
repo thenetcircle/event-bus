@@ -25,7 +25,7 @@ class ZKManagerTest extends AkkaStreamTest {
 
   it should "do proper initialization" in {
 
-    val zkmanager = new ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181")
+    /*val zkmanager = new ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181")
 
     zkmanager.init()
 
@@ -33,7 +33,7 @@ class ZKManagerTest extends AkkaStreamTest {
 
     println(zkmanager.fetchStories())
 
-    Thread.sleep(10000)
+    Thread.sleep(10000)*/
 
   }
 

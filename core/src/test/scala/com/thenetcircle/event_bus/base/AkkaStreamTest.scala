@@ -33,9 +33,9 @@ abstract class AkkaStreamTest(_env: BaseEnvironment)
     with UnitTest {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  implicit val baseEnvironment: BaseEnvironment = _env
+  val baseEnvironment: BaseEnvironment = _env
   implicit val runningEnvironment: RunningEnvironment =
-    RunningEnvironment("test-runner-group", "test-runner-id")
+    RunningEnvironment("test-runner-group", "test-runner-id")(baseEnvironment, system)
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
@@ -53,7 +53,6 @@ abstract class AkkaStreamTest(_env: BaseEnvironment)
   override def beforeAll(): Unit = {}
 
   override def afterAll(): Unit = {
-    baseEnvironment.shutdown()
     runningEnvironment.shutdown()
     TestKit.shutdownActorSystem(system)
   }

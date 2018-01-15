@@ -22,13 +22,13 @@ import com.thenetcircle.event_bus.story.StoryManager.StoryInfo
 
 class StoryManager(zKManager: ZKManager, taskBuilderFactory: TaskBuilderFactory) {
 
-  def getAvailableStories(executorGroup: String): List[String] = {
+  def getAvailableStories(runnerGroup: String): List[String] = {
     zKManager
       .getChildren("stories")
       .map(_.filter(storyName => {
         zKManager
-          .getData(s"stories/$storyName/assigned-executor-group")
-          .getOrElse("default") == executorGroup
+          .getData(s"stories/$storyName/runner-group")
+          .getOrElse("default") == runnerGroup
       }))
       .getOrElse(List.empty[String])
   }
@@ -48,12 +48,10 @@ class StoryManager(zKManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)
     StoryInfo(storyName, status, settings, source, sink, transforms, fallbacks)
   }
 
-  def createStory(storyName: String)(implicit context: TaskRunningContext): Story = {
+  def buildStory(storyName: String)(implicit context: TaskRunningContext): Story = {
     val storyInfo: StoryInfo = getStoryInfo(storyName)
     new Story(
-      storyInfo.name,
-      StorySettings(),
-      StoryStatus(storyInfo.status),
+      StorySettings(storyName, StoryStatus(storyInfo.status)),
       taskBuilderFactory.buildSourceTask(storyInfo.source).get,
       taskBuilderFactory.buildSinkTask(storyInfo.sink).get,
       storyInfo.transforms.map(_.flatMap(_v => taskBuilderFactory.buildTransformTask(_v))),

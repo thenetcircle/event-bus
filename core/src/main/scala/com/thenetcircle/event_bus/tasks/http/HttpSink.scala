@@ -53,7 +53,7 @@ class HttpSink(
 
   implicit val system: ActorSystem = context.getActorSystem()
   implicit val materializer: Materializer = context.getMaterializer()
-  implicit val executor: ExecutionContext = context.getExecutor()
+  implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
   // TODO: double check when it creates a new pool
   private val sendingFlow =

@@ -25,11 +25,9 @@ import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
-case class StorySettings()
+case class StorySettings(name: String, initStatus: StoryStatus = StoryStatus.INIT)
 
-class Story(val name: String,
-            val settings: StorySettings,
-            initStatus: StoryStatus = StoryStatus.INIT,
+class Story(val settings: StorySettings,
             val sourceTask: SourceTask,
             val sinkTask: SinkTask,
             val transformTasks: Option[List[TransformTask]] = None,
@@ -37,7 +35,7 @@ class Story(val name: String,
     extends SourceTask
     with StrictLogging {
 
-  private var status: StoryStatus = initStatus
+  private var status: StoryStatus = settings.initStatus
   private def updateStatus(_status: StoryStatus): Unit = {
     status = _status
   }
@@ -48,7 +46,7 @@ class Story(val name: String,
       graph: Graph[FlowShape[Event, Event], NotUsed]
   ): Graph[FlowShape[Event, Event], NotUsed] = {
     graphId = graphId + 1
-    Story.decorateGraph(graph, s"$name-$graphId", fallbackTasks)
+    Story.decorateGraph(graph, s"${settings.name}-$graphId", fallbackTasks)
   }
 
   override def getGraph(): Source[Event, NotUsed] =
@@ -78,12 +76,14 @@ class Story(val name: String,
             SourceShape(confirmation.out)
           }
       )
-      .named(name)
+      .named(settings.name)
 
   override def getCommittingGraph(): Flow[Event, Event, NotUsed] = Flow[Event]
 
-  def start()(implicit materializer: Materializer): NotUsed =
+  def run()(implicit runningContext: TaskRunningContext): NotUsed = {
+    implicit val materializer: Materializer = runningContext.getMaterializer()
     getGraph().runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
+  }
 }
 
 object Story extends StrictLogging {

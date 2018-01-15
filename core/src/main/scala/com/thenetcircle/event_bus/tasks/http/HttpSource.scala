@@ -55,7 +55,7 @@ class HttpSource(
   implicit val system: ActorSystem = context.getActorSystem()
   implicit val materializer: Materializer = context.getMaterializer()
   implicit val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
-  implicit val executor: ExecutionContext = context.getExecutor()
+  implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
   private val httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _] =
     overriddenHttpBind.getOrElse(settings.serverSettingsOption match {

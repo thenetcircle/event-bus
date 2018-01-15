@@ -25,11 +25,11 @@ import scala.concurrent.ExecutionContext
 class TaskRunningContext(environment: RunningEnvironment,
                          system: ActorSystem,
                          materializer: Materializer,
-                         executor: ExecutionContext) {
+                         executionContext: ExecutionContext) {
 
   def getEnvironment(): RunningEnvironment = environment
   def getActorSystem(): ActorSystem = system
   def getMaterializer(): Materializer = materializer
-  def getExecutor(): ExecutionContext = executor
+  def getExecutionContext(): ExecutionContext = executionContext
 
 }
