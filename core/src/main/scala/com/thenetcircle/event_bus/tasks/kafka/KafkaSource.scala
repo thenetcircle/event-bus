@@ -105,6 +105,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 }
 
+// TODO: change the consumer offset
 case class KafkaSourceSettings(bootstrapServers: String,
                                groupId: String,
                                subscribedTopics: Either[Set[String], String],
