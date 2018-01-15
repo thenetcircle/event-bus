@@ -57,31 +57,35 @@ class TaskBuilderFactory() {
     }
   }
 
-  def buildSourceTask(configString: String)(implicit context: TaskContext): Option[SourceTask] = ???
+  def buildSourceTask(configString: String)(
+      implicit context: TaskRunningContext
+  ): Option[SourceTask] = ???
   /*{
     parseTaskConfigString(configString).map {
       case _category :: _configString :: _ => buildTaskA(_category, _configString)
     }
   }*/
 
-  def buildSourceTask(category: String,
-                      configString: String)(implicit context: TaskContext): Option[SourceTask] =
+  def buildSourceTask(category: String, configString: String)(
+      implicit context: TaskRunningContext
+  ): Option[SourceTask] =
     getSourceTaskBuilder(category).map(_builder => _builder.build(configString))
 
   def buildTransformTask(
       configString: String
-  )(implicit context: TaskContext): Option[TransformTask] =
+  )(implicit context: TaskRunningContext): Option[TransformTask] =
     ???
 
   def buildTransformTask(category: String, configString: String)(
-      implicit context: TaskContext
+      implicit context: TaskRunningContext
   ): Option[TransformTask] =
     getTransformTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildSinkTask(configString: String)(implicit context: TaskContext): Option[SinkTask] = ???
+  def buildSinkTask(configString: String)(implicit context: TaskRunningContext): Option[SinkTask] =
+    ???
 
   def buildSinkTask(category: String,
-                    configString: String)(implicit context: TaskContext): Option[SinkTask] =
+                    configString: String)(implicit context: TaskRunningContext): Option[SinkTask] =
     getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
 
 }

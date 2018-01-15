@@ -21,7 +21,7 @@ import akka.kafka.ProducerSettings
 import com.thenetcircle.event_bus.interface.SinkTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKeySerializer}
-import com.thenetcircle.event_bus.story.TaskContext
+import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.config.Config
 
 class KafkaSinkBuilder() extends SinkTaskBuilder {
@@ -52,7 +52,7 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: TaskContext): KafkaSink = {
+  override def build(configString: String)(implicit context: TaskRunningContext): KafkaSink = {
 
     val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 

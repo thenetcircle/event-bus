@@ -18,18 +18,18 @@
 package com.thenetcircle.event_bus.story
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.misc.Environment
+import com.thenetcircle.event_bus.misc.BaseEnvironment
 import com.typesafe.config.Config
 
-class ExecutionEnvironment(executorGroupName: String,
-                           executorId: String,
-                           appName: String,
-                           appVersion: String,
-                           appEnv: String,
-                           debug: Boolean,
-                           systemConfig: Config,
-                           actorSystem: ActorSystem)
-    extends Environment(
+class RunningEnvironment(runnerGroup: String,
+                         runnerId: String,
+                         appName: String,
+                         appVersion: String,
+                         appEnv: String,
+                         debug: Boolean,
+                         systemConfig: Config,
+                         actorSystem: ActorSystem)
+    extends BaseEnvironment(
       appName: String,
       appVersion: String,
       appEnv: String,
@@ -37,22 +37,20 @@ class ExecutionEnvironment(executorGroupName: String,
       systemConfig: Config
     ) {
 
-  def getExecutorGroupName(): String = executorGroupName
-  def getExecutorId(): String = executorId
+  def getRunnerGroup(): String = runnerGroup
+  def getRunnerId(): String = runnerId
   def getActorSystem(): ActorSystem = actorSystem
 
 }
 
-object ExecutionEnvironment {
+object RunningEnvironment {
 
-  def apply(
-      executorGroupName: String,
-      executorId: String
-  )(implicit environment: Environment, system: ActorSystem): ExecutionEnvironment = {
+  def apply(runnerGroup: String, runnerId: String)(implicit environment: BaseEnvironment,
+                                                   system: ActorSystem): RunningEnvironment = {
 
-    new ExecutionEnvironment(
-      executorGroupName,
-      executorId,
+    new RunningEnvironment(
+      runnerGroup,
+      runnerId,
       environment.getAppName(),
       environment.getAppVersion(),
       environment.getAppEnv(),

@@ -30,7 +30,7 @@ import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
 import com.thenetcircle.event_bus.interface.SourceTask
-import com.thenetcircle.event_bus.story.TaskContext
+import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -48,7 +48,7 @@ case class HttpSourceSettings(interface: String,
 class HttpSource(
     val settings: HttpSourceSettings,
     overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
-)(implicit context: TaskContext)
+)(implicit context: TaskRunningContext)
     extends SourceTask
     with StrictLogging {
 

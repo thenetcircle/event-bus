@@ -27,7 +27,7 @@ object StoryStatus extends Enumeration {
   val STOPPING = Value(5, "STOPPING")
   val STOPPED = Value(6, "STOPPED")
 
-  def apply(status: String): StoryStatus = status.toUpperCase match {
+  def apply(status: String): StoryStatus = status.toUpperCase match {w
     case "DEPLOYING" => DEPLOYING
     case "RUNNING"   => RUNNING
     case "FAILED"    => FAILED

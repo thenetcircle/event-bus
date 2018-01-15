@@ -25,7 +25,8 @@ import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
 
-class ZKManager(connectString: String)(implicit environment: Environment) extends StrictLogging {
+class ZKManager(connectString: String)(implicit environment: BaseEnvironment)
+    extends StrictLogging {
 
   val client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
@@ -108,12 +109,12 @@ class ZKManager(connectString: String)(implicit environment: Environment) extend
 
 object ZKManager {
 
-  def apply(config: Config)(implicit environment: Environment): ZKManager = {
+  def apply(config: Config)(implicit environment: BaseEnvironment): ZKManager = {
     config.checkValid(ConfigFactory.defaultReference, "app.zookeeper-server")
     apply(config.getString("app.zookeeper-server"))
   }
 
-  def apply(connectString: String)(implicit environment: Environment): ZKManager = {
+  def apply(connectString: String)(implicit environment: BaseEnvironment): ZKManager = {
     if (connectString.isEmpty) {
       throw new IllegalArgumentException("ConnectString is empty.")
     }

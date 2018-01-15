@@ -21,7 +21,7 @@ import akka.kafka.ConsumerSettings
 import com.thenetcircle.event_bus.interface.SourceTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
-import com.thenetcircle.event_bus.story.TaskContext
+import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -87,7 +87,7 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
     """.stripMargin
   )
 
-  override def build(configString: String)(implicit context: TaskContext): KafkaSource = {
+  override def build(configString: String)(implicit context: TaskRunningContext): KafkaSource = {
 
     val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 

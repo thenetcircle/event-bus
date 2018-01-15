@@ -18,54 +18,48 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.misc.{DaoFactory, Environment, ZKManager}
-import com.thenetcircle.event_bus.story.{
-  ExecutionEnvironment,
-  StoryManager,
-  TaskBuilderFactory,
-  TaskContextFactory
-}
+import com.thenetcircle.event_bus.misc.{BaseEnvironment, ZKManager}
+import com.thenetcircle.event_bus.story._
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object StoryExecutionApp extends App with StrictLogging {
+object StoryRunningApp extends App with StrictLogging {
 
   logger.info("Application is initializing.")
 
-  // Initialize Environment
-  implicit val globalEnvironment: Environment = Environment(ConfigFactory.load())
+  // Initialize BaseEnvironment
+  implicit val baseEnvironment: BaseEnvironment = BaseEnvironment(ConfigFactory.load())
 
   // Check Executor Name
-  var executorGroup: String = if (args.length > 0) args(0) else ""
-  if (executorGroup.isEmpty)
-    executorGroup = globalEnvironment.getConfig().getString("app.default-executor-group")
+  var runnerGroup: String = if (args.length > 0) args(0) else ""
+  if (runnerGroup.isEmpty)
+    runnerGroup = baseEnvironment.getConfig().getString("app.default-runner-group")
 
   // Connecting Zookeeper
-  val zKManager: ZKManager = ZKManager(globalEnvironment.getConfig())
+  val zKManager: ZKManager = ZKManager(baseEnvironment.getConfig())
   zKManager.init()
-  val executorId: String = zKManager.registerStoryExecutor(executorGroup)
+  val runnerId: String = zKManager.registerStoryExecutor(runnerGroup)
 
   // Create ActorSystem
   implicit val system: ActorSystem =
-    ActorSystem(globalEnvironment.getAppName(), globalEnvironment.getConfig())
+    ActorSystem(baseEnvironment.getAppName(), baseEnvironment.getConfig())
 
-  implicit val executionEnvironment: ExecutionEnvironment =
-    ExecutionEnvironment(executorGroup, executorId)
+  implicit val executionEnvironment: RunningEnvironment =
+    RunningEnvironment(runnerGroup, runnerId)
 
-  StoryManager(
-    DaoFactory(zKManager),
-    TaskBuilderFactory(globalEnvironment.getConfig()),
-    TaskContextFactory()
-  ).execute()
+  val storyManager = StoryManager(zKManager, TaskBuilderFactory(baseEnvironment.getConfig()))
+
+  StoryScheduler(storyManager).execute()
 
   // Kamon.start()
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
     // Kamon.shutdown()
-    globalEnvironment.shutdown()
+    baseEnvironment.shutdown()
+    executionEnvironment.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)
     /*Http()

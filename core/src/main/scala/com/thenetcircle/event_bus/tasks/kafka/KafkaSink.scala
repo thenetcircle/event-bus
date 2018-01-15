@@ -25,13 +25,13 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.SinkTask
 import com.thenetcircle.event_bus.tasks.kafka.extended.{KafkaKey, KafkaPartitioner}
-import com.thenetcircle.event_bus.story.TaskContext
+import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
 
-class KafkaSink(val settings: KafkaSinkSettings)(implicit context: TaskContext)
+class KafkaSink(val settings: KafkaSinkSettings)(implicit context: TaskRunningContext)
     extends SinkTask
     with StrictLogging {
 

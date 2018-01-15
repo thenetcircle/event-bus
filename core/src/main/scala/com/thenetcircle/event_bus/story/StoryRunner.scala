@@ -2,13 +2,13 @@ package com.thenetcircle.event_bus.story
 
 import akka.actor.{Actor, ActorLogging, Props}
 
-object StoryContainer {
+object StoryRunner {
 
-  def props(story: Story): Props = Props(classOf[StoryContainer], story)
+  def props(story: Story): Props = Props(classOf[StoryRunner], story)
 
 }
 
-class StoryContainer(story: Story) extends Actor with ActorLogging {
+class StoryRunner(story: Story) extends Actor with ActorLogging {
 
   override def preStart(): Unit = {
     super.preStart()

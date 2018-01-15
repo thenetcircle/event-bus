@@ -21,7 +21,7 @@ import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import com.thenetcircle.event_bus.interface.SinkTaskBuilder
 import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskContext
+import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 
@@ -52,7 +52,7 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
                                 |}
                               """.stripMargin)
 
-  override def build(configString: String)(implicit context: TaskContext): HttpSink = {
+  override def build(configString: String)(implicit context: TaskRunningContext): HttpSink = {
 
     val config: Config =
       ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)

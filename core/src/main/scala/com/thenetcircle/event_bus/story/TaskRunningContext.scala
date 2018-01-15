@@ -22,12 +22,12 @@ import akka.stream.Materializer
 
 import scala.concurrent.ExecutionContext
 
-class TaskContext(environment: ExecutionEnvironment,
-                  system: ActorSystem,
-                  materializer: Materializer,
-                  executor: ExecutionContext) {
+class TaskRunningContext(environment: RunningEnvironment,
+                         system: ActorSystem,
+                         materializer: Materializer,
+                         executor: ExecutionContext) {
 
-  def getEnvironment(): ExecutionEnvironment = environment
+  def getEnvironment(): RunningEnvironment = environment
   def getActorSystem(): ActorSystem = system
   def getMaterializer(): Materializer = materializer
   def getExecutor(): ExecutionContext = executor

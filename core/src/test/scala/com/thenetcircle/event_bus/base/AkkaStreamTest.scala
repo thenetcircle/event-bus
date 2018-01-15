@@ -20,20 +20,22 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestKit}
-import com.thenetcircle.event_bus.misc.Environment
-import com.thenetcircle.event_bus.story.{TaskBuilderFactory, TaskContext}
+import com.thenetcircle.event_bus.misc.BaseEnvironment
+import com.thenetcircle.event_bus.story.{RunningEnvironment, TaskRunningContext}
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaStreamTest(_env: Environment)
+abstract class AkkaStreamTest(_env: BaseEnvironment)
     extends TestKit(ActorSystem(_env.getAppName(), _env.getConfig()))
     with ImplicitSender
     with UnitTest {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  implicit val environment: Environment = _env
+  implicit val baseEnvironment: BaseEnvironment = _env
+  implicit val runningEnvironment: RunningEnvironment =
+    RunningEnvironment("test-runner-group", "test-runner-id")
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
@@ -41,23 +43,18 @@ abstract class AkkaStreamTest(_env: Environment)
   implicit val executor: ExecutionContext =
     materializer.executionContext
 
-  implicit val storyExecutingContext: TaskContext =
-    new TaskContext(
-      environment,
-      system,
-      materializer,
-      executor,
-      TaskBuilderFactory(environment.getConfig())
-    )
+  implicit val taskRunningContext: TaskRunningContext =
+    new TaskRunningContext(runningEnvironment, system, materializer, executor)
 
   def this() = {
-    this(new Environment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
+    this(new BaseEnvironment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
   }
 
   override def beforeAll(): Unit = {}
 
   override def afterAll(): Unit = {
-    environment.shutdown()
+    baseEnvironment.shutdown()
+    runningEnvironment.shutdown()
     TestKit.shutdownActorSystem(system)
   }
 

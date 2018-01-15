@@ -21,11 +21,11 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
 
-class Environment(appName: String,
-                  appVersion: String,
-                  appEnv: String,
-                  debug: Boolean,
-                  systemConfig: Config) {
+class BaseEnvironment(appName: String,
+                      appVersion: String,
+                      appEnv: String,
+                      debug: Boolean,
+                      systemConfig: Config) {
 
   def getAppEnv(): String = appEnv
   def getAppName(): String = appName
@@ -47,17 +47,17 @@ class Environment(appName: String,
 
 }
 
-object Environment {
+object BaseEnvironment {
 
-  def apply(): Environment = apply(ConfigFactory.load())
+  def apply(): BaseEnvironment = apply(ConfigFactory.load())
 
-  def apply(systemConfig: Config): Environment = {
+  def apply(systemConfig: Config): BaseEnvironment = {
 
     systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
 
     val appName = systemConfig.getString("app.name")
 
-    new Environment(
+    new BaseEnvironment(
       appName,
       systemConfig.getString("app.version"),
       systemConfig.getString("app.env"),

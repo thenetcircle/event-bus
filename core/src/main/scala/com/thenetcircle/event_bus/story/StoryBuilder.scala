@@ -14,11 +14,17 @@
  * Contributors:
  *     Beineng Ma <baineng.ma@gmail.com>
  */
-
-package com.thenetcircle.event_bus.story
 /*
+package com.thenetcircle.event_bus.story
+
+import com.thenetcircle.event_bus.interface.SourceTaskBuilder
+import com.thenetcircle.event_bus.misc.ConfigStringParser
+import com.typesafe.scalalogging.StrictLogging
+
 /** Builds Story By Config */
-class StoryBuilder() extends SourceTaskBuilder with StrictLogging {
+class StoryBuilder(builderFactory: TaskBuilderFactory)
+    extends SourceTaskBuilder
+    with StrictLogging {
 
   /**
  * Builds Story by String Config
@@ -39,11 +45,10 @@ class StoryBuilder() extends SourceTaskBuilder with StrictLogging {
  * }
  * ```
  */
-  def build(configString: String)(implicit context: TaskContext): Story = {
+  def build(configString: String)(implicit context: TaskRunningContext): Story = {
 
     try {
 
-      val builderFactory = context.getBuilderFactory()
       val config = ConfigStringParser.convertStringToConfig(configString)
 
       val storyName = config.getString("name")
@@ -78,53 +83,6 @@ class StoryBuilder() extends SourceTaskBuilder with StrictLogging {
 
     }
 
-  }
-
-  def build(
-      name: String,
-      storyConfigString: String,
-      taskAConfigString: String,
-      taskBConfigString: Option[String],
-      taskCConfigString: Option[String],
-      fallbackConfigString: Option[String],
-      initStatus: StoryStatus = StoryStatus.INIT
-  )(implicit builderFactory: TaskBuilderFactory): Story = {
-    try {
-
-      val config = ConfigStringParser.convertStringToConfig(configString)
-
-      val storyName = name
-      val storySettings = StorySettings()
-
-      val AConfig =
-        ConfigStringParser.convertStringToConfig(taskAConfigString).as[List[String]]("sourceTask")
-      val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
-
-      val taskB = config
-        .as[Option[List[List[String]]]]("transformTasks")
-        .map(_.map {
-          case _type :: _settings :: _ => builderFactory.buildTaskB(_type, _settings).get
-        })
-
-      val taskC = config.as[Option[List[String]]]("sinkTask").map {
-        case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
-      }
-
-      val fallbacks = config
-        .as[Option[List[List[String]]]]("fallbackTasks")
-        .map(_.map {
-          case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
-        })
-
-      new Story(storySettings, taskA, taskB, taskC, fallbacks)
-
-    } catch {
-
-      case ex: Throwable =>
-        logger.error(s"Creating Story failed with error: ${ex.getMessage}")
-        throw ex
-
-    }
   }
 
 }
