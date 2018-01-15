@@ -37,6 +37,8 @@ trait EventExtractor {
    *
    * @return [[Future[Event]]
    */
-  def extract(data: ByteString)(implicit executionContext: ExecutionContext): Future[Event]
+  def extract(data: ByteString, passThrough: Option[Any] = None)(
+      implicit executionContext: ExecutionContext
+  ): Future[Event]
 
 }

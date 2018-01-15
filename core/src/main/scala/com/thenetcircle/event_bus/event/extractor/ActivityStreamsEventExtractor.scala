@@ -61,9 +61,9 @@ class ActivityStreamsEventExtractor
 
   override def getFormat(): DataFormat = DataFormat.ACTIVITYSTREAMS
 
-  override def extract(
-      data: ByteString
-  )(implicit executionContext: ExecutionContext): Future[Event] = Future {
+  override def extract(data: ByteString, passThrough: Option[Any] = None)(
+      implicit executionContext: ExecutionContext
+  ): Future[Event] = Future {
     try {
       val jsonAst = data.utf8String.parseJson
       val activity = jsonAst.convertTo[Activity]
@@ -83,8 +83,9 @@ class ActivityStreamsEventExtractor
       val actor = activity.actor.flatMap(actor => Some(actor.id.getOrElse("")))
 
       Event(
-        metadata = EventMetaData(uuid, name, published, provider, actor), //
-        body = EventBody(data, getFormat())
+        metadata = EventMetaData(uuid, name, published, provider, actor),
+        body = EventBody(data, getFormat()),
+        passThrough = passThrough
       )
     } catch {
       case ex: Throwable =>

@@ -47,6 +47,8 @@ case class KafkaSinkSettings(bootstrapServers: String,
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
 
+  require(settings.bootstrapServers.isEmpty, "bootstrap servers is required.")
+
   def getProducerSettings()(
       implicit context: TaskRunningContext
   ): ProducerSettings[ProducerKey, ProducerValue] = {
@@ -55,6 +57,10 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       new KafkaKeySerializer,
       new EventSerializer
     )
+
+    settings.properties.foreach {
+      case (_key, _value) => _producerSettings = _producerSettings.withProperty(_key, _value)
+    }
 
     _producerSettings = _producerSettings
       .withParallelism(settings.parallelism)

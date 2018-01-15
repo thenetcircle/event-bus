@@ -17,111 +17,147 @@
 
 package com.thenetcircle.event_bus.tasks.kafka
 
-import akka.NotUsed
-import akka.kafka.ConsumerMessage.{CommittableOffset, CommittableOffsetBatch}
+import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
-import akka.stream.ActorAttributes.supervisionStrategy
-import akka.stream.Supervision.resumingDecider
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
-import com.thenetcircle.event_bus.interface.SourceTask
+import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
+import net.ceedubs.ficus.Ficus._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
-case class KafkaSourceSettings(groupId: String,
-                               extractParallelism: Int,
-                               commitParallelism: Int,
-                               commitBatchMax: Int,
-                               maxPartitions: Int,
-                               consumerSettings: ConsumerSettings[ConsumerKey, ConsumerValue],
-                               topics: Option[Set[String]],
-                               topicPattern: Option[String])
+class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
-class KafkaSource(val settings: KafkaSourceSettings)(implicit context: TaskRunningContext)
-    extends SourceTask
-    with StrictLogging {
+  require(settings.bootstrapServers.isEmpty, "bootstrap servers is required.")
+  require(settings.groupId.isEmpty, "group id is required.")
 
-  require(
-    settings.topics.isDefined || settings.topicPattern.isDefined,
-    "topics or topicPattern is required"
-  )
-
-  implicit val executionContext: ExecutionContext = context.getExecutionContext()
-
-  private val subscription: AutoSubscription =
-    if (settings.topics.isDefined) {
-      Subscriptions.topics(settings.topics.get)
+  def getSubscription(): AutoSubscription =
+    if (settings.subscribedTopics.isLeft) {
+      Subscriptions.topics(settings.subscribedTopics.left.get)
     } else {
-      Subscriptions.topicPattern(settings.topicPattern.get)
+      Subscriptions.topicPattern(settings.subscribedTopics.right.get)
     }
 
-  private val consumerSettings = settings.consumerSettings.withGroupId(settings.groupId)
+  def getConsumerSettings()(
+      implicit context: TaskRunningContext
+  ): ConsumerSettings[ConsumerKey, ConsumerValue] = {
+    var _consumerSettings = ConsumerSettings[ConsumerKey, ConsumerValue](
+      context.getEnvironment().getConfig(),
+      new KafkaKeyDeserializer,
+      new ByteArrayDeserializer
+    )
 
-  override def getGraph(): Source[Event, NotUsed] = {
+    settings.properties.foreach {
+      case (_key, _value) => _consumerSettings = _consumerSettings.withProperty(_key, _value)
+    }
 
-    // TODO: maybe use one consumer for one partition
+    _consumerSettings
+      .withBootstrapServers(settings.bootstrapServers)
+      .withGroupId(settings.groupId)
+      .withCommitTimeout(settings.commitTimeout)
+      .withProperty("enable.auto.commit", "false")
+      .withProperty("client.id", "eventbus-kafkasource")
+  }
+
+  override def runWith(
+      handler: Flow[Event, Future[Event], NotUsed]
+  )(implicit context: TaskRunningContext): Future[Done] = {
     Consumer
-      .committablePartitionedSource(consumerSettings, subscription)
-      .flatMapMerge(settings.maxPartitions, _._2)
-      .mapAsync(settings.extractParallelism)(msg => {
-        val extractor = msg.record
-          .key()
-          .data
-          .map(k => EventExtractorFactory.getExtractor(k.eventFormat))
-          .getOrElse(EventExtractorFactory.defaultExtractor)
-        val msgData = ByteString(msg.record.value())
-        val extractFuture = extractor
-          .extract(msgData)
-
-        extractFuture.failed.foreach(
-          e =>
-            logger.warn(
-              s"Extract message ${msgData.utf8String} from Pipeline failed with Error: ${e.getMessage}"
-          )
-        )
-        extractFuture.map((msg, _))
-      })
-      .withAttributes(supervisionStrategy(resumingDecider))
+      .committablePartitionedSource(getConsumerSettings(), getSubscription())
       .map {
-        case (msg, extractedData) =>
-          Event(
-            metadata = extractedData.metadata.withChannel(msg.record.topic()),
-            body = extractedData.body,
-            context = Map("committableOffset" -> msg.committableOffset)
-          )
+        case (topicPartition, source) =>
+          source
+            .mapAsync(1)(message => {
+              val eventExtractor = message.record
+                .key()
+                .data
+                .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
+                .getOrElse(EventExtractorFactory.defaultExtractor)
+
+              eventExtractor
+                .extract(ByteString(message.record.value()), Some(message.committableOffset))
+            })
+            // .withAttributes(supervisionStrategy(resumingDecider))
+            .via(handler)
+            .mapAsync(1)(_.flatMap(event => {
+              event.getPassThrough[CommittableOffset] match {
+                case Some(offset) => offset.commitScaladsl()
+                case None =>
+                  throw new Exception("event passthrough is missed")
+              }
+            }))
+            .toMat(Sink.ignore)(Keep.right)
+            .run()
       }
-      .mapMaterializedValue[NotUsed](m => NotUsed)
+      .mapAsyncUnordered(settings.maxConcurrentPartitions)(identity)
+      .runWith(Sink.ignore)
+  }
+}
+
+case class KafkaSourceSettings(bootstrapServers: String,
+                               groupId: String,
+                               subscribedTopics: Either[Set[String], String],
+                               maxConcurrentPartitions: Int = 100,
+                               properties: Map[String, String] = Map.empty,
+                               commitTimeout: FiniteDuration = 15.seconds)
+
+class KafkaSourceBuilder() extends SourceTaskBuilder {
+
+  override def build(configString: String): KafkaSource = {
+
+    val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
+      """
+      |{
+      |  # "bootstrap-servers": "...",
+      |  # "group-id": "...",
+      |  # "topics": [],
+      |  # "topic-pattern": "event-*", // supports wildcard
+      |
+      |  "max-concurrent-partitions": 100,
+      |
+      |  # If offset commit requests are not completed within this timeout
+      |  # the returned Future is completed `TimeoutException`.
+      |  "commit-timeout": "15s",
+      |
+      |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
+      |  # can be defined in this configuration section.
+      |  properties: {}
+      |}
+    """.stripMargin
+    )
+
+    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+
+    val subscribedTopics: Either[Set[String], String] = {
+      if (config.hasPath("topics"))
+        Left(config.as[Set[String]]("topics"))
+      else
+        Right(config.as[String]("topic-pattern"))
+    }
+
+    val settings =
+      KafkaSourceSettings(
+        config.as[String]("bootstrap-servers"),
+        config.as[String]("group-id"),
+        subscribedTopics,
+        config.as[Int]("max-concurrent-partitions"),
+        config.as[Map[String, String]]("properties"),
+        config.as[FiniteDuration]("commit-timeout")
+      )
+
+    new KafkaSource(settings)
+
   }
 
-  // TODO: find a better way of the "kafkaCommittableOffset" part
-  override def getCommittingGraph(): Flow[Event, Event, NotUsed] = {
-    Flow[Event]
-      .batch(
-        max = settings.commitBatchMax, {
-          case event =>
-            val batchCommitter = event.getContext[CommittableOffset]("committableOffset") match {
-              case Some(co) => CommittableOffsetBatch.empty.updated(co)
-              case None     => CommittableOffsetBatch.empty
-            }
-            (batchCommitter, List[Event](event))
-        }
-      ) {
-        case ((batchCommitter, eventList), event) =>
-          (event.getContext[CommittableOffset]("committableOffset") match {
-            case Some(co) => batchCommitter.updated(co)
-            case None     => batchCommitter
-          }, eventList.+:(event))
-      }
-      .mapAsync(settings.commitParallelism) {
-        case (batchCommitter, eventList) =>
-          batchCommitter.commitScaladsl().map(_ => eventList)
-      }
-      .mapConcat(identity)
-      .mapMaterializedValue(m => NotUsed)
-  }
 }

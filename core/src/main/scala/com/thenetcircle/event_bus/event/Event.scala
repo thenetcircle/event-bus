@@ -23,9 +23,9 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
 case class Event(metadata: EventMetaData,
                  body: EventBody,
-                 context: Map[String, Any] = Map.empty,
                  status: EventStatus = EventStatus.PROCESSING,
-                 version: Option[String] = None) {
+                 version: Option[String] = None,
+                 passThrough: Option[Any] = None) {
 
   def uniqueName: String = s"${metadata.name}-${metadata.uuid}"
   def withNewVersion(_version: String): Event = copy(version = Some(_version))
@@ -33,10 +33,13 @@ case class Event(metadata: EventMetaData,
   def isFailed: Boolean = status == EventStatus.FAILED
   def withStatus(_status: EventStatus): Event = copy(status = _status)
 
-  def hasContext(key: String): Boolean = context.isDefinedAt(key)
-  def addContext[T](key: String, value: T): Event = copy(context = context + (key -> value))
-  def getContext[T](key: String): Option[T] =
-    if (hasContext(key)) Some(context(key).asInstanceOf[T]) else None
+  def withPassThrough[T](_passThrough: T): Event = {
+    if (passThrough.isDefined) {
+      throw new Exception("event passthrough is defined already.")
+    }
+    copy(passThrough = Some(_passThrough))
+  }
+  def getPassThrough[T]: Option[T] = passThrough.map(_.asInstanceOf[T])
 
   def withChannel(_channel: String): Event = copy(metadata = metadata.withChannel(_channel))
 
