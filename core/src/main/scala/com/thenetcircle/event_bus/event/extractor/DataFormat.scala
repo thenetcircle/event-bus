@@ -16,37 +16,13 @@
  */
 
 package com.thenetcircle.event_bus.event.extractor
-
-import akka.util.ByteString
-import com.thenetcircle.event_bus.event.{EventBody, EventMetaData}
-import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.typesafe.config.Config
 import net.ceedubs.ficus.readers.ValueReader
-
-import scala.concurrent.{ExecutionContext, Future}
-
-trait IExtractor {
-
-  /** Format of the extracted data
-    *
-    * @return EventFormat
-    */
-  def format: DataFormat
-
-  /** Extract metadata from data accroding to Format
-    *
-    * @return ExtractedData
-    */
-  def extract(data: ByteString)(implicit executor: ExecutionContext): Future[ExtractedData]
-
-}
-
-case class ExtractedData(metadata: EventMetaData, body: EventBody)
 
 object DataFormat extends Enumeration {
   type DataFormat = Value
 
-  val TEST            = Value(-1, "TEST")
+  val TEST = Value(-1, "TEST")
   val ACTIVITYSTREAMS = Value(1, "ACTIVITYSTREAMS")
 
   def apply(name: String): DataFormat = name.toUpperCase match {

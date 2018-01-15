@@ -20,7 +20,6 @@ package com.thenetcircle.event_bus.event.extractor
 import java.text.SimpleDateFormat
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event.extractor.activitystreams.ActivityStreamsExtractor
 import com.thenetcircle.event_bus.base.AsyncUnitTest
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
@@ -29,15 +28,15 @@ import spray.json.{DeserializationException, JsonParser}
 
 class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
-  private val activityStreamsExtractor: IExtractor =
-    ExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)
+  private val activityStreamsExtractor: EventExtractor =
+    EventExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)
 
-  private val testFormatExtractor: IExtractor =
-    new ActivityStreamsExtractor {
-      override val format: DataFormat = DataFormat.TEST
+  private val testFormatExtractor: EventExtractor =
+    new ActivityStreamsEventExtractor {
+      override def getFormat(): DataFormat = DataFormat.TEST
     }
 
-  behavior of "IExtractor"
+  behavior of "EventExtractor"
 
   it should "be failed, because it's not a json formatted data" in {
     var data = ByteString("""
@@ -69,7 +68,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case ExtractedData(metadata, body) =>
+        case Event(metadata, body, _, _, _) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata.name shouldEqual "user.login"
       }
@@ -92,7 +91,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case ExtractedData(metadata, body) =>
+        case Event(metadata, body, _, _, _) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData(
             "ED-providerId-message.send-actorId-59e704843e9cb",
@@ -172,7 +171,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case ExtractedData(metadata, body) =>
+        case Event(metadata, body, _, _, _) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData(
             "ED-providerId-message.send-actorId-59e704843e9cb",
@@ -195,7 +194,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
       """.stripMargin)
     testFormatExtractor.extract(data) map { d =>
       inside(d) {
-        case ExtractedData(_, body) =>
+        case Event(_, body, _, _, _) =>
           body shouldEqual EventBody(data, DataFormat.TEST)
       }
     }

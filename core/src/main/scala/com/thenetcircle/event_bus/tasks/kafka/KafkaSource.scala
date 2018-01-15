@@ -26,7 +26,7 @@ import akka.stream.Supervision.resumingDecider
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.ExtractorFactory
+import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
 import com.thenetcircle.event_bus.interface.SourceTask
 import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.scalalogging.StrictLogging
@@ -72,8 +72,8 @@ class KafkaSource(val settings: KafkaSourceSettings)(implicit context: TaskRunni
         val extractor = msg.record
           .key()
           .data
-          .map(k => ExtractorFactory.getExtractor(k.eventFormat))
-          .getOrElse(ExtractorFactory.defaultExtractor)
+          .map(k => EventExtractorFactory.getExtractor(k.eventFormat))
+          .getOrElse(EventExtractorFactory.defaultExtractor)
         val msgData = ByteString(msg.record.value())
         val extractFuture = extractor
           .extract(msgData)

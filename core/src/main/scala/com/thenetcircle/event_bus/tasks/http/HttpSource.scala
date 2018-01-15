@@ -28,9 +28,8 @@ import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{
   DataFormat,
-  ExtractedData,
-  ExtractorFactory,
-  IExtractor
+  EventExtractorFactory,
+  EventExtractor
 }
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.misc.ConfigStringParser
@@ -62,8 +61,8 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       implicit materializer: Materializer,
       executionContext: ExecutionContext
   ): Flow[HttpRequest, HttpResponse, NotUsed] = {
-    val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
-    val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
+    val extractor: EventExtractor = EventExtractorFactory.getExtractor(settings.format)
+    val unmarshaller: Unmarshaller[HttpEntity, Event] =
       Unmarshaller.byteStringUnmarshaller.andThen(
         Unmarshaller.apply(_ => data => extractor.extract(data))
       )
@@ -71,7 +70,6 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     // TODO: test failed response
     Flow[HttpRequest]
       .mapAsync(1)(request => unmarshaller.apply(request.entity))
-      .map(extractedData => Event(metadata = extractedData.metadata, body = extractedData.body))
       .via(handler)
       .mapAsync(1)(_.map(getSucceededResponse))
   }
