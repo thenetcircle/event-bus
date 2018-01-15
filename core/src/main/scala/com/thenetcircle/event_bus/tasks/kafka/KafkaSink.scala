@@ -23,31 +23,61 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.SinkTask
-import com.thenetcircle.event_bus.tasks.kafka.extended.{KafkaKey, KafkaPartitioner}
+import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.thenetcircle.event_bus.tasks.kafka.extended.{
+  EventSerializer,
+  KafkaKey,
+  KafkaKeySerializer,
+  KafkaPartitioner
+}
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
-case class KafkaSinkSettings(producerSettings: ProducerSettings[ProducerKey, ProducerValue])
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
-class KafkaSink(val settings: KafkaSinkSettings)(implicit context: TaskRunningContext)
-    extends SinkTask
-    with StrictLogging {
+case class KafkaSinkSettings(bootstrapServers: String,
+                             parallelism: Int = 100,
+                             closeTimeout: FiniteDuration = 60.seconds,
+                             properties: Map[String, String] = Map.empty)
 
-  import KafkaSink._
+class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
 
-  private val producerSettings = settings.producerSettings
-    .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
+  def getProducerSettings()(
+      implicit context: TaskRunningContext
+  ): ProducerSettings[ProducerKey, ProducerValue] = {
+    var _producerSettings = ProducerSettings[ProducerKey, ProducerValue](
+      context.getEnvironment().getConfig(),
+      new KafkaKeySerializer,
+      new EventSerializer
+    )
 
-  override def getGraph(): Flow[Event, Event, NotUsed] =
+    _producerSettings = _producerSettings
+      .withParallelism(settings.parallelism)
+      .withCloseTimeout(settings.closeTimeout)
+      .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
+      .withBootstrapServers(settings.bootstrapServers)
+
+    _producerSettings
+  }
+
+  def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {
+    Message(KafkaSink.getProducerRecordFromEvent(event), event)
+  }
+
+  override def getHandler()(
+      implicit context: TaskRunningContext
+  ): Flow[Event, Future[Event], NotUsed] = {
     Flow[Event]
-      .map(event => {
-        Message(getProducerRecordFromEvent(event), event)
-      })
-      // TODO: take care of Supervision of mapAsync
-      .via(Producer.flow(producerSettings))
-      .map(msg => msg.message.passThrough)
+      .map(createMessage)
+      // TODO: take care of Supervision of mapAsync inside flow
+      .via(Producer.flow(getProducerSettings()))
+      .map(result => Future.successful(result.message.passThrough))
+  }
 }
 
 object KafkaSink {
@@ -68,4 +98,37 @@ object KafkaSink {
       value
     )
   }
+}
+
+class KafkaSinkBuilder() extends SinkTaskBuilder {
+
+  override def build(configString: String): KafkaSink = {
+    val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
+      """
+      |{
+      |  # "bootstrap-servers": "",
+      |  # Tuning parameter of how many sends that can run in parallel.
+      |  "parallelism": 100,
+      |  # How long to wait for `KafkaProducer.close`
+      |  "close-timeout": "60s",
+      |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
+      |  # can be defined in this configuration section.
+      |  "properties": {}
+      |}
+      """.stripMargin
+    )
+
+    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+
+    val settings =
+      KafkaSinkSettings(
+        config.as[String]("bootstrap-servers"),
+        config.as[Int]("parallelism"),
+        config.as[FiniteDuration]("close-timeout"),
+        config.as[Map[String, String]]("properties")
+      )
+
+    new KafkaSink(settings)
+  }
+
 }
