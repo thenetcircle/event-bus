@@ -23,10 +23,11 @@ import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.story.TaskRunningContext
 
 import scala.concurrent.Future
+import scala.util.Try
 
 trait SourceTask extends Task {
 
-  def runWith(handler: Flow[Event, Future[Event], NotUsed])(
+  def runWith(handler: Flow[Event, Try[Event], NotUsed])(
       implicit context: TaskRunningContext
   ): Future[Done]
 

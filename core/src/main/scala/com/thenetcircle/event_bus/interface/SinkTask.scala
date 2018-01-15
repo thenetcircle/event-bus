@@ -22,10 +22,10 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.story.TaskRunningContext
 
-import scala.concurrent.Future
+import scala.util.Try
 
 trait SinkTask extends Task {
 
-  def getHandler()(implicit context: TaskRunningContext): Flow[Event, Future[Event], NotUsed]
+  def getHandler()(implicit context: TaskRunningContext): Flow[Event, Try[Event], NotUsed]
 
 }

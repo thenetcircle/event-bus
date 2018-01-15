@@ -15,7 +15,7 @@ object Dependencies {
   val akkaStreamKafka = "com.typesafe.akka" %% "akka-stream-kafka" % "0.17"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 
-  val curator = "org.apache.curator" % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, curator need to exclude original one
+  val curator = "org.apache.curator" % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, needs to exclude original one
   val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.11" exclude ("org.slf4j", "slf4j-log4j12")
 
   val sprayJson = "io.spray" %% "spray-json" % "1.3.3"

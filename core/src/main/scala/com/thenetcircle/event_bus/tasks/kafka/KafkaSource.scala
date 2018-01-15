@@ -36,6 +36,7 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Failure, Success, Try}
 
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
@@ -71,7 +72,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def runWith(
-      handler: Flow[Event, Future[Event], NotUsed]
+      handler: Flow[Event, Try[Event], NotUsed]
   )(implicit context: TaskRunningContext): Future[Done] = {
     Consumer
       .committablePartitionedSource(getConsumerSettings(), getSubscription())
@@ -90,13 +91,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
             })
             // .withAttributes(supervisionStrategy(resumingDecider))
             .via(handler)
-            .mapAsync(1)(_.flatMap(event => {
-              event.getPassThrough[CommittableOffset] match {
-                case Some(offset) => offset.commitScaladsl()
-                case None =>
-                  throw new Exception("event passthrough is missed")
-              }
-            }))
+            .mapAsync(1) {
+              case Success(event) =>
+                event.getPassThrough[CommittableOffset] match {
+                  case Some(co) => co.commitScaladsl()
+                  case None     => throw new Exception("event passthrough is missed")
+                }
+              case Failure(ex) => throw ex
+            }
             .toMat(Sink.ignore)(Keep.right)
             .run()
       }

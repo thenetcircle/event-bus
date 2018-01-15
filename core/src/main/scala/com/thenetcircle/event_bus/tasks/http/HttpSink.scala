@@ -27,6 +27,7 @@ import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge}
 import akka.stream.stage._
+import akka.util.ByteString
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.interface.SinkTask
 import com.thenetcircle.event_bus.story.TaskRunningContext
@@ -41,44 +42,65 @@ case class HttpSinkSettings(host: String,
                             port: Int,
                             maxRetryTimes: Int,
                             defaultRequest: HttpRequest,
-                            expectedResponse: Option[String] = None,
-                            connectionPoolSettingsOption: Option[ConnectionPoolSettings] = None)
+                            maxConnections: Int = 4,
+                            minConnections: Int = 0,
+                            connectionMaxRetries: Int = 5,
+                            maxOpenRequests: Int = 32,
+                            pipeliningLimit: Int = 1,
+                            idleTimeout: String = "30 s")
 
-class HttpSink(
-    val settings: HttpSinkSettings,
-    overriddenSendingFlow: Option[Flow[(HttpRequest, Event), (Try[HttpResponse], Event), _]] = None
-)(implicit context: TaskRunningContext)
+class HttpSink(val settings: HttpSinkSettings,
+               responseCheckFunc: (StatusCode, Seq[HttpHeader], String) => Boolean)
     extends SinkTask
     with StrictLogging {
 
-  implicit val system: ActorSystem = context.getActorSystem()
-  implicit val materializer: Materializer = context.getMaterializer()
-  implicit val executionContext: ExecutionContext = context.getExecutionContext()
+  def checkResponse(
+      response: HttpResponse
+  )(implicit context: TaskRunningContext): Future[Boolean] = {
+    implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
-  // TODO: double check when it creates a new pool
-  private val sendingFlow =
-    overriddenSendingFlow.getOrElse(settings.connectionPoolSettingsOption match {
-      case Some(_poolSettings) =>
-        Http().cachedHostConnectionPool[Event](settings.host, settings.port, _poolSettings)
-      case None => Http().cachedHostConnectionPool[Event](settings.host, settings.port)
-    })
+    response.entity.dataBytes
+      .runFold(ByteString(""))(_ ++ _)
+      .map(body => responseCheckFunc(response.status, response.headers, body.utf8String))
+  }
 
-  private val sender: Flow[Event, (Try[HttpResponse], Event), NotUsed] =
+  def createRequest(event: Event): HttpRequest = {
+    settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+  }
+
+  def getConnectionPoolSettings(): ConnectionPoolSettings =
+    ConnectionPoolSettings(s"""akka.http.host-connection-pool {
+                              |  max-connections = ${settings.maxConnections}
+                              |  min-connections = ${settings.minConnections}
+                              |  max-retries = ${settings.connectionMaxRetries}
+                              |  max-open-requests = ${settings.maxOpenRequests}
+                              |  pipelining-limit = ${settings.pipeliningLimit}
+                              |  idle-timeout = ${settings.idleTimeout}
+                              |}""".stripMargin)
+
+  def sendAndCheck()(
+      implicit context: TaskRunningContext
+  ): Flow[(HttpRequest, Event), Try[Event], NotUsed] = {}
+
+  override def getHandler()(
+      implicit context: TaskRunningContext
+  ): Flow[Event, Try[Event], NotUsed] = {
+
+    implicit val system: ActorSystem = context.getActorSystem()
+    implicit val materializer: Materializer = context.getMaterializer()
+
+    val sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), NotUsed] =
+      Http().superPool[Event](settings = getConnectionPoolSettings()).map {
+        case (Success(httpResponse), event) =>
+          if (checkResponse(httpResponse)) Success(event)
+          else Failure(new Exception("response from the endpoint is not expected."))
+        case f => f
+      }
+
     Flow[Event]
-      .map(event => {
-        // build request from settings
-        val request =
-          settings.defaultRequest.withEntity(HttpEntity(event.body.data))
-        logger.debug(s"Sending new request to EndPoint")
-        (request, event)
-      })
-      .via(sendingFlow)
+      .map(_event => (createRequest(_event), _event))
+      .via(sender)
 
-  private def checkResponse(statusCode: StatusCode, response: String): Boolean = {
-    statusCode.isSuccess() && (settings.expectedResponse match {
-      case Some(ep) => response == ep
-      case None     => true
-    })
   }
 
   override def getGraph(): Flow[Event, Event, NotUsed] =

@@ -37,8 +37,8 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.{Success, Try}
 
 case class KafkaSinkSettings(bootstrapServers: String,
                              parallelism: Int = 100,
@@ -77,12 +77,12 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   override def getHandler()(
       implicit context: TaskRunningContext
-  ): Flow[Event, Future[Event], NotUsed] = {
+  ): Flow[Event, Try[Event], NotUsed] = {
     Flow[Event]
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
       .via(Producer.flow(getProducerSettings()))
-      .map(result => Future.successful(result.message.passThrough))
+      .map(result => Success(result.message.passThrough))
   }
 }
 

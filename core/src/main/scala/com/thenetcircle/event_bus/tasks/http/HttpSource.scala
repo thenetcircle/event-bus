@@ -28,8 +28,8 @@ import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{
   DataFormat,
-  EventExtractorFactory,
-  EventExtractor
+  EventExtractor,
+  EventExtractorFactory
 }
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.misc.ConfigStringParser
@@ -39,7 +39,7 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 case class HttpSourceSettings(interface: String = "0.0.0.0",
                               port: Int = 8000,
@@ -57,7 +57,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     HttpResponse(entity = HttpEntity(settings.succeededResponse))
   }
 
-  def getInternalHandler(handler: Flow[Event, Future[Event], NotUsed])(
+  def getInternalHandler(handler: Flow[Event, Try[Event], NotUsed])(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
   ): Flow[HttpRequest, HttpResponse, NotUsed] = {
@@ -71,30 +71,33 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     Flow[HttpRequest]
       .mapAsync(1)(request => unmarshaller.apply(request.entity))
       .via(handler)
-      .mapAsync(1)(_.map(getSucceededResponse))
+      .map {
+        case Success(event) => getSucceededResponse(event)
+        case Failure(ex)    => HttpResponse(entity = HttpEntity(ex.getMessage))
+      }
   }
 
+  def getServerSettings(): ServerSettings = ServerSettings(s"""
+                      |akka.http.server {
+                      |  idle-timeout = ${settings.idleTimeout}
+                      |  request-timeout = ${settings.requestTimeout}
+                      |  bind-timeout = ${settings.bindTimeout}
+                      |  linger-timeout = ${settings.lingerTimeout}
+                      |  max-connections = ${settings.maxConnections}
+                      |}
+      """.stripMargin)
+
   override def runWith(
-      handler: Flow[Event, Future[Event], NotUsed]
+      handler: Flow[Event, Try[Event], NotUsed]
   )(implicit context: TaskRunningContext): Future[Done] = {
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()
-
-    val serverSettings = ServerSettings(s"""
-        |akka.http.server {
-        |  idle-timeout = ${settings.idleTimeout}
-        |  request-timeout = ${settings.requestTimeout}
-        |  bind-timeout = ${settings.bindTimeout}
-        |  linger-timeout = ${settings.lingerTimeout}
-        |  max-connections = ${settings.maxConnections}
-        |}
-      """.stripMargin)
 
     val httpBindFuture =
       Http().bindAndHandle(
         handler = getInternalHandler(handler),
         interface = settings.interface,
-        settings = serverSettings
+        settings = getServerSettings()
       )
 
     httpBindFuture.onComplete {
