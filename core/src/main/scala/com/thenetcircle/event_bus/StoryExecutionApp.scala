@@ -31,7 +31,7 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object StoryExecutor extends App with StrictLogging {
+object StoryExecutionApp extends App with StrictLogging {
 
   logger.info("Application is initializing.")
 

@@ -16,35 +16,29 @@
  */
 
 package com.thenetcircle.event_bus.story
-
-import com.thenetcircle.event_bus.interface.SourceTaskBuilder
-import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
-import com.typesafe.scalalogging.StrictLogging
-import net.ceedubs.ficus.Ficus._
-
+/*
 /** Builds Story By Config */
 class StoryBuilder() extends SourceTaskBuilder with StrictLogging {
 
   /**
-   * Builds Story by String Config
-   *
-   * example:
-   * ```
-   * {
-   *   # "name": "..."
-   *   # "sourceTask": ["sourceTask-type", "settings"]
-   *   # "transformTasks": [
-   *   #   ["op-type", "settings"],
-   *   #   ...
-   *   # ]
-   *   # "sinkTask": ["sinkTask-type", "settings"]
-   *   # "fallbackTasks": [
-   *     ["sinkTask-type", "settings"]
-   *   ]
-   * }
-   * ```
-   */
+ * Builds Story by String Config
+ *
+ * example:
+ * ```
+ * {
+ *   # "name": "..."
+ *   # "sourceTask": ["sourceTask-type", "settings"]
+ *   # "transformTasks": [
+ *   #   ["op-type", "settings"],
+ *   #   ...
+ *   # ]
+ *   # "sinkTask": ["sinkTask-type", "settings"]
+ *   # "fallbackTasks": [
+ *     ["sinkTask-type", "settings"]
+ *   ]
+ * }
+ * ```
+ */
   def build(configString: String)(implicit context: TaskContext): Story = {
 
     try {
@@ -134,3 +128,4 @@ class StoryBuilder() extends SourceTaskBuilder with StrictLogging {
   }
 
 }
+ */

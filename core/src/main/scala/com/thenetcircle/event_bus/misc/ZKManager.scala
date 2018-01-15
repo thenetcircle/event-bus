@@ -19,13 +19,12 @@ package com.thenetcircle.event_bus.misc
 
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.curator.framework.recipes.leader.LeaderLatch
+import org.apache.curator.framework.recipes.leader.{LeaderSelector, LeaderSelectorListenerAdapter}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration._
 
 class ZKManager(connectString: String)(implicit environment: Environment) extends StrictLogging {
 
@@ -94,12 +93,16 @@ class ZKManager(connectString: String)(implicit environment: Environment) extend
     )
   }
 
-  def getLeadership(relativePath: String, timeout: FiniteDuration, id: Option[String]): Boolean = {
-
-    val leanderLatch = if (id.isDefined) {
-      new LeaderLatch()
-    }
-
+  def requestLeadership(relativePath: String,
+                        callback: (LeaderSelector, ZKManager) => Unit): Unit = {
+    val zKManager = this
+    val leaderSelector =
+      new LeaderSelector(client, getAbsPath(relativePath), new LeaderSelectorListenerAdapter {
+        override def takeLeadership(client: CuratorFramework): Unit = {
+          callback(this, zKManager)
+        }
+      })
+    leaderSelector.start()
   }
 
 }
