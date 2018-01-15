@@ -17,4 +17,4 @@
 
 package com.thenetcircle.event_bus.interface
 
-trait Task {}
+trait Task

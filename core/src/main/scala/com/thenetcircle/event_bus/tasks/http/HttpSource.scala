@@ -17,202 +17,140 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
-import akka.NotUsed
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
-import akka.stream.scaladsl.{Flow, GraphDSL, Source}
-import akka.stream.stage._
+import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.event.extractor.{ExtractedData, ExtractorFactory, IExtractor}
-import com.thenetcircle.event_bus.interface.SourceTask
+import com.thenetcircle.event_bus.event.extractor.{
+  DataFormat,
+  ExtractedData,
+  ExtractorFactory,
+  IExtractor
+}
+import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import net.ceedubs.ficus.Ficus._
 
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
-case class HttpSourceSettings(interface: String,
-                              port: Int,
-                              format: DataFormat,
-                              maxConnections: Int,
-                              perConnectionParallelism: Int,
-                              succeededResponse: String,
-                              errorResponse: String,
-                              serverSettingsOption: Option[ServerSettings] = None)
+case class HttpSourceSettings(interface: String = "0.0.0.0",
+                              port: Int = 8000,
+                              format: DataFormat = DataFormat("ActivityStreams"),
+                              maxConnections: Int = 1024,
+                              succeededResponse: String = "ok",
+                              requestTimeout: String = "10 s",
+                              idleTimeout: String = "60 s",
+                              bindTimeout: String = "1s",
+                              lingerTimeout: String = "1 min")
 
-class HttpSource(
-    val settings: HttpSourceSettings,
-    overriddenHttpBind: Option[Source[Flow[HttpResponse, HttpRequest, Any], _]] = None
-)(implicit context: TaskRunningContext)
-    extends SourceTask
-    with StrictLogging {
+class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  implicit val system: ActorSystem = context.getActorSystem()
-  implicit val materializer: Materializer = context.getMaterializer()
-  implicit val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
-  implicit val executionContext: ExecutionContext = context.getExecutionContext()
+  def getSucceededResponse(event: Event): HttpResponse = {
+    HttpResponse(entity = HttpEntity(settings.succeededResponse))
+  }
 
-  private val httpBind: Source[Flow[HttpResponse, HttpRequest, Any], _] =
-    overriddenHttpBind.getOrElse(settings.serverSettingsOption match {
-      case Some(ss) =>
-        Http()
-          .bind(interface = settings.interface, port = settings.port, settings = ss)
-          .map(_.flow)
-      case None =>
-        Http()
-          .bind(interface = settings.interface, port = settings.port)
-          .map(_.flow)
-    })
-
-  override def getGraph(): Source[Event, NotUsed] =
-    httpBind
-      .flatMapMerge(
-        settings.maxConnections,
-        httpBindFlow => {
-          Source.fromGraph(GraphDSL.create() {
-            implicit builder =>
-              import GraphDSL.Implicits._
-
-              val client = builder.add(httpBindFlow)
-              val requestHandler = builder.add(
-                new HttpRequestHandler(
-                  ex =>
-                    HttpResponse(
-                      StatusCodes.BadRequest,
-                      entity = HttpEntity(settings.errorResponse)
-                  )
-                )
-              )
-              val responseHolder =
-                Flow[Future[HttpResponse]]
-                  .mapAsync(settings.perConnectionParallelism)(identity)
-
-              // workflow
-              // since Http().bind using join, The direction is a bit different
-              // format: off
-
-              client ~> requestHandler.in
-
-                        requestHandler.out0 ~> responseHolder ~> client
-
-              // format: on
-
-              SourceShape(requestHandler.out1)
-          })
-        }
+  def getInternalHandler(handler: Flow[Event, Future[Event], NotUsed])(
+      implicit materializer: Materializer,
+      executionContext: ExecutionContext
+  ): Flow[HttpRequest, HttpResponse, NotUsed] = {
+    val extractor: IExtractor = ExtractorFactory.getExtractor(settings.format)
+    val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
+      Unmarshaller.byteStringUnmarshaller.andThen(
+        Unmarshaller.apply(_ => data => extractor.extract(data))
       )
-      .mapMaterializedValue(m => NotUsed)
 
-  override def getCommittingGraph(): Flow[Event, Event, NotUsed] =
-    Flow[Event].map(event => {
-      event
-        .getContext[Promise[HttpResponse]]("responsePromise")
-        .foreach(p => p.success(HttpResponse(entity = HttpEntity(settings.succeededResponse))))
-      event
-    })
+    // TODO: test failed response
+    Flow[HttpRequest]
+      .mapAsync(1)(request => unmarshaller.apply(request.entity))
+      .map(extractedData => Event(metadata = extractedData.metadata, body = extractedData.body))
+      .via(handler)
+      .mapAsync(1)(_.map(getSucceededResponse))
+  }
+
+  override def runWith(
+      handler: Flow[Event, Future[Event], NotUsed]
+  )(implicit context: TaskRunningContext): Future[Done] = {
+    implicit val materializer: Materializer = context.getMaterializer()
+    implicit val executionContext: ExecutionContext = context.getExecutionContext()
+
+    val serverSettings = ServerSettings(s"""
+        |akka.http.server {
+        |  idle-timeout = ${settings.idleTimeout}
+        |  request-timeout = ${settings.requestTimeout}
+        |  bind-timeout = ${settings.bindTimeout}
+        |  linger-timeout = ${settings.lingerTimeout}
+        |  max-connections = ${settings.maxConnections}
+        |}
+      """.stripMargin)
+
+    val httpBindFuture =
+      Http().bindAndHandle(
+        handler = getInternalHandler(handler),
+        interface = settings.interface,
+        settings = serverSettings
+      )
+
+    httpBindFuture.onComplete {
+      case Success(binding) => binding.unbind()
+      case Failure(ex) =>
+        logger.error(s"HttpBindFuture failed with error $ex")
+    }
+
+    httpBindFuture.map(_ => Done)
+  }
+
 }
 
-/**
- * Does transform a incoming [[HttpRequest]] to a [[Future]] of [[HttpResponse]]
- * and a [[Event]] with a committer to complete the [[Future]]
- *
- * {{{
- *                             +------------+
- *            In[HttpRequest] ~~>           |
- *                             |           ~~> Out1[Event]
- * Out0[Future[HttpResponse]] <~~           |
- *                             +------------+
- * }}}
- *
- * '''Emits when'''
- * a incoming [[HttpRequest]] successful transformed to a [[Event]],
- * the Future of [[HttpResponse]] will always emit to out0
- *
- * '''Backpressures when''' any of the outputs backpressure
- *
- * '''Completes when''' upstream completes
- *
- * '''Cancels when''' when any downstreams cancel
- */
-final class HttpRequestHandler(buildErrorResponseFunc: Throwable => HttpResponse)(
-    implicit executor: ExecutionContext,
-    extractor: IExtractor
-) extends GraphStage[FanOutShape2[HttpRequest, Future[HttpResponse], Event]] {
+class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
 
-  val unmarshaller: Unmarshaller[HttpEntity, ExtractedData] =
-    Unmarshaller.byteStringUnmarshaller.andThen(
-      Unmarshaller.apply(_ => data => extractor.extract(data))
-    )
+  override def build(configString: String): HttpSource = {
 
-  val in: Inlet[HttpRequest] = Inlet("inlet-http-request")
-  val out0: Outlet[Future[HttpResponse]] = Outlet("outlet-http-response")
-  val out1: Outlet[Event] = Outlet("outlet-event")
+    try {
 
-  override def shape: FanOutShape2[HttpRequest, Future[HttpResponse], Event] =
-    new FanOutShape2(in, out0, out1)
+      val defaultConfig: Config =
+        ConfigStringParser.convertStringToConfig("""
+          |{
+          |  "interface": "0.0.0.0",
+          |  "port": 8000,
+          |  "format": "ActivityStreams",
+          |  "max-connections": 1024,
+          |  "succeeded-response": "ok",
+          |  "request-timeout": "10 s",
+          |  "idle-timeout": "60 s",
+          |  "bind-timeout": "1s",
+          |  "linger-timeout": "1 min",
+          |}""".stripMargin)
 
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-    new GraphStageLogic(shape) with StageLogging {
+      val config: Config =
+        ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
-      def tryPullIn(): Unit =
-        if (!hasBeenPulled(in) && isAvailable(out0) && isAvailable(out1)) {
-          log.debug("tryPull in")
-          tryPull(in)
-        }
+      val settings = HttpSourceSettings(
+        config.as[String]("interface"),
+        config.as[Int]("port"),
+        config.as[DataFormat]("format"),
+        config.as[Int]("max-connections"),
+        config.as[String]("succeeded-response"),
+        config.as[String]("request-timeout"),
+        config.as[String]("idle-timeout"),
+        config.as[String]("bind-timeout"),
+        config.as[String]("linger-timeout")
+      )
 
-      setHandler(in, new InHandler {
-        override def onPush(): Unit = {
-          log.debug("onPush in -> push out0")
-          push(out0, requestPreprocess(grab(in)))
-        }
-      })
+      new HttpSource(settings)
 
-      setHandler(out0, new OutHandler {
-        override def onPull(): Unit = {
-          log.debug("onPull out0")
-          tryPullIn()
-        }
-      })
-
-      setHandler(out1, new OutHandler {
-        override def onPull(): Unit = {
-          log.debug("onPull out1")
-          tryPullIn()
-        }
-      })
-
-      def requestPreprocess(request: HttpRequest): Future[HttpResponse] = {
-        val responsePromise = Promise[HttpResponse]
-        val extractedDataFuture =
-          unmarshaller.apply(request.entity)(executor, materializer)
-        val callback = getEventExtractingCallback(responsePromise)
-        extractedDataFuture.onComplete(result => callback.invoke(result))
-
-        responsePromise.future
-      }
-
-      def getEventExtractingCallback(
-          responsePromise: Promise[HttpResponse]
-      ): AsyncCallback[Try[ExtractedData]] =
-        getAsyncCallback[Try[ExtractedData]] {
-          case Success(extractedData) =>
-            val event = Event(
-              metadata = extractedData.metadata,
-              body = extractedData.body,
-              context = Map("responsePromise" -> responsePromise)
-            )
-            log.debug("push out1")
-            push(out1, event)
-
-          case Failure(ex) =>
-            log.info(s"Request send failed with error: ${ex.getMessage}")
-            responsePromise.success(buildErrorResponseFunc(ex))
-            tryPullIn()
-        }
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"Build HttpSource failed with error: $ex")
+        throw ex
     }
+  }
 }

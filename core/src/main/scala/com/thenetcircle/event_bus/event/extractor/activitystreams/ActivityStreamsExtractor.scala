@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.event.extractor.activitystreams
 
 import java.text.SimpleDateFormat
 
-import io.jvm.uuid.UUID
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
@@ -39,10 +38,10 @@ class ActivityStreamsExtractor extends IExtractor with StrictLogging {
       data: ByteString
   )(implicit executor: ExecutionContext): Future[ExtractedData] = Future {
     try {
-      val jsonAst  = data.utf8String.parseJson
+      val jsonAst = data.utf8String.parseJson
       val activity = jsonAst.convertTo[Activity]
 
-      val uuid: String = activity.id.getOrElse(UUID.random.toString)
+      val uuid: String = activity.id.getOrElse(java.util.UUID.randomUUID().toString)
       val name: String = activity.title
       val published: Long = activity.published match {
         case Some(p) =>
@@ -54,10 +53,12 @@ class ActivityStreamsExtractor extends IExtractor with StrictLogging {
           System.currentTimeMillis()
       }
       val provider = activity.provider.flatMap(_.id)
-      val actor    = activity.actor.flatMap(actor => Some(actor.id.getOrElse("")))
+      val actor = activity.actor.flatMap(actor => Some(actor.id.getOrElse("")))
 
-      ExtractedData(metadata = EventMetaData(uuid, name, published, provider, actor),
-                    body = EventBody(data, format))
+      ExtractedData(
+        metadata = EventMetaData(uuid, name, published, provider, actor),
+        body = EventBody(data, format)
+      )
     } catch {
       case ex: Throwable =>
         logger.warn(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")

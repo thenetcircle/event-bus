@@ -17,14 +17,17 @@
 
 package com.thenetcircle.event_bus.interface
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.TaskRunningContext
+
+import scala.concurrent.Future
 
 trait SourceTask extends Task {
 
-  def getGraph(): Source[Event, NotUsed]
-
-  def getCommittingGraph(): Flow[Event, Event, NotUsed]
+  def runWith(handler: Flow[Event, Future[Event], NotUsed])(
+      implicit context: TaskRunningContext
+  ): Future[Done]
 
 }
