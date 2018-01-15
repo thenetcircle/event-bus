@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.misc
 
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.curator.framework.recipes.leader.{LeaderSelector, LeaderSelectorListenerAdapter}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
@@ -93,7 +92,7 @@ class ZKManager(connectString: String)(implicit environment: Environment) extend
     )
   }
 
-  def requestLeadership(relativePath: String,
+  /*def requestLeadership(relativePath: String,
                         callback: (LeaderSelector, ZKManager) => Unit): Unit = {
     val zKManager = this
     val leaderSelector =
@@ -103,7 +102,7 @@ class ZKManager(connectString: String)(implicit environment: Environment) extend
         }
       })
     leaderSelector.start()
-  }
+  }*/
 
 }
 

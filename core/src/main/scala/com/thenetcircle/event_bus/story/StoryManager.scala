@@ -17,8 +17,11 @@
 
 package com.thenetcircle.event_bus.story
 
+import akka.actor.{ActorRef, ActorSystem}
 import com.thenetcircle.event_bus.misc.DaoFactory
 import com.thenetcircle.event_bus.story.StoryDAO.StoryInfo
+
+import scala.collection.mutable
 
 class StoryManager(
     daoFactory: DaoFactory,
@@ -26,15 +29,20 @@ class StoryManager(
     taskContextFactory: TaskContextFactory
 )(implicit environment: ExecutionEnvironment) {
 
-  val storyDAO: StoryDAO = daoFactory.getStoryDAO()
+  implicit val system: ActorSystem = environment.getActorSystem()
+  private val storyDAO: StoryDAO = daoFactory.getStoryDAO()
+  private val runningStories: mutable.Set[ActorRef] = mutable.Set.empty
 
   def execute(): Unit = {
-
     val candidateStories: List[String] =
-      storyDAO.getAvailableStories(environment.getExecutorGroup())
+      storyDAO.getAvailableStories(environment.getExecutorGroupName())
 
-    candidateStories.foreach(storyName => {})
+    candidateStories.foreach(storyName => {
+      val story = createStory(storyName)
+      val storyContainer = system.actorOf(StoryContainer.props(story), storyName)
 
+      runningStories += storyContainer
+    })
   }
 
   def createStory(storyName: String): Story = {

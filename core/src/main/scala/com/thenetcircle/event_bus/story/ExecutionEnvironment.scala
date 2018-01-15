@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import com.thenetcircle.event_bus.misc.Environment
 import com.typesafe.config.Config
 
-class ExecutionEnvironment(executorGroup: String,
+class ExecutionEnvironment(executorGroupName: String,
                            executorId: String,
                            appName: String,
                            appVersion: String,
@@ -37,7 +37,7 @@ class ExecutionEnvironment(executorGroup: String,
       systemConfig: Config
     ) {
 
-  def getExecutorGroup(): String = executorGroup
+  def getExecutorGroupName(): String = executorGroupName
   def getExecutorId(): String = executorId
   def getActorSystem(): ActorSystem = actorSystem
 
@@ -46,12 +46,12 @@ class ExecutionEnvironment(executorGroup: String,
 object ExecutionEnvironment {
 
   def apply(
-      executorGroup: String,
+      executorGroupName: String,
       executorId: String
   )(implicit environment: Environment, system: ActorSystem): ExecutionEnvironment = {
 
     new ExecutionEnvironment(
-      executorGroup,
+      executorGroupName,
       executorId,
       environment.getAppName(),
       environment.getAppVersion(),

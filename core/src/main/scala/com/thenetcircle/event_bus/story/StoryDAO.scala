@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.thenetcircle.event_bus.story.StoryDAO.StoryInfo
-import org.apache.curator.framework.recipes.leader.LeaderLatch
 
 class StoryDAO(zKManager: ZKManager) {
 
@@ -47,12 +46,6 @@ class StoryDAO(zKManager: ZKManager) {
       zKManager.getChildrenData(s"$storyRootPath/fallbacks").map(_.map(_._2))
 
     StoryInfo(storyName, status, settings, source, sink, transforms, fallbacks)
-  }
-
-  def hasLeadership(storyName: String): Boolean = {
-
-    val leaderLatch = new LeaderLatch(zKManager.client, )
-
   }
 
 }
