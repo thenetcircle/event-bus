@@ -72,7 +72,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def runWith(
-      handler: Flow[Event, Try[Event], NotUsed]
+      handler: Flow[Event, (Try[Done], Event), NotUsed]
   )(implicit context: TaskRunningContext): Future[Done] = {
     Consumer
       .committablePartitionedSource(getConsumerSettings(), getSubscription())
@@ -89,16 +89,16 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
               eventExtractor
                 .extract(ByteString(message.record.value()), Some(message.committableOffset))
             })
-            // .withAttributes(supervisionStrategy(resumingDecider))
             .via(handler)
             .mapAsync(1) {
-              case Success(event) =>
+              case (Success(_), event) =>
                 event.getPassThrough[CommittableOffset] match {
                   case Some(co) => co.commitScaladsl()
                   case None     => throw new Exception("event passthrough is missed")
                 }
-              case Failure(ex) => throw ex
+              case (Failure(ex), _) => throw ex
             }
+            // .withAttributes(supervisionStrategy(resumingDecider))
             .toMat(Sink.ignore)(Keep.right)
             .run()
       }

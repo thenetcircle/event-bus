@@ -17,54 +17,70 @@
 
 package com.thenetcircle.event_bus.tasks.misc
 
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.StrictLogging
 
-class TopicResolverTransform(_topicMapping: Map[String, String], defaultTopic: String)
-    extends TransformTask {
+import scala.util.{Failure, Success, Try}
 
-  private var topicMapping = _topicMapping
+class TopicResolverTransform(defaultTopic: String) extends TransformTask with StrictLogging {
 
-  // TODO: lock
-  def updateTopicMapping(_topicMapping: Map[String, String]): Unit =
-    topicMapping = _topicMapping
+  private var inited: Boolean = false
+  private var mapping: Map[String, Map[String, String]] = Map.empty
+  private var index: Map[String, String] = Map.empty
+
+  def init(): Unit = if (!inited) {
+    // get data from zookeeper
+    inited = true
+  }
+
+  def getIndex(): Map[String, String] = synchronized(index)
+  def updateIndex(_mapping: Map[String, Map[String, String]]): Unit = synchronized {
+    // calculate index
+  }
 
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
     val eventName = event.metadata.name
-    val topicOption = topicMapping
-      .find { case (key, _) => eventName matches key }
+    val topicOption = getIndex()
+      .find { case (topicPattern, _) => eventName matches topicPattern }
       .map(_._2)
+
     event.withChannel(topicOption.getOrElse(defaultTopic))
   }
 
-  override def getGraph(): Flow[Event, Event, NotUsed] = Flow[Event].map(resolveEvent)
+  override def getHandler()(
+      implicit context: TaskRunningContext
+  ): Flow[Event, (Try[Done], Event), NotUsed] =
+    Flow[Event].map(event => {
+      Try(resolveEvent(event)) match {
+        case Success(newEvent) => (Success(Done), newEvent)
+        case Failure(ex) =>
+          logger.error(s"resolve topic failed with error $ex")
+          (Failure(ex), event)
+      }
+    })
 
 }
 
 class TopicResolverTransformBuilder() extends TransformTaskBuilder {
 
-  val defaultConfig: Config =
-    ConfigStringParser.convertStringToConfig("""
+  override def build(configString: String): TopicResolverTransform = {
+    val defaultConfig: Config =
+      ConfigStringParser.convertStringToConfig("""
       |{
       |  "default_topic": "event-default"
       |}
     """.stripMargin)
 
-  override def build(configString: String)(implicit context: TaskRunningContext) = {
-
     val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
 
-    val defaultTopic = config.getString("default_topic")
-    val _mapping: Map[String, String] = Map.empty
-
-    new TopicResolverTransform(_mapping, defaultTopic)
-
+    new TopicResolverTransform(config.getString("default_topic"))
   }
 
 }

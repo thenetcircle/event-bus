@@ -57,7 +57,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     HttpResponse(entity = HttpEntity(settings.succeededResponse))
   }
 
-  def getInternalHandler(handler: Flow[Event, Try[Event], NotUsed])(
+  def getInternalHandler(handler: Flow[Event, (Try[Done], Event), NotUsed])(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
   ): Flow[HttpRequest, HttpResponse, NotUsed] = {
@@ -72,8 +72,8 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       .mapAsync(1)(request => unmarshaller.apply(request.entity))
       .via(handler)
       .map {
-        case Success(event) => getSucceededResponse(event)
-        case Failure(ex)    => HttpResponse(entity = HttpEntity(ex.getMessage))
+        case (Success(_), event) => getSucceededResponse(event)
+        case (Failure(ex), _)    => HttpResponse(entity = HttpEntity(ex.getMessage))
       }
   }
 
@@ -88,7 +88,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       """.stripMargin)
 
   override def runWith(
-      handler: Flow[Event, Try[Event], NotUsed]
+      handler: Flow[Event, (Try[Done], Event), NotUsed]
   )(implicit context: TaskRunningContext): Future[Done] = {
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()

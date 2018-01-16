@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.kafka
 
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
@@ -77,12 +77,12 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   override def getHandler()(
       implicit context: TaskRunningContext
-  ): Flow[Event, Try[Event], NotUsed] = {
+  ): Flow[Event, (Try[Done], Event), NotUsed] = {
     Flow[Event]
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
       .via(Producer.flow(getProducerSettings()))
-      .map(result => Success(result.message.passThrough))
+      .map(result => (Success(Done), result.message.passThrough))
   }
 }
 

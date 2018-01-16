@@ -16,12 +16,15 @@
  */
 
 package com.thenetcircle.event_bus.interface
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.TaskRunningContext
+
+import scala.util.Try
 
 trait TransformTask extends Task {
 
-  def getGraph(): Flow[Event, Event, NotUsed]
+  def getHandler()(implicit context: TaskRunningContext): Flow[Event, (Try[Done], Event), NotUsed]
 
 }

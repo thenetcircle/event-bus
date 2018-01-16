@@ -27,7 +27,7 @@ import scala.util.Try
 
 trait SourceTask extends Task {
 
-  def runWith(handler: Flow[Event, Try[Event], NotUsed])(
+  def runWith(handler: Flow[Event, (Try[Done], Event), NotUsed])(
       implicit context: TaskRunningContext
   ): Future[Done]
 
