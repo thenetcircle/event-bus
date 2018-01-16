@@ -36,7 +36,7 @@ object StoryRunningApp extends App with StrictLogging {
   // Check Executor Name
   var runnerGroup: String = if (args.length > 0) args(0) else ""
   if (runnerGroup.isEmpty)
-    runnerGroup = env.getSystemConfig().getString("app.default-runner-runnerGroup")
+    runnerGroup = env.getSystemConfig().getString("app.default-runner-group")
 
   // Connecting Zookeeper
   val zkManager: ZKManager = ZKManager(env.getSystemConfig())(env)

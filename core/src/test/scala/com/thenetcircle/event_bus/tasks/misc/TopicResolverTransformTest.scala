@@ -18,24 +18,49 @@
 package com.thenetcircle.event_bus.tasks.misc
 
 import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 
 class TopicResolverTransformTest extends AkkaStreamTest {
 
   behavior of "TopicResolverTransform"
 
   val resolver = new TopicResolverTransform("event-default")
+  resolver.updateMapping(
+    Map(
+      "event-user" -> Map("patterns" -> s"""user.*${ConfigStringParser.delimiter}profile.*"""),
+      "event-message" -> Map("patterns" -> """message.*""")
+    )
+  )
 
   it should "solve topic correctly" in {
-    /*
+
     val testEvent1 = createTestEvent("message.send")
-    resolver.resolveEvent(testEvent1).metadata.channel shouldEqual Some("topic-message")
+    resolver.resolveEvent(testEvent1).metadata.channel shouldEqual Some("event-message")
 
-    val testEvent2 = createTestEvent("user.profile.kick")
-    resolver.resolveEvent(testEvent2).metadata.channel shouldEqual Some("topic-user")
+    val testEvent2 = createTestEvent("profile.kick")
+    resolver.resolveEvent(testEvent2).metadata.channel shouldEqual Some("event-user")
 
-    val testEvent3 = createTestEvent("payment.subscribe")
-    resolver.resolveEvent(testEvent3).metadata.channel shouldEqual Some("event-default")
-   */
+    val testEvent3 = createTestEvent("user.visit.profile")
+    resolver.resolveEvent(testEvent3).metadata.channel shouldEqual Some("event-user")
+
+    val testEvent4 = createTestEvent("payment.buy")
+    resolver.resolveEvent(testEvent4).metadata.channel shouldEqual Some("event-default")
+
+    /*val executionStart: Long = currentTime
+
+    val done = Source(0 to 100000)
+      .map(i => createTestEvent(s"message.kick.$i"))
+      .via(resolver.getHandler())
+      .runForeach {
+        case (resultTry, event) =>
+          println(event.metadata.channel)
+      }
+
+    done.foreach(_ => {
+      val total = currentTime - executionStart
+      Console.println("[total " + total + "ms]")
+    })*/
+
   }
 
 }

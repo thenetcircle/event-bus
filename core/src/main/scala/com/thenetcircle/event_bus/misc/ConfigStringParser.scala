@@ -20,6 +20,8 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyn
 
 object ConfigStringParser {
 
+  val delimiter = """|||"""
+
   private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
   def convertStringToConfig(configString: String): Config =
     ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)

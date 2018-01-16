@@ -29,7 +29,7 @@ class KafkaSourceBuilderTest extends AkkaStreamTest {
 
     val sink = builder.build("""{
         |  "bootstrap-servers": "abc",
-        |  "runnerGroup-id": "test-runnerGroup",
+        |  "group-id": "test-group",
         |  "topics": [ "abc", "def" ],
         |  "max-concurrent-partitions": 50
         |}""".stripMargin)
@@ -37,7 +37,7 @@ class KafkaSourceBuilderTest extends AkkaStreamTest {
     val settings = sink.settings
 
     settings.bootstrapServers shouldEqual "abc"
-    settings.groupId shouldEqual "test-runnerGroup"
+    settings.groupId shouldEqual "test-group"
     settings.subscribedTopics shouldEqual Left(Set[String]("abc", "def"))
     settings.maxConcurrentPartitions shouldEqual 50
 

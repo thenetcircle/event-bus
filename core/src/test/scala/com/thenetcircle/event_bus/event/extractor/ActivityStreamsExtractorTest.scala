@@ -68,7 +68,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case Event(metadata, body, _, _, _) =>
+        case Event(metadata, body, _) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata.name shouldEqual "user.login"
       }
@@ -91,7 +91,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case Event(metadata, body, _, _, _) =>
+        case Event(metadata, body, _) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData(
             "ED-providerId-message.send-actorId-59e704843e9cb",
@@ -171,7 +171,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
 
     activityStreamsExtractor.extract(data) map { _data =>
       inside(_data) {
-        case Event(metadata, body, _, _, _) =>
+        case Event(metadata, body, _) =>
           body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
           metadata shouldEqual EventMetaData(
             "ED-providerId-message.send-actorId-59e704843e9cb",
@@ -194,7 +194,7 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
       """.stripMargin)
     testFormatExtractor.extract(data) map { d =>
       inside(d) {
-        case Event(_, body, _, _, _) =>
+        case Event(_, body, _) =>
           body shouldEqual EventBody(data, DataFormat.TEST)
       }
     }

@@ -35,7 +35,7 @@ class StoryManager(zkManager: ZKManager, builderFactory: TaskBuilderFactory)(
       .getChildren("stories")
       .map(_.filter(storyName => {
         zkManager
-          .getData(s"stories/$storyName/runner-runnerGroup")
+          .getData(s"stories/$storyName/runner-group")
           .getOrElse("default") == runnerGroup
       }))
       .getOrElse(List.empty[String])

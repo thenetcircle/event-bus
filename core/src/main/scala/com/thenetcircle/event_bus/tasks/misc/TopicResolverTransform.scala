@@ -25,38 +25,66 @@ import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import java.util.concurrent.ConcurrentHashMap
 
+import scala.collection.mutable
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 class TopicResolverTransform(defaultTopic: String) extends TransformTask with StrictLogging {
 
   private var inited: Boolean = false
-  private var mapping: Map[String, Map[String, String]] = Map.empty
   private var index: Map[String, String] = Map.empty
+  private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
 
   def init(): Unit = if (!inited) {
-    // get data from zookeeper
+    // TODO: get data from zookeeper
     inited = true
   }
 
-  def getIndex(): Map[String, String] = synchronized(index)
-  def updateIndex(_mapping: Map[String, Map[String, String]]): Unit = synchronized {
-    // calculate index
+  def getIndex(): Map[String, String] = synchronized { index }
+  def updateIndex(_index: Map[String, String]): Unit = synchronized { index = _index }
+  def updateMapping(_mapping: Map[String, Map[String, String]]): Unit = {
+    val _index = mutable.Map.empty[String, String]
+    _mapping.foreach {
+      case (topic, submap) =>
+        submap
+          .get("patterns")
+          .foreach(_.split(Regex.quote(ConfigStringParser.delimiter)).foreach(pattern => {
+            _index += (pattern -> topic)
+          }))
+    }
+    updateIndex(_index.toMap)
   }
 
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
     val eventName = event.metadata.name
-    val topicOption = getIndex()
-      .find { case (topicPattern, _) => eventName matches topicPattern }
-      .map(_._2)
+    var topic = ""
 
-    event.withChannel(topicOption.getOrElse(defaultTopic))
+    val cachedTopic = cached.get(eventName)
+    if (cachedTopic != null) {
+      topic = cachedTopic
+    } else {
+      val channelOption = index
+        .find {
+          case (pattern, _) =>
+            eventName matches pattern
+        }
+        .map(_._2)
+      topic = channelOption.getOrElse(defaultTopic)
+      cached.put(eventName, topic)
+    }
+
+    event.withChannel(topic)
   }
 
   override def getHandler()(
       implicit context: TaskRunningContext
-  ): Flow[Event, (Try[Done], Event), NotUsed] =
+  ): Flow[Event, (Try[Done], Event), NotUsed] = {
+
+    init()
+
     Flow[Event].map(event => {
       Try(resolveEvent(event)) match {
         case Success(newEvent) => (Success(Done), newEvent)
@@ -65,6 +93,7 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
           (Failure(ex), event)
       }
     })
+  }
 
 }
 

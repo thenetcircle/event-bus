@@ -17,6 +17,8 @@
 
 package com.thenetcircle.event_bus.tasks.kafka
 
+import java.util.concurrent.TimeUnit
+
 import akka.{Done, NotUsed}
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
@@ -97,6 +99,8 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
     val kafkaSettings = getProducerSettings()
     lazy val kafkaProducer = kafkaSettings.createKafkaProducer()
+
+    context.addShutdownHook(kafkaProducer.close(10, TimeUnit.SECONDS))
 
     Flow[Event]
       .map(createMessage)

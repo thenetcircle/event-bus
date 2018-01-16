@@ -35,7 +35,7 @@ abstract class AkkaStreamTest(_env: BaseEnvironment)
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   val baseEnv: BaseEnvironment = _env
   implicit val runningEnv: RunningEnvironment =
-    RunningEnvironment("test-runner-runnerGroup", "test-runner-id")(baseEnv, system)
+    RunningEnvironment("test-runner-group", "test-runner-id")(baseEnv, system)
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)

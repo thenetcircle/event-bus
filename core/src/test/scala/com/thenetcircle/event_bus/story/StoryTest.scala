@@ -17,21 +17,17 @@
 
 package com.thenetcircle.event_bus.story
 
-import akka.{Done, NotUsed}
-import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.SinkTask
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.{Success, Try}
+import scala.io.StdIn
 
 class StoryTest extends AkkaStreamTest {
 
   behavior of "Story"
 
-  it should "working good" in {
+  it should "works from HttpSource to KafkaSink" in {
 
     val settings = StorySettings("test-story")
 
@@ -58,6 +54,10 @@ class StoryTest extends AkkaStreamTest {
       )
       .get
 
+    val story = new Story(settings, sourceTask, sinkTask)
+    val (killSwitch, doneFuture) = story.run()
+
+    /*
     val sinkTask2 = new SinkTask {
       override def getHandler()(
           implicit context: TaskRunningContext
@@ -68,10 +68,7 @@ class StoryTest extends AkkaStreamTest {
       }
     }
 
-    val story = new Story(settings, sourceTask, sinkTask)
-    val (killSwitch, doneFuture) = story.run()
-
-    /*val route = path("hello") {
+    val route = path("hello") {
       get {
         complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
       }
@@ -84,12 +81,50 @@ class StoryTest extends AkkaStreamTest {
     )
 
     val fu = Http().bindAndHandle(handler, "127.0.0.1", 8080)
-    fu.flatMap(_.unbind())*/
+    fu.flatMap(_.unbind())
 
-    /*val runningContextFactory = TaskRunningContextFactory()
+    val runningContextFactory = TaskRunningContextFactory()
     system.actorOf(StoryRunner.props(runningContextFactory, story), "test-story")*/
 
     Await.result(system.whenTerminated, 60.seconds)
+
+  }
+
+  it should "works from KafkaSource to HttpSink" in {
+
+    val settings = StorySettings("test-story-2")
+
+    val sourceTask = builderFactory
+      .buildSourceTask(
+        "kafka",
+        """
+          |{
+          |  "bootstrap-servers": "maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093",
+          |  "group-id": "eventbus-testgroup",
+          |  "topics": [ "event-default" ],
+          |  "max-concurrent-partitions": 50,
+          |  "properties": {}
+          |}
+        """.stripMargin
+      )
+      .get
+
+    val sinkTask = builderFactory
+      .buildSinkTask("http", """
+            |{
+            |  "request" : {
+            |    "uri": "http://10.60.53.71:3000"
+            |  },
+            |  "expected-response": "TEST_RESPONSE"
+            |}
+          """.stripMargin)
+      .get
+
+    val story = new Story(settings, sourceTask, sinkTask)
+    val (killSwitch, doneFuture) = story.run()
+
+    // Await.result(system.whenTerminated, 60.seconds)
+    StdIn.readLine()
 
   }
 
