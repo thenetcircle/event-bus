@@ -45,17 +45,17 @@ class RunningEnvironment(runnerGroup: String,
 
 object RunningEnvironment {
 
-  def apply(runnerGroup: String, runnerId: String)(implicit environment: BaseEnvironment,
+  def apply(runnerGroup: String, runnerId: String)(implicit baseEnv: BaseEnvironment,
                                                    system: ActorSystem): RunningEnvironment = {
 
     new RunningEnvironment(
       runnerGroup,
       runnerId,
-      environment.getAppName(),
-      environment.getAppVersion(),
-      environment.getAppEnv(),
-      environment.isDebug(),
-      environment.getSystemConfig(),
+      baseEnv.getAppName(),
+      baseEnv.getAppVersion(),
+      baseEnv.getAppEnv(),
+      baseEnv.isDebug(),
+      baseEnv.getSystemConfig(),
       system
     )
 

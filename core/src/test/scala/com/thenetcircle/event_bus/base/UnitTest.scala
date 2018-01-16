@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.base
 
+import com.typesafe.scalalogging.StrictLogging
 import org.scalatest._
 
-trait UnitTest extends FlatSpecLike with Matchers with BeforeAndAfterAll {}
+trait UnitTest extends FlatSpecLike with Matchers with BeforeAndAfterAll with StrictLogging {}

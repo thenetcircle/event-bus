@@ -1,14 +1,25 @@
 package com.thenetcircle.event_bus.story
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Materializer, Supervision}
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
+import scala.util.control.NonFatal
 
-class TaskRunningContextFactory()(implicit runningEnv: RunningEnvironment) {
+class TaskRunningContextFactory()(implicit runningEnv: RunningEnvironment) extends StrictLogging {
   implicit val system: ActorSystem = runningEnv.getActorSystem()
 
-  private lazy val materializer: Materializer = ActorMaterializer()
+  val decider: Supervision.Decider = {
+    case NonFatal(ex) =>
+      logger.error(s"supervision error: $ex")
+      Supervision.Resume
+  }
+
+  private lazy val materializer: Materializer = ActorMaterializer(
+    ActorMaterializerSettings(system)
+    // .withSupervisionStrategy(decider)
+  )
   // TODO: use another execution context for computing
   private lazy val executionContext: ExecutionContext = ExecutionContext.global
 

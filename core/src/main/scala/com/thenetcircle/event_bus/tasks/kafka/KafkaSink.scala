@@ -54,7 +54,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       implicit context: TaskRunningContext
   ): ProducerSettings[ProducerKey, ProducerValue] = {
     var _producerSettings = ProducerSettings[ProducerKey, ProducerValue](
-      context.getEnvironment().getSystemConfig(),
+      context.getActorSystem(),
       new KafkaKeySerializer,
       new EventSerializer
     )
@@ -94,10 +94,14 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   override def getHandler()(
       implicit context: TaskRunningContext
   ): Flow[Event, (Try[Done], Event), NotUsed] = {
+
+    val kafkaSettings = getProducerSettings()
+    lazy val kafkaProducer = kafkaSettings.createKafkaProducer()
+
     Flow[Event]
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
-      .via(Producer.flow(getProducerSettings()))
+      .via(Producer.flow(kafkaSettings, kafkaProducer))
       .map(result => (Success(Done), result.message.passThrough))
   }
 }

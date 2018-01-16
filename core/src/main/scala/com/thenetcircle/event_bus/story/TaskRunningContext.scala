@@ -34,4 +34,8 @@ class TaskRunningContext(runningEnv: RunningEnvironment,
   def getExecutionContext(): ExecutionContext = executionContext
   def getStoryRunner(): ActorRef = storyRunner
 
+  def addShutdownHook(body: => Unit) {
+    runningEnv.addShutdownHook(body)
+  }
+
 }

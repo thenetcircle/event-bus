@@ -39,7 +39,8 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 case class HttpSourceSettings(interface: String = "0.0.0.0",
@@ -71,6 +72,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     // TODO: test failed response
     Flow[HttpRequest]
       .mapAsync(1)(request => unmarshaller.apply(request.entity))
+      .withAttributes(ActorAttributes.supervisionStrategy(Supervision.resumingDecider))
       .via(handler)
       .map {
         case (Success(_), event) => getSucceededResponse(event)
@@ -105,14 +107,17 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       Http().bindAndHandle(
         handler = internalNandler,
         interface = settings.interface,
+        port = settings.port,
         settings = getServerSettings()
       )
 
-    httpBindFuture.onComplete {
+    /*httpBindFuture.onComplete {
       case Success(binding) => binding.unbind()
       case Failure(ex) =>
         logger.error(s"HttpBindFuture failed with error $ex")
-    }
+    }*/
+
+    context.addShutdownHook(Await.ready(httpBindFuture.flatMap(_.unbind()), 5.seconds))
 
     (sharedKillSwitch, httpBindFuture.map(_ => Done))
   }
