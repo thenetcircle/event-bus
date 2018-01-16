@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.interface
 
+import akka.stream.KillSwitch
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event.Event
@@ -29,6 +30,6 @@ trait SourceTask extends Task {
 
   def runWith(handler: Flow[Event, (Try[Done], Event), NotUsed])(
       implicit context: TaskRunningContext
-  ): Future[Done]
+  ): (KillSwitch, Future[Done])
 
 }

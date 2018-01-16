@@ -28,7 +28,6 @@ case class Event(metadata: EventMetaData,
                  passThrough: Option[Any] = None) {
 
   def uniqueName: String = s"${metadata.name}-${metadata.uuid}"
-  def withNewVersion(_version: String): Event = copy(version = Some(_version))
 
   def isFailed: Boolean = status == EventStatus.FAILED
   def withStatus(_status: EventStatus): Event = copy(status = _status)

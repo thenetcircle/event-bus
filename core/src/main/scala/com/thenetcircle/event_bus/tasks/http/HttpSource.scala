@@ -89,13 +89,18 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
 
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
-  )(implicit context: TaskRunningContext): Future[Done] = {
+  )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
+    val sharedKillSwitch = KillSwitches.shared("http-source-shard-killswitch")
+
+    val internalNandler =
+      Flow[HttpRequest].via(sharedKillSwitch.flow).via(getInternalHandler(handler))
+
     val httpBindFuture =
       Http().bindAndHandle(
-        handler = getInternalHandler(handler),
+        handler = internalNandler,
         interface = settings.interface,
         settings = getServerSettings()
       )
@@ -106,7 +111,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
         logger.error(s"HttpBindFuture failed with error $ex")
     }
 
-    httpBindFuture.map(_ => Done)
+    (sharedKillSwitch, httpBindFuture.map(_ => Done))
   }
 
 }

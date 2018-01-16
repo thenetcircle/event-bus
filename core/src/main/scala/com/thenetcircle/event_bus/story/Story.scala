@@ -17,13 +17,24 @@
 
 package com.thenetcircle.event_bus.story
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Flow, GraphDSL, Partition, Sink, Source}
-import akka.stream.{FlowShape, Graph, Materializer, SourceShape}
+import akka.{Done, NotUsed}
+import akka.stream.scaladsl.{
+  Broadcast,
+  Flow,
+  GraphDSL,
+  Merge,
+  Partition,
+  RunnableGraph,
+  Sink,
+  Source
+}
+import akka.stream._
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
+
+import scala.util.{Success, Try}
 
 case class StorySettings(name: String, initStatus: StoryStatus = StoryStatus.INIT)
 
@@ -32,94 +43,86 @@ class Story(val settings: StorySettings,
             val sinkTask: SinkTask,
             val transformTasks: Option[List[TransformTask]] = None,
             val fallbackTasks: Option[List[SinkTask]] = None)
-    extends SourceTask
-    with StrictLogging {
+    extends StrictLogging {
+
+  import Story.M
+
+  val storyName: String = settings.name
 
   private var status: StoryStatus = settings.initStatus
-  private def updateStatus(_status: StoryStatus): Unit = {
+  def updateStatus(_status: StoryStatus): Unit = {
     status = _status
   }
   def getStatus(): StoryStatus = status
 
-  private var graphId = 0
-  private def decorateGraph(
-      graph: Graph[FlowShape[Event, Event], NotUsed]
-  ): Graph[FlowShape[Event, Event], NotUsed] = {
-    graphId = graphId + 1
-    Story.decorateGraph(graph, s"${settings.name}-$graphId", fallbackTasks)
+  private var flowId: Int = 0
+  private def decorateFlow(flow: Flow[Event, M, NotUsed]): Flow[M, M, NotUsed] = {
+    flowId = flowId + 1
+    Story.decorateFlow(flow, s"story-$storyName-flow-$flowId", fallbackTasks)
   }
 
-  override def getGraph(): Source[Event, NotUsed] =
-    Source
-      .fromGraph(
-        GraphDSL
-          .create() { implicit builder =>
-            import GraphDSL.Implicits._
+  def run()(implicit context: TaskRunningContext): NotUsed = {
+    val transforms =
+      transformTasks
+        .map(_.foldLeft(Flow[M]) { (_chain, _transform) =>
+          _chain.via(decorateFlow(_transform.getHandler()))
+        })
+        .getOrElse(Flow[M])
+    val sink = decorateFlow(sinkTask.getHandler())
+    val handler = Flow[Event].map((Success(Done), _)).via(transforms).via(sink)
 
-            // variables
-            val source = sourceTask.getGraph()
-            var transformations = transformTasks
-              .map(_bList => {
-                var _bChain = Flow[Event]
-                _bList.foreach(_b => _bChain = _bChain.via(decorateGraph(_b.getGraph())))
-                _bChain
-              })
-              .getOrElse(Flow[Event])
-            // val sink = sinkTask.map(s => decorateGraph(s.getGraph())).getOrElse(Flow[Event])
-            val sink = decorateGraph(sinkTask.getGraph())
-            val confirmation = builder.add(decorateGraph(sourceTask.getCommittingGraph()))
-
-            // workflow
-            source ~> transformations ~> sink ~> confirmation
-
-            // ports
-            SourceShape(confirmation.out)
-          }
-      )
-      .named(settings.name)
-
-  override def getCommittingGraph(): Flow[Event, Event, NotUsed] = Flow[Event]
-
-  def run()(implicit runningContext: TaskRunningContext): NotUsed = {
-    implicit val materializer: Materializer = runningContext.getMaterializer()
-    getGraph().runWith(Sink.ignore.mapMaterializedValue(m => NotUsed))
+    sourceTask.runWith(handler.named(s"story-$storyName"))
   }
 }
 
 object Story extends StrictLogging {
 
-  def decorateGraph(
-      graph: Graph[FlowShape[Event, Event], NotUsed],
-      graphId: String,
-      fallbackTasks: Option[List[SinkTask]] = None
-  ): Graph[FlowShape[Event, Event], NotUsed] = {
+  type M = (Try[Done], Event) // middle result type
+
+  def decorateFlow(flow: Flow[Event, M, NotUsed],
+                   flowName: String,
+                   fallbackTasks: Option[List[SinkTask]] = None): Flow[M, M, NotUsed] = {
 
     Flow.fromGraph(
       GraphDSL
         .create() { implicit builder =>
           import GraphDSL.Implicits._
 
-          // variables
-          val mainGraph = builder.add(graph)
-          val checkGraph = builder.add(new Partition[Event](2, e => if (e.isFailed) 1 else 0))
-          var failedGraph = Flow[Event].map(_event => {
-            val logMessage =
-              s"Event ${_event.uniqueName} was processing failed on graph: $graphId." +
-                (if (fallbackTasks.isDefined) " Sending to fallbackTasks." else "")
-            logger.debug(logMessage)
-            _event
-          })
-          // TODO: use nested fallback graphs
-          fallbackTasks.foreach(acList => failedGraph = failedGraph.via(acList.head.getGraph()))
+          val preCheck =
+            builder.add(new Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
+          val postCheck =
+            builder.add(Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
+          val output = builder.add(Merge[M](3))
+          val logic = Flow[M].map(_._2).via(flow)
+
+          // add other fallbacks
+          val fallback = Flow[M]
+            .map {
+              case input @ (doneTry, event) =>
+                val logMessage =
+                  s"Event ${event.uniqueName} was processing failed on flow: $flowName." +
+                    (if (fallbackTasks.isDefined) " Sending to fallbackTasks." else "")
+                logger.debug(logMessage)
+                input
+            }
+            .via(
+              fallbackTasks
+                .map(_list => {
+                  Flow[M].map(_._2).via(_list.head.getHandler())
+                })
+                .getOrElse(Flow[M])
+            )
 
           // workflow
           // format: off
-          mainGraph ~> checkGraph.in
-                       checkGraph.out(1) ~> failedGraph
+          preCheck.out(0) ~> logic ~> postCheck
+                                      postCheck.out(0)        ~>      output.in(0)
+                                      postCheck.out(1) ~> fallback ~> output.in(1)
+          preCheck.out(1)                       ~>                    output.in(2)
           // format: on
 
           // ports
-          FlowShape(mainGraph.in, checkGraph.out(0))
+          FlowShape(preCheck.in, output.out)
         }
     )
   }

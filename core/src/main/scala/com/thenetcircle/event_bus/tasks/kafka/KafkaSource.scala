@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.tasks.kafka
 import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
+import akka.stream.{KillSwitch, KillSwitches}
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -31,8 +32,8 @@ import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import net.ceedubs.ficus.Ficus._
+import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -73,9 +74,10 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
-  )(implicit context: TaskRunningContext): Future[Done] = {
+  )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
     Consumer
       .committablePartitionedSource(getConsumerSettings(), getSubscription())
+      .viaMat(KillSwitches.single)(Keep.right)
       .map {
         case (topicPartition, source) =>
           source
@@ -103,7 +105,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
             .run()
       }
       .mapAsyncUnordered(settings.maxConcurrentPartitions)(identity)
-      .runWith(Sink.ignore)
+      .toMat(Sink.ignore)(Keep.both)
+      .run()
   }
 }
 
