@@ -80,7 +80,7 @@ class HttpSinkTest extends AkkaStreamTest {
     result.expectNext(testEvent)
   }
 
-  it should "retry multiple times before goes to failed/fallback" in {
+  it should "withRetry multiple times before goes to failed/fallback" in {
     var senderTimes = 0
     val sender = Flow[(HttpRequest, Event)].map {
       case (_, event) =>
@@ -189,7 +189,7 @@ class HttpSinkTest extends AkkaStreamTest {
         val response = if (senderTimes > 5) {
           Success(HttpResponse(entity = HttpEntity(event.body.data)))
         } else {
-          Failure(new Exception("Let it retry"))
+          Failure(new Exception("Let it withRetry"))
         }
         (response, event)
     }

@@ -23,7 +23,7 @@ object Retry {
 
       val retry = builder.add(new RetryStage[Event](maxRetryTimes, checkFunc))
 
-      // workflow (check if the result is expected, otherwise will retry)
+      // workflow (check if the resultTry is expected, otherwise will withRetry)
       // format: off
 
             retry.ready ~> logic ~> retry.checkpoint
@@ -93,7 +93,7 @@ object Retry {
           checkpoint,
           new InHandler {
             override def onPush() = {
-              log.debug("onPush result")
+              log.debug("onPush resultTry")
               grab(checkpoint) match {
                 case (resultTry, payload) =>
                   resultTry match {
@@ -135,7 +135,7 @@ object Retry {
             log.warning(s"Event sent failed after retried $maxRetryTimes times.")
             pushResult(payload)
           } else {
-            log.debug("emit ready & tryPull result")
+            log.debug("emit ready & tryPull resultTry")
             emit(ready, payload)
             tryPull(checkpoint)
           }

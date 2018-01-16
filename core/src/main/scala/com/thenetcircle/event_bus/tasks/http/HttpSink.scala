@@ -17,116 +17,225 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
-
-import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream._
-import akka.stream.scaladsl.{Flow, GraphDSL, Merge}
-import akka.stream.stage._
-import akka.util.ByteString
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.interface.SinkTask
+import akka.stream.scaladsl.Flow
+import akka.util.{ByteString, Timeout}
+import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
+import net.ceedubs.ficus.Ficus._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-case class HttpSinkSettings(host: String,
-                            port: Int,
-                            maxRetryTimes: Int,
-                            defaultRequest: HttpRequest,
-                            maxConnections: Int = 4,
-                            minConnections: Int = 0,
-                            connectionMaxRetries: Int = 5,
-                            maxOpenRequests: Int = 32,
-                            pipeliningLimit: Int = 1,
-                            idleTimeout: String = "30 s")
+case class HttpSinkSettings(defaultRequest: HttpRequest,
+                            expectedResponseBody: String,
+                            maxRetryTimes: Int = 10,
+                            maxConcurrentRetries: Int = 1,
+                            retryTimeout: FiniteDuration = 10.seconds,
+                            poolSettings: Option[ConnectionPoolSettings] = None)
 
-class HttpSink(val settings: HttpSinkSettings,
-               responseCheckFunc: (StatusCode, Seq[HttpHeader], String) => Boolean)
-    extends SinkTask
-    with StrictLogging {
+class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
 
   def createRequest(event: Event): HttpRequest = {
     settings.defaultRequest.withEntity(HttpEntity(event.body.data))
   }
 
-  def getConnectionPoolSettings(): ConnectionPoolSettings =
-    ConnectionPoolSettings(s"""akka.http.host-connection-pool {
-                              |  max-connections = ${settings.maxConnections}
-                              |  min-connections = ${settings.minConnections}
-                              |  max-retries = ${settings.connectionMaxRetries}
-                              |  max-open-requests = ${settings.maxOpenRequests}
-                              |  pipelining-limit = ${settings.pipeliningLimit}
-                              |  idle-timeout = ${settings.idleTimeout}
-                              |}""".stripMargin)
-
-  def sendAndCheck()(
-      implicit context: TaskRunningContext
-  ): Flow[(HttpRequest, Event), Try[Event], NotUsed] = {}
+  def checkResponse(status: StatusCode, headers: Seq[HttpHeader], body: Option[String]): Boolean = {
+    status == StatusCodes.OK && body.get == settings.expectedResponseBody
+  }
 
   override def getHandler()(
       implicit context: TaskRunningContext
-  ): Flow[Event, Try[Event], NotUsed] = {
+  ): Flow[Event, (Try[Done], Event), NotUsed] = {
+    import HttpSink.RetrySender._
+    import HttpSink._
 
     implicit val system: ActorSystem = context.getActorSystem()
     implicit val materializer: Materializer = context.getMaterializer()
 
-    val sender: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), NotUsed] =
-      Http().superPool[Event](settings = getConnectionPoolSettings()).map {
-        case (Success(httpResponse), event) =>
-          if (checkResponse(httpResponse)) Success(event)
-          else Failure(new Exception("response from the endpoint is not expected."))
-        case f => f
-      }
+    val sender = system.actorOf(
+      RetrySender.props(settings.maxRetryTimes, checkResponse, settings.poolSettings),
+      "http-retry-sender"
+    )
 
     Flow[Event]
-      .map(_event => (createRequest(_event), _event))
-      .via(sender)
+      .mapAsync(settings.maxConcurrentRetries) { event =>
+        import akka.pattern.ask
+        implicit val askTimeout: Timeout = Timeout(settings.retryTimeout)
 
+        (sender ? Send(createRequest(event)))
+          .mapTo[Try[HttpResponse]]
+          .map(respTry => (respTry.map(_ => Done), event))
+      }
+      .watchTermination() { (_, done) =>
+        done.map(_ => sender ! PoisonPill)
+        NotUsed
+      }
+  }
+}
+
+object HttpSink {
+  object RetrySender {
+    def props(
+        maxRetryTimes: Int,
+        respCheckFunc: (StatusCode, Seq[HttpHeader], Option[String]) => Boolean,
+        conntionPoolSettings: Option[ConnectionPoolSettings] = None
+    )(implicit context: TaskRunningContext): Props = {
+      Props(new RetrySender(maxRetryTimes, respCheckFunc, conntionPoolSettings))
+    }
+
+    case class Send(request: HttpRequest, retryTimes: Int = 0) {
+      def retry(): Send = copy(retryTimes = retryTimes + 1)
+    }
+    case class Resp(respTry: Try[HttpResponse], send: Send)
+    case class Check(resultTry: Try[Boolean], send: Send, respOption: Option[HttpResponse])
   }
 
   class RetrySender(
       maxRetryTimes: Int,
-      respCheckFunc: (StatusCode, Seq[HttpHeader], String) => Boolean,
-      conntionPoolSettings: ConnectionPoolSettings
+      respCheckFunc: (StatusCode, Seq[HttpHeader], Option[String]) => Boolean,
+      conntionPoolSettings: Option[ConnectionPoolSettings] = None
   )(implicit context: TaskRunningContext)
       extends Actor
       with ActorLogging {
 
-    import akka.pattern.pipe
+    import RetrySender._
 
     implicit val system: ActorSystem = context.getActorSystem()
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
     override def receive: Receive = {
-      case RetrySender.Send(_request, retryTimes) =>
-        Http()
-          .singleRequest(request = _request, settings = conntionPoolSettings)
-          .map(_response => (_request, _response, retryTimes))
-          .pipeTo(self)(sender = sender())
+      case send @ Send(req, _) =>
+        implicit val originalSender: ActorRef = sender()
+        val respFuture = conntionPoolSettings match {
+          case Some(_settings) => Http().singleRequest(request = req, settings = _settings)
+          case None            => Http().singleRequest(request = req)
+        }
+        respFuture.andThen { case respTry => self ! Resp(respTry, send) }
 
-      case (request: HttpRequest, HttpResponse(status, headers, entity, _), retryTimes) =>
-        entity.dataBytes.runFold(ByteString(""))(_ ++ _).map { body =>
-          log.debug("Got response, body: " + body.utf8String)
-          respCheckFunc(status, headers, body.utf8String)
+      case Resp(respTry, send: Send) =>
+        implicit val originalSender: ActorRef = sender()
+
+        respTry match {
+          case Success(resp @ HttpResponse(status @ StatusCodes.OK, headers, entity, _)) =>
+            entity.dataBytes
+              .runFold(ByteString(""))(_ ++ _)
+              .map { body =>
+                log.debug("Got response, body: " + body.utf8String)
+                respCheckFunc(status, headers, Some(body.utf8String))
+              }
+              .andThen {
+                case resultTry => self ! Check(resultTry, send, Some(resp))
+              }
+          case Success(resp @ HttpResponse(status, headers, _, _)) =>
+            log.info("Got non-200 status code: " + status)
+            resp.discardEntityBytes()
+            self ! Check(Try(respCheckFunc(status, headers, None)), send, Some(resp))
+          case Failure(ex) =>
+            self ! Check(Failure(ex), send, None)
         }
 
-      case (resp @ HttpResponse(code, _, _, _), retryTimes) =>
-        log.info("Request failed, response code: " + code)
-        resp.discardEntityBytes()
+      case Check(resultTry, send, respOption) =>
+        implicit val originalSender: ActorRef = sender()
+        val canRetry: Boolean = maxRetryTimes < 0 || send.retryTimes < maxRetryTimes
+
+        resultTry match {
+          case Success(true) => originalSender ! Success(respOption.get)
+          case Success(false) =>
+            if (canRetry) {
+              self ! send.retry()
+            } else {
+              val failedMessage = "The response checking was failed."
+              log.debug(failedMessage)
+              originalSender ! Failure(new Exception(failedMessage))
+            }
+          case f @ Failure(ex) =>
+            log.warning(s"Request failed with error: $ex")
+            if (canRetry)
+              self ! send.retry()
+            else
+              originalSender ! f
+        }
     }
   }
+}
 
-  object RetrySender {
-    case class Send(request: HttpRequest, retryTimes: Int = 1)
+class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
+
+  override def build(configString: String): HttpSink = {
+
+    val defaultConfig: Config =
+      ConfigStringParser.convertStringToConfig("""
+                                |{
+                                |  "request": {
+                                |    "method": "POST"
+                                |    # "uri": "..."
+                                |  },
+                                |  "max-concurrent-retries": 1,
+                                |  "max-retry-times": 10,
+                                |  "expected-response": "OK",
+                                |  "retry-timeout": "10 s",
+                                |  "pool-settings": {
+                                |    "max-connections": 4,
+                                |    "min-connections": 0,
+                                |    "max-retries": 5,
+                                |    "max-open-requests": 32
+                                |    "pipelining-limit": 1,
+                                |    "idle-timeout": "30 s"
+                                |  }
+                                |}
+                              """.stripMargin)
+
+    val config: Config =
+      ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+
+    try {
+      val requestMethod = config.as[String]("request.method").toUpperCase() match {
+        case "POST" => HttpMethods.POST
+        case "GET"  => HttpMethods.GET
+        case unacceptedMethod =>
+          throw new IllegalArgumentException(s"Request method $unacceptedMethod is not supported.")
+      }
+      val requsetUri = Uri(config.as[String]("request.uri"))
+      val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
+
+      val poolSettingsMap = config.as[Map[String, String]]("pool-settings")
+      val poolSettingsOption = if (poolSettingsMap.nonEmpty) {
+        var _settingsStr =
+          poolSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
+        Some(ConnectionPoolSettings(s""" akka.http.host-connection-pool {
+             |${_settingsStr}
+             |}""".stripMargin))
+      } else None
+
+      val settings = HttpSinkSettings(
+        defaultRequest,
+        config.as[String]("expected-response"),
+        config.as[Int]("max-retry-times"),
+        config.as[Int]("max-concurrent-retries"),
+        config.as[FiniteDuration]("retry-timeout"),
+        poolSettingsOption
+      )
+
+      new HttpSink(settings)
+
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"Creating HttpSinkSettings failed with error: ${ex.getMessage}")
+        throw ex
+    }
+
   }
 }
