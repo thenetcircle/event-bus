@@ -102,194 +102,156 @@ class HttpSink(val settings: HttpSinkSettings,
       .via(sender)
 
   }
+}
 
-  override def getGraph(): Flow[Event, Event, NotUsed] =
+object Retry {
+
+  def apply(maxRetryTimes: Int, checkFunc: (HttpResponse) => Future[Boolean])(
+      logic: Flow[(HttpRequest, Event), (Try[HttpResponse], Event), NotUsed]
+  ): Flow[(HttpRequest, Event), (Try[HttpResponse], Event), NotUsed] = {
     Flow.fromGraph(GraphDSL.create() { implicit builder =>
       import GraphDSL.Implicits._
 
-      val input = builder.add(Flow[Event])
-      val retryEngine =
-        builder.add(new HttpRetryEngine[Event](settings.maxRetryTimes, checkResponse))
-      val output = builder.add(Merge[Event](2))
-      val failureHandler = builder.add(Flow[Event].map(e => e.withStatus(EventStatus.FAILED)))
+      val retry = builder.add(new RetryStage[Event](maxRetryTimes, checkFunc))
 
       // workflow (check if the result is expected, otherwise will retry)
       // format: off
 
-            input.out ~> retryEngine.incoming
-                         retryEngine.ready  ~> sender ~> retryEngine.result
-                                                         retryEngine.succeed ~> output.in(0)
-                                                         retryEngine.failed  ~> failureHandler ~> output.in(1)
+      retry.ready ~> logic ~> retry.checkpoint
 
       // format: on
 
-      FlowShape(input.in, output.out)
+      FlowShape(retry.input, retry.output)
 
     })
-}
+  }
 
-final class HttpRetryEngine[T <: Event](
-    maxRetryTimes: Int,
-    responseCheckFunc: (StatusCode, String) => Boolean
-)(implicit executor: ExecutionContext)
-    extends GraphStage[HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T]] {
-  val incoming: Inlet[T] = Inlet("incoming")
-  val result: Inlet[(Try[HttpResponse], T)] = Inlet("result")
-  val ready: Outlet[T] = Outlet("ready")
-  val succeed: Outlet[T] = Outlet("succeed")
-  val failed: Outlet[T] = Outlet("failed")
+  final class RetryStage[I, O, P](maxRetryTimes: Int, checkFunc: (O) => Future[Boolean])(
+      implicit executionContext: ExecutionContext
+  ) extends GraphStage[RetryShape[(I, P), (Try[O], P), (I, P), (Try[O], P)]] {
 
-  override def shape: HttpRetryEngineShape[T, (Try[HttpResponse], T), T, T, T] =
-    HttpRetryEngineShape(incoming, result, ready, succeed, failed)
+    val input: Inlet[(I, P)] = Inlet("input")
+    val checkpoint: Inlet[(Try[O], P)] = Inlet("checkpoint")
+    val ready: Outlet[(I, P)] = Outlet("ready")
+    val output: Outlet[(Try[O], P)] = Outlet("output")
 
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
-    new GraphStageLogic(shape) with StageLogging {
-      val retryTimes: AtomicInteger = new AtomicInteger(0)
+    override def shape: RetryShape[(I, P), (Try[O], P), (I, P), (Try[O], P)] =
+      RetryShape(input, checkpoint, ready, output)
 
-      val isPending: AtomicBoolean = new AtomicBoolean(false)
-      var isWaitingPull: Boolean = false
+    override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+      new GraphStageLogic(shape) with StageLogging {
+        val retryTimes: AtomicInteger = new AtomicInteger(0)
 
-      setHandler(
-        incoming,
-        new InHandler {
-          override def onPush() = {
-            log.debug(s"onPush incoming -> push ready")
-            push(ready, grab(incoming))
-            isPending.set(true)
-          }
+        val isPending: AtomicBoolean = new AtomicBoolean(false)
+        var isWaitingPull: Boolean = false
 
-          override def onUpstreamFinish() = {
-            log.debug("onUpstreamFinish")
-            if (!isPending.get()) {
-              log.debug("completeStage")
-              completeStage()
+        setHandler(
+          input,
+          new InHandler {
+            override def onPush() = {
+              log.debug(s"onPush incoming -> push ready")
+              push(ready, grab(input))
+              isPending.set(true)
+            }
+
+            override def onUpstreamFinish() = {
+              log.debug("onUpstreamFinish")
+              if (!isPending.get()) {
+                log.debug("completeStage")
+                completeStage()
+              }
             }
           }
-        }
-      )
+        )
 
-      setHandler(
-        ready,
-        new OutHandler {
+        setHandler(
+          ready,
+          new OutHandler {
+            override def onPull() = {
+              log.debug("onPull ready")
+              if (!isPending.get()) {
+                log.debug("tryPull incoming")
+                tryPull(input)
+              } else {
+                log.debug("set waitingPull to true")
+                isWaitingPull = true
+              }
+            }
+          }
+        )
+
+        setHandler(
+          checkpoint,
+          new InHandler {
+            override def onPush() = {
+              log.debug("onPush result")
+              grab(checkpoint) match {
+                case (resultTry, payload) =>
+                  resultTry match {
+                    case Success(result) =>
+                      checkFunc(result).onComplete(
+                        getAsyncCallback(checkCallback(resultTry, payload)).invoke
+                      )
+                    case Failure(ex) =>
+                      log.error(s"check failed with error: $ex.")
+                      processFailure(payload)
+                  }
+              }
+            }
+          }
+        )
+
+        setHandler(output, new OutHandler {
           override def onPull() = {
-            log.debug("onPull ready")
-            if (!isPending.get()) {
-              log.debug("tryPull incoming")
-              tryPull(incoming)
-            } else {
-              log.debug("set waitingPull to true")
-              isWaitingPull = true
+            log.debug("onPull output")
+            if (!hasBeenPulled(checkpoint)) {
+              log.debug("tryPull checker")
+              tryPull(checkpoint)
             }
           }
+        })
+
+        def checkCallback(resultTry: Try[O], payload: P): (Try[Boolean]) => Unit = {
+          case Success(true) =>
+            pushResult((resultTry, payload))
+          case Success(false) =>
+            processFailure(payload)
+          case Failure(ex) =>
+            log.warning(s"Parse response error: ${ex.getMessage}")
+            pushResult((resultTry, payload))
         }
-      )
 
-      setHandler(
-        result,
-        new InHandler {
-          override def onPush() = {
-            log.debug("onPush result")
-            grab(result) match {
-              case (responseTry, event) =>
-                responseTry match {
-                  case Success(response) =>
-                    checkResponse(response, event).onComplete(
-                      getAsyncCallback(responseHandler(event)).invoke
-                    )
-
-                  case Failure(ex) =>
-                    log.error(
-                      s"Event ${event.metadata.name} sent failed with error: ${ex.getMessage}."
-                    )
-                    failureHandler(event)
-                }
-            }
+        def processFailure(payload: P): Unit = {
+          if (retryTimes.incrementAndGet() >= maxRetryTimes) {
+            log.warning(s"Event sent failed after retried $maxRetryTimes times.")
+            pushResult(payload)
+          } else {
+            log.debug("emit ready & tryPull result")
+            emit(ready, payload)
+            tryPull(checkpoint)
           }
         }
-      )
 
-      setHandler(
-        failed,
-        new OutHandler {
-          override def onPull() = {
-            log.debug("onPull failed")
-            if (!hasBeenPulled(result) && isAvailable(succeed)) {
-              log.debug("tryPull result")
-              tryPull(result)
-            }
-          }
-        }
-      )
-
-      setHandler(
-        succeed,
-        new OutHandler {
-          override def onPull() = {
-            log.debug("onPull succeed")
-            if (!hasBeenPulled(result) && isAvailable(failed)) {
-              log.debug("tryPull result")
-              tryPull(result)
-            }
-          }
-        }
-      )
-
-      def responseHandler(event: T): (Try[Boolean]) => Unit = {
-        case Success(true) =>
-          pushResultTo(succeed, event)
-        case Success(false) =>
-          failureHandler(event)
-        case Failure(ex) =>
-          log.warning(s"Parse response error: ${ex.getMessage}")
-          pushResultTo(failed, event)
-      }
-
-      def failureHandler(event: T): Unit = {
-        if (retryTimes.incrementAndGet() >= maxRetryTimes) {
-          log.warning(s"Event sent failed after retried $maxRetryTimes times.")
-          pushResultTo(failed, event)
-        } else {
-          log.debug("emit ready & tryPull result")
-          emit(ready, event)
-          tryPull(result)
+        def pushResult(result: (Try[O], P)): Unit = {
+          push(output, result)
+          isPending.set(false)
+          retryTimes.set(0)
+          if (isClosed(input)) completeStage()
+          else if (isWaitingPull) tryPull(input)
         }
       }
+  }
 
-      def pushResultTo(outlet: Outlet[T], result: T): Unit = {
-        log.debug(s"push result $result to $outlet")
-        push(outlet, result)
-        isPending.set(false)
-        retryTimes.set(0)
-        if (isClosed(incoming)) completeStage()
-        else if (isWaitingPull) tryPull(incoming)
-      }
+  final case class RetryShape[A, B, C, D](input: Inlet[A],
+                                          checkpoint: Inlet[B],
+                                          ready: Outlet[C],
+                                          output: Outlet[D])
+      extends Shape {
 
-      def checkResponse(response: HttpResponse, event: Event): Future[Boolean] = {
-        response.entity
-          .toStrict(3.seconds)(materializer)
-          .map { entity =>
-            val result: Boolean = responseCheckFunc(response.status, entity.data.utf8String)
-            if (!result && retryTimes.get() == 0) {
-              log.warning(
-                s"""Event "${event.uniqueName}" sent failed with unexpected response: ${entity.data.utf8String}."""
-              )
-            }
-            result
-          }
-      }
-    }
-}
+    override val inlets: Seq[Inlet[_]] = input :: checkpoint :: Nil
+    override val outlets: Seq[Outlet[_]] = ready :: output :: Nil
 
-final case class HttpRetryEngineShape[Incoming, Result, Ready, Succeed, Failed](
-    incoming: Inlet[Incoming],
-    result: Inlet[Result],
-    ready: Outlet[Ready],
-    succeed: Outlet[Succeed],
-    failed: Outlet[Failed]
-) extends Shape {
+    override def deepCopy(): Shape = RetryShape(input, checkpoint, ready, output)
+  }
 
-  override val inlets: Seq[Inlet[_]] = incoming :: result :: Nil
-  override val outlets: Seq[Outlet[_]] = ready :: succeed :: failed :: Nil
-
-  override def deepCopy(): Shape = HttpRetryEngineShape(incoming, result, ready, succeed, failed)
 }
