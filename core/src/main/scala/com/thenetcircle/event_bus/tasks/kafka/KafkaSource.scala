@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.tasks.kafka
 import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
-import akka.stream.{KillSwitch, KillSwitches}
+import akka.stream.{KillSwitch, KillSwitches, Materializer}
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -35,14 +35,14 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
-  require(settings.bootstrapServers.isEmpty, "bootstrap servers is required.")
-  require(settings.groupId.isEmpty, "group id is required.")
+  require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
+  require(settings.groupId.nonEmpty, "group id is required.")
 
   def getSubscription(): AutoSubscription =
     if (settings.subscribedTopics.isLeft) {
@@ -75,6 +75,10 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
   )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
+
+    implicit val materializer: Materializer = context.getMaterializer()
+    implicit val executionContext: ExecutionContext = context.getExecutionContext()
+
     Consumer
       .committablePartitionedSource(getConsumerSettings(), getSubscription())
       .viaMat(KillSwitches.single)(Keep.right)
@@ -138,7 +142,7 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
       |
       |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
       |  # can be defined in this configuration section.
-      |  properties: {}
+      |  "properties": {}
       |}
     """.stripMargin
     )

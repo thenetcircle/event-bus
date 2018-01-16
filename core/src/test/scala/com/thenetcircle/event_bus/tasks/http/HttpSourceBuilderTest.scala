@@ -30,14 +30,9 @@ class HttpSourceBuilderTest extends AkkaStreamTest {
 
     val source = builder.build("""{
         |  "interface": "127.0.0.1",
-        |  "akka": {
-        |    "http": {
-        |      "server": {}
-        |    }
-        |  },
         |  "succeeded-response": "okoo",
-        |  "error-response": "kooo",
-        |  "max-connections": 1001
+        |  "max-connections": 1001,
+        |  "request-timeout": "5 s"
         |}""".stripMargin)
 
     val settings = source.settings
@@ -46,10 +41,9 @@ class HttpSourceBuilderTest extends AkkaStreamTest {
     settings.port shouldEqual 8000
     settings.format shouldEqual DataFormat.ACTIVITYSTREAMS
     settings.maxConnections shouldEqual 1001
-    settings.perConnectionParallelism shouldEqual 10
-    settings.serverSettingsOption shouldBe defined
     settings.succeededResponse shouldEqual "okoo"
-    settings.errorResponse shouldEqual "kooo"
+    settings.requestTimeout shouldEqual "5 s"
+    settings.lingerTimeout shouldEqual "1 min"
 
   }
 

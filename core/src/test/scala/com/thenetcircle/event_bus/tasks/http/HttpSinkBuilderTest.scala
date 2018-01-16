@@ -16,8 +16,11 @@
  */
 
 package com.thenetcircle.event_bus.tasks.http
+
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.base.AkkaStreamTest
+
+import scala.concurrent.duration._
 
 class HttpSinkBuilderTest extends AkkaStreamTest {
 
@@ -29,19 +32,22 @@ class HttpSinkBuilderTest extends AkkaStreamTest {
 
     val sink = builder.build("""{
         |  "request" : {
-        |    "host": "127.0.0.1"
+        |    "uri": "http://www.google.com"
         |  },
         |  "expected-response": "TEST_RESPONSE"
         |}""".stripMargin)
 
     val settings = sink.settings
 
-    settings.host shouldEqual "127.0.0.1"
-    settings.port shouldEqual 80
     settings.maxRetryTimes shouldEqual 10
-    settings.defaultRequest shouldEqual HttpRequest(method = HttpMethods.POST, uri = Uri("/"))
-    settings.expectedResponse shouldEqual Some("TEST_RESPONSE")
-    settings.connectionPoolSettingsOption shouldBe defined
+    settings.maxConcurrentRetries shouldEqual 1
+    settings.retryTimeout shouldEqual 10.seconds
+    settings.defaultRequest shouldEqual HttpRequest(
+      method = HttpMethods.POST,
+      uri = Uri("http://www.google.com")
+    )
+    settings.expectedResponseBody shouldEqual "TEST_RESPONSE"
+    settings.poolSettings shouldBe defined
 
   }
 

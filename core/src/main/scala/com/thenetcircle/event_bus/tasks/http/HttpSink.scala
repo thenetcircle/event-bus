@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem, PoisonPill, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -63,6 +63,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
     implicit val system: ActorSystem = context.getActorSystem()
     implicit val materializer: Materializer = context.getMaterializer()
+    implicit val exectionContext: ExecutionContext = context.getExecutionContext()
 
     val sender = system.actorOf(
       RetrySender.props(settings.maxRetryTimes, checkResponse, settings.poolSettings),
@@ -116,18 +117,19 @@ object HttpSink {
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
+    def sendToSelf(msg: Any): Unit = self.tell(msg, sender())
+
     override def receive: Receive = {
       case send @ Send(req, _) =>
-        implicit val originalSender: ActorRef = sender()
         val respFuture = conntionPoolSettings match {
           case Some(_settings) => Http().singleRequest(request = req, settings = _settings)
           case None            => Http().singleRequest(request = req)
         }
-        respFuture.andThen { case respTry => self ! Resp(respTry, send) }
+        respFuture.andThen {
+          case respTry => sendToSelf(Resp(respTry, send))
+        }
 
       case Resp(respTry, send: Send) =>
-        implicit val originalSender: ActorRef = sender()
-
         respTry match {
           case Success(resp @ HttpResponse(status @ StatusCodes.OK, headers, entity, _)) =>
             entity.dataBytes
@@ -137,36 +139,34 @@ object HttpSink {
                 respCheckFunc(status, headers, Some(body.utf8String))
               }
               .andThen {
-                case resultTry => self ! Check(resultTry, send, Some(resp))
+                case resultTry => sendToSelf(Check(resultTry, send, Some(resp)))
               }
           case Success(resp @ HttpResponse(status, headers, _, _)) =>
             log.info("Got non-200 status code: " + status)
             resp.discardEntityBytes()
-            self ! Check(Try(respCheckFunc(status, headers, None)), send, Some(resp))
+            sendToSelf(Check(Try(respCheckFunc(status, headers, None)), send, Some(resp)))
           case Failure(ex) =>
-            self ! Check(Failure(ex), send, None)
+            sendToSelf(Check(Failure(ex), send, None))
         }
 
       case Check(resultTry, send, respOption) =>
-        implicit val originalSender: ActorRef = sender()
         val canRetry: Boolean = maxRetryTimes < 0 || send.retryTimes < maxRetryTimes
-
         resultTry match {
-          case Success(true) => originalSender ! Success(respOption.get)
+          case Success(true) => sender() ! Success(respOption.get)
           case Success(false) =>
             if (canRetry) {
-              self ! send.retry()
+              sendToSelf(send.retry())
             } else {
               val failedMessage = "The response checking was failed."
               log.debug(failedMessage)
-              originalSender ! Failure(new Exception(failedMessage))
+              sender() ! Failure(new Exception(failedMessage))
             }
           case f @ Failure(ex) =>
             log.warning(s"Request failed with error: $ex")
             if (canRetry)
-              self ! send.retry()
+              sendToSelf(send.retry())
             else
-              originalSender ! f
+              sender() ! f
         }
     }
   }
@@ -191,7 +191,7 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
                                 |    "max-connections": 4,
                                 |    "min-connections": 0,
                                 |    "max-retries": 5,
-                                |    "max-open-requests": 32
+                                |    "max-open-requests": 32,
                                 |    "pipelining-limit": 1,
                                 |    "idle-timeout": "30 s"
                                 |  }

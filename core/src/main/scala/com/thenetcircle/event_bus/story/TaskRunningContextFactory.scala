@@ -7,7 +7,8 @@ import scala.concurrent.ExecutionContext
 
 class TaskRunningContextFactory()(implicit environment: RunningEnvironment) {
 
-  private val system: ActorSystem = environment.getActorSystem()
+  implicit val system: ActorSystem = environment.getActorSystem()
+
   private lazy val materializer: Materializer = ActorMaterializer()
 
   // TODO: use another execution context for computing

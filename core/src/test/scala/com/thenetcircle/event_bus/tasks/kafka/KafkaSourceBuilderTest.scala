@@ -19,8 +19,6 @@ package com.thenetcircle.event_bus.tasks.kafka
 
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 
-import scala.concurrent.duration._
-
 class KafkaSourceBuilderTest extends AkkaStreamTest {
 
   behavior of "KafkaSourceBuilder"
@@ -30,22 +28,18 @@ class KafkaSourceBuilderTest extends AkkaStreamTest {
   it should "build correct KafkaSource with the default config" in {
 
     val sink = builder.build("""{
+        |  "bootstrap-servers": "abc",
         |  "group-id": "test-group",
         |  "topics": [ "abc", "def" ],
-        |  "commit-batch-max": 100,
-        |  "consumer": {
-        |    "poll-timeout": "50ms"
-        |  }
+        |  "max-concurrent-partitions": 50
         |}""".stripMargin)
 
     val settings = sink.settings
 
+    settings.bootstrapServers shouldEqual "abc"
     settings.groupId shouldEqual "test-group"
-    settings.topics shouldEqual Some(Set("abc", "def"))
-    settings.commitBatchMax shouldEqual 100
-    settings.consumerSettings.pollTimeout shouldEqual 50.milliseconds
-    settings.consumerSettings.dispatcher shouldEqual "akka.kafka.default-dispatcher"
-    settings.consumerSettings.properties("client.id") shouldEqual "EventBus-Consumer"
+    settings.subscribedTopics shouldEqual Left(Set[String]("abc", "def"))
+    settings.maxConcurrentPartitions shouldEqual 50
 
   }
 

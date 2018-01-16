@@ -16,7 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.tasks.http
-
+/*
 import java.text.SimpleDateFormat
 
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
@@ -128,3 +128,4 @@ class HttpSourceTest extends AkkaStreamTest {
 
   }
 }
+ */

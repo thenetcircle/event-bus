@@ -47,7 +47,7 @@ case class KafkaSinkSettings(bootstrapServers: String,
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
 
-  require(settings.bootstrapServers.isEmpty, "bootstrap servers is required.")
+  require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
   def getProducerSettings()(
       implicit context: TaskRunningContext

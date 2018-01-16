@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ServerSettings
@@ -90,6 +91,8 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
   )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
+
+    implicit val system: ActorSystem = context.getActorSystem()
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
@@ -133,7 +136,7 @@ class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
           |  "request-timeout": "10 s",
           |  "idle-timeout": "60 s",
           |  "bind-timeout": "1s",
-          |  "linger-timeout": "1 min",
+          |  "linger-timeout": "1 min"
           |}""".stripMargin)
 
       val config: Config =
