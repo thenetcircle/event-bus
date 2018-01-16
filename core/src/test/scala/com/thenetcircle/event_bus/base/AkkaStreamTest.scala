@@ -17,9 +17,9 @@
 
 package com.thenetcircle.event_bus.base
 
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
-import akka.testkit.{ImplicitSender, TestKit}
+import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.misc.BaseEnvironment
 import com.thenetcircle.event_bus.story.{RunningEnvironment, TaskRunningContext}
 import com.typesafe.config.ConfigFactory
@@ -28,14 +28,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 abstract class AkkaStreamTest(_env: BaseEnvironment)
-    extends TestKit(ActorSystem(_env.getAppName(), _env.getConfig()))
+    extends TestKit(ActorSystem(_env.getAppName(), _env.getSystemConfig()))
     with ImplicitSender
     with UnitTest {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  val baseEnvironment: BaseEnvironment = _env
-  implicit val runningEnvironment: RunningEnvironment =
-    RunningEnvironment("test-runner-group", "test-runner-id")(baseEnvironment, system)
+  val baseEnv: BaseEnvironment = _env
+  implicit val runningEnv: RunningEnvironment =
+    RunningEnvironment("test-runner-runnerGroup", "test-runner-id")(baseEnv, system)
 
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
@@ -43,8 +43,10 @@ abstract class AkkaStreamTest(_env: BaseEnvironment)
   implicit val executor: ExecutionContext =
     materializer.executionContext
 
-  implicit val taskRunningContext: TaskRunningContext =
-    new TaskRunningContext(runningEnvironment, system, materializer, executor)
+  val storyRunner: ActorRef = system.actorOf(TestActors.blackholeProps)
+
+  implicit val runningContext: TaskRunningContext =
+    new TaskRunningContext(runningEnv, system, materializer, executor, storyRunner)
 
   def this() = {
     this(new BaseEnvironment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
@@ -53,7 +55,7 @@ abstract class AkkaStreamTest(_env: BaseEnvironment)
   override def beforeAll(): Unit = {}
 
   override def afterAll(): Unit = {
-    runningEnvironment.shutdown()
+    runningEnv.shutdown()
     TestKit.shutdownActorSystem(system)
   }
 

@@ -42,7 +42,7 @@ import scala.util.{Failure, Success, Try}
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
-  require(settings.groupId.nonEmpty, "group id is required.")
+  require(settings.groupId.nonEmpty, "runnerGroup id is required.")
 
   def getSubscription(): AutoSubscription =
     if (settings.subscribedTopics.isLeft) {
@@ -55,7 +55,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       implicit context: TaskRunningContext
   ): ConsumerSettings[ConsumerKey, ConsumerValue] = {
     var _consumerSettings = ConsumerSettings[ConsumerKey, ConsumerValue](
-      context.getEnvironment().getConfig(),
+      context.getEnvironment().getSystemConfig(),
       new KafkaKeyDeserializer,
       new ByteArrayDeserializer
     )
@@ -130,7 +130,7 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
       """
       |{
       |  # "bootstrap-servers": "...",
-      |  # "group-id": "...",
+      |  # "runnerGroup-id": "...",
       |  # "topics": [],
       |  # "topic-pattern": "event-*", // supports wildcard
       |
@@ -159,7 +159,7 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
     val settings =
       KafkaSourceSettings(
         config.as[String]("bootstrap-servers"),
-        config.as[String]("group-id"),
+        config.as[String]("runnerGroup-id"),
         subscribedTopics,
         config.as[Int]("max-concurrent-partitions"),
         config.as[Map[String, String]]("properties"),

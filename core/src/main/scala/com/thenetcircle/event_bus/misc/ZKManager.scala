@@ -25,39 +25,38 @@ import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
 
-class ZKManager(connectString: String)(implicit environment: BaseEnvironment)
-    extends StrictLogging {
+class ZKManager(connectString: String)(implicit env: BaseEnvironment) extends StrictLogging {
 
   val client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
-  val rootPath = s"/event-bus/${environment.getAppName()}"
+  val rootPath = s"/event-bus/${env.getAppName()}"
 
   // register itself to be a runner
   // update stories status
 
   def init(): Unit = {
     client.start()
-    environment.addShutdownHook(client.close())
+    env.addShutdownHook(client.close())
 
     // Check and Create root nodes
     if (client.checkExists().forPath(getAbsPath("stories")) == null) {
       client.create().creatingParentsIfNeeded().forPath(getAbsPath("stories"))
     }
-    if (client.checkExists().forPath(getAbsPath("executors")) == null) {
-      client.create().creatingParentsIfNeeded().forPath(getAbsPath("executors"))
+    if (client.checkExists().forPath(getAbsPath("runners")) == null) {
+      client.create().creatingParentsIfNeeded().forPath(getAbsPath("runners"))
     }
   }
 
   def getAbsPath(path: String): String = s"$rootPath/$path"
 
-  def registerStoryExecutor(executorGroup: String): String = {
+  def registerStoryRunner(group: String): String = {
     val payload = ""
     client
       .create()
       .creatingParentsIfNeeded()
       .withProtection()
       .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-      .forPath(getAbsPath(s"executors/$executorGroup/member"), payload.getBytes())
+      .forPath(getAbsPath(s"runners/$group/member"), payload.getBytes())
   }
 
   def getClient(): CuratorFramework = client
@@ -95,11 +94,11 @@ class ZKManager(connectString: String)(implicit environment: BaseEnvironment)
 
   /*def requestLeadership(relativePath: String,
                         callback: (LeaderSelector, ZKManager) => Unit): Unit = {
-    val zKManager = this
+    val zkManager = this
     val leaderSelector =
       new LeaderSelector(client, getAbsPath(relativePath), new LeaderSelectorListenerAdapter {
         override def takeLeadership(client: CuratorFramework): Unit = {
-          callback(this, zKManager)
+          callback(this, zkManager)
         }
       })
     leaderSelector.start()
@@ -109,12 +108,12 @@ class ZKManager(connectString: String)(implicit environment: BaseEnvironment)
 
 object ZKManager {
 
-  def apply(config: Config)(implicit environment: BaseEnvironment): ZKManager = {
+  def apply(config: Config)(implicit env: BaseEnvironment): ZKManager = {
     config.checkValid(ConfigFactory.defaultReference, "app.zookeeper-server")
     apply(config.getString("app.zookeeper-server"))
   }
 
-  def apply(connectString: String)(implicit environment: BaseEnvironment): ZKManager = {
+  def apply(connectString: String)(implicit env: BaseEnvironment): ZKManager = {
     if (connectString.isEmpty) {
       throw new IllegalArgumentException("ConnectString is empty.")
     }

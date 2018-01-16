@@ -17,17 +17,25 @@
 
 package com.thenetcircle.event_bus.story
 
+import akka.actor.{ActorRef, ActorSystem}
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.thenetcircle.event_bus.story.StoryManager.StoryInfo
 
-class StoryManager(zKManager: ZKManager, taskBuilderFactory: TaskBuilderFactory) {
+import scala.collection.mutable
+
+class StoryManager(zkManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)(
+    implicit runningEnv: RunningEnvironment
+) {
+
+  lazy val runningContextFactory: TaskRunningContextFactory = TaskRunningContextFactory()
+  implicit val system: ActorSystem = runningEnv.getActorSystem()
 
   def getAvailableStories(runnerGroup: String): List[String] = {
-    zKManager
+    zkManager
       .getChildren("stories")
       .map(_.filter(storyName => {
-        zKManager
-          .getData(s"stories/$storyName/runner-group")
+        zkManager
+          .getData(s"stories/$storyName/runner-runnerGroup")
           .getOrElse("default") == runnerGroup
       }))
       .getOrElse(List.empty[String])
@@ -36,19 +44,19 @@ class StoryManager(zKManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)
   def getStoryInfo(storyName: String): StoryInfo = {
     val storyRootPath = s"stories/$storyName"
 
-    val status: String = zKManager.getData(s"$storyRootPath/status").get
-    val settings: String = zKManager.getData(s"$storyRootPath/settings").get
-    val source: String = zKManager.getData(s"$storyRootPath/source").get
-    val sink: String = zKManager.getData(s"$storyRootPath/sink").get
+    val status: String = zkManager.getData(s"$storyRootPath/status").get
+    val settings: String = zkManager.getData(s"$storyRootPath/settings").get
+    val source: String = zkManager.getData(s"$storyRootPath/source").get
+    val sink: String = zkManager.getData(s"$storyRootPath/sink").get
     val transforms: Option[List[String]] =
-      zKManager.getChildrenData(s"$storyRootPath/transforms").map(_.map(_._2))
+      zkManager.getChildrenData(s"$storyRootPath/transforms").map(_.map(_._2))
     val fallbacks: Option[List[String]] =
-      zKManager.getChildrenData(s"$storyRootPath/fallbacks").map(_.map(_._2))
+      zkManager.getChildrenData(s"$storyRootPath/fallbacks").map(_.map(_._2))
 
     StoryInfo(storyName, status, settings, source, sink, transforms, fallbacks)
   }
 
-  def buildStory(storyName: String)(implicit context: TaskRunningContext): Story = {
+  def buildStory(storyName: String): Story = {
     val storyInfo: StoryInfo = getStoryInfo(storyName)
     new Story(
       StorySettings(storyName, StoryStatus(storyInfo.status)),
@@ -59,11 +67,24 @@ class StoryManager(zKManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)
     )
   }
 
+  val runningStories: mutable.Map[String, ActorRef] = mutable.Map.empty
+  def run(): Unit = {
+    val candidateStories: List[String] = getAvailableStories(runningEnv.getRunnerGroup())
+
+    candidateStories.foreach(storyName => {
+      val story = buildStory(storyName)
+      val storyRunner =
+        system.actorOf(StoryRunner.props(runningContextFactory, story), storyName)
+      runningStories += (storyName -> storyRunner)
+    })
+  }
 }
 
 object StoryManager {
-  def apply(zKManager: ZKManager, taskBuilderFactory: TaskBuilderFactory): StoryManager =
-    new StoryManager(zKManager, taskBuilderFactory)
+  def apply(zkManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)(
+      implicit runningEnv: RunningEnvironment
+  ): StoryManager =
+    new StoryManager(zkManager, taskBuilderFactory)
 
   case class StoryInfo(name: String,
                        status: String,

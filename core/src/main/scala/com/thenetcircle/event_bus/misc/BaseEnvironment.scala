@@ -30,7 +30,7 @@ class BaseEnvironment(appName: String,
   def getAppEnv(): String = appEnv
   def getAppName(): String = appName
   def getAppVersion(): String = appVersion
-  def getConfig(): Config = systemConfig
+  def getSystemConfig(): Config = systemConfig
 
   def isDebug(): Boolean = debug
   def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"

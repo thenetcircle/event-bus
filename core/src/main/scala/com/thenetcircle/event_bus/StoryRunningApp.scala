@@ -31,43 +31,37 @@ object StoryRunningApp extends App with StrictLogging {
   logger.info("Application is initializing.")
 
   // Initialize BaseEnvironment
-  val baseEnvironment: BaseEnvironment = BaseEnvironment(ConfigFactory.load())
+  val env: BaseEnvironment = BaseEnvironment(ConfigFactory.load())
 
   // Check Executor Name
   var runnerGroup: String = if (args.length > 0) args(0) else ""
   if (runnerGroup.isEmpty)
-    runnerGroup = baseEnvironment.getConfig().getString("app.default-runner-group")
+    runnerGroup = env.getSystemConfig().getString("app.default-runner-runnerGroup")
 
   // Connecting Zookeeper
-  val zKManager: ZKManager = ZKManager(baseEnvironment.getConfig())(baseEnvironment)
-  zKManager.init()
-  val runnerId: String = zKManager.registerStoryExecutor(runnerGroup)
+  val zkManager: ZKManager = ZKManager(env.getSystemConfig())(env)
+  zkManager.init()
+  val runnerId: String = zkManager.registerStoryRunner(runnerGroup)
 
   // Create ActorSystem
   implicit val system: ActorSystem =
-    ActorSystem(baseEnvironment.getAppName(), baseEnvironment.getConfig())
+    ActorSystem(env.getAppName(), env.getSystemConfig())
 
-  implicit val runningEnvironment: RunningEnvironment =
-    RunningEnvironment(runnerGroup, runnerId)(baseEnvironment, system)
+  implicit val runningEnv: RunningEnvironment =
+    RunningEnvironment(runnerGroup, runnerId)(env, system)
 
   // Kamon.start()
 
-  // Schedule Stories
-  val storyManager = StoryManager(zKManager, TaskBuilderFactory(runningEnvironment.getConfig()))
-  StoryScheduler(storyManager).execute()
+  // Run Stories
+  val storyManager = StoryManager(zkManager, TaskBuilderFactory(runningEnv.getSystemConfig()))
+  storyManager.run()
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
     // Kamon.shutdown()
-    runningEnvironment.shutdown()
+    runningEnv.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)
-    /*Http()
-      .shutdownAllConnectionPools()
-      .map(_ => {
-        globalActorSystem.terminate()
-        Await.result(globalActorSystem.whenTerminated, 60.seconds)
-      })(ExecutionContext.global)*/
   })
 
 }

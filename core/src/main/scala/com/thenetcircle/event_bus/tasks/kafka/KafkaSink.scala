@@ -53,7 +53,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       implicit context: TaskRunningContext
   ): ProducerSettings[ProducerKey, ProducerValue] = {
     var _producerSettings = ProducerSettings[ProducerKey, ProducerValue](
-      context.getEnvironment().getConfig(),
+      context.getEnvironment().getSystemConfig(),
       new KafkaKeySerializer,
       new EventSerializer
     )

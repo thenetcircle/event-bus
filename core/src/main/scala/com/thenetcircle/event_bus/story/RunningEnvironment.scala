@@ -55,7 +55,7 @@ object RunningEnvironment {
       environment.getAppVersion(),
       environment.getAppEnv(),
       environment.isDebug(),
-      environment.getConfig(),
+      environment.getSystemConfig(),
       system
     )
 
