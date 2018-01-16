@@ -18,19 +18,11 @@
 package com.thenetcircle.event_bus.event
 
 import akka.util.ByteString
-import com.thenetcircle.event_bus.event.EventStatus.EventStatus
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
-case class Event(metadata: EventMetaData,
-                 body: EventBody,
-                 status: EventStatus = EventStatus.PROCESSING,
-                 version: Option[String] = None,
-                 passThrough: Option[Any] = None) {
+case class Event(metadata: EventMetaData, body: EventBody, passThrough: Option[Any] = None) {
 
   def uniqueName: String = s"${metadata.name}-${metadata.uuid}"
-
-  def isFailed: Boolean = status == EventStatus.FAILED
-  def withStatus(_status: EventStatus): Event = copy(status = _status)
 
   def withPassThrough[T](_passThrough: T): Event = {
     if (passThrough.isDefined) {
@@ -54,10 +46,3 @@ case class EventMetaData(uuid: String,
 }
 
 case class EventBody(data: ByteString, format: DataFormat)
-
-object EventStatus extends Enumeration {
-  type EventStatus = Value
-
-  val PROCESSING = Value(1, "PROCESSING")
-  val FAILED = Value(2, "FAILED")
-}

@@ -23,7 +23,7 @@ import com.thenetcircle.event_bus.story.StoryManager.StoryInfo
 
 import scala.collection.mutable
 
-class StoryManager(zkManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)(
+class StoryManager(zkManager: ZKManager, builderFactory: TaskBuilderFactory)(
     implicit runningEnv: RunningEnvironment
 ) {
 
@@ -60,10 +60,10 @@ class StoryManager(zkManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)
     val storyInfo: StoryInfo = getStoryInfo(storyName)
     new Story(
       StorySettings(storyName, StoryStatus(storyInfo.status)),
-      taskBuilderFactory.buildSourceTask(storyInfo.source).get,
-      taskBuilderFactory.buildSinkTask(storyInfo.sink).get,
-      storyInfo.transforms.map(_.flatMap(_v => taskBuilderFactory.buildTransformTask(_v))),
-      storyInfo.fallbacks.map(_.flatMap(_v => taskBuilderFactory.buildSinkTask(_v)))
+      builderFactory.buildSourceTask(storyInfo.source).get,
+      builderFactory.buildSinkTask(storyInfo.sink).get,
+      storyInfo.transforms.map(_.flatMap(_v => builderFactory.buildTransformTask(_v))),
+      storyInfo.fallbacks.map(_.flatMap(_v => builderFactory.buildSinkTask(_v)))
     )
   }
 
@@ -81,10 +81,10 @@ class StoryManager(zkManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)
 }
 
 object StoryManager {
-  def apply(zkManager: ZKManager, taskBuilderFactory: TaskBuilderFactory)(
+  def apply(zkManager: ZKManager, builderFactory: TaskBuilderFactory)(
       implicit runningEnv: RunningEnvironment
   ): StoryManager =
-    new StoryManager(zkManager, taskBuilderFactory)
+    new StoryManager(zkManager, builderFactory)
 
   case class StoryInfo(name: String,
                        status: String,

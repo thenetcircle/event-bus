@@ -43,7 +43,8 @@ import scala.util.{Success, Try}
 case class KafkaSinkSettings(bootstrapServers: String,
                              parallelism: Int = 100,
                              closeTimeout: FiniteDuration = 60.seconds,
-                             properties: Map[String, String] = Map.empty)
+                             properties: Map[String, String] = Map.empty,
+                             defaultTopic: String = "event-default")
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
 
@@ -72,26 +73,11 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   }
 
   def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {
-    Message(KafkaSink.getProducerRecordFromEvent(event), event)
+    Message(getProducerRecordFromEvent(event), event)
   }
 
-  override def getHandler()(
-      implicit context: TaskRunningContext
-  ): Flow[Event, (Try[Done], Event), NotUsed] = {
-    Flow[Event]
-      .map(createMessage)
-      // TODO: take care of Supervision of mapAsync inside flow
-      .via(Producer.flow(getProducerSettings()))
-      .map(result => (Success(Done), result.message.passThrough))
-  }
-}
-
-object KafkaSink {
-  private def getProducerRecordFromEvent(
-      event: Event
-  ): ProducerRecord[ProducerKey, ProducerValue] = {
-    // TODO: use channel detective
-    val topic: String = event.metadata.channel.getOrElse("event-default")
+  def getProducerRecordFromEvent(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
+    val topic: String = event.metadata.channel.getOrElse(settings.defaultTopic)
     val timestamp: Long = event.metadata.published
     val key: ProducerKey = KafkaKey(event)
     val value: ProducerValue = event
@@ -103,6 +89,16 @@ object KafkaSink {
       key,
       value
     )
+  }
+
+  override def getHandler()(
+      implicit context: TaskRunningContext
+  ): Flow[Event, (Try[Done], Event), NotUsed] = {
+    Flow[Event]
+      .map(createMessage)
+      // TODO: take care of Supervision of mapAsync inside flow
+      .via(Producer.flow(getProducerSettings()))
+      .map(result => (Success(Done), result.message.passThrough))
   }
 }
 
@@ -119,7 +115,8 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
       |  "close-timeout": "60s",
       |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
       |  # can be defined in this configuration section.
-      |  "properties": {}
+      |  "properties": {},
+      |  "default-topic": "event-default"
       |}
       """.stripMargin
     )
@@ -131,7 +128,8 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
         config.as[String]("bootstrap-servers"),
         config.as[Int]("parallelism"),
         config.as[FiniteDuration]("close-timeout"),
-        config.as[Map[String, String]]("properties")
+        config.as[Map[String, String]]("properties"),
+        config.as[String]("default-topic")
       )
 
     new KafkaSink(settings)
