@@ -15,17 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.misc
+package com.thenetcircle.event_bus.context
 
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
 
-class BaseEnvironment(appName: String,
-                      appVersion: String,
-                      appEnv: String,
-                      debug: Boolean,
-                      systemConfig: Config) {
+class AppContext(appName: String,
+                 appVersion: String,
+                 appEnv: String,
+                 debug: Boolean,
+                 systemConfig: Config) {
 
   def getAppEnv(): String = appEnv
   def getAppName(): String = appName
@@ -47,17 +47,17 @@ class BaseEnvironment(appName: String,
 
 }
 
-object BaseEnvironment {
+object AppContext {
 
-  def apply(): BaseEnvironment = apply(ConfigFactory.load())
+  def apply(): AppContext = apply(ConfigFactory.load())
 
-  def apply(systemConfig: Config): BaseEnvironment = {
+  def apply(systemConfig: Config): AppContext = {
 
     systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
 
     val appName = systemConfig.getString("app.name")
 
-    new BaseEnvironment(
+    new AppContext(
       appName,
       systemConfig.getString("app.version"),
       systemConfig.getString("app.env"),

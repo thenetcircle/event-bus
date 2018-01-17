@@ -17,8 +17,9 @@
 
 package com.thenetcircle.event_bus.story
 
+import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.interface._
-import com.thenetcircle.event_bus.misc.{BaseEnvironment, ConfigStringParser}
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -57,7 +58,7 @@ class TaskBuilderFactory() {
     }
   }
 
-  def buildSourceTask(configString: String)(implicit env: BaseEnvironment): Option[SourceTask] =
+  def buildSourceTask(configString: String)(implicit env: AppContext): Option[SourceTask] =
     ???
   /*{
     parseTaskConfigString(configString).map {
@@ -66,24 +67,21 @@ class TaskBuilderFactory() {
   }*/
 
   def buildSourceTask(category: String,
-                      configString: String)(implicit env: BaseEnvironment): Option[SourceTask] =
+                      configString: String)(implicit env: AppContext): Option[SourceTask] =
     getSourceTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildTransformTask(
-      configString: String
-  )(implicit env: BaseEnvironment): Option[TransformTask] =
+  def buildTransformTask(configString: String)(implicit env: AppContext): Option[TransformTask] =
     ???
 
-  def buildTransformTask(category: String, configString: String)(
-      implicit env: BaseEnvironment
-  ): Option[TransformTask] =
+  def buildTransformTask(category: String,
+                         configString: String)(implicit env: AppContext): Option[TransformTask] =
     getTransformTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildSinkTask(configString: String)(implicit env: BaseEnvironment): Option[SinkTask] =
+  def buildSinkTask(configString: String)(implicit env: AppContext): Option[SinkTask] =
     ???
 
   def buildSinkTask(category: String,
-                    configString: String)(implicit env: BaseEnvironment): Option[SinkTask] =
+                    configString: String)(implicit env: AppContext): Option[SinkTask] =
     getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
 
 }

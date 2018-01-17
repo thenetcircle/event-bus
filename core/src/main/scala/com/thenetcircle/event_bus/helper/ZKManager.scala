@@ -15,8 +15,9 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.misc
+package com.thenetcircle.event_bus.helper
 
+import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
@@ -25,7 +26,7 @@ import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
 
-class ZKManager(connectString: String)(implicit env: BaseEnvironment) extends StrictLogging {
+class ZKManager(connectString: String)(implicit env: AppContext) extends StrictLogging {
 
   val client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
@@ -108,12 +109,12 @@ class ZKManager(connectString: String)(implicit env: BaseEnvironment) extends St
 
 object ZKManager {
 
-  def apply(config: Config)(implicit env: BaseEnvironment): ZKManager = {
+  def apply(config: Config)(implicit env: AppContext): ZKManager = {
     config.checkValid(ConfigFactory.defaultReference, "app.zookeeper-server")
     apply(config.getString("app.zookeeper-server"))
   }
 
-  def apply(connectString: String)(implicit env: BaseEnvironment): ZKManager = {
+  def apply(connectString: String)(implicit env: AppContext): ZKManager = {
     if (connectString.isEmpty) {
       throw new IllegalArgumentException("ConnectString is empty.")
     }

@@ -18,48 +18,48 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.misc.{BaseEnvironment, ZKManager}
+import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.helper.ZKManager
 import com.thenetcircle.event_bus.story._
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object StoryRunningApp extends App with StrictLogging {
+object ZookeeperBasedLauncher extends App with StrictLogging {
 
   logger.info("Application is initializing.")
 
-  // Initialize BaseEnvironment
-  val env: BaseEnvironment = BaseEnvironment(ConfigFactory.load())
+  val config: Config = ConfigFactory.load()
 
   // Check Executor Name
-  var runnerGroup: String = if (args.length > 0) args(0) else ""
-  if (runnerGroup.isEmpty)
-    runnerGroup = env.getSystemConfig().getString("app.default-runner-group")
+  // TODO append server info
+  var runnerName: String = if (args.length > 0) args(0) else ""
+  if (runnerName.isEmpty)
+    runnerName = config.getString("app.default-runner-group")
+
+  // Create AppContext
+  implicit val appContext: AppContext = AppContext(config)
 
   // Connecting Zookeeper
-  val zkManager: ZKManager = ZKManager(env.getSystemConfig())(env)
+  val zkManager: ZKManager = ZKManager(config)(appContext)
   zkManager.init()
-  val runnerId: String = zkManager.registerStoryRunner(runnerGroup)
+  zkManager.registerStoryRunner(runnerName)
 
   // Create ActorSystem
-  implicit val system: ActorSystem =
-    ActorSystem(env.getAppName(), env.getSystemConfig())
-
-  implicit val runningEnv: RunningEnvironment =
-    RunningEnvironment(runnerGroup, runnerId)(env, system)
+  implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
 
   // Kamon.start()
 
   // Run Stories
-  val storyManager = StoryManager(zkManager, TaskBuilderFactory(runningEnv.getSystemConfig()))
+  val storyManager = StoryRunner(zkManager, TaskBuilderFactory(config))
   storyManager.run()
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
     // Kamon.shutdown()
-    runningEnv.shutdown()
+    appContext.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)
   })

@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.interface
 import akka.stream.KillSwitch
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.story.TaskRunningContext
 
 import scala.concurrent.Future
 import scala.util.Try

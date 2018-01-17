@@ -26,10 +26,10 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
-import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._

@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.interface.SourceTaskBuilder
-import com.thenetcircle.event_bus.misc.ConfigStringParser
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.typesafe.scalalogging.StrictLogging
 
 /** Builds Story By Config */

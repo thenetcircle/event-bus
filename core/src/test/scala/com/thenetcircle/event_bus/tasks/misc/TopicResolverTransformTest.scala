@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.tasks.misc
 
 import com.thenetcircle.event_bus.base.AkkaStreamTest
-import com.thenetcircle.event_bus.misc.ConfigStringParser
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 
 class TopicResolverTransformTest extends AkkaStreamTest {
 

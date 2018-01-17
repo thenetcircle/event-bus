@@ -21,6 +21,7 @@ import akka.stream.{KillSwitch, KillSwitches}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{SinkTask, SourceTask}
 
@@ -90,7 +91,7 @@ class StoryTest extends AkkaStreamTest {
     fu.flatMap(_.unbind())
 
     val runningContextFactory = TaskRunningContextFactory()
-    system.actorOf(StoryRunner.props(runningContextFactory, story), "test-story")*/
+    system.actorOf(StoryWrapper.props(runningContextFactory, story), "test-story")*/
 
     Await.result(system.whenTerminated, 60.seconds)
 

@@ -24,10 +24,10 @@ import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
-import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,

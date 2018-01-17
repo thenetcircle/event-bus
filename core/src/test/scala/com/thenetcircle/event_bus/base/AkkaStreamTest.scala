@@ -17,47 +17,47 @@
 
 package com.thenetcircle.event_bus.base
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
-import com.thenetcircle.event_bus.misc.BaseEnvironment
-import com.thenetcircle.event_bus.story.{RunningEnvironment, TaskBuilderFactory, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.story.TaskBuilderFactory
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaStreamTest(_env: BaseEnvironment)
-    extends TestKit(ActorSystem(_env.getAppName(), _env.getSystemConfig()))
+abstract class AkkaStreamTest(_appContext: AppContext)
+    extends TestKit(ActorSystem(_appContext.getAppName(), _appContext.getSystemConfig()))
     with ImplicitSender
     with UnitTest {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  val baseEnv: BaseEnvironment = _env
-  implicit val runningEnv: RunningEnvironment =
-    RunningEnvironment("test-runner-group", "test-runner-id")(baseEnv, system)
-
+  implicit val appContext: AppContext = _appContext
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
   )
-  implicit val executor: ExecutionContext =
-    materializer.executionContext
-
-  val storyRunner: ActorRef = system.actorOf(TestActors.blackholeProps)
+  implicit val executor: ExecutionContext = materializer.executionContext
 
   implicit val runningContext: TaskRunningContext =
-    new TaskRunningContext(runningEnv, system, materializer, executor, storyRunner)
+    new TaskRunningContext(
+      appContext,
+      system,
+      materializer,
+      executor,
+      system.actorOf(TestActors.blackholeProps)
+    )
 
-  val builderFactory: TaskBuilderFactory = TaskBuilderFactory(runningEnv.getSystemConfig())
+  val builderFactory: TaskBuilderFactory = TaskBuilderFactory(appContext.getSystemConfig())
 
   def this() = {
-    this(new BaseEnvironment("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
+    this(new AppContext("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
   }
 
   override def beforeAll(): Unit = {}
 
   override def afterAll(): Unit = {
-    runningEnv.shutdown()
+    appContext.shutdown()
     TestKit.shutdownActorSystem(system)
   }
 

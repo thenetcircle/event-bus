@@ -24,11 +24,11 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
-import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging

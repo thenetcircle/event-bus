@@ -15,19 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.helper
 
-import akka.{Done, NotUsed}
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.Event
+import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
-import scala.util.Try
+object ConfigStringParser {
 
-trait SinkTask extends Task {
+  val delimiter = """|||"""
 
-  def getHandler()(
-      implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Try[Done], Event), NotUsed]
+  private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
+  def convertStringToConfig(configString: String): Config =
+    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
 
 }

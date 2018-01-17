@@ -21,11 +21,12 @@ import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
-import com.thenetcircle.event_bus.misc.ConfigStringParser
-import com.thenetcircle.event_bus.story.TaskRunningContext
+import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.ConcurrentHashMap
+
+import com.thenetcircle.event_bus.context.TaskRunningContext
 
 import scala.collection.mutable
 import scala.util.matching.Regex
