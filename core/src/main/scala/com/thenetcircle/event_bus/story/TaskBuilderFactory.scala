@@ -17,17 +17,27 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.interface._
-import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 class TaskBuilderFactory() {
-
   private var sourceTaskBuilders: Map[String, SourceTaskBuilder] = Map.empty
   private var transformTaskBuilders: Map[String, TransformTaskBuilder] = Map.empty
   private var sinkTaskBuilers: Map[String, SinkTaskBuilder] = Map.empty
+
+  private def createInstance(cls: Class[TaskBuilder[Task]]): TaskBuilder[Task] = cls.newInstance()
+
+  def registerBuilder(category: String, builderClassName: String): Unit = {
+    registerBuilder(
+      category,
+      Class.forName(builderClassName).asInstanceOf[Class[TaskBuilder[Task]]]
+    )
+  }
+
+  def registerBuilder(category: String, builderClass: Class[TaskBuilder[Task]]): Unit = {
+    registerBuilder(category, createInstance(builderClass))
+  }
 
   def registerBuilder(category: String, builder: TaskBuilder[Task]): Unit = {
     builder match {
@@ -49,66 +59,22 @@ class TaskBuilderFactory() {
 
   def getSinkTaskBuilder(category: String): Option[SinkTaskBuilder] =
     sinkTaskBuilers.get(category.toLowerCase)
-
-  def parseTaskConfigString(configString: String): Option[List[String]] = {
-    try {
-      Some(ConfigStringParser.convertStringToConfig(configString).as[List[String]](""))
-    } catch {
-      case _: Throwable => None
-    }
-  }
-
-  def buildSourceTask(configString: String)(implicit env: AppContext): Option[SourceTask] =
-    ???
-  /*{
-    parseTaskConfigString(configString).map {
-      case _category :: _configString :: _ => buildTaskA(_category, _configString)
-    }
-  }*/
-
-  def buildSourceTask(category: String,
-                      configString: String)(implicit env: AppContext): Option[SourceTask] =
-    getSourceTaskBuilder(category).map(_builder => _builder.build(configString))
-
-  def buildTransformTask(configString: String)(implicit env: AppContext): Option[TransformTask] =
-    ???
-
-  def buildTransformTask(category: String,
-                         configString: String)(implicit env: AppContext): Option[TransformTask] =
-    getTransformTaskBuilder(category).map(_builder => _builder.build(configString))
-
-  def buildSinkTask(configString: String)(implicit env: AppContext): Option[SinkTask] =
-    ???
-
-  def buildSinkTask(category: String,
-                    configString: String)(implicit env: AppContext): Option[SinkTask] =
-    getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
-
 }
 
 object TaskBuilderFactory {
-
   def apply(config: Config): TaskBuilderFactory = {
-
-    val builderFactory = new TaskBuilderFactory()
-
     config.checkValid(ConfigFactory.defaultReference, "app.supported-builders")
 
+    val taskBuilderFactory = new TaskBuilderFactory()
     List("source", "transform", "sink").foreach(prefix => {
       config
         .as[List[List[String]]](s"app.supported-builders.$prefix")
         .foreach {
-          case plotType :: builderClass :: _ =>
-            builderFactory.registerBuilder(
-              plotType,
-              Class.forName(builderClass).asInstanceOf[Class[TaskBuilder[Task]]].newInstance()
-            )
+          case category :: builderClassName :: _ =>
+            taskBuilderFactory.registerBuilder(category, builderClassName)
           case _ =>
         }
     })
-
-    builderFactory
-
+    taskBuilderFactory
   }
-
 }

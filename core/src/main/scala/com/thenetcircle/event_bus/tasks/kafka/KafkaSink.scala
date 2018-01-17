@@ -24,7 +24,7 @@ import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
@@ -116,7 +116,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
 class KafkaSinkBuilder() extends SinkTaskBuilder {
 
-  override def build(configString: String): KafkaSink = {
+  override def build(
+      configString: String
+  )(implicit buildingContext: TaskBuildingContext): KafkaSink = {
     val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
       """
       |{

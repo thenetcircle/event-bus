@@ -17,27 +17,22 @@
 
 package com.thenetcircle.event_bus.helper
 
-import com.thenetcircle.event_bus.context.AppContext
-import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
 
-class ZKManager(connectString: String)(implicit env: AppContext) extends StrictLogging {
+class ZookeeperManager(connectString: String, rootPath: String) extends StrictLogging {
 
   val client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
-  val rootPath = s"/event-bus/${env.getAppName()}"
 
-  // register itself to be a runner
-  // update stories status
-
-  def init(): Unit = {
+  def start(): Unit = {
     client.start()
-    env.addShutdownHook(client.close())
+    sys.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
 
     // Check and Create root nodes
     if (client.checkExists().forPath(getAbsPath("stories")) == null) {
@@ -48,16 +43,18 @@ class ZKManager(connectString: String)(implicit env: AppContext) extends StrictL
     }
   }
 
-  def getAbsPath(path: String): String = s"$rootPath/$path"
+  def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
-  def registerStoryRunner(group: String): String = {
+  def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
+
+  def registerStoryRunner(runnerName: String): String = {
     val payload = ""
     client
       .create()
       .creatingParentsIfNeeded()
       .withProtection()
       .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-      .forPath(getAbsPath(s"runners/$group/member"), payload.getBytes())
+      .forPath(getAbsPath(s"runners/$runnerName/member"), payload.getBytes())
   }
 
   def getClient(): CuratorFramework = client
@@ -107,18 +104,11 @@ class ZKManager(connectString: String)(implicit env: AppContext) extends StrictL
 
 }
 
-object ZKManager {
-
-  def apply(config: Config)(implicit env: AppContext): ZKManager = {
-    config.checkValid(ConfigFactory.defaultReference, "app.zookeeper-server")
-    apply(config.getString("app.zookeeper-server"))
-  }
-
-  def apply(connectString: String)(implicit env: AppContext): ZKManager = {
-    if (connectString.isEmpty) {
-      throw new IllegalArgumentException("ConnectString is empty.")
+object ZookeeperManager {
+  def apply(connectString: String, rootPath: String): ZookeeperManager = {
+    if (connectString.isEmpty || rootPath.isEmpty) {
+      throw new IllegalArgumentException("Parameters are unavailable.")
     }
-    new ZKManager(connectString)
+    new ZookeeperManager(connectString, rootPath)
   }
-
 }

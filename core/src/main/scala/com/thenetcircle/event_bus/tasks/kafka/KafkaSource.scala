@@ -24,7 +24,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
@@ -160,7 +160,9 @@ case class KafkaSourceSettings(bootstrapServers: String,
 
 class KafkaSourceBuilder() extends SourceTaskBuilder {
 
-  override def build(configString: String): KafkaSource = {
+  override def build(
+      configString: String
+  )(implicit buildingContext: TaskBuildingContext): KafkaSource = {
 
     val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
       """

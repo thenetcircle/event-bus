@@ -14,38 +14,39 @@
  * Contributors:
  *     Beineng Ma <baineng.ma@gmail.com>
  */
-/*
+
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.interface.SourceTaskBuilder
+import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.typesafe.scalalogging.StrictLogging
+import com.thenetcircle.event_bus.interface.{SinkTask, SourceTask, TransformTask}
 
-/** Builds Story By Config */
-class StoryBuilder(builderFactory: TaskBuilderFactory)
-    extends SourceTaskBuilder
-    with StrictLogging {
+import scala.util.matching.Regex
 
-  /**
- * Builds Story by String Config
- *
- * example:
- * ```
- * {
- *   # "name": "..."
- *   # "sourceTask": ["sourceTask-type", "settings"]
- *   # "transformTasks": [
- *   #   ["op-type", "settings"],
- *   #   ...
- *   # ]
- *   # "sinkTask": ["sinkTask-type", "settings"]
- *   # "fallbackTasks": [
- *     ["sinkTask-type", "settings"]
- *   ]
- * }
- * ```
- */
-  def build(configString: String)(implicit runningContext: TaskRunningContext): Story = {
+class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext) {
+
+  implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
+
+  /*/**
+   * Builds Story by String Config
+   *
+   * example:
+   * ```
+   * {
+   *   # "name": "..."
+   *   # "sourceTask": ["sourceTask-type", "settings"]
+   *   # "transformTasks": [
+   *   #   ["op-type", "settings"],
+   *   #   ...
+   *   # ]
+   *   # "sinkTask": ["sinkTask-type", "settings"]
+   *   # "fallbackTasks": [
+   *     ["sinkTask-type", "settings"]
+   *   ]
+   * }
+   * ```
+   */
+  def build(configString: String): Story = {
 
     try {
 
@@ -83,7 +84,51 @@ class StoryBuilder(builderFactory: TaskBuilderFactory)
 
     }
 
+  }*/
+
+  def buildStory(storyInfo: StoryInfo): Story = {
+    new Story(
+      StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
+      buildSourceTask(storyInfo.source).get,
+      buildSinkTask(storyInfo.sink).get,
+      storyInfo.transforms.map(_.flatMap(_v => buildTransformTask(_v))),
+      storyInfo.fallbacks.map(_.flatMap(_v => buildSinkTask(_v)))
+    )
   }
 
+  def parseConfigString(configString: String): (String, String) = {
+    val re = configString.split(Regex.quote(ConfigStringParser.delimiter), 2)
+    (re(0), re(1))
+  }
+
+  def buildSourceTask(configString: String): Option[SourceTask] = {
+    val (_category, _config) = parseConfigString(configString)
+    buildSourceTask(_category, _config)
+  }
+
+  def buildSourceTask(category: String, configString: String): Option[SourceTask] =
+    taskBuilderFactory.getSourceTaskBuilder(category).map(_builder => _builder.build(configString))
+
+  def buildTransformTask(configString: String): Option[TransformTask] = {
+    val (_category, _config) = parseConfigString(configString)
+    buildTransformTask(_category, _config)
+  }
+
+  def buildTransformTask(category: String, configString: String): Option[TransformTask] =
+    taskBuilderFactory
+      .getTransformTaskBuilder(category)
+      .map(_builder => _builder.build(configString))
+
+  def buildSinkTask(configString: String): Option[SinkTask] = {
+    val (_category, _config) = parseConfigString(configString)
+    buildSinkTask(_category, _config)
+  }
+
+  def buildSinkTask(category: String, configString: String): Option[SinkTask] =
+    taskBuilderFactory.getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
 }
- */
+
+object StoryBuilder {
+  def apply(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext): StoryBuilder =
+    new StoryBuilder(taskBuilderFactory)
+}

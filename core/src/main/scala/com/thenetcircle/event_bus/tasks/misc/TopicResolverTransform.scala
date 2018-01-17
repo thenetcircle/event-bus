@@ -26,7 +26,7 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.ConcurrentHashMap
 
-import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 
 import scala.collection.mutable
 import scala.util.matching.Regex
@@ -100,7 +100,9 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
 
 class TopicResolverTransformBuilder() extends TransformTaskBuilder {
 
-  override def build(configString: String): TopicResolverTransform = {
+  override def build(
+      configString: String
+  )(implicit buildingContext: TaskBuildingContext): TopicResolverTransform = {
     val defaultConfig: Config =
       ConfigStringParser.convertStringToConfig("""
       |{

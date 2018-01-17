@@ -18,8 +18,8 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.helper.ZKManager
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContextFactory}
+import com.thenetcircle.event_bus.helper.ZookeeperManager
 import com.thenetcircle.event_bus.story._
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -31,34 +31,42 @@ object ZookeeperBasedLauncher extends App with StrictLogging {
 
   logger.info("Application is initializing.")
 
+  // Base components
   val config: Config = ConfigFactory.load()
-
-  // Check Executor Name
-  // TODO append server info
-  var runnerName: String = if (args.length > 0) args(0) else ""
-  if (runnerName.isEmpty)
-    runnerName = config.getString("app.default-runner-group")
-
-  // Create AppContext
   implicit val appContext: AppContext = AppContext(config)
-
-  // Connecting Zookeeper
-  val zkManager: ZKManager = ZKManager(config)(appContext)
-  zkManager.init()
-  zkManager.registerStoryRunner(runnerName)
-
-  // Create ActorSystem
   implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
 
   // Kamon.start()
 
+  // Setup Zookeeper
+  val zkManager: ZookeeperManager =
+    ZookeeperManager(
+      config.getString("app.zookeeper-server"),
+      s"/event-bus/${appContext.getAppName()}"
+    )
+  zkManager.start()
+  appContext.setZookeeperManager(zkManager)
+
   // Run Stories
-  val storyManager = StoryRunner(zkManager, TaskBuilderFactory(config))
-  storyManager.run()
+  // TODO append server info
+  val storyRunner: StoryRunner =
+    StoryRunner(if (args.length > 0) args(0) else "", TaskRunningContextFactory(system, appContext))
+  zkManager.registerStoryRunner(storyRunner.getName())
+
+  val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(config))
+  val storyDAO: StoryDAO = StoryZookeeperDAO(zkManager)
+
+  storyDAO
+    .getStoriesByRunnerName(storyRunner.getName())
+    .foreach(storyInfo => {
+      val story = storyBuilder.buildStory(storyInfo)
+      storyRunner.run(story)
+    })
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
     // Kamon.shutdown()
+    storyRunner.shutdown()
     appContext.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)

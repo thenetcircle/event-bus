@@ -25,7 +25,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractorFactory}
@@ -155,7 +155,9 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
 
 class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
 
-  override def build(configString: String): HttpSource = {
+  override def build(
+      configString: String
+  )(implicit buildingContext: TaskBuildingContext): HttpSource = {
 
     try {
 

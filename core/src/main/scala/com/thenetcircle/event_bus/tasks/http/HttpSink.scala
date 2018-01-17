@@ -26,7 +26,7 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
@@ -197,7 +197,9 @@ object HttpSink {
 
 class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
 
-  override def build(configString: String): HttpSink = {
+  override def build(
+      configString: String
+  )(implicit buildingContext: TaskBuildingContext): HttpSink = {
 
     val defaultConfig: Config =
       ConfigStringParser.convertStringToConfig("""
