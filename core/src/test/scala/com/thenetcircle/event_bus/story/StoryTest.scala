@@ -17,11 +17,17 @@
 
 package com.thenetcircle.event_bus.story
 
+import akka.stream.{KillSwitch, KillSwitches}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interface.SourceTask
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.io.StdIn
+import scala.util.Try
 
 class StoryTest extends AkkaStreamTest {
 
@@ -118,6 +124,48 @@ class StoryTest extends AkkaStreamTest {
             |  "expected-response": "TEST_RESPONSE"
             |}
           """.stripMargin)
+      .get
+
+    val story = new Story(settings, sourceTask, sinkTask)
+    val (killSwitch, doneFuture) = story.run()
+
+    // Await.result(system.whenTerminated, 60.seconds)
+    StdIn.readLine()
+
+  }
+
+  it should "works from MockSource to HttpSink" in {
+
+    val settings = StorySettings("test-story-3")
+
+    val sourceTask = new SourceTask {
+      override def runWith(
+          handler: Flow[Event, (Try[Done], Event), NotUsed]
+      )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
+
+        val testEvent1 = createTestEvent("test-event-1")
+        val testEvent2 = createTestEvent("test-event-2")
+        val testEvent3 = createTestEvent("test-event-3")
+
+        Source(List(testEvent1, testEvent2, testEvent3))
+        // .single(testEvent)
+          .viaMat(KillSwitches.single)(Keep.right)
+          .via(handler)
+          .toMat(Sink.foreach(println))(Keep.both)
+          .run()
+
+      }
+    }
+
+    val sinkTask = builderFactory
+      .buildSinkTask("http", """
+                                 |{
+                                 |  "request" : {
+                                 |    "uri": "http://127.0.0.1:8888"
+                                 |  },
+                                 |  "expected-response": "TEST_RESPONSE"
+                                 |}
+                               """.stripMargin)
       .get
 
     val story = new Story(settings, sourceTask, sinkTask)

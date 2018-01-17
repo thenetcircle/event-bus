@@ -10,6 +10,8 @@
 	<logger name="ch.qos.logback" level="WARN" />
 	<logger name="org.apache.kafka" level="INFO" />
 	<logger name="akka.event" level="INFO" />
+	<logger name="akka.http.impl.engine.client.PoolGateway" level="INFO" />
+	<logger name="akka.io.TcpOutgoingConnection" level="INFO" />
 
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />

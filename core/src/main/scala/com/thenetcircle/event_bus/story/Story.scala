@@ -98,7 +98,7 @@ object Story extends StrictLogging {
                 val logMessage =
                   s"Event ${event.uniqueName} was processing failed on flow: $flowName." +
                     (if (fallbackTasks.isDefined) " Sending to fallbackTasks." else "")
-                logger.debug(logMessage)
+                logger.warn(logMessage)
                 input
             }
             .via(

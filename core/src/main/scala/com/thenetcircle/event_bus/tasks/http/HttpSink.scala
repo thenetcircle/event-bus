@@ -40,9 +40,9 @@ import scala.util.{Failure, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
                             expectedResponseBody: String,
-                            maxRetryTimes: Int = 10,
+                            maxRetryTimes: Int = 9,
                             maxConcurrentRetries: Int = 1,
-                            retryTimeout: FiniteDuration = 10.seconds,
+                            retryTimeout: FiniteDuration = 6.seconds,
                             poolSettings: Option[ConnectionPoolSettings] = None)
 
 class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
@@ -65,7 +65,8 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val exectionContext: ExecutionContext = context.getExecutionContext()
 
-    val sender = system.actorOf(
+    // TODO: includes StoryName
+    val retrySender = system.actorOf(
       RetrySender.props(settings.maxRetryTimes, checkResponse, settings.poolSettings),
       "http-retry-sender"
     )
@@ -75,12 +76,12 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         import akka.pattern.ask
         implicit val askTimeout: Timeout = Timeout(settings.retryTimeout)
 
-        (sender ? Send(createRequest(event)))
-          .mapTo[Try[HttpResponse]]
-          .map(respTry => (respTry.map(_ => Done), event))
+        (retrySender ? Send(createRequest(event)))
+          .mapTo[Result]
+          .map(result => (result.payload.map(_ => Done), event))
       }
       .watchTermination() { (_, done) =>
-        done.map(_ => sender ! PoisonPill)
+        done.map(_ => retrySender ! PoisonPill)
         NotUsed
       }
   }
@@ -92,7 +93,7 @@ object HttpSink {
         maxRetryTimes: Int,
         respCheckFunc: (StatusCode, Seq[HttpHeader], Option[String]) => Boolean,
         conntionPoolSettings: Option[ConnectionPoolSettings] = None
-    )(implicit context: TaskRunningContext): Props = {
+    )(implicit runningContext: TaskRunningContext): Props = {
       Props(new RetrySender(maxRetryTimes, respCheckFunc, conntionPoolSettings))
     }
 
@@ -101,35 +102,43 @@ object HttpSink {
     }
     case class Resp(respTry: Try[HttpResponse], send: Send)
     case class Check(resultTry: Try[Boolean], send: Send, respOption: Option[HttpResponse])
+    case class Result(payload: Try[HttpResponse])
   }
 
   class RetrySender(
       maxRetryTimes: Int,
       respCheckFunc: (StatusCode, Seq[HttpHeader], Option[String]) => Boolean,
       conntionPoolSettings: Option[ConnectionPoolSettings] = None
-  )(implicit context: TaskRunningContext)
+  )(implicit runningContext: TaskRunningContext)
       extends Actor
       with ActorLogging {
 
     import RetrySender._
 
-    implicit val system: ActorSystem = context.getActorSystem()
-    implicit val materializer: Materializer = context.getMaterializer()
-    implicit val executionContext: ExecutionContext = context.getExecutionContext()
+    implicit val system: ActorSystem = runningContext.getActorSystem()
+    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    def sendToSelf(msg: Any): Unit = self.tell(msg, sender())
+    def replyToOriginalSender(msg: Try[HttpResponse]): Unit = {
+      log.debug(s"replying to original sender: $msg")
+      sender() ! Result(msg)
+    }
 
     override def receive: Receive = {
       case send @ Send(req, _) =>
+        val originalSender = sender()
+
         val respFuture = conntionPoolSettings match {
           case Some(_settings) => Http().singleRequest(request = req, settings = _settings)
           case None            => Http().singleRequest(request = req)
         }
         respFuture.andThen {
-          case respTry => sendToSelf(Resp(respTry, send))
+          case respTry => self.tell(Resp(respTry, send), originalSender)
         }
 
       case Resp(respTry, send: Send) =>
+        val originalSender = sender()
+
         respTry match {
           case Success(resp @ HttpResponse(status @ StatusCodes.OK, headers, entity, _)) =>
             entity.dataBytes
@@ -139,34 +148,39 @@ object HttpSink {
                 respCheckFunc(status, headers, Some(body.utf8String))
               }
               .andThen {
-                case resultTry => sendToSelf(Check(resultTry, send, Some(resp)))
+                case resultTry => self.tell(Check(resultTry, send, Some(resp)), originalSender)
               }
           case Success(resp @ HttpResponse(status, headers, _, _)) =>
             log.info("Got non-200 status code: " + status)
             resp.discardEntityBytes()
-            sendToSelf(Check(Try(respCheckFunc(status, headers, None)), send, Some(resp)))
+            self.tell(
+              Check(Try(respCheckFunc(status, headers, None)), send, Some(resp)),
+              originalSender
+            )
           case Failure(ex) =>
-            sendToSelf(Check(Failure(ex), send, None))
+            self.tell(Check(Failure(ex), send, None), originalSender)
         }
 
       case Check(resultTry, send, respOption) =>
+        val originalSender = sender()
+
         val canRetry: Boolean = maxRetryTimes < 0 || send.retryTimes < maxRetryTimes
         resultTry match {
-          case Success(true) => sender() ! Success(respOption.get)
+          case Success(true) => replyToOriginalSender(Success(respOption.get))
           case Success(false) =>
             if (canRetry) {
-              sendToSelf(send.retry())
+              self.tell(send.retry(), originalSender)
             } else {
               val failedMessage = "The response checking was failed."
               log.debug(failedMessage)
-              sender() ! Failure(new Exception(failedMessage))
+              replyToOriginalSender(Failure[HttpResponse](new Exception(failedMessage)))
             }
-          case f @ Failure(ex) =>
+          case Failure(ex) =>
             log.warning(s"Request failed with error: $ex")
             if (canRetry)
-              sendToSelf(send.retry())
+              self.tell(send.retry(), originalSender)
             else
-              sender() ! f
+              replyToOriginalSender(Failure[HttpResponse](ex))
         }
     }
   }
@@ -184,9 +198,9 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
                                 |    # "uri": "..."
                                 |  },
                                 |  "max-concurrent-retries": 1,
-                                |  "max-retry-times": 10,
+                                |  "max-retry-times": 9,
                                 |  "expected-response": "OK",
-                                |  "retry-timeout": "10 s",
+                                |  "retry-timeout": "6 s",
                                 |  "pool-settings": {
                                 |    "max-connections": 4,
                                 |    "min-connections": 0,
