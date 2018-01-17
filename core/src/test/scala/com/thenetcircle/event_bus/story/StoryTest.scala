@@ -33,7 +33,7 @@ class StoryTest extends AkkaStreamTest {
 
   behavior of "Story"
 
-  it should "works from HttpSource to KafkaSink" in {
+  ignore should "works from HttpSource to KafkaSink" in {
 
     val settings = StorySettings("test-story")
 
@@ -96,7 +96,7 @@ class StoryTest extends AkkaStreamTest {
 
   }
 
-  it should "works from KafkaSource to HttpSink" in {
+  ignore should "works from KafkaSource to HttpSink" in {
 
     val settings = StorySettings("test-story-2")
 
@@ -119,9 +119,9 @@ class StoryTest extends AkkaStreamTest {
       .buildSinkTask("http", """
             |{
             |  "request" : {
-            |    "uri": "http://10.60.53.71:3000"
+            |    "uri": "http://127.0.0.1:3001"
             |  },
-            |  "expected-response": "TEST_RESPONSE"
+            |  "expected-response": "ok"
             |}
           """.stripMargin)
       .get
@@ -129,12 +129,12 @@ class StoryTest extends AkkaStreamTest {
     val story = new Story(settings, sourceTask, sinkTask)
     val (killSwitch, doneFuture) = story.run()
 
-    // Await.result(system.whenTerminated, 60.seconds)
+    // Await.result(system.whenTerminated, 10.minutes)
     StdIn.readLine()
 
   }
 
-  it should "works from MockSource to HttpSink" in {
+  ignore should "works from MockSource to HttpSink" in {
 
     val settings = StorySettings("test-story-3")
 
@@ -161,9 +161,9 @@ class StoryTest extends AkkaStreamTest {
       .buildSinkTask("http", """
                                  |{
                                  |  "request" : {
-                                 |    "uri": "http://127.0.0.1:8888"
+                                 |    "uri": "http://127.0.0.1:3001"
                                  |  },
-                                 |  "expected-response": "TEST_RESPONSE"
+                                 |  "expected-response": "ok"
                                  |}
                                """.stripMargin)
       .get

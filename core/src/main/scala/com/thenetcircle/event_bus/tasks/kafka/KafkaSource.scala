@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.tasks.kafka
 import akka.kafka.ConsumerMessage.CommittableOffset
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
-import akka.stream.{KillSwitch, KillSwitches, Materializer}
+import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -37,6 +37,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
@@ -82,33 +83,68 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     Consumer
       .committablePartitionedSource(getConsumerSettings(), getSubscription())
       .viaMat(KillSwitches.single)(Keep.right)
-      .map {
+      .mapAsyncUnordered(settings.maxConcurrentPartitions) {
         case (topicPartition, source) =>
-          source
-            .mapAsync(1)(message => {
-              val eventExtractor = message.record
-                .key()
-                .data
-                .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
-                .getOrElse(EventExtractorFactory.defaultExtractor)
-
-              eventExtractor
-                .extract(ByteString(message.record.value()), Some(message.committableOffset))
-            })
-            .via(handler)
-            .mapAsync(1) {
-              case (Success(_), event) =>
-                event.getPassThrough[CommittableOffset] match {
-                  case Some(co) => co.commitScaladsl()
-                  case None     => throw new Exception("event passthrough is missed")
-                }
-              case (Failure(ex), _) => throw ex
-            }
-            // .withAttributes(supervisionStrategy(resumingDecider))
-            .toMat(Sink.ignore)(Keep.right)
-            .run()
+          try {
+            source
+              .mapAsync(1)(message => {
+                val messageKeyOption = Option(message.record.key())
+                val eventExtractor =
+                  messageKeyOption
+                    .flatMap(_key => _key.data)
+                    .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
+                    .getOrElse(EventExtractorFactory.defaultExtractor)
+                val eventFuture = eventExtractor
+                  .extract(ByteString(message.record.value()), Some(message.committableOffset))
+                eventFuture.failed.foreach(
+                  ex =>
+                    logger.warn(
+                      s"The event read from Kafka extracted failed with format: ${eventExtractor
+                        .getFormat()} and error: $ex"
+                  )
+                )
+                eventFuture
+              })
+              .withAttributes(ActorAttributes.supervisionStrategy(Supervision.resumingDecider))
+              .via(handler)
+              .mapAsync(1) {
+                case (Success(_), event) =>
+                  event.getPassThrough[CommittableOffset] match {
+                    case Some(co) =>
+                      logger.debug(s"The event is going to commit")
+                      co.commitScaladsl() // the commit logic
+                    case None =>
+                      val errorMessage =
+                        s"The event ${event.uniqueName} missed PassThrough[CommittableOffset]"
+                      logger.debug(errorMessage)
+                      throw new NoSuchElementException(errorMessage)
+                  }
+                case (Failure(ex), _) =>
+                  logger.debug(s"The event reaches the end with processing error $ex")
+                  Future.successful(Done)
+              }
+              .toMat(Sink.ignore)(Keep.right)
+              .run()
+              .recover {
+                case NonFatal(ex) =>
+                  logger.warn(
+                    s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
+                  )
+                  Done
+              }
+              .map(done => {
+                logger
+                  .info(s"The substream listening on topicPartition $topicPartition was completed.")
+                done
+              })
+          } catch {
+            case NonFatal(ex) ⇒
+              logger.error(
+                s"Could not materialize topic $topicPartition listening stream with error: $ex"
+              )
+              throw ex
+          }
       }
-      .mapAsyncUnordered(settings.maxConcurrentPartitions)(identity)
       .toMat(Sink.ignore)(Keep.both)
       .run()
   }

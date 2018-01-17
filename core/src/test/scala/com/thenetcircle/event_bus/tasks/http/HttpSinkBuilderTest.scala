@@ -39,9 +39,9 @@ class HttpSinkBuilderTest extends AkkaStreamTest {
 
     val settings = sink.settings
 
-    settings.maxRetryTimes shouldEqual 10
+    settings.maxRetryTimes shouldEqual 9
     settings.maxConcurrentRetries shouldEqual 1
-    settings.retryTimeout shouldEqual 10.seconds
+    settings.totalRetryTimeout shouldEqual 6.seconds
     settings.defaultRequest shouldEqual HttpRequest(
       method = HttpMethods.POST,
       uri = Uri("http://www.google.com")

@@ -89,7 +89,7 @@ class ActivityStreamsEventExtractor
       )
     } catch {
       case ex: Throwable =>
-        logger.warn(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")
+        logger.debug(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")
         throw ex
     }
   }

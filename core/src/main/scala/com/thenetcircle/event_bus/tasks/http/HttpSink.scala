@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, PoisonPill, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -36,19 +36,20 @@ import net.ceedubs.ficus.Ficus._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
                             expectedResponseBody: String,
                             maxRetryTimes: Int = 9,
                             maxConcurrentRetries: Int = 1,
-                            retryTimeout: FiniteDuration = 6.seconds,
+                            totalRetryTimeout: FiniteDuration = 6.seconds,
                             poolSettings: Option[ConnectionPoolSettings] = None)
 
 class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
 
   def createRequest(event: Event): HttpRequest = {
-    settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+    settings.defaultRequest.withEntity(HttpEntity(event.body.data.utf8String))
   }
 
   def checkResponse(status: StatusCode, headers: Seq[HttpHeader], body: Option[String]): Boolean = {
@@ -74,16 +75,23 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     Flow[Event]
       .mapAsync(settings.maxConcurrentRetries) { event =>
         import akka.pattern.ask
-        implicit val askTimeout: Timeout = Timeout(settings.retryTimeout)
+        implicit val askTimeout: Timeout = Timeout(settings.totalRetryTimeout)
 
         (retrySender ? Send(createRequest(event)))
           .mapTo[Result]
           .map(result => (result.payload.map(_ => Done), event))
+          .recover {
+            case NonFatal(ex) => (Failure(ex), event)
+          }
       }
-      .watchTermination() { (_, done) =>
-        done.map(_ => retrySender ! PoisonPill)
+    // Comment this because of that the flow might be materialized multiple times(like KafkaSource)
+    /*.watchTermination() { (_, done) =>
+        done.map(_ => {
+          system.stop(retrySender)
+          // retrySender ! PoisonPill
+        })
         NotUsed
-      }
+      }*/
   }
 }
 
@@ -200,7 +208,7 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
                                 |  "max-concurrent-retries": 1,
                                 |  "max-retry-times": 9,
                                 |  "expected-response": "OK",
-                                |  "retry-timeout": "6 s",
+                                |  "total-retry-timeout": "6 s",
                                 |  "pool-settings": {
                                 |    "max-connections": 4,
                                 |    "min-connections": 0,
@@ -239,7 +247,7 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
         config.as[String]("expected-response"),
         config.as[Int]("max-retry-times"),
         config.as[Int]("max-concurrent-retries"),
-        config.as[FiniteDuration]("retry-timeout"),
+        config.as[FiniteDuration]("total-retry-timeout"),
         poolSettingsOption
       )
 
