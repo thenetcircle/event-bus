@@ -17,8 +17,11 @@
 
 package com.thenetcircle.event_bus.context
 
+import com.typesafe.config.Config
+
 class TaskBuildingContext(appContext: AppContext) {
 
   def getAppContext(): AppContext = appContext
+  def getSystemConfig(): Config = appContext.getSystemConfig()
 
 }

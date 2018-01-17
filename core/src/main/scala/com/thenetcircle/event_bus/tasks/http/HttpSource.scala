@@ -29,8 +29,8 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractorFactory}
-import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -43,12 +43,8 @@ import scala.util.{Failure, Success, Try}
 case class HttpSourceSettings(interface: String = "0.0.0.0",
                               port: Int = 8000,
                               format: DataFormat = DataFormat("ActivityStreams"),
-                              maxConnections: Int = 1024,
                               succeededResponse: String = "ok",
-                              requestTimeout: String = "10 s",
-                              idleTimeout: String = "60 s",
-                              bindTimeout: String = "1s",
-                              lingerTimeout: String = "1 min")
+                              serverSettings: ServerSettings)
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
@@ -85,16 +81,6 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
           }
       })
   }
-
-  def getServerSettings(): ServerSettings = ServerSettings(s"""
-                      |akka.http.server {
-                      |  idle-timeout = ${settings.idleTimeout}
-                      |  request-timeout = ${settings.requestTimeout}
-                      |  bind-timeout = ${settings.bindTimeout}
-                      |  linger-timeout = ${settings.lingerTimeout}
-                      |  max-connections = ${settings.maxConnections}
-                      |}
-      """.stripMargin)
 
   def getInternalHandler(handler: Flow[Event, (Try[Done], Event), NotUsed])(
       implicit materializer: Materializer,
@@ -138,7 +124,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
         handler = getInternalHandler(handler),
         interface = settings.interface,
         port = settings.port,
-        settings = getServerSettings()
+        settings = settings.serverSettings
       )
 
     val killSwitch = new KillSwitch {
@@ -158,40 +144,30 @@ class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): HttpSource = {
-
     try {
-
-      val defaultConfig: Config =
-        ConfigStringParser.convertStringToConfig("""
-          |{
-          |  "interface": "0.0.0.0",
-          |  "port": 8000,
-          |  "format": "ActivityStreams",
-          |  "max-connections": 1024,
-          |  "succeeded-response": "ok",
-          |  "request-timeout": "10 s",
-          |  "idle-timeout": "60 s",
-          |  "bind-timeout": "1s",
-          |  "linger-timeout": "1 min"
-          |}""".stripMargin)
-
       val config: Config =
-        ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+        ConfigStringParser
+          .convertStringToConfig(configString)
+          .withFallback(buildingContext.getSystemConfig().getConfig("task.http-source"))
+
+      val serverSettingsMap = config.as[Map[String, String]]("server")
+      val serverSettings = {
+        var _settingsStr =
+          serverSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
+        ServerSettings(s"""akka.http.server {
+                          |${_settingsStr}
+                          |}""".stripMargin)
+      }
 
       val settings = HttpSourceSettings(
         config.as[String]("interface"),
         config.as[Int]("port"),
         config.as[DataFormat]("format"),
-        config.as[Int]("max-connections"),
         config.as[String]("succeeded-response"),
-        config.as[String]("request-timeout"),
-        config.as[String]("idle-timeout"),
-        config.as[String]("bind-timeout"),
-        config.as[String]("linger-timeout")
+        serverSettings
       )
 
       new HttpSource(settings)
-
     } catch {
       case ex: Throwable =>
         logger.error(s"Build HttpSource failed with error: $ex")

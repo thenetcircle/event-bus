@@ -24,7 +24,7 @@ class TopicResolverTransformTest extends AkkaStreamTest {
 
   behavior of "TopicResolverTransform"
 
-  val resolver = new TopicResolverTransform("event-default")
+  val resolver = new ChannelResolverTransform("event-default")
   resolver.updateMapping(
     Map(
       "event-user" -> Map("patterns" -> s"""user.*${ConfigStringParser.delimiter}profile.*"""),

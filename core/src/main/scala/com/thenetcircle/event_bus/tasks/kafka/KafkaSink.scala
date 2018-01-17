@@ -19,22 +19,21 @@ package com.thenetcircle.event_bus.tasks.kafka
 
 import java.util.concurrent.TimeUnit
 
-import akka.{Done, NotUsed}
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
   KafkaKeySerializer,
   KafkaPartitioner
 }
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
@@ -43,11 +42,12 @@ import scala.concurrent.duration._
 import scala.util.{Success, Try}
 
 case class KafkaSinkSettings(bootstrapServers: String,
+                             defaultTopic: String = "event-default",
+                             useEventChannel: Boolean = true,
                              parallelism: Int = 100,
                              closeTimeout: FiniteDuration = 60.seconds,
-                             properties: Map[String, String] = Map.empty,
-                             useEventChannel: Boolean = true,
-                             defaultTopic: String = "event-default")
+                             useDispatcher: Option[String] = None,
+                             properties: Map[String, String] = Map.empty)
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
 
@@ -65,6 +65,8 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     settings.properties.foreach {
       case (_key, _value) => _producerSettings = _producerSettings.withProperty(_key, _value)
     }
+
+    settings.useDispatcher.foreach(dp => _producerSettings = _producerSettings.withDispatcher(dp))
 
     _producerSettings = _producerSettings
       .withParallelism(settings.parallelism)
@@ -115,40 +117,24 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 }
 
 class KafkaSinkBuilder() extends SinkTaskBuilder {
-
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): KafkaSink = {
-    val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
-      """
-      |{
-      |  # "bootstrap-servers": "",
-      |  # Tuning parameter of how many sends that can run in parallel.
-      |  "parallelism": 100,
-      |  # How long to wait for `KafkaProducer.close`
-      |  "close-timeout": "60s",
-      |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
-      |  # can be defined in this configuration section.
-      |  "use-event-channel": true,
-      |  "default-topic": "event-default"
-      |  "properties": {},
-      |}
-      """.stripMargin
-    )
-
-    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+    val config = ConfigStringParser
+      .convertStringToConfig(configString)
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.kafka-sink"))
 
     val settings =
       KafkaSinkSettings(
         config.as[String]("bootstrap-servers"),
+        config.as[String]("default-topic"),
+        config.as[Boolean]("use-event-channel"),
         config.as[Int]("parallelism"),
         config.as[FiniteDuration]("close-timeout"),
-        config.as[Map[String, String]]("properties"),
-        config.as[Boolean]("use-event-channel"),
-        config.as[String]("default-topic")
+        config.as[Option[String]]("use-dispatcher"),
+        config.as[Map[String, String]]("properties")
       )
 
     new KafkaSink(settings)
   }
-
 }

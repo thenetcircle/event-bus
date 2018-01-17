@@ -201,33 +201,13 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
       configString: String
   )(implicit buildingContext: TaskBuildingContext): HttpSink = {
 
-    val defaultConfig: Config =
-      ConfigStringParser.convertStringToConfig("""
-                                |{
-                                |  "request": {
-                                |    "method": "POST"
-                                |    # "uri": "..."
-                                |  },
-                                |  "max-concurrent-retries": 1,
-                                |  "max-retry-times": 9,
-                                |  "expected-response": "OK",
-                                |  "total-retry-timeout": "6 s",
-                                |  "pool-settings": {
-                                |    "max-connections": 4,
-                                |    "min-connections": 0,
-                                |    "max-retries": 5,
-                                |    "max-open-requests": 32,
-                                |    "pipelining-limit": 1,
-                                |    "idle-timeout": "30 s"
-                                |  }
-                                |}
-                              """.stripMargin)
-
     val config: Config =
-      ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+      ConfigStringParser
+        .convertStringToConfig(configString)
+        .withFallback(buildingContext.getSystemConfig().getConfig("task.http-sink"))
 
     try {
-      val requestMethod = config.as[String]("request.method").toUpperCase() match {
+      val requestMethod = config.as[String]("request.method").toUpperCase match {
         case "POST" => HttpMethods.POST
         case "GET"  => HttpMethods.GET
         case unacceptedMethod =>
@@ -236,11 +216,11 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
       val requsetUri = Uri(config.as[String]("request.uri"))
       val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
 
-      val poolSettingsMap = config.as[Map[String, String]]("pool-settings")
+      val poolSettingsMap = config.as[Map[String, String]]("pool")
       val poolSettingsOption = if (poolSettingsMap.nonEmpty) {
         var _settingsStr =
           poolSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
-        Some(ConnectionPoolSettings(s""" akka.http.host-connection-pool {
+        Some(ConnectionPoolSettings(s"""akka.http.host-connection-pool {
              |${_settingsStr}
              |}""".stripMargin))
       } else None
@@ -258,7 +238,7 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
 
     } catch {
       case ex: Throwable =>
-        logger.error(s"Creating HttpSinkSettings failed with error: ${ex.getMessage}")
+        logger.error(s"Build HttpSink failed with error: ${ex.getMessage}")
         throw ex
     }
 

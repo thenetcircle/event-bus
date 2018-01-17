@@ -63,12 +63,12 @@ class TaskBuilderFactory() {
 
 object TaskBuilderFactory {
   def apply(config: Config): TaskBuilderFactory = {
-    config.checkValid(ConfigFactory.defaultReference, "app.supported-builders")
+    config.checkValid(ConfigFactory.defaultReference, "task.builders")
 
     val taskBuilderFactory = new TaskBuilderFactory()
     List("source", "transform", "sink").foreach(prefix => {
       config
-        .as[List[List[String]]](s"app.supported-builders.$prefix")
+        .as[List[List[String]]](s"task.builders.$prefix")
         .foreach {
           case category :: builderClassName :: _ =>
             taskBuilderFactory.registerBuilder(category, builderClassName)

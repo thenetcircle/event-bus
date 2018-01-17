@@ -17,22 +17,21 @@
 
 package com.thenetcircle.event_bus.tasks.misc
 
-import akka.{Done, NotUsed}
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
-import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.typesafe.config.Config
-import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.ConcurrentHashMap
 
+import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class TopicResolverTransform(defaultTopic: String) extends TransformTask with StrictLogging {
+class ChannelResolverTransform(defaultChannel: String) extends TransformTask with StrictLogging {
 
   private var inited: Boolean = false
   private var index: Map[String, String] = Map.empty
@@ -48,11 +47,11 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
   def updateMapping(_mapping: Map[String, Map[String, String]]): Unit = {
     val _index = mutable.Map.empty[String, String]
     _mapping.foreach {
-      case (topic, submap) =>
+      case (channel, submap) =>
         submap
           .get("patterns")
           .foreach(_.split(Regex.quote(ConfigStringParser.delimiter)).foreach(pattern => {
-            _index += (pattern -> topic)
+            _index += (pattern -> channel)
           }))
     }
     updateIndex(_index.toMap)
@@ -61,11 +60,11 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
     val eventName = event.metadata.name
-    var topic = ""
+    var channel = ""
 
-    val cachedTopic = cached.get(eventName)
-    if (cachedTopic != null) {
-      topic = cachedTopic
+    val cachedChannel = cached.get(eventName)
+    if (cachedChannel != null) {
+      channel = cachedChannel
     } else {
       val channelOption = index
         .find {
@@ -73,11 +72,11 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
             eventName matches pattern
         }
         .map(_._2)
-      topic = channelOption.getOrElse(defaultTopic)
-      cached.put(eventName, topic)
+      channel = channelOption.getOrElse(defaultChannel)
+      cached.put(eventName, channel)
     }
 
-    event.withChannel(topic)
+    event.withChannel(channel)
   }
 
   override def getHandler()(
@@ -98,21 +97,16 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
 
 }
 
-class TopicResolverTransformBuilder() extends TransformTaskBuilder {
+class ChannelResolverTransformBuilder() extends TransformTaskBuilder {
 
   override def build(
       configString: String
-  )(implicit buildingContext: TaskBuildingContext): TopicResolverTransform = {
-    val defaultConfig: Config =
-      ConfigStringParser.convertStringToConfig("""
-      |{
-      |  "default_topic": "event-default"
-      |}
-    """.stripMargin)
+  )(implicit buildingContext: TaskBuildingContext): ChannelResolverTransform = {
+    val config = ConfigStringParser
+      .convertStringToConfig(configString)
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.channel-resolver"))
 
-    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
-
-    new TopicResolverTransform(config.getString("default_topic"))
+    new ChannelResolverTransform(config.getString("default-channel"))
   }
 
 }

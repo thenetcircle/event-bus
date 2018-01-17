@@ -27,16 +27,15 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
-import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
-import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -65,11 +64,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       case (_key, _value) => _consumerSettings = _consumerSettings.withProperty(_key, _value)
     }
 
+    settings.useDispatcher.foreach(dp => _consumerSettings = _consumerSettings.withDispatcher(dp))
+
     _consumerSettings
       .withBootstrapServers(settings.bootstrapServers)
       .withGroupId(settings.groupId)
       .withCommitTimeout(settings.commitTimeout)
-      .withProperty("enable.auto.commit", "false")
       .withProperty("client.id", "eventbus-kafkasource")
   }
 
@@ -155,37 +155,18 @@ case class KafkaSourceSettings(bootstrapServers: String,
                                groupId: String,
                                subscribedTopics: Either[Set[String], String],
                                maxConcurrentPartitions: Int = 100,
-                               properties: Map[String, String] = Map.empty,
-                               commitTimeout: FiniteDuration = 15.seconds)
+                               commitTimeout: FiniteDuration = 15.seconds,
+                               useDispatcher: Option[String] = None,
+                               properties: Map[String, String] = Map.empty)
 
 class KafkaSourceBuilder() extends SourceTaskBuilder {
 
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): KafkaSource = {
-
-    val defaultConfig: Config = ConfigStringParser.convertStringToConfig(
-      """
-      |{
-      |  # "bootstrap-servers": "...",
-      |  # "group-id": "...",
-      |  # "topics": [],
-      |  # "topic-pattern": "event-*", // supports wildcard
-      |
-      |  "max-concurrent-partitions": 100,
-      |
-      |  # If offset commit requests are not completed within this timeout
-      |  # the returned Future is completed `TimeoutException`.
-      |  "commit-timeout": "15s",
-      |
-      |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
-      |  # can be defined in this configuration section.
-      |  "properties": {}
-      |}
-    """.stripMargin
-    )
-
-    val config = ConfigStringParser.convertStringToConfig(configString).withFallback(defaultConfig)
+    val config = ConfigStringParser
+      .convertStringToConfig(configString)
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.kafka-source"))
 
     val subscribedTopics: Either[Set[String], String] = {
       if (config.hasPath("topics"))
@@ -200,12 +181,12 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
         config.as[String]("group-id"),
         subscribedTopics,
         config.as[Int]("max-concurrent-partitions"),
-        config.as[Map[String, String]]("properties"),
-        config.as[FiniteDuration]("commit-timeout")
+        config.as[FiniteDuration]("commit-timeout"),
+        config.as[Option[String]]("use-dispatcher"),
+        config.as[Map[String, String]]("properties")
       )
 
     new KafkaSource(settings)
-
   }
 
 }
