@@ -46,6 +46,7 @@ case class KafkaSinkSettings(bootstrapServers: String,
                              parallelism: Int = 100,
                              closeTimeout: FiniteDuration = 60.seconds,
                              properties: Map[String, String] = Map.empty,
+                             useEventChannel: Boolean = true,
                              defaultTopic: String = "event-default")
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
@@ -75,11 +76,13 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   }
 
   def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {
-    Message(getProducerRecordFromEvent(event), event)
+    Message(createProducerRecord(event), event)
   }
 
-  def getProducerRecordFromEvent(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
-    val topic: String = event.metadata.channel.getOrElse(settings.defaultTopic)
+  def createProducerRecord(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
+    val topic: String =
+      if (settings.useEventChannel) event.metadata.channel.getOrElse(settings.defaultTopic)
+      else settings.defaultTopic
     val timestamp: Long = event.metadata.published
     val key: ProducerKey = KafkaKey(event)
     val value: ProducerValue = event
@@ -102,6 +105,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
     context.addShutdownHook(kafkaProducer.close(10, TimeUnit.SECONDS))
 
+    // Note that the flow might be materialized multiple times, like (from HttpSource)
     Flow[Event]
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
@@ -123,8 +127,9 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
       |  "close-timeout": "60s",
       |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
       |  # can be defined in this configuration section.
-      |  "properties": {},
+      |  "use-event-channel": true,
       |  "default-topic": "event-default"
+      |  "properties": {},
       |}
       """.stripMargin
     )
@@ -137,6 +142,7 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
         config.as[Int]("parallelism"),
         config.as[FiniteDuration]("close-timeout"),
         config.as[Map[String, String]]("properties"),
+        config.as[Boolean]("use-event-channel"),
         config.as[String]("default-topic")
       )
 

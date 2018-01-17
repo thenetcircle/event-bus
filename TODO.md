@@ -11,3 +11,9 @@
 - Configuration storage
 - Controller Api (start new service, restart services, change services, update configuration)
 - Admin Interface
+
+- handle extract failed case
+- rename context to runningContxt
+- move default config to reference.conf
+- create BuilderEnvironment
+- create Config runner and Zookeeper runner

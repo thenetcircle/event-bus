@@ -22,12 +22,12 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.SourceTask
+import com.thenetcircle.event_bus.interface.{SinkTask, SourceTask}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import scala.io.StdIn
-import scala.util.Try
+import scala.util.{Success, Try}
 
 class StoryTest extends AkkaStreamTest {
 
@@ -172,6 +172,37 @@ class StoryTest extends AkkaStreamTest {
     val (killSwitch, doneFuture) = story.run()
 
     // Await.result(system.whenTerminated, 60.seconds)
+    StdIn.readLine()
+
+  }
+
+  it should "works from HttpSource to Std Output" in {
+
+    val settings = StorySettings("test-story-4")
+
+    val sourceTask = builderFactory.buildSourceTask("http", """
+        |{
+        |  "interface": "127.0.0.1",
+        |  "port": 8092,
+        |  "succeeded-response": "okoo",
+        |  "max-connections": 1000,
+        |  "request-timeout": "5s"
+        |}
+      """.stripMargin).get
+
+    val sinkTask = new SinkTask {
+      override def getHandler()(implicit context: TaskRunningContext) = {
+        Flow[Event].map(e => {
+          println(s"Accept new event $e")
+          (Success(Done), e)
+        })
+      }
+    }
+
+    val story = new Story(settings, sourceTask, sinkTask)
+    val (killSwitch, doneFuture) = story.run()
+
+    // Await.result(system.whenTerminated, 10.minutes)
     StdIn.readLine()
 
   }

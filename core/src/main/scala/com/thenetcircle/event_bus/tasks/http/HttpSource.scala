@@ -23,15 +23,11 @@ import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.event.extractor.{
-  DataFormat,
-  EventExtractor,
-  EventExtractorFactory
-}
+import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractorFactory}
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.misc.ConfigStringParser
 import com.thenetcircle.event_bus.story.TaskRunningContext
@@ -41,6 +37,7 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 case class HttpSourceSettings(interface: String = "0.0.0.0",
@@ -55,29 +52,38 @@ case class HttpSourceSettings(interface: String = "0.0.0.0",
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  def getSucceededResponse(event: Event): HttpResponse = {
-    HttpResponse(entity = HttpEntity(settings.succeededResponse))
+  def createResponseFromTry(result: Try[Any]): HttpResponse = result match {
+    case Success(_) =>
+      HttpResponse(entity = HttpEntity(settings.succeededResponse))
+
+    case Failure(ex) =>
+      HttpResponse(
+        entity = HttpEntity(s"The request was processing failed with error ${ex.getMessage}.")
+      )
   }
 
-  def getInternalHandler(handler: Flow[Event, (Try[Done], Event), NotUsed])(
+  def createResponseFromEvent(result: (Try[Done], Event)): HttpResponse = result match {
+    case (s @ Success(_), event) => createResponseFromTry(s)
+    case (f @ Failure(ex), _)    => createResponseFromTry(f)
+  }
+
+  def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
-  ): Flow[HttpRequest, HttpResponse, NotUsed] = {
-    val extractor: EventExtractor = EventExtractorFactory.getExtractor(settings.format)
+  ): Flow[HttpRequest, Try[Event], NotUsed] = {
     val unmarshaller: Unmarshaller[HttpEntity, Event] =
-      Unmarshaller.byteStringUnmarshaller.andThen(
-        Unmarshaller.apply(_ => data => extractor.extract(data))
-      )
+      EventExtractorFactory.getHttpEntityUnmarshaller(settings.format)
 
-    // TODO: test failed response
     Flow[HttpRequest]
-      .mapAsync(1)(request => unmarshaller.apply(request.entity))
-      .withAttributes(ActorAttributes.supervisionStrategy(Supervision.resumingDecider))
-      .via(handler)
-      .map {
-        case (Success(_), event) => getSucceededResponse(event)
-        case (Failure(ex), _)    => HttpResponse(entity = HttpEntity(ex.getMessage))
-      }
+      .mapAsync(1)(request => {
+        unmarshaller(request.entity)
+          .map(event => Success(event))
+          .recover {
+            case NonFatal(ex) =>
+              logger.debug(s"A http request unmarshaller failed with error $ex")
+              Failure(ex)
+          }
+      })
   }
 
   def getServerSettings(): ServerSettings = ServerSettings(s"""
@@ -90,36 +96,59 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
                       |}
       """.stripMargin)
 
+  def getInternalHandler(handler: Flow[Event, (Try[Done], Event), NotUsed])(
+      implicit materializer: Materializer,
+      executionContext: ExecutionContext
+  ): Flow[HttpRequest, HttpResponse, NotUsed] = Flow.fromGraph(
+    GraphDSL
+      .create() { implicit builder =>
+        import GraphDSL.Implicits._
+
+        val unmarshaller = builder.add(getRequestUnmarshallerHandler())
+        val partitioner = builder.add(Partition[Try[Event]](2, {
+          case Success(_) => 0
+          case Failure(_) => 1
+        }))
+
+        val realHandler = Flow[Try[Event]].map(_.get).via(handler)
+        val response1 = Flow[(Try[Done], Event)].map(createResponseFromEvent)
+        val response2 = Flow[Try[Any]].map(createResponseFromTry)
+
+        val output = builder.add(Merge[HttpResponse](2))
+
+        // format: off
+          unmarshaller ~> partitioner
+                          partitioner.out(0) ~> realHandler ~> response1 ~> output.in(0)
+                          partitioner.out(1)                ~> response2 ~> output.in(1)
+          // format: on
+
+        FlowShape(unmarshaller.in, output.out)
+      }
+  )
+
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
   )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
-
     implicit val system: ActorSystem = context.getActorSystem()
     implicit val materializer: Materializer = context.getMaterializer()
     implicit val executionContext: ExecutionContext = context.getExecutionContext()
 
-    val sharedKillSwitch = KillSwitches.shared("http-source-shard-killswitch")
-
-    val internalNandler =
-      Flow[HttpRequest].via(sharedKillSwitch.flow).via(getInternalHandler(handler))
-
     val httpBindFuture =
       Http().bindAndHandle(
-        handler = internalNandler,
+        handler = getInternalHandler(handler),
         interface = settings.interface,
         port = settings.port,
         settings = getServerSettings()
       )
 
-    /*httpBindFuture.onComplete {
-      case Success(binding) => binding.unbind()
-      case Failure(ex) =>
-        logger.error(s"HttpBindFuture failed with error $ex")
-    }*/
+    val killSwitch = new KillSwitch {
+      override def abort(ex: Throwable): Unit = shutdown()
+      override def shutdown(): Unit = Await.ready(httpBindFuture.flatMap(_.unbind()), 5.seconds)
+    }
 
-    context.addShutdownHook(Await.ready(httpBindFuture.flatMap(_.unbind()), 5.seconds))
+    context.addShutdownHook(killSwitch.shutdown())
 
-    (sharedKillSwitch, httpBindFuture.map(_ => Done))
+    (killSwitch, httpBindFuture.map(_ => Done))
   }
 
 }

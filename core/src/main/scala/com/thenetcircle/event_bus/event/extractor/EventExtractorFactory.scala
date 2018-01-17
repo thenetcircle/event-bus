@@ -16,9 +16,15 @@
  */
 
 package com.thenetcircle.event_bus.event.extractor
+
+import akka.http.scaladsl.model.HttpEntity
+import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.util.ByteString
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 
 object EventExtractorFactory {
 
@@ -32,10 +38,25 @@ object EventExtractorFactory {
 
   val defaultExtractor: EventExtractor = getExtractor(DataFormat.ACTIVITYSTREAMS)
 
-  /** Returns [[EventExtractor]] based on [[DataFormat]]
-   *
-   * @param format
+  /**
+   * Returns [[EventExtractor]] based on [[DataFormat]]
    */
   def getExtractor(format: DataFormat): EventExtractor = registeredExtractors(format)
+
+  /**
+   * Returns Unmarshaller[ByteString, Event] based on [[DataFormat]]
+   */
+  def getByteStringUnmarshaller(
+      format: DataFormat
+  )(implicit executionContext: ExecutionContext): Unmarshaller[ByteString, Event] =
+    Unmarshaller.apply(_ => data => getExtractor(format).extract(data))
+
+  /**
+   * Returns Unmarshaller[HttpEntity, Event] based on [[DataFormat]]
+   */
+  def getHttpEntityUnmarshaller(
+      format: DataFormat
+  )(implicit executionContext: ExecutionContext): Unmarshaller[HttpEntity, Event] =
+    Unmarshaller.byteStringUnmarshaller andThen getByteStringUnmarshaller(format)
 
 }

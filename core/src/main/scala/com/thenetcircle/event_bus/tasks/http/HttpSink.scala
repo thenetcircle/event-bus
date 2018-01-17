@@ -21,9 +21,10 @@ import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
+import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.Flow
-import akka.util.{ByteString, Timeout}
+import akka.util.Timeout
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
@@ -149,8 +150,8 @@ object HttpSink {
 
         respTry match {
           case Success(resp @ HttpResponse(status @ StatusCodes.OK, headers, entity, _)) =>
-            entity.dataBytes
-              .runFold(ByteString(""))(_ ++ _)
+            Unmarshaller
+              .byteStringUnmarshaller(entity)
               .map { body =>
                 log.debug("Got response, body: " + body.utf8String)
                 respCheckFunc(status, headers, Some(body.utf8String))
