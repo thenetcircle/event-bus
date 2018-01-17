@@ -128,10 +128,10 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
 
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
-  )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
-    implicit val system: ActorSystem = context.getActorSystem()
-    implicit val materializer: Materializer = context.getMaterializer()
-    implicit val executionContext: ExecutionContext = context.getExecutionContext()
+  )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
+    implicit val system: ActorSystem = runningContext.getActorSystem()
+    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     val httpBindFuture =
       Http().bindAndHandle(
@@ -146,7 +146,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       override def shutdown(): Unit = Await.ready(httpBindFuture.flatMap(_.unbind()), 5.seconds)
     }
 
-    context.addShutdownHook(killSwitch.shutdown())
+    runningContext.addShutdownHook(killSwitch.shutdown())
 
     (killSwitch, httpBindFuture.map(_ => Done))
   }

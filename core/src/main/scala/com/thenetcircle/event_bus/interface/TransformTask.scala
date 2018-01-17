@@ -25,6 +25,8 @@ import scala.util.Try
 
 trait TransformTask extends Task {
 
-  def getHandler()(implicit context: TaskRunningContext): Flow[Event, (Try[Done], Event), NotUsed]
+  def getHandler()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Event, (Try[Done], Event), NotUsed]
 
 }

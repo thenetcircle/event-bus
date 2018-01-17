@@ -53,10 +53,10 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     }
 
   def getConsumerSettings()(
-      implicit context: TaskRunningContext
+      implicit runningContext: TaskRunningContext
   ): ConsumerSettings[ConsumerKey, ConsumerValue] = {
     var _consumerSettings = ConsumerSettings[ConsumerKey, ConsumerValue](
-      context.getActorSystem(),
+      runningContext.getActorSystem(),
       new KafkaKeyDeserializer,
       new ByteArrayDeserializer
     )
@@ -75,10 +75,10 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   override def runWith(
       handler: Flow[Event, (Try[Done], Event), NotUsed]
-  )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
+  )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
-    implicit val materializer: Materializer = context.getMaterializer()
-    implicit val executionContext: ExecutionContext = context.getExecutionContext()
+    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     Consumer
       .committablePartitionedSource(getConsumerSettings(), getSubscription())

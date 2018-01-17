@@ -45,7 +45,7 @@ class StoryBuilder(builderFactory: TaskBuilderFactory)
  * }
  * ```
  */
-  def build(configString: String)(implicit context: TaskRunningContext): Story = {
+  def build(configString: String)(implicit runningContext: TaskRunningContext): Story = {
 
     try {
 

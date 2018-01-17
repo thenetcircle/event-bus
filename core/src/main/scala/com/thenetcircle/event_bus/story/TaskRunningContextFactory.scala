@@ -20,7 +20,7 @@ class TaskRunningContextFactory()(implicit runningEnv: RunningEnvironment) exten
     ActorMaterializerSettings(system)
     // .withSupervisionStrategy(decider)
   )
-  // TODO: use another execution context for computing
+  // TODO: use another execution runningContext for computing
   private lazy val executionContext: ExecutionContext = ExecutionContext.global
 
   def createNewRunningContext(storyRunner: ActorRef): TaskRunningContext = {

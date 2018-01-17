@@ -96,7 +96,7 @@ class HttpSourceTest extends AkkaStreamTest {
     )
     event.body shouldEqual EventBody(ByteString(data), DataFormat.ACTIVITYSTREAMS)
     event
-      .context("responsePromise")
+      .runningContext("responsePromise")
       .asInstanceOf[Promise[HttpResponse]]
       .success(HttpResponse(entity = HttpEntity("ok")))
 

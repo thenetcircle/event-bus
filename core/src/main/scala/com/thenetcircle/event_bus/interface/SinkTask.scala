@@ -26,6 +26,8 @@ import scala.util.Try
 
 trait SinkTask extends Task {
 
-  def getHandler()(implicit context: TaskRunningContext): Flow[Event, (Try[Done], Event), NotUsed]
+  def getHandler()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Event, (Try[Done], Event), NotUsed]
 
 }

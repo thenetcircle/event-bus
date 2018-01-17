@@ -66,7 +66,7 @@ class StoryTest extends AkkaStreamTest {
     /*
     val sinkTask2 = new SinkTask {
       override def getHandler()(
-          implicit context: TaskRunningContext
+          implicit runningContext: TaskRunningContext
       ): Flow[Event, (Try[Done], Event), NotUsed] = {
 
         Flow[Event].map((Success(Done), _))
@@ -141,7 +141,7 @@ class StoryTest extends AkkaStreamTest {
     val sourceTask = new SourceTask {
       override def runWith(
           handler: Flow[Event, (Try[Done], Event), NotUsed]
-      )(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
+      )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
         val testEvent1 = createTestEvent("test-event-1")
         val testEvent2 = createTestEvent("test-event-2")
@@ -191,7 +191,7 @@ class StoryTest extends AkkaStreamTest {
       """.stripMargin).get
 
     val sinkTask = new SinkTask {
-      override def getHandler()(implicit context: TaskRunningContext) = {
+      override def getHandler()(implicit runningContext: TaskRunningContext) = {
         Flow[Event].map(e => {
           println(s"Accept new event $e")
           (Success(Done), e)

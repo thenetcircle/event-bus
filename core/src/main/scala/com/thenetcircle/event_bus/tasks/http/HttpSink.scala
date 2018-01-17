@@ -58,14 +58,14 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
   }
 
   override def getHandler()(
-      implicit context: TaskRunningContext
+      implicit runningContext: TaskRunningContext
   ): Flow[Event, (Try[Done], Event), NotUsed] = {
     import HttpSink.RetrySender._
     import HttpSink._
 
-    implicit val system: ActorSystem = context.getActorSystem()
-    implicit val materializer: Materializer = context.getMaterializer()
-    implicit val exectionContext: ExecutionContext = context.getExecutionContext()
+    implicit val system: ActorSystem = runningContext.getActorSystem()
+    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val exectionContext: ExecutionContext = runningContext.getExecutionContext()
 
     // TODO: includes StoryName
     val retrySender = system.actorOf(

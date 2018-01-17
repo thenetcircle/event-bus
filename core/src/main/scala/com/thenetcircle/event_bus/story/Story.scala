@@ -50,12 +50,12 @@ class Story(val settings: StorySettings,
   private var flowId: Int = 0
   private def decorateFlow(
       flow: Flow[Event, M, NotUsed]
-  )(implicit context: TaskRunningContext): Flow[M, M, NotUsed] = {
+  )(implicit runningContext: TaskRunningContext): Flow[M, M, NotUsed] = {
     flowId = flowId + 1
     Story.decorateFlow(flow, s"story-$storyName-flow-$flowId", fallbackTasks)
   }
 
-  def run()(implicit context: TaskRunningContext): (KillSwitch, Future[Done]) = {
+  def run()(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
     val transforms =
       transformTasks
         .map(_.foldLeft(Flow[M]) { (_chain, _transform) =>
@@ -77,7 +77,7 @@ object Story extends StrictLogging {
       flow: Flow[Event, M, NotUsed],
       flowName: String,
       fallbackTasks: Option[List[SinkTask]] = None
-  )(implicit context: TaskRunningContext): Flow[M, M, NotUsed] = {
+  )(implicit runningContext: TaskRunningContext): Flow[M, M, NotUsed] = {
 
     Flow.fromGraph(
       GraphDSL

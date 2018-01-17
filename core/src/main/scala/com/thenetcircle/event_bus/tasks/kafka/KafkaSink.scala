@@ -54,10 +54,10 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
   def getProducerSettings()(
-      implicit context: TaskRunningContext
+      implicit runningContext: TaskRunningContext
   ): ProducerSettings[ProducerKey, ProducerValue] = {
     var _producerSettings = ProducerSettings[ProducerKey, ProducerValue](
-      context.getActorSystem(),
+      runningContext.getActorSystem(),
       new KafkaKeySerializer,
       new EventSerializer
     )
@@ -97,13 +97,13 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   }
 
   override def getHandler()(
-      implicit context: TaskRunningContext
+      implicit runningContext: TaskRunningContext
   ): Flow[Event, (Try[Done], Event), NotUsed] = {
 
     val kafkaSettings = getProducerSettings()
     lazy val kafkaProducer = kafkaSettings.createKafkaProducer()
 
-    context.addShutdownHook(kafkaProducer.close(10, TimeUnit.SECONDS))
+    runningContext.addShutdownHook(kafkaProducer.close(10, TimeUnit.SECONDS))
 
     // Note that the flow might be materialized multiple times, like (from HttpSource)
     Flow[Event]

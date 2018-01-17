@@ -80,7 +80,7 @@ class TopicResolverTransform(defaultTopic: String) extends TransformTask with St
   }
 
   override def getHandler()(
-      implicit context: TaskRunningContext
+      implicit runningContext: TaskRunningContext
   ): Flow[Event, (Try[Done], Event), NotUsed] = {
 
     init()
