@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.event
 
 import akka.util.ByteString
+import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
 case class Event(metadata: EventMetaData, body: EventBody, passThrough: Option[Any] = None) {
@@ -37,16 +38,15 @@ case class Event(metadata: EventMetaData, body: EventBody, passThrough: Option[A
 }
 
 object Event {
-  val EXCEPTION_EVENTNAME = "event-bus-exception"
-  def createEventFromException(body: ByteString, dataFormat: DataFormat, ex: Throwable): Event = {
+  def createEventFromException(ex: Throwable, bodyOption: Option[EventBody] = None): Event = {
     Event(
       metadata = EventMetaData(
         java.util.UUID.randomUUID().toString,
-        EXCEPTION_EVENTNAME,
-        System.currentTimeMillis()
+        ex.getClass.getName,
+        System.currentTimeMillis(),
+        actor = Some(ex.toString)
       ),
-      body = EventBody(body, dataFormat),
-      Some(ex)
+      body = bodyOption.getOrElse(EventBody(ByteString(), DataFormat.UNKNOWN))
     )
   }
 }

@@ -25,10 +25,10 @@ import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.{Event, EventBody}
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
+import com.thenetcircle.event_bus.interface.TaskSignal.{ToFallbackSignal, NoSignal}
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
@@ -96,7 +96,10 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
           logger.warn(
             s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
           )
-          Failure(ex) -> Event.createEventFromException(eventData, dataFormat, ex)
+          Success(ToFallbackSignal) ->
+            Event
+              .createEventFromException(ex, Some(EventBody(eventData, dataFormat)))
+              .withPassThrough[CommittableOffset](message.committableOffset)
       }
   }
 

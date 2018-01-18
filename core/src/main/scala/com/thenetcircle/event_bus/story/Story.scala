@@ -22,7 +22,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.TaskSignal.SkipSignal
+import com.thenetcircle.event_bus.interface.TaskSignal.{ToFallbackSignal, NoSignal, SkipSignal}
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
@@ -56,23 +56,26 @@ class Story(val settings: StorySettings,
         .map(_.foldLeft(Flow[MR]) { (_chain, _transform) =>
           {
             transformId += 1
-            _chain.via(
-              wrapTaskHandler(_transform.getHandler(), s"story-$storyName-transform-$transformId")
-            )
+            _chain
+              .via(wrapTask(_transform.getHandler(), s"story-$storyName-transform-$transformId"))
           }
         })
         .getOrElse(Flow[MR])
 
-    val sink = wrapTaskHandler(sinkTask.getHandler(), s"story-$storyName-sink")
+    val sink = wrapTask(sinkTask.getHandler(), s"story-$storyName-sink")
 
-    // TODO: change here
-    val sourceResultHandler =
-      wrapTaskHandler(Flow[Event].map(Task.makeNoResultEvent), s"story-$storyName-sourceresult")
+    // internal logic
+    val head =
+      wrapTask(Flow[Event].map(e => (Success(NoSignal), e)), s"story-$storyName-head")
+    val tail =
+      wrapTask(Flow[Event].map(e => (Success(NoSignal), e)), s"story-$storyName-tail")
 
-    sourceTask.runWith(sourceResultHandler.via(transforms).via(sink))
+    val workflow = head.via(transforms).via(sink).via(tail)
+
+    sourceTask.runWith(workflow)
   }
 
-  def wrapTaskHandler(taskHandler: Flow[Event, MR, NotUsed], taskName: String)(
+  def wrapTask(taskHandler: Flow[Event, MR, NotUsed], taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[MR, MR, NotUsed] = {
 
@@ -82,23 +85,27 @@ class Story(val settings: StorySettings,
           .create() { implicit builder =>
             import GraphDSL.Implicits._
 
-            // Success goes 0, Failure/SkipOthers goes 1
-            val preCheck =
-              builder.add(new Partition[MR](2, {
-                case (Success(SkipSignal), _) => 1
-                case (Success(_), _)          => 0
-                case (Failure(_), _)          => 1
+            // Success goes 0, Failure/SkipSignal goes 1, ToFallbackSignal goes 2
+            val signalCheck =
+              builder.add(new Partition[MR](3, {
+                case (Success(ToFallbackSignal), _) => 2
+                case (Success(SkipSignal), _)       => 1
+                case (Success(_), _)                => 0
+                case (Failure(_), _)                => 1
               }))
 
             // Success goes 0, Failure goes 1
-            val postCheck =
+            val resultCheck =
               builder.add(Partition[MR](2, input => if (input._1.isSuccess) 0 else 1))
 
-            val output = builder.add(Merge[MR](3))
-            val logic = Flow[MR].map(_._2).via(taskHandler)
+            val output = builder.add(Merge[MR](4))
+            val task = Flow[MR].map(_._2).via(taskHandler)
 
-            // add other fallback
-            val fallback = Flow[MR]
+            val fallbackFlow = fallbackTask
+              .map(_task => Flow[MR].via(_task.getHandler(taskName)))
+              .getOrElse(Flow[MR].map(input => Success(SkipSignal) -> input._2))
+
+            val failureFallback = Flow[MR]
               .map {
                 case input @ (_, event) =>
                   val logMessage =
@@ -107,27 +114,31 @@ class Story(val settings: StorySettings,
                   logger.warn(logMessage)
                   input
               }
-              .via(
-                fallbackTask
-                  .map(_task => Flow[MR].via(_task.getHandler(taskName)))
-                  .getOrElse(Flow[MR])
-              )
+              .via(fallbackFlow)
 
-            // workflow
+            val signalFallback = Flow[MR].via(fallbackFlow)
+
             // format: off
+            // ---------------  workflow graph start ----------------
             
-            // success flow >>>
-            preCheck.out(0) ~> logic ~> postCheck
-                                        postCheck.out(0)        ~>      output.in(0)
-                                        // fallback flow >>>
-                                        postCheck.out(1) ~> fallback ~> output.in(1)
-            // failure/skip-others flow >>>
-            preCheck.out(1)                       ~>                    output.in(2)
+
+            // no signal goes to run this task >>>
+            signalCheck.out(0)   ~>   task   ~>   resultCheck
+                                                  // success result goes to next task
+                                                  resultCheck.out(0)              ~>            output.in(0)
+                                                  // failure result directly goes to fallback  >>>
+                                                  resultCheck.out(1) ~>    failureFallback   ~> output.in(1)
+            // failure/skip-signal events goes to next task directly >>>
+            signalCheck.out(1)                                 ~>                               output.in(2)
+            // to-fallback-signal goes to fallback directly >>>
+            signalCheck.out(2)              ~>            signalFallback          ~>            output.in(3)
+
             
+            // ---------------  workflow graph end ----------------
             // format: on
 
             // ports
-            FlowShape(preCheck.in, output.out)
+            FlowShape(signalCheck.in, output.out)
           }
       )
       .named(taskName)

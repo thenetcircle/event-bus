@@ -31,9 +31,9 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
   private val activityStreamsExtractor: EventExtractor =
     EventExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)
 
-  private val testFormatExtractor: EventExtractor =
+  private val unknownFormatExtractor: EventExtractor =
     new ActivityStreamsEventExtractor {
-      override def getFormat(): DataFormat = DataFormat.TEST
+      override def getFormat(): DataFormat = DataFormat.UNKNOWN
     }
 
   behavior of "EventExtractor"
@@ -192,10 +192,10 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
          |  "title": "user.login"
          |}
       """.stripMargin)
-    testFormatExtractor.extract(data) map { d =>
+    unknownFormatExtractor.extract(data) map { d =>
       inside(d) {
         case Event(_, body, _) =>
-          body shouldEqual EventBody(data, DataFormat.TEST)
+          body shouldEqual EventBody(data, DataFormat.UNKNOWN)
       }
     }
   }

@@ -24,7 +24,6 @@ import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.Flow
-import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
@@ -76,8 +75,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
           .recover {
             case ex: EventExtractingException =>
               logger.debug(s"A http request unmarshaller failed with error $ex")
-              Failure(ex) ->
-                Event.createEventFromException(ByteString(""), DataFormat.ACTIVITYSTREAMS, ex)
+              Failure(ex) -> Event.createEventFromException(ex)
           }
       })
   }
