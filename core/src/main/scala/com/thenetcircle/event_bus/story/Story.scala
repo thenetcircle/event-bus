@@ -35,10 +35,10 @@ class Story(val settings: StorySettings,
             val sourceTask: SourceTask,
             val sinkTask: SinkTask,
             val transformTasks: Option[List[TransformTask]] = None,
-            val fallbackTasks: Option[List[SinkTask]] = None)
+            val fallbackTask: Option[FallbackTask] = None)
     extends StrictLogging {
 
-  import Story.M
+  type M = (Try[Done], Event) // middle result type
 
   val storyName: String = settings.name
 
@@ -48,80 +48,72 @@ class Story(val settings: StorySettings,
   }
   def getStatus(): StoryStatus = status
 
-  private var flowId: Int = 0
-  private def decorateFlow(
-      flow: Flow[Event, M, NotUsed]
-  )(implicit runningContext: TaskRunningContext): Flow[M, M, NotUsed] = {
-    flowId = flowId + 1
-    Story.decorateFlow(flow, s"story-$storyName-flow-$flowId", fallbackTasks)
-  }
-
   def run()(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
+    var transformId = 0
     val transforms =
       transformTasks
         .map(_.foldLeft(Flow[M]) { (_chain, _transform) =>
-          _chain.via(decorateFlow(_transform.getHandler()))
+          {
+            transformId += 1
+            _chain.via(
+              wrapTaskFlow(_transform.getHandler(), s"story-$storyName-transform-$transformId")
+            )
+          }
         })
         .getOrElse(Flow[M])
-    val sink = decorateFlow(sinkTask.getHandler())
+
+    val sink = wrapTaskFlow(sinkTask.getHandler(), s"story-$storyName-sink")
+
     val handler = Flow[Event].map((Success(Done), _)).via(transforms).via(sink)
 
-    sourceTask.runWith(handler.named(s"story-$storyName"))
+    sourceTask.runWith(handler)
   }
-}
 
-object Story extends StrictLogging {
+  def wrapTaskFlow(taskFlow: Flow[Event, M, NotUsed], taskName: String)(
+      implicit runningContext: TaskRunningContext
+  ): Flow[M, M, NotUsed] = {
 
-  type M = (Try[Done], Event) // middle result type
+    Flow
+      .fromGraph(
+        GraphDSL
+          .create() { implicit builder =>
+            import GraphDSL.Implicits._
 
-  def decorateFlow(
-      flow: Flow[Event, M, NotUsed],
-      flowName: String,
-      fallbackTasks: Option[List[SinkTask]] = None
-  )(implicit runningContext: TaskRunningContext): Flow[M, M, NotUsed] = {
+            val preCheck =
+              builder.add(new Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
+            val postCheck =
+              builder.add(Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
+            val output = builder.add(Merge[M](3))
+            val logic = Flow[M].map(_._2).via(taskFlow)
 
-    Flow.fromGraph(
-      GraphDSL
-        .create() { implicit builder =>
-          import GraphDSL.Implicits._
+            // add other fallback
+            val fallback = Flow[M]
+              .map {
+                case input @ (_, event) =>
+                  val logMessage =
+                    s"Event ${event.uniqueName} was processing failed on task: $taskName." +
+                      (if (fallbackTask.isDefined) " Sending to fallbackTask." else "")
+                  logger.warn(logMessage)
+                  input
+              }
+              .via(
+                fallbackTask
+                  .map(_task => Flow[M].via(_task.getHandler(taskName)))
+                  .getOrElse(Flow[M])
+              )
 
-          val preCheck =
-            builder.add(new Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
-          val postCheck =
-            builder.add(Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
-          val output = builder.add(Merge[M](3))
-          val logic = Flow[M].map(_._2).via(flow)
-
-          // add other fallbacks
-          val fallback = Flow[M]
-            .map {
-              case input @ (doneTry, event) =>
-                val logMessage =
-                  s"Event ${event.uniqueName} was processing failed on flow: $flowName." +
-                    (if (fallbackTasks.isDefined) " Sending to fallbackTasks." else "")
-                logger.warn(logMessage)
-                input
-            }
-            .via(
-              fallbackTasks
-                .map(_list => {
-                  Flow[M].map(_._2).via(_list.head.getHandler())
-                })
-                .getOrElse(Flow[M])
-            )
-
-          // workflow
-          // format: off
+            // workflow
+            // format: off
           preCheck.out(0) ~> logic ~> postCheck
                                       postCheck.out(0)        ~>      output.in(0)
                                       postCheck.out(1) ~> fallback ~> output.in(1)
           preCheck.out(1)                       ~>                    output.in(2)
           // format: on
 
-          // ports
-          FlowShape(preCheck.in, output.out)
-        }
-    )
+            // ports
+            FlowShape(preCheck.in, output.out)
+          }
+      )
+      .named(taskName)
   }
-
 }

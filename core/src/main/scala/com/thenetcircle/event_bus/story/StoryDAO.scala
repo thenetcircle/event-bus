@@ -11,7 +11,7 @@ case class StoryInfo(name: String,
                      source: String,
                      sink: String,
                      transforms: Option[List[String]],
-                     fallbacks: Option[List[String]])
+                     fallback: Option[String])
 
 trait StoryDAO {
   def getStoriesByRunnerName(runnerName: String): List[StoryInfo]
@@ -20,30 +20,26 @@ trait StoryDAO {
 
 class StoryZookeeperDAO(zkManager: ZookeeperManager)(implicit appContext: AppContext)
     extends StoryDAO {
+  // TODO: watch new stories, and story changes
   def getStoriesByRunnerName(runnerName: String): List[StoryInfo] = {
     zkManager
-      .getChildren("stories")
-      .map(_.filter(storyName => {
-        zkManager
-          .getData(s"stories/$storyName/runner")
-          .getOrElse(appContext.getDefaultRunnerName()) == runnerName
-      }).map(getStoryInfo))
+      .getChildren(s"runners/$runnerName/stories")
+      .map(_.map(getStoryInfo))
       .getOrElse(List.empty[StoryInfo])
   }
 
   def getStoryInfo(storyName: String): StoryInfo = {
     val storyRootPath = s"stories/$storyName"
 
-    val status: String = zkManager.getData(s"$storyRootPath/status").get
-    val settings: String = zkManager.getData(s"$storyRootPath/settings").get
+    val status: String = zkManager.getData(s"$storyRootPath/status").getOrElse("INIT")
+    val settings: String = zkManager.getData(s"$storyRootPath/settings").getOrElse("")
     val source: String = zkManager.getData(s"$storyRootPath/source").get
     val sink: String = zkManager.getData(s"$storyRootPath/sink").get
     val transforms: Option[List[String]] =
       zkManager.getChildrenData(s"$storyRootPath/transforms").map(_.map(_._2))
-    val fallbacks: Option[List[String]] =
-      zkManager.getChildrenData(s"$storyRootPath/fallbacks").map(_.map(_._2))
+    val fallback: Option[String] = zkManager.getData(s"$storyRootPath/fallback")
 
-    StoryInfo(storyName, status, settings, source, sink, transforms, fallbacks)
+    StoryInfo(storyName, status, settings, source, sink, transforms, fallback)
   }
 }
 
@@ -53,22 +49,25 @@ object StoryZookeeperDAO {
 }
 
 /*
- * example:
+ * config example:
  * ```
  * [
- * {
- *   # "name": "..."
- *   # "sourceTask": ["sourceTask-type", "settings"]
- *   # "transformTasks": [
- *   #   ["op-type", "settings"],
- *   #   ...
- *   # ]
- *   # "sinkTask": ["sinkTask-type", "settings"]
- *   # "fallbackTasks": [
- *     ["sinkTask-type", "settings"]
- *   ]
- * },
- * ...
+ *   {
+ *     # "name": "..."
+ *     # "status": "..."
+ *     # "settings": "..."
+ *     # "source": "..."
+ *     # "sink": "..."
+ *     # "transformTasks": [
+ *     #   ["op-type", "settings"],
+ *     #   ...
+ *     # ]
+ *     # "sinkTask": ["sinkTask-type", "settings"]
+ *     # "fallbackTask": [
+ *       ["sinkTask-type", "settings"]
+ *     ]
+ *   },
+ *   ...
  * ]
  * ```
  */
@@ -85,13 +84,15 @@ class StoryConfigDAO(config: Config) extends StoryDAO {
         cf.as[String]("source"),
         cf.as[String]("sink"),
         cf.as[Option[List[String]]]("transforms"),
-        cf.as[Option[List[String]]]("fallbacks")
+        cf.as[Option[String]]("fallback")
     )
   )
 
-  override def getStoriesByRunnerName(runnerName: String) = ???
+  override def getStoriesByRunnerName(runnerName: String) = stories
 
-  override def getStoryInfo(storyName: String) = ???
+  override def getStoryInfo(storyName: String) = {
+    stories.find(info => info.name == storyName).get
+  }
 
 }
 

@@ -16,19 +16,18 @@
  */
 
 package com.thenetcircle.event_bus.interface
+import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
+import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.event.Event
 
-import com.thenetcircle.event_bus.context.TaskBuildingContext
+import scala.util.Try
 
-trait TaskBuilder[+T <: Task] {
+trait FallbackTask extends Task {
 
-  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
+  // Note that this method will be called on each tasks of stories
+  def getHandler(failedTaskName: String)(
+      implicit runningContext: TaskRunningContext
+  ): Flow[(Try[Done], Event), (Try[Done], Event), NotUsed]
 
 }
-
-trait SourceTaskBuilder extends TaskBuilder[SourceTask]
-
-trait TransformTaskBuilder extends TaskBuilder[TransformTask]
-
-trait SinkTaskBuilder extends TaskBuilder[SinkTask]
-
-trait FallbackTaskBuilder extends TaskBuilder[FallbackTask]

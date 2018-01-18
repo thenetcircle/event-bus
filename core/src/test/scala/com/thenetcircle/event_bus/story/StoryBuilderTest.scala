@@ -40,7 +40,7 @@ class StoryBuilderTest extends AkkaStreamTest {
         |    "kafka",
         |    "{\"producer\": {  \"close-timeout\": \"100s\",  \"use-dispatcher\": \"test-dispatcher\"}}"
         |  ],
-        |  "fallbackTasks": [
+        |  "fallbackTask": [
         |    ["http", "{\"request\" : {\"host\": \"127.0.0.1\"}, \"expected-response\": \"TEST_RESPONSE\"}"]
         |  ]
         |}""".stripMargin
@@ -55,7 +55,7 @@ class StoryBuilderTest extends AkkaStreamTest {
 
     story.sinkTask.get.isInstanceOf[KafkaSink] shouldEqual true
 
-    story.fallbackTasks.get.head.isInstanceOf[HttpSink] shouldEqual true
+    story.fallbackTask.get.head.isInstanceOf[HttpSink] shouldEqual true
 
   }*/
 

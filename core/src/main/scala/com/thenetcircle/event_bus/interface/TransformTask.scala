@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.interface
+
 import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.TaskRunningContext

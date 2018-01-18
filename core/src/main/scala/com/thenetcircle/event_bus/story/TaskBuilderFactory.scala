@@ -25,6 +25,7 @@ class TaskBuilderFactory() {
   private var sourceTaskBuilders: Map[String, SourceTaskBuilder] = Map.empty
   private var transformTaskBuilders: Map[String, TransformTaskBuilder] = Map.empty
   private var sinkTaskBuilers: Map[String, SinkTaskBuilder] = Map.empty
+  private var fallbackTaskBuilers: Map[String, FallbackTaskBuilder] = Map.empty
 
   private def createInstance(cls: Class[TaskBuilder[Task]]): TaskBuilder[Task] = cls.newInstance()
 
@@ -48,6 +49,8 @@ class TaskBuilderFactory() {
           .asInstanceOf[TransformTaskBuilder])
       case _: SinkTaskBuilder =>
         sinkTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[SinkTaskBuilder])
+      case _: FallbackTaskBuilder =>
+        fallbackTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[FallbackTaskBuilder])
     }
   }
 
@@ -59,6 +62,9 @@ class TaskBuilderFactory() {
 
   def getSinkTaskBuilder(category: String): Option[SinkTaskBuilder] =
     sinkTaskBuilers.get(category.toLowerCase)
+
+  def getFallbackTaskBuilder(category: String): Option[FallbackTaskBuilder] =
+    fallbackTaskBuilers.get(category.toLowerCase)
 }
 
 object TaskBuilderFactory {
@@ -66,7 +72,7 @@ object TaskBuilderFactory {
     config.checkValid(ConfigFactory.defaultReference, "task.builders")
 
     val taskBuilderFactory = new TaskBuilderFactory()
-    List("source", "transform", "sink").foreach(prefix => {
+    List("source", "transform", "sink", "fallback").foreach(prefix => {
       config
         .as[List[List[String]]](s"task.builders.$prefix")
         .foreach {

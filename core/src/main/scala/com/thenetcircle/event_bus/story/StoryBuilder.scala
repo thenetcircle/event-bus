@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.{SinkTask, SourceTask, TransformTask}
+import com.thenetcircle.event_bus.interface.{FallbackTask, SinkTask, SourceTask, TransformTask}
 
 import scala.util.matching.Regex
 
@@ -27,72 +27,13 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
-  /*/**
-   * Builds Story by String Config
-   *
-   * example:
-   * ```
-   * {
-   *   # "name": "..."
-   *   # "sourceTask": ["sourceTask-type", "settings"]
-   *   # "transformTasks": [
-   *   #   ["op-type", "settings"],
-   *   #   ...
-   *   # ]
-   *   # "sinkTask": ["sinkTask-type", "settings"]
-   *   # "fallbackTasks": [
-   *     ["sinkTask-type", "settings"]
-   *   ]
-   * }
-   * ```
-   */
-  def build(configString: String): Story = {
-
-    try {
-
-      val config = ConfigStringParser.convertStringToConfig(configString)
-
-      val storyName = config.getString("name")
-      val storySettings = StorySettings()
-
-      val AConfig = config.as[List[String]]("sourceTask")
-      val taskA = builderFactory.buildTaskA(AConfig(0), AConfig(1)).get
-
-      val taskB = config
-        .as[Option[List[List[String]]]]("transformTasks")
-        .map(_.map {
-          case _type :: _settings :: _ => builderFactory.buildTaskB(_type, _settings).get
-        })
-
-      val taskC = config.as[Option[List[String]]]("sinkTask").map {
-        case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
-      }
-
-      val fallbacks = config
-        .as[Option[List[List[String]]]]("fallbackTasks")
-        .map(_.map {
-          case _type :: _settings :: _ => builderFactory.buildTaskC(_type, _settings).get
-        })
-
-      new Story(storyName, storySettings, taskA, taskB, taskC, fallbacks)
-
-    } catch {
-
-      case ex: Throwable =>
-        logger.error(s"Creating Story failed with error: ${ex.getMessage}")
-        throw ex
-
-    }
-
-  }*/
-
   def buildStory(storyInfo: StoryInfo): Story = {
     new Story(
       StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
       buildSourceTask(storyInfo.source).get,
       buildSinkTask(storyInfo.sink).get,
       storyInfo.transforms.map(_.flatMap(_v => buildTransformTask(_v))),
-      storyInfo.fallbacks.map(_.flatMap(_v => buildSinkTask(_v)))
+      storyInfo.fallback.flatMap(buildFallbackTask)
     )
   }
 
@@ -126,6 +67,16 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
 
   def buildSinkTask(category: String, configString: String): Option[SinkTask] =
     taskBuilderFactory.getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
+
+  def buildFallbackTask(configString: String): Option[FallbackTask] = {
+    val (_category, _config) = parseConfigString(configString)
+    buildFallbackTask(_category, _config)
+  }
+
+  def buildFallbackTask(category: String, configString: String): Option[FallbackTask] =
+    taskBuilderFactory
+      .getFallbackTaskBuilder(category)
+      .map(_builder => _builder.build(configString))
 }
 
 object StoryBuilder {

@@ -15,20 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.event.extractor
 
-import com.thenetcircle.event_bus.context.TaskBuildingContext
-
-trait TaskBuilder[+T <: Task] {
-
-  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
-
-}
-
-trait SourceTaskBuilder extends TaskBuilder[SourceTask]
-
-trait TransformTaskBuilder extends TaskBuilder[TransformTask]
-
-trait SinkTaskBuilder extends TaskBuilder[SinkTask]
-
-trait FallbackTaskBuilder extends TaskBuilder[FallbackTask]
+class EventExtractingException(message: String, cause: Throwable)
+    extends RuntimeException(message, cause)
