@@ -141,15 +141,20 @@ class StoryTest extends AkkaStreamTest {
 
     val sourceTask = new SourceTask {
       override def runWith(
-          handler: Flow[Event, (Try[Done], Event), NotUsed]
+          handler: Flow[(Try[Done], Event), (Try[Done], Event), NotUsed]
       )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
         val testEvent1 = createTestEvent("test-event-1")
         val testEvent2 = createTestEvent("test-event-2")
         val testEvent3 = createTestEvent("test-event-3")
 
-        Source(List(testEvent1, testEvent2, testEvent3))
-        // .single(testEvent)
+        val data = List(
+          (Success(Done), testEvent1),
+          (Success(Done), testEvent2),
+          (Success(Done), testEvent3)
+        )
+
+        Source(data)
           .viaMat(KillSwitches.single)(Keep.right)
           .via(handler)
           .toMat(Sink.foreach(println))(Keep.both)

@@ -14,6 +14,7 @@
 
 - ~~handle extract failed case~~
 - ~~rename context to runningContxt~~
-- move default config to reference.conf
+- ~~move default config to reference.conf~~
 - ~~create BuilderEnvironment~~
 - ~~create Config runner and Zookeeper runner~~
+- add rfc date parser and change published field format

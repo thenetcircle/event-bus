@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.kafka
 
-import akka.kafka.ConsumerMessage.CommittableOffset
+import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream._
@@ -26,7 +26,7 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
+import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
@@ -73,8 +73,32 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       .withProperty("client.id", "eventbus-kafkasource")
   }
 
+  def extractEventFromMessage(
+      message: CommittableMessage[ConsumerKey, ConsumerValue]
+  )(implicit executionContext: ExecutionContext): Future[(Try[Done], Event)] = {
+    val messageKeyOption = Option(message.record.key())
+    val eventExtractor =
+      messageKeyOption
+        .flatMap(_key => _key.data)
+        .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
+        .getOrElse(EventExtractorFactory.defaultExtractor)
+    val eventBody = ByteString(message.record.value())
+
+    eventExtractor
+      .extract(eventBody, Some(message.committableOffset))
+      .map(event => Success(Done) -> event)
+      .recover {
+        case ex: EventExtractingException =>
+          val dataFormat = eventExtractor.getFormat()
+          logger.warn(
+            s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
+          )
+          Failure(ex) -> Event.createEventFromException(eventBody, dataFormat, ex)
+      }
+  }
+
   override def runWith(
-      handler: Flow[Event, (Try[Done], Event), NotUsed]
+      handler: Flow[(Try[Done], Event), (Try[Done], Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()
@@ -87,25 +111,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
         case (topicPartition, source) =>
           try {
             source
-              .mapAsync(1)(message => {
-                val messageKeyOption = Option(message.record.key())
-                val eventExtractor =
-                  messageKeyOption
-                    .flatMap(_key => _key.data)
-                    .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
-                    .getOrElse(EventExtractorFactory.defaultExtractor)
-                val eventFuture = eventExtractor
-                  .extract(ByteString(message.record.value()), Some(message.committableOffset))
-                eventFuture.failed.foreach(
-                  ex =>
-                    logger.warn(
-                      s"The event read from Kafka extracted failed with format: ${eventExtractor
-                        .getFormat()} and error: $ex"
-                  )
-                )
-                eventFuture
-              })
-              .withAttributes(ActorAttributes.supervisionStrategy(Supervision.resumingDecider))
+              .mapAsync(1)(extractEventFromMessage)
               .via(handler)
               .mapAsync(1) {
                 case (Success(_), event) =>

@@ -56,20 +56,21 @@ class Story(val settings: StorySettings,
           {
             transformId += 1
             _chain.via(
-              wrapTaskFlow(_transform.getHandler(), s"story-$storyName-transform-$transformId")
+              wrapTaskHandler(_transform.getHandler(), s"story-$storyName-transform-$transformId")
             )
           }
         })
         .getOrElse(Flow[M])
 
-    val sink = wrapTaskFlow(sinkTask.getHandler(), s"story-$storyName-sink")
+    val sink = wrapTaskHandler(sinkTask.getHandler(), s"story-$storyName-sink")
 
-    val handler = Flow[Event].map((Success(Done), _)).via(transforms).via(sink)
+    val sourceResultHandler =
+      wrapTaskHandler(Flow[Event].map(e => (Success(Done), e)), s"story-$storyName-sourceresult")
 
-    sourceTask.runWith(handler)
+    sourceTask.runWith(sourceResultHandler.via(transforms).via(sink))
   }
 
-  def wrapTaskFlow(taskFlow: Flow[Event, M, NotUsed], taskName: String)(
+  def wrapTaskHandler(taskHandler: Flow[Event, M, NotUsed], taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[M, M, NotUsed] = {
 
@@ -84,7 +85,7 @@ class Story(val settings: StorySettings,
             val postCheck =
               builder.add(Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
             val output = builder.add(Merge[M](3))
-            val logic = Flow[M].map(_._2).via(taskFlow)
+            val logic = Flow[M].map(_._2).via(taskHandler)
 
             // add other fallback
             val fallback = Flow[M]

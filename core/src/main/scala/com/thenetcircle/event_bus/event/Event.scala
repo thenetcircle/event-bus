@@ -36,11 +36,26 @@ case class Event(metadata: EventMetaData, body: EventBody, passThrough: Option[A
 
 }
 
+object Event {
+  val EXCEPTION_EVENTNAME = "event-bus-exception"
+  def createEventFromException(body: ByteString, dataFormat: DataFormat, ex: Throwable): Event = {
+    Event(
+      metadata = EventMetaData(
+        java.util.UUID.randomUUID().toString,
+        EXCEPTION_EVENTNAME,
+        System.currentTimeMillis()
+      ),
+      body = EventBody(body, dataFormat),
+      Some(ex)
+    )
+  }
+}
+
 case class EventMetaData(uuid: String,
                          name: String,
                          published: Long,
-                         provider: Option[String], // who provided the event
-                         actor: Option[String], // who triggered the event
+                         provider: Option[String] = None, // who provided the event
+                         actor: Option[String] = None, // who triggered the event
                          channel: Option[String] = None) {
   def withChannel(_channel: String): EventMetaData = copy(channel = Some(_channel))
 }

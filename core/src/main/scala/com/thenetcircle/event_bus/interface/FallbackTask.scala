@@ -21,13 +21,13 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 trait FallbackTask extends Task {
 
   // Note that this method will be called on each tasks of stories
   def getHandler(failedTaskName: String)(
       implicit runningContext: TaskRunningContext
-  ): Flow[(Try[Done], Event), (Try[Done], Event), NotUsed]
+  ): Flow[(Try[Done], Event), (Failure[Done], Event), NotUsed]
 
 }
