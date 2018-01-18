@@ -19,13 +19,21 @@ package com.thenetcircle.event_bus.story
 
 import akka.actor.{ActorRef, ActorSystem}
 import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContextFactory}
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.mutable
 
-class StoryRunner(name: String, runningContextFactory: TaskRunningContextFactory)(
+class StoryRunner(_name: String, runningContextFactory: TaskRunningContextFactory)(
     implicit appContext: AppContext,
     system: ActorSystem
-) {
+) extends StrictLogging {
+
+  val name: String = if (_name.isEmpty) {
+    val defaultRunnerName = appContext.getDefaultRunnerName()
+    logger.warn(s"Didn't set runner-name or it's empty, use $defaultRunnerName instead.")
+    defaultRunnerName
+  } else _name
+
   val runningStories: mutable.Map[String, ActorRef] = mutable.Map.empty
 
   def getName(): String = name
@@ -39,17 +47,15 @@ class StoryRunner(name: String, runningContextFactory: TaskRunningContextFactory
 
   // TODO shutdown running stories
   def shutdown(): Unit = {}
+
 }
 
-object StoryRunner {
+object StoryRunner extends StrictLogging {
   def apply(
       name: String,
       runningContextFactory: TaskRunningContextFactory
   )(implicit appContext: AppContext, system: ActorSystem): StoryRunner = {
-    new StoryRunner(
-      if (name.nonEmpty) name else appContext.getDefaultRunnerName(),
-      runningContextFactory
-    )
+    new StoryRunner(name, runningContextFactory)
   }
 
 }

@@ -2,6 +2,8 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.helper.ZookeeperManager
+import com.typesafe.config.{Config, ConfigFactory}
+import net.ceedubs.ficus.Ficus._
 
 case class StoryInfo(name: String,
                      status: String,
@@ -48,4 +50,51 @@ class StoryZookeeperDAO(zkManager: ZookeeperManager)(implicit appContext: AppCon
 object StoryZookeeperDAO {
   def apply(zkManager: ZookeeperManager)(implicit appContext: AppContext): StoryZookeeperDAO =
     new StoryZookeeperDAO(zkManager)
+}
+
+/*
+ * example:
+ * ```
+ * [
+ * {
+ *   # "name": "..."
+ *   # "sourceTask": ["sourceTask-type", "settings"]
+ *   # "transformTasks": [
+ *   #   ["op-type", "settings"],
+ *   #   ...
+ *   # ]
+ *   # "sinkTask": ["sinkTask-type", "settings"]
+ *   # "fallbackTasks": [
+ *     ["sinkTask-type", "settings"]
+ *   ]
+ * },
+ * ...
+ * ]
+ * ```
+ */
+class StoryConfigDAO(config: Config) extends StoryDAO {
+  config.checkValid(ConfigFactory.defaultReference, "story")
+
+  val storyConfigs: List[Config] = config.as[List[Config]]("story")
+  val stories: List[StoryInfo] = storyConfigs.map(
+    cf =>
+      StoryInfo(
+        cf.as[String]("name"),
+        cf.as[String]("status"),
+        cf.as[String]("settings"),
+        cf.as[String]("source"),
+        cf.as[String]("sink"),
+        cf.as[Option[List[String]]]("transforms"),
+        cf.as[Option[List[String]]]("fallbacks")
+    )
+  )
+
+  override def getStoriesByRunnerName(runnerName: String) = ???
+
+  override def getStoryInfo(storyName: String) = ???
+
+}
+
+object StoryConfigDAO {
+  def apply(config: Config): StoryConfigDAO = new StoryConfigDAO(config)
 }
