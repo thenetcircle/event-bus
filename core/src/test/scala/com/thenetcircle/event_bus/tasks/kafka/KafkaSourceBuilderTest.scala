@@ -28,18 +28,27 @@ class KafkaSourceBuilderTest extends AkkaStreamTest {
   it should "build correct KafkaSource with the default config" in {
 
     val sink = builder.build("""{
-        |  "bootstrap-servers": "abc",
+        |  "bootstrap-servers": "test-server",
         |  "group-id": "test-group",
         |  "topics": [ "abc", "def" ],
-        |  "max-concurrent-partitions": 50
+        |  "max-concurrent-partitions": 50,
+        |  "use-dispatcher": "test-dispatcher",
+        |  "properties": {
+        |    "enable.auto.commit": "true"
+        |  }
         |}""".stripMargin)
 
     val settings = sink.settings
+    val kafkaSource = new KafkaSource(settings)
+    val consumerSettings = kafkaSource.getConsumerSettings()
 
-    settings.bootstrapServers shouldEqual "abc"
+    settings.bootstrapServers shouldEqual "test-server"
     settings.groupId shouldEqual "test-group"
     settings.subscribedTopics shouldEqual Left(Set[String]("abc", "def"))
     settings.maxConcurrentPartitions shouldEqual 50
+    settings.useDispatcher.get shouldEqual "test-dispatcher"
+
+    consumerSettings.getProperty("enable.auto.commit") shouldEqual "true"
 
   }
 

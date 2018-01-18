@@ -20,14 +20,15 @@ package com.thenetcircle.event_bus.tasks.misc
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 
-class TopicResolverTransformTest extends AkkaStreamTest {
+class ChannelResolverTransformTest extends AkkaStreamTest {
 
-  behavior of "TopicResolverTransform"
+  behavior of "ChannelResolverTransform"
 
   val resolver = new ChannelResolverTransform("event-default")
+  val delimiter = ConfigStringParser.delimiter
   resolver.updateMapping(
     Map(
-      "event-user" -> Map("patterns" -> s"""user.*${ConfigStringParser.delimiter}profile.*"""),
+      "event-user" -> Map("patterns" -> s"""user.*${delimiter}profile.*"""),
       "event-message" -> Map("patterns" -> """message.*""")
     )
   )

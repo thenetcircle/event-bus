@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.base
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
-import com.thenetcircle.event_bus.story.TaskBuilderFactory
+import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
 import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
@@ -37,18 +37,19 @@ abstract class AkkaStreamTest(_appContext: AppContext)
   implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
   )
-  implicit val executor: ExecutionContext = materializer.executionContext
+  implicit val testExecutionContext: ExecutionContext = materializer.executionContext
 
   implicit val runningContext: TaskRunningContext =
     new TaskRunningContext(
       appContext,
       system,
       materializer,
-      executor,
+      testExecutionContext,
       system.actorOf(TestActors.blackholeProps)
     )
 
-  val builderFactory: TaskBuilderFactory = TaskBuilderFactory(appContext.getSystemConfig())
+  implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
+  val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
   def this() = {
     this(new AppContext("event-bus-test", "2.x", "test", true, ConfigFactory.load()))

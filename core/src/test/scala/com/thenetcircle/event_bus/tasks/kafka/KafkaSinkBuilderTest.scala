@@ -30,16 +30,27 @@ class KafkaSinkBuilderTest extends AkkaStreamTest {
   it should "build correct KafkaSink with the default config" in {
 
     val sink = builder.build("""{
-        |  "bootstrap-servers": "abc",
-        |  "close-timeout": "100s",
-        |  "parallelism": 50
+        |  "bootstrap-servers": "testserver1,testserver2",
+        |  "close-timeout": "100 s",
+        |  "parallelism": 50,
+        |  "use-dispatcher": "test-dispatcher",
+        |  "properties": {
+        |    "batch.size": 1024,
+        |    "connections.max.idle.ms": 100
+        |  }
         |}""".stripMargin)
 
     val settings = sink.settings
+    val kafkaSink = new KafkaSink(settings)
+    val producerSettings = kafkaSink.getProducerSettings()
 
-    settings.bootstrapServers shouldEqual "abc"
+    settings.bootstrapServers shouldEqual "testserver1,testserver2"
     settings.closeTimeout shouldEqual 100.seconds
     settings.parallelism shouldEqual 50
+    settings.useDispatcher.get shouldEqual "test-dispatcher"
+
+    producerSettings.properties("batch.size") shouldEqual "1024"
+    producerSettings.properties("connections.max.idle.ms") shouldEqual "100"
 
   }
 

@@ -38,7 +38,7 @@ class StoryTest extends AkkaStreamTest {
 
     val settings = StorySettings("test-story")
 
-    val sourceTask = builderFactory.buildSourceTask("http", """
+    val sourceTask = storyBuilder.buildSourceTask("http", """
         |{
         |  "interface": "127.0.0.1",
         |  "port": 8086,
@@ -48,7 +48,7 @@ class StoryTest extends AkkaStreamTest {
         |}
       """.stripMargin).get
 
-    val sinkTask = builderFactory
+    val sinkTask = storyBuilder
       .buildSinkTask(
         "kafka",
         """
@@ -101,7 +101,7 @@ class StoryTest extends AkkaStreamTest {
 
     val settings = StorySettings("test-story-2")
 
-    val sourceTask = builderFactory
+    val sourceTask = storyBuilder
       .buildSourceTask(
         "kafka",
         """
@@ -116,7 +116,7 @@ class StoryTest extends AkkaStreamTest {
       )
       .get
 
-    val sinkTask = builderFactory
+    val sinkTask = storyBuilder
       .buildSinkTask("http", """
             |{
             |  "request" : {
@@ -158,7 +158,7 @@ class StoryTest extends AkkaStreamTest {
       }
     }
 
-    val sinkTask = builderFactory
+    val sinkTask = storyBuilder
       .buildSinkTask("http", """
                                  |{
                                  |  "request" : {
@@ -181,7 +181,7 @@ class StoryTest extends AkkaStreamTest {
 
     val settings = StorySettings("test-story-4")
 
-    val sourceTask = builderFactory.buildSourceTask("http", """
+    val sourceTask = storyBuilder.buildSourceTask("http", """
         |{
         |  "interface": "127.0.0.1",
         |  "port": 8092,

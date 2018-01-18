@@ -50,7 +50,8 @@ class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) ext
   private lazy val materializer: Materializer = ActorMaterializer(
     ActorMaterializerSettings(system)
     // .withSupervisionStrategy(decider)
-  )
+  )(system)
+
   // TODO: use another execution runningContext for computing
   private lazy val executionContext: ExecutionContext = ExecutionContext.global
 

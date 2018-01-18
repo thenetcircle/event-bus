@@ -20,6 +20,8 @@ package com.thenetcircle.event_bus.tasks.http
 import com.thenetcircle.event_bus.base.AkkaStreamTest
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 
+import scala.concurrent.duration._
+
 class HttpSourceBuilderTest extends AkkaStreamTest {
 
   behavior of "HttpSourceBuilder"
@@ -30,21 +32,23 @@ class HttpSourceBuilderTest extends AkkaStreamTest {
 
     val source = builder.build("""{
         |  "interface": "127.0.0.1",
+        |  "port": 8888,
         |  "succeeded-response": "okoo",
-        |  "max-connections": 1001,
-        |  "request-timeout": "5 s"
+        |  "server": {
+        |    "max-connections": 1001,
+        |    "request-timeout": "5 s"
+        |  }
         |}""".stripMargin)
 
     val settings = source.settings
 
     settings.interface shouldEqual "127.0.0.1"
-    settings.port shouldEqual 8000
+    settings.port shouldEqual 8888
     settings.format shouldEqual DataFormat.ACTIVITYSTREAMS
-    settings.maxConnections shouldEqual 1001
     settings.succeededResponse shouldEqual "okoo"
-    settings.requestTimeout shouldEqual "5 s"
-    settings.lingerTimeout shouldEqual "1 min"
+    settings.serverSettings.maxConnections shouldEqual 1001
+    settings.serverSettings.requestTimeout shouldEqual 5.seconds
+    settings.serverSettings.lingerTimeout shouldEqual 1.minute
 
   }
-
 }

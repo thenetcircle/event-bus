@@ -34,20 +34,31 @@ class HttpSinkBuilderTest extends AkkaStreamTest {
         |  "request" : {
         |    "uri": "http://www.google.com"
         |  },
-        |  "expected-response": "TEST_RESPONSE"
+        |  "expected-response": "TEST_RESPONSE",
+        |  "total-retry-timeout": "10 m",
+        |  "pool": {
+        |    "max-retries": 10,
+        |    "max-open-requests": 64,
+        |    "idle-timeout": "10 min"
+        |  }
         |}""".stripMargin)
 
     val settings = sink.settings
 
     settings.maxRetryTimes shouldEqual 9
     settings.maxConcurrentRetries shouldEqual 1
-    settings.totalRetryTimeout shouldEqual 6.seconds
+    settings.totalRetryTimeout shouldEqual 10.minutes
     settings.defaultRequest shouldEqual HttpRequest(
       method = HttpMethods.POST,
       uri = Uri("http://www.google.com")
     )
     settings.expectedResponseBody shouldEqual "TEST_RESPONSE"
-    settings.poolSettings shouldBe defined
+    settings.poolSettings.get.maxRetries shouldEqual 10
+    settings.poolSettings.get.maxOpenRequests shouldEqual 64
+    settings.poolSettings.get.idleTimeout shouldEqual 10.minutes
+    settings.poolSettings.get.pipeliningLimit shouldEqual 1
+    settings.poolSettings.get.maxConnections shouldEqual 4
+    settings.poolSettings.get.minConnections shouldEqual 0
 
   }
 
