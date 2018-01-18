@@ -92,7 +92,7 @@ class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Result, Event), NotUsed] = {
+  ): Flow[Event, (Signal, Event), NotUsed] = {
 
     init()
 

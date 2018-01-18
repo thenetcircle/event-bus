@@ -78,7 +78,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(Result, Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[(Signal, Event)] = {
     val messageKeyOption = Option(message.record.key())
     val eventExtractor =
       messageKeyOption
@@ -104,7 +104,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def runWith(
-      handler: Flow[(Result, Event), (Result, Event), NotUsed]
+      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()

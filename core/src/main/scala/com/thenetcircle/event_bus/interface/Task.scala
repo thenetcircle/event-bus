@@ -19,5 +19,5 @@ package com.thenetcircle.event_bus.interface
 import scala.util.Try
 
 trait Task {
-  type Result = Try[TaskSignal]
+  type Signal = Try[TaskSignal]
 }

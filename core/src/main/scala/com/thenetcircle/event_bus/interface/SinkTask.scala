@@ -26,6 +26,6 @@ trait SinkTask extends Task {
 
   def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Result, Event), NotUsed]
+  ): Flow[Event, (Signal, Event), NotUsed]
 
 }
