@@ -7,3 +7,4 @@ target/
 /test_receiver/
 /site/
 /ansible/
+core/src/test/scala/com/thenetcircle/event_bus/story/StoryTest.scala

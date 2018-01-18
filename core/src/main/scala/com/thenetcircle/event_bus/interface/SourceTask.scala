@@ -24,11 +24,10 @@ import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 
 import scala.concurrent.Future
-import scala.util.Try
 
 trait SourceTask extends Task {
 
-  def runWith(handler: Flow[(Try[Done], Event), (Try[Done], Event), NotUsed])(
+  def runWith(handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed])(
       implicit runningContext: TaskRunningContext
   ): (KillSwitch, Future[Done])
 

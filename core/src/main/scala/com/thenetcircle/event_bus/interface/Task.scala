@@ -16,5 +16,8 @@
  */
 
 package com.thenetcircle.event_bus.interface
+import scala.util.Try
 
-trait Task
+trait Task {
+  type ResultTry = Try[TaskResult]
+}

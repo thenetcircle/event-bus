@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
+import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
@@ -25,11 +26,11 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
-import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.TaskResult.NoResult
+import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -59,7 +60,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Try[Done], Event), NotUsed] = {
+  ): Flow[Event, (ResultTry, Event), NotUsed] = {
     import HttpSink.RetrySender._
     import HttpSink._
 
@@ -80,7 +81,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
         (retrySender ? Send(createRequest(event)))
           .mapTo[Result]
-          .map(result => (result.payload.map(_ => Done), event))
+          .map(result => (result.payload.map(_ => NoResult), event))
           .recover {
             case NonFatal(ex) => (Failure(ex), event)
           }

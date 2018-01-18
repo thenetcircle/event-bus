@@ -22,6 +22,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interface.TaskResult.NoResult
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
@@ -38,7 +39,7 @@ class Story(val settings: StorySettings,
             val fallbackTask: Option[FallbackTask] = None)
     extends StrictLogging {
 
-  type M = (Try[Done], Event) // middle result type
+  type MR = (Try[TaskResult], Event) // middle result type
 
   val storyName: String = settings.name
 
@@ -52,7 +53,7 @@ class Story(val settings: StorySettings,
     var transformId = 0
     val transforms =
       transformTasks
-        .map(_.foldLeft(Flow[M]) { (_chain, _transform) =>
+        .map(_.foldLeft(Flow[MR]) { (_chain, _transform) =>
           {
             transformId += 1
             _chain.via(
@@ -60,19 +61,22 @@ class Story(val settings: StorySettings,
             )
           }
         })
-        .getOrElse(Flow[M])
+        .getOrElse(Flow[MR])
 
     val sink = wrapTaskHandler(sinkTask.getHandler(), s"story-$storyName-sink")
 
     val sourceResultHandler =
-      wrapTaskHandler(Flow[Event].map(e => (Success(Done), e)), s"story-$storyName-sourceresult")
+      wrapTaskHandler(
+        Flow[Event].map(e => (Success(NoResult), e)),
+        s"story-$storyName-sourceresult"
+      )
 
     sourceTask.runWith(sourceResultHandler.via(transforms).via(sink))
   }
 
-  def wrapTaskHandler(taskHandler: Flow[Event, M, NotUsed], taskName: String)(
+  def wrapTaskHandler(taskHandler: Flow[Event, MR, NotUsed], taskName: String)(
       implicit runningContext: TaskRunningContext
-  ): Flow[M, M, NotUsed] = {
+  ): Flow[MR, MR, NotUsed] = {
 
     Flow
       .fromGraph(
@@ -81,14 +85,14 @@ class Story(val settings: StorySettings,
             import GraphDSL.Implicits._
 
             val preCheck =
-              builder.add(new Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
+              builder.add(new Partition[MR](2, input => if (input._1.isSuccess) 0 else 1))
             val postCheck =
-              builder.add(Partition[M](2, input => if (input._1.isSuccess) 0 else 1))
-            val output = builder.add(Merge[M](3))
-            val logic = Flow[M].map(_._2).via(taskHandler)
+              builder.add(Partition[MR](2, input => if (input._1.isSuccess) 0 else 1))
+            val output = builder.add(Merge[MR](3))
+            val logic = Flow[MR].map(_._2).via(taskHandler)
 
             // add other fallback
-            val fallback = Flow[M]
+            val fallback = Flow[MR]
               .map {
                 case input @ (_, event) =>
                   val logMessage =
@@ -99,8 +103,8 @@ class Story(val settings: StorySettings,
               }
               .via(
                 fallbackTask
-                  .map(_task => Flow[M].via(_task.getHandler(taskName)))
-                  .getOrElse(Flow[M])
+                  .map(_task => Flow[MR].via(_task.getHandler(taskName)))
+                  .getOrElse(Flow[MR])
               )
 
             // workflow

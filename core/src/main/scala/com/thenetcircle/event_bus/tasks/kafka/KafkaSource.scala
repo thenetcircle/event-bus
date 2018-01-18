@@ -28,6 +28,7 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.TaskResult.NoResult
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
@@ -37,7 +38,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
@@ -77,7 +78,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(Try[Done], Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[(ResultTry, Event)] = {
     val messageKeyOption = Option(message.record.key())
     val eventExtractor =
       messageKeyOption
@@ -88,7 +89,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     eventExtractor
       .extract(eventBody, Some(message.committableOffset))
-      .map(event => Success(Done) -> event)
+      .map(event => Success(NoResult) -> event)
       .recover {
         case ex: EventExtractingException =>
           val dataFormat = eventExtractor.getFormat()
@@ -100,7 +101,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def runWith(
-      handler: Flow[(Try[Done], Event), (Try[Done], Event), NotUsed]
+      handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()

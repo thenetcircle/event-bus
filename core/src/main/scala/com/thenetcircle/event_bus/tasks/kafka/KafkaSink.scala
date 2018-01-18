@@ -19,14 +19,15 @@ package com.thenetcircle.event_bus.tasks.kafka
 
 import java.util.concurrent.TimeUnit
 
+import akka.NotUsed
 import akka.kafka.ProducerMessage.Message
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
-import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.TaskResult.NoResult
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{
   EventSerializer,
@@ -39,7 +40,7 @@ import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
-import scala.util.{Success, Try}
+import scala.util.Success
 
 case class KafkaSinkSettings(bootstrapServers: String,
                              defaultTopic: String = "event-default",
@@ -101,7 +102,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Try[Done], Event), NotUsed] = {
+  ): Flow[Event, (ResultTry, Event), NotUsed] = {
 
     val kafkaSettings = getProducerSettings()
     lazy val kafkaProducer = kafkaSettings.createKafkaProducer()
@@ -113,7 +114,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
       .via(Producer.flow(kafkaSettings, kafkaProducer))
-      .map(result => (Success(Done), result.message.passThrough))
+      .map(result => (Success(NoResult), result.message.passThrough))
   }
 }
 

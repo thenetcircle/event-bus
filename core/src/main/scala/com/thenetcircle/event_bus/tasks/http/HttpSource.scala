@@ -34,6 +34,7 @@ import com.thenetcircle.event_bus.event.extractor.{
   EventExtractorFactory
 }
 import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interface.TaskResult.NoResult
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -61,7 +62,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       )
   }
 
-  def createResponseFromEvent(result: (Try[Done], Event)): HttpResponse = result match {
+  def createResponseFromEvent(result: (ResultTry, Event)): HttpResponse = result match {
     case (s @ Success(_), event) => createResponseFromTry(s)
     case (f @ Failure(ex), _)    => createResponseFromTry(f)
   }
@@ -85,7 +86,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       })
   }
 
-  def getInternalHandler(handler: Flow[(Try[Done], Event), (Try[Done], Event), NotUsed])(
+  def getInternalHandler(handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed])(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
   ): Flow[HttpRequest, HttpResponse, NotUsed] = Flow.fromGraph(
@@ -99,8 +100,8 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
           case Failure(_) => 1
         }))
 
-        val realHandler = Flow[Try[Event]].map(t => (t.map(_ => Done), t.get)).via(handler)
-        val response1 = Flow[(Try[Done], Event)].map(createResponseFromEvent)
+        val realHandler = Flow[Try[Event]].map(t => (t.map(_ => NoResult), t.get)).via(handler)
+        val response1 = Flow[(ResultTry, Event)].map(createResponseFromEvent)
         val response2 = Flow[Try[Any]].map(createResponseFromTry)
 
         val output = builder.add(Merge[HttpResponse](2))
@@ -116,7 +117,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   )
 
   override def runWith(
-      handler: Flow[(Try[Done], Event), (Try[Done], Event), NotUsed]
+      handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()
