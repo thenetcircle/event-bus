@@ -23,12 +23,19 @@ class StoryWrapper(runningContextFactory: TaskRunningContextFactory, story: Stor
   val (killSwitch, doneFuture) = story.run()
   doneFuture.onComplete(_ => self ! Done)(runningContext.getExecutionContext())
 
+  val storyName = story.storyName
+
+  override def postStop() = {
+    log.info(s"Stopping story $storyName")
+    killSwitch.shutdown()
+  }
+
   override def receive: Receive = {
     case Stop =>
-      log.warning(s"the story ${story.storyName} is shuting down")
+      log.warning(s"the story $storyName is shuting down")
       killSwitch.shutdown()
     case Done =>
-      log.warning(s"the story ${story.storyName} is completed")
+      log.warning(s"the story $storyName is completed")
       context.stop(self)
   }
 }

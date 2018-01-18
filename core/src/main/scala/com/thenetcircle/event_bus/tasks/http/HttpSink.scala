@@ -23,7 +23,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.pattern.AskTimeoutException
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
@@ -81,10 +80,13 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
         (retrySender ? Send(createRequest(event)))
           .mapTo[SendResult]
-          .map(result => (result.payload.map(_ => NoSignal), event))
-          .recover {
+          .map(result => {
+            // TODO for failure case will retry by backoff, for non-200 case / for ko case will send to fallback
+            (result.payload.map(_ => NoSignal), event)
+          })
+      /*.recover {
             case ex: AskTimeoutException => (Failure(ex), event)
-          }
+          }*/
       }
     // Comment this because of that the flow might be materialized multiple times(such as KafkaSource)
     /*.watchTermination() { (_, done) =>
@@ -134,15 +136,13 @@ object HttpSink {
       sender() ! SendResult(msg)
     }
 
+    val http = Http()
+    val poolSettings = conntionPoolSettings.getOrElse(ConnectionPoolSettings(system))
+
     override def receive: Receive = {
       case send @ Send(req, _) =>
         val originalSender = sender()
-
-        val respFuture = conntionPoolSettings match {
-          case Some(_settings) => Http().singleRequest(request = req, settings = _settings)
-          case None            => Http().singleRequest(request = req)
-        }
-        respFuture.andThen {
+        http.singleRequest(request = req, settings = poolSettings) andThen {
           case respTry => self.tell(Resp(respTry, send), originalSender)
         }
 
