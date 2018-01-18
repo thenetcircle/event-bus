@@ -29,7 +29,6 @@ import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -60,7 +59,6 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
   override def getHandler()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (Signal, Event), NotUsed] = {
-    import HttpSink.RetrySender._
     import HttpSink._
 
     implicit val system: ActorSystem = runningContext.getActorSystem()
@@ -78,11 +76,12 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         import akka.pattern.ask
         implicit val askTimeout: Timeout = Timeout(settings.totalRetryTimeout)
 
-        (retrySender ? Send(createRequest(event)))
-          .mapTo[SendResult]
+        (retrySender ? RetrySender.Send(createRequest(event)))
+          .mapTo[RetrySender.Result]
           .map(result => {
             // TODO for failure case will retry by backoff, for non-200 case / for ko case will send to fallback
-            (result.payload.map(_ => NoSignal), event)
+            // TODO use to-fallback signal for failure case
+            (makeSignal(result.payload), event)
           })
       /*.recover {
             case ex: AskTimeoutException => (Failure(ex), event)
@@ -114,7 +113,7 @@ object HttpSink {
     }
     case class Resp(respTry: Try[HttpResponse], send: Send)
     case class Check(resultTry: Try[Boolean], send: Send, respOption: Option[HttpResponse])
-    case class SendResult(payload: Try[HttpResponse])
+    case class Result(payload: Try[HttpResponse])
   }
 
   class RetrySender(
@@ -133,7 +132,7 @@ object HttpSink {
 
     def replyToOriginalSender(msg: Try[HttpResponse]): Unit = {
       log.debug(s"replying to original sender: $msg")
-      sender() ! SendResult(msg)
+      sender() ! Result(msg)
     }
 
     val http = Http()

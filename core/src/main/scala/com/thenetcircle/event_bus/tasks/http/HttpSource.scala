@@ -34,7 +34,7 @@ import com.thenetcircle.event_bus.event.extractor.{
   EventExtractorFactory
 }
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
+import com.thenetcircle.event_bus.interface.TaskSignal.{FailureSignal, NoSignal, SuccessSignal}
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -42,7 +42,6 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success}
 
 case class HttpSourceSettings(interface: String = "0.0.0.0",
                               port: Int = 8000,
@@ -53,9 +52,9 @@ case class HttpSourceSettings(interface: String = "0.0.0.0",
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
   def createResponse(result: (Signal, Event)): HttpResponse = result match {
-    case (s @ Success(_), event) =>
+    case (_: SuccessSignal, _) =>
       HttpResponse(entity = HttpEntity(settings.succeededResponse))
-    case (f @ Failure(ex), _) =>
+    case (FailureSignal(ex), _) =>
       HttpResponse(
         entity = HttpEntity(s"The request was processing failed with error ${ex.getMessage}.")
       )
@@ -71,11 +70,11 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     Flow[HttpRequest]
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
-          .map(event => Success(NoSignal) -> event)
+          .map(event => NoSignal -> event)
           .recover {
             case ex: EventExtractingException =>
               logger.debug(s"A http request unmarshaller failed with error $ex")
-              Failure(ex) -> Event.createEventFromException(ex)
+              FailureSignal(ex) -> Event.createEventFromException(ex)
           }
       })
   }

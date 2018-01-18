@@ -21,13 +21,17 @@ sealed trait TaskSignal
 
 object TaskSignal {
 
-  sealed trait NoSignal extends TaskSignal
+  sealed trait SuccessSignal
+
+  sealed trait NoSignal extends TaskSignal with SuccessSignal
   case object NoSignal extends NoSignal
 
-  sealed trait SkipSignal extends TaskSignal
+  sealed trait ToFallbackSignal extends TaskSignal with SuccessSignal
+  case object ToFallbackSignal extends ToFallbackSignal
+
+  sealed trait SkipSignal extends TaskSignal with SuccessSignal
   case object SkipSignal extends SkipSignal
 
-  sealed trait ToFallbackSignal extends TaskSignal
-  case object ToFallbackSignal extends ToFallbackSignal
+  case class FailureSignal(ex: Throwable) extends TaskSignal
 
 }

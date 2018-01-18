@@ -16,8 +16,16 @@
  */
 
 package com.thenetcircle.event_bus.interface
-import scala.util.Try
+
+import com.thenetcircle.event_bus.interface.TaskSignal.{FailureSignal, NoSignal}
+
+import scala.util.{Failure, Success, Try}
 
 trait Task {
-  type Signal = Try[TaskSignal]
+  type Signal = TaskSignal
+
+  def makeSignal[T](that: Try[T], successSignal: Signal = NoSignal): Signal = that match {
+    case Success(_)  => successSignal
+    case Failure(ex) => FailureSignal(ex)
+  }
 }

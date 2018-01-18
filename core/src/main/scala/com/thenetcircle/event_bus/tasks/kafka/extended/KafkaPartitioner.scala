@@ -24,8 +24,6 @@ import org.apache.kafka.clients.producer.Partitioner
 import org.apache.kafka.common.utils.Utils
 import org.apache.kafka.common.{Cluster, PartitionInfo}
 
-import scala.util.Random
-
 class KafkaPartitioner extends Partitioner {
   override def partition(topic: String,
                          key: scala.Any,
@@ -37,9 +35,10 @@ class KafkaPartitioner extends Partitioner {
     val numPartitions: Int = partitions.size
 
     val event = value.asInstanceOf[Event]
-    val keyBytes = event.metadata.actor
+    /*val keyBytes = event.metadata.actor
       .getOrElse(Random.nextString(6))
-      .getBytes("UTF-8")
+      .getBytes("UTF-8")*/
+    val keyBytes = event.uniqueName.getBytes("UTF-8")
 
     Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions
   }

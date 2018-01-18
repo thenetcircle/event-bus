@@ -40,7 +40,6 @@ import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
-import scala.util.Success
 
 case class KafkaSinkSettings(bootstrapServers: String,
                              defaultTopic: String = "event-default",
@@ -114,7 +113,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
       .via(Producer.flow(kafkaSettings, kafkaProducer))
-      .map(result => (Success(NoSignal), result.message.passThrough))
+      .map(result => (NoSignal, result.message.passThrough))
   }
 }
 

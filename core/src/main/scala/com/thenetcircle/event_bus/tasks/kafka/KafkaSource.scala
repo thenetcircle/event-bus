@@ -25,10 +25,15 @@ import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.{Event, EventBody}
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
+import com.thenetcircle.event_bus.event.{Event, EventBody}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.{ToFallbackSignal, NoSignal}
+import com.thenetcircle.event_bus.interface.TaskSignal.{
+  FailureSignal,
+  NoSignal,
+  SuccessSignal,
+  ToFallbackSignal
+}
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
@@ -38,7 +43,6 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
-import scala.util.{Failure, Success}
 
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
@@ -89,14 +93,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     eventExtractor
       .extract(eventData, Some(message.committableOffset))
-      .map(event => Success(NoSignal) -> event)
+      .map(event => NoSignal -> event)
       .recover {
         case ex: EventExtractingException =>
           val dataFormat = eventExtractor.getFormat()
           logger.warn(
             s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
           )
-          Success(ToFallbackSignal) ->
+          ToFallbackSignal ->
             Event
               .createEventFromException(ex, Some(EventBody(eventData, dataFormat)))
               .withPassThrough[CommittableOffset](message.committableOffset)
@@ -120,7 +124,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
               .mapAsync(1)(extractEventFromMessage)
               .via(handler)
               .mapAsync(1) {
-                case (Success(_), event) =>
+                case (_: SuccessSignal, event) =>
                   event.getPassThrough[CommittableOffset] match {
                     case Some(co) =>
                       logger.debug(s"The event is going to commit")
@@ -129,14 +133,20 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                       val errorMessage =
                         s"The event ${event.uniqueName} missed PassThrough[CommittableOffset]"
                       logger.debug(errorMessage)
-                      throw new NoSuchElementException(errorMessage)
+                      throw new IllegalStateException(errorMessage)
                   }
-                case (Failure(ex), _) =>
-                  logger.debug(s"The event reaches the end with processing error $ex")
-                  Future.successful(Done)
+                case (FailureSignal(ex), _) =>
+                  logger.debug(s"The event reaches the end with error $ex")
+                  // complete the stream if failure, before was using Future.successful(Done)
+                  throw ex
               }
               .toMat(Sink.ignore)(Keep.right)
               .run()
+              .map(done => {
+                logger
+                  .info(s"The substream listening on topicPartition $topicPartition was completed.")
+                done
+              })
               .recover {
                 case NonFatal(ex) =>
                   logger.warn(
@@ -144,11 +154,6 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                   )
                   Done
               }
-              .map(done => {
-                logger
-                  .info(s"The substream listening on topicPartition $topicPartition was completed.")
-                done
-              })
           } catch {
             case NonFatal(ex) ⇒
               logger.error(
