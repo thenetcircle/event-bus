@@ -23,6 +23,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.pattern.AskTimeoutException
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
@@ -38,7 +39,6 @@ import net.ceedubs.ficus.Ficus._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
@@ -80,13 +80,13 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         implicit val askTimeout: Timeout = Timeout(settings.totalRetryTimeout)
 
         (retrySender ? Send(createRequest(event)))
-          .mapTo[Result]
+          .mapTo[SendResult]
           .map(result => (result.payload.map(_ => NoSignal), event))
           .recover {
-            case NonFatal(ex) => (Failure(ex), event)
+            case ex: AskTimeoutException => (Failure(ex), event)
           }
       }
-    // Comment this because of that the flow might be materialized multiple times(like KafkaSource)
+    // Comment this because of that the flow might be materialized multiple times(such as KafkaSource)
     /*.watchTermination() { (_, done) =>
         done.map(_ => {
           system.stop(retrySender)
@@ -112,7 +112,7 @@ object HttpSink {
     }
     case class Resp(respTry: Try[HttpResponse], send: Send)
     case class Check(resultTry: Try[Boolean], send: Send, respOption: Option[HttpResponse])
-    case class Result(payload: Try[HttpResponse])
+    case class SendResult(payload: Try[HttpResponse])
   }
 
   class RetrySender(
@@ -131,7 +131,7 @@ object HttpSink {
 
     def replyToOriginalSender(msg: Try[HttpResponse]): Unit = {
       log.debug(s"replying to original sender: $msg")
-      sender() ! Result(msg)
+      sender() ! SendResult(msg)
     }
 
     override def receive: Receive = {
