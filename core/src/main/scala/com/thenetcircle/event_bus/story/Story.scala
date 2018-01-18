@@ -22,13 +22,13 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.TaskResult.NoResult
+import com.thenetcircle.event_bus.interface.TaskSignal.SkipOthers
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
-import scala.util.{Success, Try}
+import scala.util.{Failure, Success, Try}
 
 case class StorySettings(name: String, initStatus: StoryStatus = StoryStatus.INIT)
 
@@ -39,7 +39,7 @@ class Story(val settings: StorySettings,
             val fallbackTask: Option[FallbackTask] = None)
     extends StrictLogging {
 
-  type MR = (Try[TaskResult], Event) // middle result type
+  type MR = (Try[TaskSignal], Event) // middle result type
 
   val storyName: String = settings.name
 
@@ -65,11 +65,9 @@ class Story(val settings: StorySettings,
 
     val sink = wrapTaskHandler(sinkTask.getHandler(), s"story-$storyName-sink")
 
+    // TODO: change here
     val sourceResultHandler =
-      wrapTaskHandler(
-        Flow[Event].map(e => (Success(NoResult), e)),
-        s"story-$storyName-sourceresult"
-      )
+      wrapTaskHandler(Flow[Event].map(Task.makeNoResultEvent), s"story-$storyName-sourceresult")
 
     sourceTask.runWith(sourceResultHandler.via(transforms).via(sink))
   }
@@ -84,10 +82,18 @@ class Story(val settings: StorySettings,
           .create() { implicit builder =>
             import GraphDSL.Implicits._
 
+            // Success goes 0, Failure/SkipOthers goes 1
             val preCheck =
-              builder.add(new Partition[MR](2, input => if (input._1.isSuccess) 0 else 1))
+              builder.add(new Partition[MR](2, {
+                case (Success(SkipOthers), _) => 1
+                case (Success(_), _)          => 0
+                case (Failure(_), _)          => 1
+              }))
+
+            // Success goes 0, Failure goes 1
             val postCheck =
               builder.add(Partition[MR](2, input => if (input._1.isSuccess) 0 else 1))
+
             val output = builder.add(Merge[MR](3))
             val logic = Flow[MR].map(_._2).via(taskHandler)
 
@@ -109,10 +115,15 @@ class Story(val settings: StorySettings,
 
             // workflow
             // format: off
+            
+            // success flow >>>
             preCheck.out(0) ~> logic ~> postCheck
                                         postCheck.out(0)        ~>      output.in(0)
+                                        // fallback flow >>>
                                         postCheck.out(1) ~> fallback ~> output.in(1)
+            // failure/skip-others flow >>>
             preCheck.out(1)                       ~>                    output.in(2)
+            
             // format: on
 
             // ports

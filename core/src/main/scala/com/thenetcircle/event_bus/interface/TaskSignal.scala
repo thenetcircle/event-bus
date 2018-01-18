@@ -17,14 +17,14 @@
 
 package com.thenetcircle.event_bus.interface
 
-sealed trait TaskResult
+sealed trait TaskSignal
 
-object TaskResult {
+object TaskSignal {
 
-  sealed trait NoResult extends TaskResult
-  case object NoResult extends NoResult
+  sealed trait NoSignal extends TaskSignal
+  case object NoSignal extends NoSignal
 
-  sealed trait FallbackResult extends TaskResult
-  case object FallbackResult extends FallbackResult
+  sealed trait SkipOthers extends TaskSignal
+  case object SkipOthers extends SkipOthers
 
 }

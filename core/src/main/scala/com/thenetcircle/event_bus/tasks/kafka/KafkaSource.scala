@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskResult.NoResult
+import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
@@ -78,7 +78,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(ResultTry, Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[(Signal, Event)] = {
     val messageKeyOption = Option(message.record.key())
     val eventExtractor =
       messageKeyOption
@@ -89,7 +89,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     eventExtractor
       .extract(eventBody, Some(message.committableOffset))
-      .map(event => Success(NoResult) -> event)
+      .map(event => Success(NoSignal) -> event)
       .recover {
         case ex: EventExtractingException =>
           val dataFormat = eventExtractor.getFormat()
@@ -101,7 +101,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def runWith(
-      handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed]
+      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()

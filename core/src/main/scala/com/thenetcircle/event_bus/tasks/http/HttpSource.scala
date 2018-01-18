@@ -23,7 +23,8 @@ import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
-import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
+import akka.stream.scaladsl.Flow
+import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
@@ -34,7 +35,7 @@ import com.thenetcircle.event_bus.event.extractor.{
   EventExtractorFactory
 }
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskResult.NoResult
+import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -42,7 +43,7 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success}
 
 case class HttpSourceSettings(interface: String = "0.0.0.0",
                               port: Int = 8000,
@@ -52,80 +53,51 @@ case class HttpSourceSettings(interface: String = "0.0.0.0",
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  def createResponseFromTry(result: Try[Any]): HttpResponse = result match {
-    case Success(_) =>
+  def createResponse(result: (Signal, Event)): HttpResponse = result match {
+    case (s @ Success(_), event) =>
       HttpResponse(entity = HttpEntity(settings.succeededResponse))
-
-    case Failure(ex) =>
+    case (f @ Failure(ex), _) =>
       HttpResponse(
         entity = HttpEntity(s"The request was processing failed with error ${ex.getMessage}.")
       )
   }
 
-  def createResponseFromEvent(result: (ResultTry, Event)): HttpResponse = result match {
-    case (s @ Success(_), event) => createResponseFromTry(s)
-    case (f @ Failure(ex), _)    => createResponseFromTry(f)
-  }
-
   def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
-  ): Flow[HttpRequest, Try[Event], NotUsed] = {
+  ): Flow[HttpRequest, (Signal, Event), NotUsed] = {
     val unmarshaller: Unmarshaller[HttpEntity, Event] =
       EventExtractorFactory.getHttpEntityUnmarshaller(settings.format)
 
     Flow[HttpRequest]
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
-          .map(event => Success(event))
+          .map(event => Success(NoSignal) -> event)
           .recover {
             case ex: EventExtractingException =>
               logger.debug(s"A http request unmarshaller failed with error $ex")
-              Failure(ex)
+              Failure(ex) ->
+                Event.createEventFromException(ByteString(""), DataFormat.ACTIVITYSTREAMS, ex)
           }
       })
   }
 
-  def getInternalHandler(handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed])(
-      implicit materializer: Materializer,
-      executionContext: ExecutionContext
-  ): Flow[HttpRequest, HttpResponse, NotUsed] = Flow.fromGraph(
-    GraphDSL
-      .create() { implicit builder =>
-        import GraphDSL.Implicits._
-
-        val unmarshaller = builder.add(getRequestUnmarshallerHandler())
-        val partitioner = builder.add(Partition[Try[Event]](2, {
-          case Success(_) => 0
-          case Failure(_) => 1
-        }))
-
-        val realHandler = Flow[Try[Event]].map(t => (t.map(_ => NoResult), t.get)).via(handler)
-        val response1 = Flow[(ResultTry, Event)].map(createResponseFromEvent)
-        val response2 = Flow[Try[Any]].map(createResponseFromTry)
-
-        val output = builder.add(Merge[HttpResponse](2))
-
-        // format: off
-        unmarshaller ~> partitioner
-                        partitioner.out(0) ~> realHandler ~> response1 ~> output.in(0)
-                        partitioner.out(1)                ~> response2 ~> output.in(1)
-        // format: on
-
-        FlowShape(unmarshaller.in, output.out)
-      }
-  )
-
   override def runWith(
-      handler: Flow[(ResultTry, Event), (ResultTry, Event), NotUsed]
+      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
+    val internalHandler =
+      Flow[HttpRequest]
+        .via(getRequestUnmarshallerHandler())
+        .via(handler)
+        .map(createResponse)
+
     val httpBindFuture =
       Http().bindAndHandle(
-        handler = getInternalHandler(handler),
+        handler = internalHandler,
         interface = settings.interface,
         port = settings.port,
         settings = settings.serverSettings

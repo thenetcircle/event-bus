@@ -16,8 +16,15 @@
  */
 
 package com.thenetcircle.event_bus.interface
-import scala.util.Try
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
+
+import scala.util.{Success, Try}
 
 trait Task {
-  type ResultTry = Try[TaskResult]
+  type Signal = Try[TaskSignal]
+}
+
+object Task {
+  def makeNoResultEvent(event: Event): (Try[TaskSignal], Event) = (Success(NoSignal), event)
 }

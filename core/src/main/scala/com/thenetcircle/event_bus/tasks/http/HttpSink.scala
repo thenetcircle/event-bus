@@ -29,7 +29,7 @@ import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskResult.NoResult
+import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -60,7 +60,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (ResultTry, Event), NotUsed] = {
+  ): Flow[Event, (Signal, Event), NotUsed] = {
     import HttpSink.RetrySender._
     import HttpSink._
 
@@ -81,7 +81,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
         (retrySender ? Send(createRequest(event)))
           .mapTo[Result]
-          .map(result => (result.payload.map(_ => NoResult), event))
+          .map(result => (result.payload.map(_ => NoSignal), event))
           .recover {
             case NonFatal(ex) => (Failure(ex), event)
           }

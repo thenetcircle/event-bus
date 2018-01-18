@@ -24,7 +24,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskResult.NoResult
+import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
 import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -92,13 +92,13 @@ class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (ResultTry, Event), NotUsed] = {
+  ): Flow[Event, (Signal, Event), NotUsed] = {
 
     init()
 
     Flow[Event].map(event => {
       Try(resolveEvent(event)) match {
-        case Success(newEvent) => (Success(NoResult), newEvent)
+        case Success(newEvent) => (Success(NoSignal), newEvent)
         case Failure(ex) =>
           logger.error(s"resolve topic failed with error $ex")
           (Failure(ex), event)
