@@ -105,11 +105,11 @@ class Story(val settings: StorySettings,
 
             // workflow
             // format: off
-          preCheck.out(0) ~> logic ~> postCheck
-                                      postCheck.out(0)        ~>      output.in(0)
-                                      postCheck.out(1) ~> fallback ~> output.in(1)
-          preCheck.out(1)                       ~>                    output.in(2)
-          // format: on
+            preCheck.out(0) ~> logic ~> postCheck
+                                        postCheck.out(0)        ~>      output.in(0)
+                                        postCheck.out(1) ~> fallback ~> output.in(1)
+            preCheck.out(1)                       ~>                    output.in(2)
+            // format: on
 
             // ports
             FlowShape(preCheck.in, output.out)

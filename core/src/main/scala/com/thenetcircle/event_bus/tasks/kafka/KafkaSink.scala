@@ -68,13 +68,14 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
     settings.useDispatcher.foreach(dp => _producerSettings = _producerSettings.withDispatcher(dp))
 
-    _producerSettings = _producerSettings
+    val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
+
+    _producerSettings
       .withParallelism(settings.parallelism)
       .withCloseTimeout(settings.closeTimeout)
       .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
       .withBootstrapServers(settings.bootstrapServers)
-
-    _producerSettings
+      .withProperty("client.id", clientId)
   }
 
   def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {

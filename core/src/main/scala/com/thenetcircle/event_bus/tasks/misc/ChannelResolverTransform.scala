@@ -31,7 +31,9 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class ChannelResolverTransform(defaultChannel: String) extends TransformTask with StrictLogging {
+class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false)
+    extends TransformTask
+    with StrictLogging {
 
   private var inited: Boolean = false
   private var index: Map[String, String] = Map.empty
@@ -55,6 +57,16 @@ class ChannelResolverTransform(defaultChannel: String) extends TransformTask wit
           }))
     }
     updateIndex(_index.toMap)
+    if (useCache) cached.clear()
+  }
+
+  def getChannelFromIndex(eventName: String): Option[String] = {
+    getIndex()
+      .find {
+        case (pattern, _) =>
+          eventName matches pattern
+      }
+      .map(_._2)
   }
 
   // TODO: performance test
@@ -62,18 +74,16 @@ class ChannelResolverTransform(defaultChannel: String) extends TransformTask wit
     val eventName = event.metadata.name
     var channel = ""
 
-    val cachedChannel = cached.get(eventName)
-    if (cachedChannel != null) {
-      channel = cachedChannel
+    if (useCache) {
+      val cachedChannel = cached.get(eventName)
+      if (cachedChannel != null) {
+        channel = cachedChannel
+      } else {
+        channel = getChannelFromIndex(eventName).getOrElse(defaultChannel)
+        cached.put(eventName, channel)
+      }
     } else {
-      val channelOption = index
-        .find {
-          case (pattern, _) =>
-            eventName matches pattern
-        }
-        .map(_._2)
-      channel = channelOption.getOrElse(defaultChannel)
-      cached.put(eventName, channel)
+      channel = getChannelFromIndex(eventName).getOrElse(defaultChannel)
     }
 
     event.withChannel(channel)
@@ -106,7 +116,10 @@ class ChannelResolverTransformBuilder() extends TransformTaskBuilder {
       .convertStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.channel-resolver"))
 
-    new ChannelResolverTransform(config.getString("default-channel"))
+    new ChannelResolverTransform(
+      config.getString("default-channel"),
+      config.getBoolean("use-cache")
+    )
   }
 
 }

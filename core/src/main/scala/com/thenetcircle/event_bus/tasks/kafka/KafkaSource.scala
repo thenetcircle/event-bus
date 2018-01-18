@@ -66,11 +66,13 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     settings.useDispatcher.foreach(dp => _consumerSettings = _consumerSettings.withDispatcher(dp))
 
+    val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
+
     _consumerSettings
       .withBootstrapServers(settings.bootstrapServers)
       .withGroupId(settings.groupId)
       .withCommitTimeout(settings.commitTimeout)
-      .withProperty("client.id", "eventbus-kafkasource")
+      .withProperty("client.id", clientId)
   }
 
   def extractEventFromMessage(
