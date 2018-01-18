@@ -24,7 +24,10 @@ object TaskSignal {
   sealed trait NoSignal extends TaskSignal
   case object NoSignal extends NoSignal
 
-  sealed trait SkipOthers extends TaskSignal
-  case object SkipOthers extends SkipOthers
+  sealed trait SkipSignal extends TaskSignal
+  case object SkipSignal extends SkipSignal
+
+  sealed trait FallbackSignal extends TaskSignal
+  case object FallbackSignal extends FallbackSignal
 
 }

@@ -22,7 +22,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.TaskSignal.SkipOthers
+import com.thenetcircle.event_bus.interface.TaskSignal.SkipSignal
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
@@ -85,7 +85,7 @@ class Story(val settings: StorySettings,
             // Success goes 0, Failure/SkipOthers goes 1
             val preCheck =
               builder.add(new Partition[MR](2, {
-                case (Success(SkipOthers), _) => 1
+                case (Success(SkipSignal), _) => 1
                 case (Success(_), _)          => 0
                 case (Failure(_), _)          => 1
               }))
