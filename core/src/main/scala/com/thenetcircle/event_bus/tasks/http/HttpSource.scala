@@ -53,7 +53,7 @@ case class HttpSourceSettings(interface: String = "0.0.0.0",
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  def createResponse(result: (Signal, Event)): HttpResponse = result match {
+  def createResponse(result: (Result, Event)): HttpResponse = result match {
     case (s @ Success(_), event) =>
       HttpResponse(entity = HttpEntity(settings.succeededResponse))
     case (f @ Failure(ex), _) =>
@@ -65,7 +65,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
-  ): Flow[HttpRequest, (Signal, Event), NotUsed] = {
+  ): Flow[HttpRequest, (Result, Event), NotUsed] = {
     val unmarshaller: Unmarshaller[HttpEntity, Event] =
       EventExtractorFactory.getHttpEntityUnmarshaller(settings.format)
 
@@ -83,7 +83,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   }
 
   override def runWith(
-      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
+      handler: Flow[(Result, Event), (Result, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()

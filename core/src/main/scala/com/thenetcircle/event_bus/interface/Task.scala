@@ -22,7 +22,7 @@ import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
 import scala.util.{Success, Try}
 
 trait Task {
-  type Signal = Try[TaskSignal]
+  type Result = Try[TaskSignal]
 }
 
 object Task {

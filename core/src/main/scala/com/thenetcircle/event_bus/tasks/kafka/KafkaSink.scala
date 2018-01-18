@@ -102,7 +102,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Signal, Event), NotUsed] = {
+  ): Flow[Event, (Result, Event), NotUsed] = {
 
     val kafkaSettings = getProducerSettings()
     lazy val kafkaProducer = kafkaSettings.createKafkaProducer()

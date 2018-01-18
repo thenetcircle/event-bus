@@ -78,17 +78,17 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(Signal, Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[(Result, Event)] = {
     val messageKeyOption = Option(message.record.key())
     val eventExtractor =
       messageKeyOption
         .flatMap(_key => _key.data)
         .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
         .getOrElse(EventExtractorFactory.defaultExtractor)
-    val eventBody = ByteString(message.record.value())
+    val eventData = ByteString(message.record.value())
 
     eventExtractor
-      .extract(eventBody, Some(message.committableOffset))
+      .extract(eventData, Some(message.committableOffset))
       .map(event => Success(NoSignal) -> event)
       .recover {
         case ex: EventExtractingException =>
@@ -96,12 +96,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
           logger.warn(
             s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
           )
-          Failure(ex) -> Event.createEventFromException(eventBody, dataFormat, ex)
+          Failure(ex) -> Event.createEventFromException(eventData, dataFormat, ex)
       }
   }
 
   override def runWith(
-      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
+      handler: Flow[(Result, Event), (Result, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()
