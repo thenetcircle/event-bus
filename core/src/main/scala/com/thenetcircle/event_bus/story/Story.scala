@@ -29,7 +29,7 @@ import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
 
-case class StorySettings(name: String, initStatus: StoryStatus = StoryStatus.INIT)
+case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
 
 class Story(val settings: StorySettings,
             val sourceTask: SourceTask,
@@ -42,11 +42,11 @@ class Story(val settings: StorySettings,
 
   val storyName: String = settings.name
 
-  private var status: StoryStatus = settings.initStatus
-  def updateStatus(_status: StoryStatus): Unit = {
-    status = _status
+  private var storyStatus: StoryStatus = settings.status
+  def updateStoryStatus(status: StoryStatus): Unit = {
+    storyStatus = status
   }
-  def getStatus(): StoryStatus = status
+  def getStoryStatus(): StoryStatus = storyStatus
 
   def run()(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
