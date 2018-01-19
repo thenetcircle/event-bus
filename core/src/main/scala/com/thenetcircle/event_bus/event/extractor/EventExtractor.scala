@@ -17,9 +17,8 @@
 
 package com.thenetcircle.event_bus.event.extractor
 
-import akka.util.ByteString
-import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
+import com.thenetcircle.event_bus.interfaces.Event
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,7 +36,7 @@ trait EventExtractor {
    *
    * @return [[Future[Event]]
    */
-  def extract(data: ByteString, passThrough: Option[Any] = None)(
+  def extract(data: Array[Byte], passThrough: Option[Any] = None)(
       implicit executionContext: ExecutionContext
   ): Future[Event]
 

@@ -17,15 +17,18 @@
 
 package com.thenetcircle.event_bus.event.extractor
 
-import java.text.SimpleDateFormat
+import java.text.{ParseException, SimpleDateFormat}
+import java.time.Instant
+import java.util.Date
 
-import akka.util.ByteString
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
+import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 import com.typesafe.scalalogging.StrictLogging
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 case class Activity(title: String,
                     id: Option[String],
@@ -33,11 +36,10 @@ case class Activity(title: String,
                     verb: Option[String],
                     actor: Option[ActivityObject],
                     // `object`: Option[ActivityObject],
-                    // target: Option[ActivityObject],
+                    target: Option[ActivityObject],
                     provider: Option[ActivityObject],
                     // content: Option[Any],
-                    // generator: Option[ActivityObject]
-)
+                    generator: Option[ActivityObject])
 
 case class ActivityObject(id: Option[String],
                           objectType: Option[String],
@@ -51,7 +53,7 @@ case class ActivityObject(id: Option[String],
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val activityObjectFormat = jsonFormat2(ActivityObject)
-  implicit val activityFormat = jsonFormat6(Activity)
+  implicit val activityFormat = jsonFormat8(Activity)
 }
 
 class ActivityStreamsEventExtractor
@@ -61,35 +63,57 @@ class ActivityStreamsEventExtractor
 
   override def getFormat(): DataFormat = DataFormat.ACTIVITYSTREAMS
 
-  override def extract(data: ByteString, passThrough: Option[Any] = None)(
+  val patternsOfRFC3339: List[String] = List(
+    "yyyy-MM-dd'T'HH:mm:ssX",
+    "yyyy-MM-dd'T'HH:mm:ss.SSSX",
+    "yyyy-MM-dd'T'HH:mm:ss'Z'",
+    "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+  )
+
+  override def extract(_data: Array[Byte], passThrough: Option[Any] = None)(
       implicit executionContext: ExecutionContext
   ): Future[Event] = Future {
+    val data = new String(_data, "UTF-8")
     try {
-      val jsonAst = data.utf8String.parseJson
-      val activity = jsonAst.convertTo[Activity]
+      val activity = data.parseJson.convertTo[Activity]
 
-      val uuid: String = activity.id.getOrElse(java.util.UUID.randomUUID().toString)
-      val name: String = activity.title
-      val published: Long = activity.published match {
-        case Some(p) =>
-          new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-            .parse(p)
-            .getTime
+      val uuid: String =
+        activity.title + "-" + activity.id.getOrElse(java.util.UUID.randomUUID().toString)
 
-        case None =>
-          System.currentTimeMillis()
+      val metaData = EventMetaData(
+        name = Some(activity.title),
+        provider = activity.provider.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
+        generator = activity.generator.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
+        actor = activity.actor.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
+        target = activity.target.map(o => o.objectType.getOrElse("") -> o.id.getOrElse(""))
+      )
+
+      var createdAt: Option[Date] = None
+      if (activity.published.isDefined) {
+        val _published = activity.published.get
+        patternsOfRFC3339.foreach(
+          pt =>
+            if (createdAt.isEmpty) {
+              try {
+                val _d = new SimpleDateFormat(pt).parse(_published)
+                createdAt = Some(_d)
+              } catch {
+                case _: ParseException =>
+              }
+          }
+        )
       }
-      val provider = activity.provider.flatMap(_.id)
-      val actor = activity.actor.flatMap(actor => Some(actor.id.getOrElse("")))
 
-      Event(
-        metadata = EventMetaData(uuid, name, published, provider, actor),
+      RichEvent(
+        uuid = uuid,
+        metadata = metaData,
         body = EventBody(data, getFormat()),
+        createdAt = createdAt.getOrElse(Date.from(Instant.now())),
         passThrough = passThrough
       )
     } catch {
-      case ex: Throwable =>
-        logger.debug(s"Parsing data ${data.utf8String} failed with error: ${ex.getMessage}")
+      case NonFatal(ex) =>
+        logger.debug(s"Parsing data $data failed with error: ${ex.getMessage}")
         throw new EventExtractingException(ex.getMessage, ex)
     }
   }

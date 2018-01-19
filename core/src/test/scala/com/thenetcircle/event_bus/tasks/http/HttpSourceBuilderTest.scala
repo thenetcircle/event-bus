@@ -16,13 +16,12 @@
  */
 
 package com.thenetcircle.event_bus.tasks.http
-
-import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 
 import scala.concurrent.duration._
 
-class HttpSourceBuilderTest extends AkkaStreamTest {
+class HttpSourceBuilderTest extends BaseTest {
 
   behavior of "HttpSourceBuilder"
 

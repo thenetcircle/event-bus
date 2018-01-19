@@ -25,10 +25,10 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.EventStatus.Norm
-import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
+import com.thenetcircle.event_bus.interfaces.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.Event
 import com.thenetcircle.event_bus.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
@@ -84,9 +84,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   def createProducerRecord(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
     val topic: String =
-      if (settings.useEventChannel) event.metadata.channel.getOrElse(settings.defaultTopic)
+      if (settings.useEventChannel) event.metadata.group.getOrElse(settings.defaultTopic)
       else settings.defaultTopic
-    val timestamp: Long = event.metadata.published
+    val timestamp: Long = event.createdAt.getTime
     val key: ProducerKey = KafkaKey(event)
     val value: ProducerValue = event
 

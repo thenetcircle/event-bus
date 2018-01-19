@@ -15,20 +15,16 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.interfaces
 
-import com.thenetcircle.event_bus.context.TaskBuildingContext
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import com.thenetcircle.event_bus.context.TaskRunningContext
 
-trait TaskBuilder[+T <: Task] {
+trait TransformTask extends Task {
 
-  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
+  def getHandler()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Event, (Status, Event), NotUsed]
 
 }
-
-trait SourceTaskBuilder extends TaskBuilder[SourceTask]
-
-trait TransformTaskBuilder extends TaskBuilder[TransformTask]
-
-trait SinkTaskBuilder extends TaskBuilder[SinkTask]
-
-trait FallbackTaskBuilder extends TaskBuilder[FallbackTask]

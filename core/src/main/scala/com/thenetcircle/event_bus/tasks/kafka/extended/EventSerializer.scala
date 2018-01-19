@@ -19,12 +19,12 @@ package com.thenetcircle.event_bus.tasks.kafka.extended
 
 import java.util
 
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interfaces.Event
 import org.apache.kafka.common.serialization.Serializer
 
 class EventSerializer extends Serializer[Event] {
   override def serialize(topic: String, data: Event): Array[Byte] =
-    data.body.data.toArray
+    data.body.data.getBytes("UTF-8")
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
   override def close(): Unit = {}

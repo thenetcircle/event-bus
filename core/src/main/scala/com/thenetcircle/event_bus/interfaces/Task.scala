@@ -15,17 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.interfaces
 
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 
-trait TransformTask extends Task {
+import scala.util.{Failure, Success, Try}
 
-  def getHandler()(
-      implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Status, Event), NotUsed]
+trait Task {
+  type Status = EventStatus
 
+  def createStatusFromTry[T](that: Try[T], ss: Status = Norm): Status = that match {
+    case Success(_)  => ss
+    case Failure(ex) => Fail(ex)
+  }
 }

@@ -15,8 +15,20 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.base
+package com.thenetcircle.event_bus.interfaces
 
-import org.scalatest._
+import com.thenetcircle.event_bus.context.TaskBuildingContext
 
-trait AsyncUnitTest extends AsyncFlatSpecLike with Matchers with BeforeAndAfterAll with Inside {}
+trait TaskBuilder[+T <: Task] {
+
+  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
+
+}
+
+trait SourceTaskBuilder extends TaskBuilder[SourceTask]
+
+trait TransformTaskBuilder extends TaskBuilder[TransformTask]
+
+trait SinkTaskBuilder extends TaskBuilder[SinkTask]
+
+trait FallbackTaskBuilder extends TaskBuilder[FallbackTask]

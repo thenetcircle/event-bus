@@ -16,10 +16,9 @@
  */
 
 package com.thenetcircle.event_bus.helper
+import com.thenetcircle.event_bus.BaseTest
 
-import com.thenetcircle.event_bus.base.AkkaStreamTest
-
-class ZKManagerTest extends AkkaStreamTest {
+class ZKManagerTest extends BaseTest {
 
   behavior of "ZKManager"
 

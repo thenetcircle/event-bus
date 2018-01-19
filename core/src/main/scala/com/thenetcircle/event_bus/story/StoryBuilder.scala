@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.{FallbackTask, SinkTask, SourceTask, TransformTask}
+import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
 
 import scala.util.matching.Regex
 

@@ -16,7 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.tasks
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interfaces.Event
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey
 
 package object kafka {

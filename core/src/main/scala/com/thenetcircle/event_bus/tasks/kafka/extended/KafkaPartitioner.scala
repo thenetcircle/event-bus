@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.tasks.kafka.extended
 
 import java.util
 
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.interfaces.Event
 import org.apache.kafka.clients.producer.Partitioner
 import org.apache.kafka.common.utils.Utils
 import org.apache.kafka.common.{Cluster, PartitionInfo}
@@ -38,7 +38,7 @@ class KafkaPartitioner extends Partitioner {
     /*val keyBytes = event.metadata.actor
       .getOrElse(Random.nextString(6))
       .getBytes("UTF-8")*/
-    val keyBytes = event.uniqueName.getBytes("UTF-8")
+    val keyBytes = event.uuid.getBytes("UTF-8")
 
     Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions
   }

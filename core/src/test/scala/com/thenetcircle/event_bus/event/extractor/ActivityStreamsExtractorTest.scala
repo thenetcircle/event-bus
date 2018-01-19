@@ -19,14 +19,14 @@ package com.thenetcircle.event_bus.event.extractor
 
 import java.text.SimpleDateFormat
 
-import akka.util.ByteString
-import com.thenetcircle.event_bus.base.AsyncUnitTest
-import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import org.scalatest.Succeeded
-import spray.json.{DeserializationException, JsonParser}
+import com.thenetcircle.event_bus.interfaces.{EventBody, EventMetaData}
 
-class ActivityStreamsExtractorTest extends AsyncUnitTest {
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+class ActivityStreamsExtractorTest extends BaseTest {
 
   private val activityStreamsExtractor: EventExtractor =
     EventExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)
@@ -39,45 +39,44 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
   behavior of "EventExtractor"
 
   it should "be failed, because it's not a json formatted data" in {
-    var data = ByteString("""
+    var testdata = """
         |abc
-      """.stripMargin)
-    recoverToSucceededIf[JsonParser.ParsingException] {
-      activityStreamsExtractor.extract(data)
-    }.map(r => assert(r == Succeeded))
+      """.stripMargin
+
+    assertThrows[EventExtractingException] {
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+    }
   }
 
   it should "be failed, because the required field \"title\" is missed." in {
-    val data = ByteString("""
+    val testdata = """
         |{
         |  "verb": "login"
         |}
-      """.stripMargin)
-    // Object is missing required member 'title'
-    recoverToSucceededIf[DeserializationException] {
-      activityStreamsExtractor.extract(data)
-    }.map(r => assert(r == Succeeded))
+      """.stripMargin
+
+    assertThrows[EventExtractingException] {
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+    }
   }
 
   it should "be succeeded if there is a title" in {
-    var data = ByteString(s"""
+    var testdata = s"""
          |{
          |  "title": "user.login"
          |}
-      """.stripMargin)
+      """.stripMargin
 
-    activityStreamsExtractor.extract(data) map { _data =>
-      inside(_data) {
-        case Event(metadata, body, _) =>
-          body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
-          metadata.name shouldEqual "user.login"
-      }
-    }
+    val testevent =
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+
+    testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
+    testevent.metadata.name shouldEqual Some("user.login")
   }
 
   it should "be succeeded as well if there are proper data" in {
     val time = "2017-08-15T13:49:55Z"
-    var data = ByteString(s"""
+    var testdata = s"""
         |{
         |  "version": "1.0",
         |  "id": "ED-providerId-message.send-actorId-59e704843e9cb",
@@ -87,28 +86,24 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
         |  "provider": {"id": "providerId", "objectType": "providerType"},
         |  "published": "$time"
         |}
-      """.stripMargin)
+      """.stripMargin
 
-    activityStreamsExtractor.extract(data) map { _data =>
-      inside(_data) {
-        case Event(metadata, body, _) =>
-          body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
-          metadata shouldEqual EventMetaData(
-            "ED-providerId-message.send-actorId-59e704843e9cb",
-            "message.send",
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-              .parse(time)
-              .getTime,
-            Some("providerId"),
-            Some("actorId")
-          )
-      }
-    }
+    val testevent =
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+
+    testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
+    testevent.metadata shouldEqual EventMetaData(
+      name = Some("message.send"),
+      actor = Some("actorType" -> "actorId"),
+      provider = Some("providerType" -> "providerId"),
+    )
+
+    testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
   }
 
   it should "be succeeded as well with complete ActivityStreams data" in {
     val time = "2017-08-15T13:49:55Z"
-    var data = ByteString(s"""
+    var testdata = s"""
          |{
          |  "version": "1.0",
          |  "content": {
@@ -167,37 +162,34 @@ class ActivityStreamsExtractorTest extends AsyncUnitTest {
          |    }
          |  }
          |}
-      """.stripMargin)
+      """.stripMargin
 
-    activityStreamsExtractor.extract(data) map { _data =>
-      inside(_data) {
-        case Event(metadata, body, _) =>
-          body shouldEqual EventBody(data, DataFormat.ACTIVITYSTREAMS)
-          metadata shouldEqual EventMetaData(
-            "ED-providerId-message.send-actorId-59e704843e9cb",
-            "message.send",
-            new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX")
-              .parse(time)
-              .getTime,
-            Some("providerId"),
-            Some("actorId")
-          )
-      }
-    }
+    val testevent =
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+
+    testevent.uuid shouldEqual "message.send-ED-providerId-message.send-actorId-59e704843e9cb"
+    testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
+    testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
+    testevent.metadata shouldEqual EventMetaData(
+      name = Some("message.send"),
+      actor = Some("actorType" -> "actorId"),
+      target = Some("targetType" -> "targetId"),
+      provider = Some("providerType" -> "providerId"),
+      generator = Some("library" -> "tnc-event-dispatcher")
+    )
   }
 
   it should "be succeeded with another EventFormat" in {
-    var data = ByteString(s"""
+    var testdata = s"""
          |{
          |  "title": "user.login"
          |}
-      """.stripMargin)
-    unknownFormatExtractor.extract(data) map { d =>
-      inside(d) {
-        case Event(_, body, _) =>
-          body shouldEqual EventBody(data, DataFormat.UNKNOWN)
-      }
-    }
+      """.stripMargin
+
+    val testevent =
+      Await.result(unknownFormatExtractor.extract(testdata.getBytes), 500.millisecond)
+
+    testevent.body shouldEqual EventBody(testdata, DataFormat.UNKNOWN)
   }
 
 }

@@ -16,10 +16,9 @@
  */
 
 package com.thenetcircle.event_bus.tasks.kafka
+import com.thenetcircle.event_bus.BaseTest
 
-import com.thenetcircle.event_bus.base.AkkaStreamTest
-
-class KafkaSourceBuilderTest extends AkkaStreamTest {
+class KafkaSourceBuilderTest extends BaseTest {
 
   behavior of "KafkaSourceBuilder"
 

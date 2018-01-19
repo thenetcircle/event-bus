@@ -18,11 +18,11 @@
 package com.thenetcircle.event_bus.tasks.http
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
-import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.BaseTest
 
 import scala.concurrent.duration._
 
-class HttpSinkBuilderTest extends AkkaStreamTest {
+class HttpSinkBuilderTest extends BaseTest {
 
   behavior of "HttpSinkBuilder"
 

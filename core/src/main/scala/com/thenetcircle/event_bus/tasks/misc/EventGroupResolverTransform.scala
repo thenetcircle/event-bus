@@ -22,17 +22,17 @@ import java.util.concurrent.ConcurrentHashMap
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.EventStatus.{Fail, Norm}
-import com.thenetcircle.event_bus.interface.{TransformTask, TransformTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
+import com.thenetcircle.event_bus.interfaces.{TransformTask, TransformTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.Event
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false)
+class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = false)
     extends TransformTask
     with StrictLogging {
 
@@ -50,18 +50,18 @@ class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false
   def updateMapping(_mapping: Map[String, Map[String, String]]): Unit = {
     val _index = mutable.Map.empty[String, String]
     _mapping.foreach {
-      case (channel, submap) =>
+      case (group, submap) =>
         submap
           .get("patterns")
           .foreach(_.split(Regex.quote(ConfigStringParser.delimiter)).foreach(pattern => {
-            _index += (pattern -> channel)
+            _index += (pattern -> group)
           }))
     }
     updateIndex(_index.toMap)
     if (useCache) cached.clear()
   }
 
-  def getChannelFromIndex(eventName: String): Option[String] = {
+  def getGroupFromIndex(eventName: String): Option[String] = {
     getIndex()
       .find {
         case (pattern, _) =>
@@ -72,22 +72,24 @@ class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false
 
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
-    val eventName = event.metadata.name
-    var channel = ""
+    if (event.metadata.group.isDefined) return event
+    if (event.metadata.name.isEmpty) return event.withGroup(defaultGroup)
 
+    val eventName = event.metadata.name.get
+    var group = ""
     if (useCache) {
-      val cachedChannel = cached.get(eventName)
-      if (cachedChannel != null) {
-        channel = cachedChannel
+      val cachedGroup = cached.get(eventName)
+      if (cachedGroup != null) {
+        group = cachedGroup
       } else {
-        channel = getChannelFromIndex(eventName).getOrElse(defaultChannel)
-        cached.put(eventName, channel)
+        group = getGroupFromIndex(eventName).getOrElse(defaultGroup)
+        cached.put(eventName, group)
       }
     } else {
-      channel = getChannelFromIndex(eventName).getOrElse(defaultChannel)
+      group = getGroupFromIndex(eventName).getOrElse(defaultGroup)
     }
 
-    event.withChannel(channel)
+    return event.withGroup(group)
   }
 
   override def getHandler()(
@@ -100,7 +102,7 @@ class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false
       Try(resolveEvent(event)) match {
         case Success(newEvent) => (Norm, newEvent)
         case Failure(ex) =>
-          logger.error(s"resolve topic failed with error $ex")
+          logger.error(s"resolve group failed with error $ex")
           (Fail(ex), event)
       }
     })
@@ -108,17 +110,17 @@ class ChannelResolverTransform(defaultChannel: String, useCache: Boolean = false
 
 }
 
-class ChannelResolverTransformBuilder() extends TransformTaskBuilder {
+class EventGroupResolverTransformBuilder() extends TransformTaskBuilder {
 
   override def build(
       configString: String
-  )(implicit buildingContext: TaskBuildingContext): ChannelResolverTransform = {
+  )(implicit buildingContext: TaskBuildingContext): EventGroupResolverTransform = {
     val config = ConfigStringParser
       .convertStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.channel-resolver"))
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.event-group-resolver"))
 
-    new ChannelResolverTransform(
-      config.getString("default-channel"),
+    new EventGroupResolverTransform(
+      config.getString("default-group"),
       config.getBoolean("use-cache")
     )
   }

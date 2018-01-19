@@ -16,15 +16,14 @@
  */
 
 package com.thenetcircle.event_bus.tasks.misc
-
-import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 
-class ChannelResolverTransformTest extends AkkaStreamTest {
+class EventGroupResolverTransformTest extends BaseTest {
 
-  behavior of "ChannelResolverTransform"
+  behavior of "EventGroupResolverTransform"
 
-  val resolver = new ChannelResolverTransform("event-default")
+  val resolver = new EventGroupResolverTransform("event-default")
   val delimiter = ConfigStringParser.delimiter
   resolver.updateMapping(
     Map(
@@ -36,16 +35,16 @@ class ChannelResolverTransformTest extends AkkaStreamTest {
   it should "solve topic correctly" in {
 
     val testEvent1 = createTestEvent("message.send")
-    resolver.resolveEvent(testEvent1).metadata.channel shouldEqual Some("event-message")
+    resolver.resolveEvent(testEvent1).metadata.group shouldEqual Some("event-message")
 
     val testEvent2 = createTestEvent("profile.kick")
-    resolver.resolveEvent(testEvent2).metadata.channel shouldEqual Some("event-user")
+    resolver.resolveEvent(testEvent2).metadata.group shouldEqual Some("event-user")
 
     val testEvent3 = createTestEvent("user.visit.profile")
-    resolver.resolveEvent(testEvent3).metadata.channel shouldEqual Some("event-user")
+    resolver.resolveEvent(testEvent3).metadata.group shouldEqual Some("event-user")
 
     val testEvent4 = createTestEvent("payment.buy")
-    resolver.resolveEvent(testEvent4).metadata.channel shouldEqual Some("event-default")
+    resolver.resolveEvent(testEvent4).metadata.group shouldEqual Some("event-default")
 
     /*val executionStart: Long = currentTime
 
@@ -54,7 +53,7 @@ class ChannelResolverTransformTest extends AkkaStreamTest {
       .via(resolver.getHandler())
       .runForeach {
         case (resultTry, event) =>
-          println(event.metadata.channel)
+          println(event.metadata.group)
       }
 
     done.foreach(_ => {

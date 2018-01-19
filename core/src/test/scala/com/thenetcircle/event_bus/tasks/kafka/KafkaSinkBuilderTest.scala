@@ -17,11 +17,11 @@
 
 package com.thenetcircle.event_bus.tasks.kafka
 
-import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.BaseTest
 
 import scala.concurrent.duration._
 
-class KafkaSinkBuilderTest extends AkkaStreamTest {
+class KafkaSinkBuilderTest extends BaseTest {
 
   behavior of "KafkaSinkBuilder"
 

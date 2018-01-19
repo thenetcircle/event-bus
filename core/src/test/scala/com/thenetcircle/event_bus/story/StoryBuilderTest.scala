@@ -16,9 +16,9 @@
  */
 
 package com.thenetcircle.event_bus.story
-import com.thenetcircle.event_bus.base.AkkaStreamTest
+import com.thenetcircle.event_bus.BaseTest
 
-class StoryBuilderTest extends AkkaStreamTest {
+class StoryBuilderTest extends BaseTest {
 
   behavior of "StoryBuilder"
 

@@ -21,9 +21,9 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.EventStatus.{Norm, ToFB}
-import com.thenetcircle.event_bus.interface._
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces._
+import com.thenetcircle.event_bus.interfaces.Event
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
@@ -105,8 +105,8 @@ class Story(val settings: StorySettings,
             // ToFB goes to 1, Others goes to 0
             val postCheck =
               builder.add(Partition[MR](2, {
-                case (ToFB, _) => 1
-                case (_, _)    => 0
+                case (_: ToFB, _) => 1
+                case (_, _)       => 0
               }))
 
             val output = builder.add(Merge[MR](3))
@@ -115,7 +115,7 @@ class Story(val settings: StorySettings,
               .map {
                 case input @ (_, event) =>
                   val logMessage =
-                    s"Event ${event.uniqueName} was processing failed on task: $taskName." +
+                    s"Event ${event.uuid} was processing failed on task: $taskName." +
                       (if (fallbackTask.isDefined) " Sending to fallbackTask." else "")
                   logger.warn(logMessage)
                   input

@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.interfaces
 
 sealed trait EventStatus
 
@@ -26,12 +26,11 @@ object EventStatus {
   sealed trait Norm extends EventStatus with Succ
   case object Norm extends Norm
 
-  sealed trait ToFB extends EventStatus with Succ
-  case object ToFB extends ToFB
+  case class ToFB(cause: Option[Throwable] = None) extends EventStatus with Succ
 
   sealed trait InFB extends EventStatus with Succ
   case object InFB extends InFB
 
-  case class Fail(ex: Throwable) extends EventStatus
+  case class Fail(cause: Throwable) extends EventStatus
 
 }

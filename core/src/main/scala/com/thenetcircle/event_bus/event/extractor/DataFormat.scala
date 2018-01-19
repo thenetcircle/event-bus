@@ -30,6 +30,8 @@ object DataFormat extends Enumeration {
     case "ACTIVITYSTREAMS" => ACTIVITYSTREAMS
   }
 
+  val default = ACTIVITYSTREAMS
+
   implicit val eventFormatReader: ValueReader[DataFormat] =
     new ValueReader[DataFormat] {
       override def read(config: Config, path: String) =

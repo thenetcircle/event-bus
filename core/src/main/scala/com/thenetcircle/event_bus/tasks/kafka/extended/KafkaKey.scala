@@ -16,9 +16,9 @@
  */
 
 package com.thenetcircle.event_bus.tasks.kafka.extended
-import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
+import com.thenetcircle.event_bus.interfaces.Event
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey._
 
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {

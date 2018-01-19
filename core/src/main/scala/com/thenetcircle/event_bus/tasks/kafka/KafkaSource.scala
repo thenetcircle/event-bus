@@ -22,14 +22,14 @@ import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
-import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.event.{Event, EventBody}
+import com.thenetcircle.event_bus.event.LightEvent
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.EventStatus.{Fail, Norm, Succ, ToFB}
-import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ, ToFB}
+import com.thenetcircle.event_bus.interfaces.{SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.{Event, EventBody}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -84,10 +84,10 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
         .flatMap(_key => _key.data)
         .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
         .getOrElse(EventExtractorFactory.defaultExtractor)
-    val eventData = ByteString(message.record.value())
+    val messageValue = message.record.value()
 
     eventExtractor
-      .extract(eventData, Some(message.committableOffset))
+      .extract(messageValue, Some(message.committableOffset))
       .map(event => Norm -> event)
       .recover {
         case ex: EventExtractingException =>
@@ -95,9 +95,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
           logger.warn(
             s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
           )
-          ToFB ->
-            Event
-              .createEventFromException(ex, Some(EventBody(eventData, dataFormat)))
+          ToFB(Some(ex)) ->
+            LightEvent(body = EventBody(messageValue, dataFormat))
               .withPassThrough[CommittableOffset](message.committableOffset)
       }
   }
@@ -126,7 +125,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                       co.commitScaladsl() // the commit logic
                     case None =>
                       val errorMessage =
-                        s"The event ${event.uniqueName} missed PassThrough[CommittableOffset]"
+                        s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
                       logger.debug(errorMessage)
                       throw new IllegalStateException(errorMessage)
                   }

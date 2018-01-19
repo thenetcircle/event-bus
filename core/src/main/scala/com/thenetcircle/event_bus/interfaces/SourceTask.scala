@@ -15,17 +15,19 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interface
+package com.thenetcircle.event_bus.interfaces
 
-import akka.NotUsed
+import akka.stream.KillSwitch
 import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.Event
 
-trait SinkTask extends Task {
+import scala.concurrent.Future
 
-  def getHandler()(
+trait SourceTask extends Task {
+
+  def runWith(handler: Flow[(Status, Event), (Status, Event), NotUsed])(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Status, Event), NotUsed]
+  ): (KillSwitch, Future[Done])
 
 }

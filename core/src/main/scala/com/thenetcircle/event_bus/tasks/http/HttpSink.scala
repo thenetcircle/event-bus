@@ -27,9 +27,9 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.Event
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -49,7 +49,7 @@ case class HttpSinkSettings(defaultRequest: HttpRequest,
 class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
 
   def createRequest(event: Event): HttpRequest = {
-    settings.defaultRequest.withEntity(HttpEntity(event.body.data.utf8String))
+    settings.defaultRequest.withEntity(HttpEntity(event.body.data))
   }
 
   def checkResponse(status: StatusCode, headers: Seq[HttpHeader], body: Option[String]): Boolean = {

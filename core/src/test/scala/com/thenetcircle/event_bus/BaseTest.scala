@@ -15,22 +15,30 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.base
+package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.event.LightEvent
+import com.thenetcircle.event_bus.event.extractor.DataFormat
+import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
 import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.StrictLogging
+import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class AkkaStreamTest(_appContext: AppContext)
+abstract class BaseTest(_appContext: AppContext)
     extends TestKit(ActorSystem(_appContext.getAppName(), _appContext.getSystemConfig()))
     with ImplicitSender
-    with UnitTest {
+    with FlatSpecLike
+    with Matchers
+    with BeforeAndAfterAll
+    with StrictLogging {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   implicit val appContext: AppContext = _appContext
@@ -61,5 +69,11 @@ abstract class AkkaStreamTest(_appContext: AppContext)
     appContext.shutdown()
     TestKit.shutdownActorSystem(system)
   }
+
+  def createTestEvent(name: String = "TestEvent", body: String = "body"): Event =
+    LightEvent(
+      metadata = EventMetaData(name = Some(name)),
+      body = EventBody(body, DataFormat.UNKNOWN)
+    )
 
 }
