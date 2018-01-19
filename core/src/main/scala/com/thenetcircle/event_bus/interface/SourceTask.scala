@@ -27,7 +27,7 @@ import scala.concurrent.Future
 
 trait SourceTask extends Task {
 
-  def runWith(handler: Flow[(Signal, Event), (Signal, Event), NotUsed])(
+  def runWith(handler: Flow[(Status, Event), (Status, Event), NotUsed])(
       implicit runningContext: TaskRunningContext
   ): (KillSwitch, Future[Done])
 

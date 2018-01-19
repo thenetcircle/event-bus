@@ -58,7 +58,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Signal, Event), NotUsed] = {
+  ): Flow[Event, (Status, Event), NotUsed] = {
     import HttpSink._
 
     implicit val system: ActorSystem = runningContext.getActorSystem()
@@ -80,8 +80,8 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
           .mapTo[RetrySender.Result]
           .map(result => {
             // TODO for failure case will retry by backoff, for non-200 case / for ko case will send to fallback
-            // TODO use to-fallback signal for failure case
-            (makeSignal(result.payload), event)
+            // TODO use ToFB for failure case
+            (createStatusFromTry(result.payload), event)
           })
       /*.recover {
             case ex: AskTimeoutException => (Failure(ex), event)

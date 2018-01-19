@@ -34,7 +34,7 @@ import com.thenetcircle.event_bus.event.extractor.{
   EventExtractorFactory
 }
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.{FailureSignal, NoSignal, SuccessSignal}
+import com.thenetcircle.event_bus.interface.EventStatus.{Fail, Norm, Succ}
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -51,10 +51,10 @@ case class HttpSourceSettings(interface: String = "0.0.0.0",
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  def createResponse(result: (Signal, Event)): HttpResponse = result match {
-    case (_: SuccessSignal, _) =>
+  def createResponse(result: (Status, Event)): HttpResponse = result match {
+    case (_: Succ, _) =>
       HttpResponse(entity = HttpEntity(settings.succeededResponse))
-    case (FailureSignal(ex), _) =>
+    case (Fail(ex), _) =>
       HttpResponse(
         entity = HttpEntity(s"The request was processing failed with error ${ex.getMessage}.")
       )
@@ -63,24 +63,24 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
-  ): Flow[HttpRequest, (Signal, Event), NotUsed] = {
+  ): Flow[HttpRequest, (Status, Event), NotUsed] = {
     val unmarshaller: Unmarshaller[HttpEntity, Event] =
       EventExtractorFactory.getHttpEntityUnmarshaller(settings.format)
 
     Flow[HttpRequest]
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
-          .map(event => NoSignal -> event)
+          .map(event => Norm -> event)
           .recover {
             case ex: EventExtractingException =>
               logger.debug(s"A http request unmarshaller failed with error $ex")
-              FailureSignal(ex) -> Event.createEventFromException(ex)
+              Fail(ex) -> Event.createEventFromException(ex)
           }
       })
   }
 
   override def runWith(
-      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
+      handler: Flow[(Status, Event), (Status, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()

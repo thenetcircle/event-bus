@@ -17,21 +17,21 @@
 
 package com.thenetcircle.event_bus.interface
 
-sealed trait TaskSignal
+sealed trait EventStatus
 
-object TaskSignal {
+object EventStatus {
 
-  sealed trait SuccessSignal
+  sealed trait Succ extends EventStatus
 
-  sealed trait NoSignal extends TaskSignal with SuccessSignal
-  case object NoSignal extends NoSignal
+  sealed trait Norm extends EventStatus with Succ
+  case object Norm extends Norm
 
-  sealed trait ToFallbackSignal extends TaskSignal with SuccessSignal
-  case object ToFallbackSignal extends ToFallbackSignal
+  sealed trait ToFB extends EventStatus with Succ
+  case object ToFB extends ToFB
 
-  sealed trait SkipSignal extends TaskSignal with SuccessSignal
-  case object SkipSignal extends SkipSignal
+  sealed trait InFB extends EventStatus with Succ
+  case object InFB extends InFB
 
-  case class FailureSignal(ex: Throwable) extends TaskSignal
+  case class Fail(ex: Throwable) extends EventStatus
 
 }

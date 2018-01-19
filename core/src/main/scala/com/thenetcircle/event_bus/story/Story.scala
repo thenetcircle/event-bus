@@ -22,7 +22,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.interface.TaskSignal.{NoSignal, ToFallbackSignal}
+import com.thenetcircle.event_bus.interface.EventStatus.{Norm, ToFB}
 import com.thenetcircle.event_bus.interface._
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
@@ -38,7 +38,7 @@ class Story(val settings: StorySettings,
             val fallbackTask: Option[FallbackTask] = None)
     extends StrictLogging {
 
-  type MR = (TaskSignal, Event) // middle result type
+  type MR = (EventStatus, Event) // middle result type
 
   val storyName: String = settings.name
 
@@ -90,23 +90,23 @@ class Story(val settings: StorySettings,
           .create() { implicit builder =>
             import GraphDSL.Implicits._
 
-            // SkipPreCheck goes to 0, NoSignal goes to 0, Others goes to 1
+            // SkipPreCheck goes to 0, Norm goes to 0, Others goes to 1
             val preCheck =
               builder.add(new Partition[MR](2, input => {
                 if (skipPreCheck) 0
                 else {
                   input match {
-                    case (NoSignal, _) => 0
-                    case (_, _)        => 1
+                    case (Norm, _) => 0
+                    case (_, _)    => 1
                   }
                 }
               }))
 
-            // ToFallbackSignal goes to 1, Others goes to 0
+            // ToFB goes to 1, Others goes to 0
             val postCheck =
               builder.add(Partition[MR](2, {
-                case (ToFallbackSignal, _) => 1
-                case (_, _)                => 0
+                case (ToFB, _) => 1
+                case (_, _)    => 0
               }))
 
             val output = builder.add(Merge[MR](3))
@@ -130,14 +130,14 @@ class Story(val settings: StorySettings,
             // ---------------  workflow graph start ----------------
             
 
-            // no-signal goes to taskHandler >>>
+            // Norm goes to taskHandler >>>
             preCheck.out(0)   ~>   taskHandler   ~>   postCheck
-                                                      // non to-fallback signal goes to next task
+                                                      // non-ToFB goes to next task
                                                       postCheck.out(0)            ~>              output.in(0)
-                                                      // to-fallback signal goes to fallback  >>>
+                                                      // ToFB goes to fallback  >>>
                                                       postCheck.out(1) ~>      fallback      ~>   output.in(1)
 
-            // failure/skip/to-fallback signal goes to next task directly >>>
+            // Other status will skip this task >>>
             preCheck.out(1)                                  ~>                                   output.in(2)
 
 

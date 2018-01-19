@@ -27,7 +27,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.NoSignal
+import com.thenetcircle.event_bus.interface.EventStatus.Norm
 import com.thenetcircle.event_bus.interface.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{
   EventSerializer,
@@ -101,7 +101,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Signal, Event), NotUsed] = {
+  ): Flow[Event, (Status, Event), NotUsed] = {
 
     val kafkaSettings = getProducerSettings()
     lazy val kafkaProducer = kafkaSettings.createKafkaProducer()
@@ -113,7 +113,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       .map(createMessage)
       // TODO: take care of Supervision of mapAsync inside flow
       .via(Producer.flow(kafkaSettings, kafkaProducer))
-      .map(result => (NoSignal, result.message.passThrough))
+      .map(result => (Norm, result.message.passThrough))
   }
 }
 

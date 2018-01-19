@@ -28,12 +28,7 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventBody}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interface.TaskSignal.{
-  FailureSignal,
-  NoSignal,
-  SuccessSignal,
-  ToFallbackSignal
-}
+import com.thenetcircle.event_bus.interface.EventStatus.{Fail, Norm, Succ, ToFB}
 import com.thenetcircle.event_bus.interface.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
@@ -82,7 +77,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(Signal, Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[(Status, Event)] = {
     val messageKeyOption = Option(message.record.key())
     val eventExtractor =
       messageKeyOption
@@ -93,14 +88,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     eventExtractor
       .extract(eventData, Some(message.committableOffset))
-      .map(event => NoSignal -> event)
+      .map(event => Norm -> event)
       .recover {
         case ex: EventExtractingException =>
           val dataFormat = eventExtractor.getFormat()
           logger.warn(
             s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
           )
-          ToFallbackSignal ->
+          ToFB ->
             Event
               .createEventFromException(ex, Some(EventBody(eventData, dataFormat)))
               .withPassThrough[CommittableOffset](message.committableOffset)
@@ -108,7 +103,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def runWith(
-      handler: Flow[(Signal, Event), (Signal, Event), NotUsed]
+      handler: Flow[(Status, Event), (Status, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()
@@ -124,7 +119,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
               .mapAsync(1)(extractEventFromMessage)
               .via(handler)
               .mapAsync(1) {
-                case (_: SuccessSignal, event) =>
+                case (_: Succ, event) =>
                   event.getPassThrough[CommittableOffset] match {
                     case Some(co) =>
                       logger.debug(s"The event is going to commit")
@@ -135,7 +130,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                       logger.debug(errorMessage)
                       throw new IllegalStateException(errorMessage)
                   }
-                case (FailureSignal(ex), _) =>
+                case (Fail(ex), _) =>
                   logger.debug(s"The event reaches the end with error $ex")
                   // complete the stream if failure, before was using Future.successful(Done)
                   throw ex
