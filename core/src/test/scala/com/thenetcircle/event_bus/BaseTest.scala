@@ -43,7 +43,7 @@ abstract class BaseTest(_appContext: AppContext)
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   implicit val appContext: AppContext = _appContext
   implicit val materializer: ActorMaterializer = ActorMaterializer(
-    ActorMaterializerSettings(system).withInputBuffer(initialSize = 1, maxSize = 1)
+    ActorMaterializerSettings(system) //.withInputBuffer(initialSize = 1, maxSize = 1)
   )
   implicit val testExecutionContext: ExecutionContext = materializer.executionContext
 

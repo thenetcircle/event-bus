@@ -23,7 +23,7 @@ import java.util.Date
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 
-case class LightEvent(uuid: String = "failure-event-" + java.util.UUID.randomUUID().toString,
+case class LightEvent(uuid: String = "lightevent-" + java.util.UUID.randomUUID().toString,
                       metadata: EventMetaData = EventMetaData(),
                       body: EventBody = EventBody("", DataFormat.UNKNOWN),
                       createdAt: Date = Date.from(Instant.now()),

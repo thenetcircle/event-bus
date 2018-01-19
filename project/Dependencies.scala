@@ -1,7 +1,7 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion = "2.5.4"
+  val akkaVersion = "2.5.7"
   val akkaHttpVersion = "10.0.9"
   val kamonVersion = "0.6.7"
   val gatlingVersion = "2.2.2"
@@ -12,7 +12,7 @@ object Dependencies {
   val akkaStreamTestkit = "com.typesafe.akka" %% "akka-stream-testkit" % akkaVersion % Test
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % akkaHttpVersion
   val akkaHttpTestkit = "com.typesafe.akka" %% "akka-http-testkit" % akkaHttpVersion % Test
-  val akkaStreamKafka = "com.typesafe.akka" %% "akka-stream-kafka" % "0.17"
+  val akkaStreamKafka = "com.typesafe.akka" %% "akka-stream-kafka" % "0.18"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 
   val curator = "org.apache.curator" % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, needs to exclude original one

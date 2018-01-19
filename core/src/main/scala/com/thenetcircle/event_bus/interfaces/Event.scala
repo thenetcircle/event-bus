@@ -47,5 +47,5 @@ case class EventMetaData(name: Option[String] = None,
 case class EventBody(data: String, format: DataFormat)
 object EventBody {
   def apply(data: Array[Byte], format: DataFormat): EventBody =
-    new EventBody(new String(data, "UTF-8"), format)
+    EventBody(new String(data, "UTF-8"), format)
 }

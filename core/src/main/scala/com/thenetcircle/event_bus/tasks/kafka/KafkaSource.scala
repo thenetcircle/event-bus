@@ -121,7 +121,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                 case (_: Succ, event) =>
                   event.getPassThrough[CommittableOffset] match {
                     case Some(co) =>
-                      logger.debug(s"The event is going to commit")
+                      logger.debug(s"The event ${event.uuid} is committing to kafka")
                       co.commitScaladsl() // the commit logic
                     case None =>
                       val errorMessage =
@@ -129,8 +129,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                       logger.debug(errorMessage)
                       throw new IllegalStateException(errorMessage)
                   }
-                case (Fail(ex), _) =>
-                  logger.debug(s"The event reaches the end with error $ex")
+                case (Fail(ex), event) =>
+                  logger.debug(s"Event ${event.uuid} reaches the end with error $ex")
                   // complete the stream if failure, before was using Future.successful(Done)
                   throw ex
               }
