@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.context
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Materializer, Supervision}
+import com.thenetcircle.event_bus.story.StorySettings
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
@@ -28,13 +29,15 @@ class TaskRunningContext(appContext: AppContext,
                          system: ActorSystem,
                          materializer: Materializer,
                          executionContext: ExecutionContext,
-                         storyWrapper: ActorRef) {
+                         storyWrapper: ActorRef,
+                         storySettings: StorySettings) {
 
   def getAppContext(): AppContext = appContext
   def getActorSystem(): ActorSystem = system
   def getMaterializer(): Materializer = materializer
   def getExecutionContext(): ExecutionContext = executionContext
   def getStoryWrapper(): ActorRef = storyWrapper
+  def getStorySettings(): StorySettings = storySettings
 
   def addShutdownHook(body: => Unit) = appContext.addShutdownHook(body)
 
@@ -55,8 +58,16 @@ class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) ext
   // TODO: use another execution runningContext for computing
   private lazy val executionContext: ExecutionContext = ExecutionContext.global
 
-  def createNewRunningContext(storyWrapper: ActorRef): TaskRunningContext = {
-    new TaskRunningContext(appContext, system, materializer, executionContext, storyWrapper)
+  def createNewRunningContext(storyWrapper: ActorRef,
+                              storySettings: StorySettings): TaskRunningContext = {
+    new TaskRunningContext(
+      appContext,
+      system,
+      materializer,
+      executionContext,
+      storyWrapper,
+      storySettings
+    )
   }
 }
 

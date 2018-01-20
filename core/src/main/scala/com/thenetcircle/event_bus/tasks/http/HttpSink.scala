@@ -17,25 +17,31 @@
 
 package com.thenetcircle.event_bus.tasks.http
 
+import java.util.concurrent.ThreadLocalRandom
+
 import akka.NotUsed
-import akka.actor.ActorSystem
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.{StatusCode, _}
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
+import akka.pattern.AskTimeoutException
 import akka.stream._
-import akka.stream.scaladsl.{Flow, RestartFlow}
+import akka.stream.scaladsl.Flow
+import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
+import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
                             expectedResponseBody: String,
@@ -50,6 +56,10 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     settings.defaultRequest.withEntity(HttpEntity(event.body.data))
   }
 
+  def checkResponse(status: StatusCode, headers: Seq[HttpHeader], body: Option[String]): Boolean = {
+    status == StatusCodes.OK && body.get == settings.expectedResponseBody
+  }
+
   override def getHandler()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (Status, Event), NotUsed] = {
@@ -58,46 +68,130 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val exectionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    val poolSettings = settings.poolSettings.getOrElse(ConnectionPoolSettings(system))
-    val sendingFlow = Http().superPool[Event](settings = poolSettings)
-
-    val retrySendingFlow: Flow[(HttpRequest, Event), (Status, Event), NotUsed] =
-      RestartFlow.withBackoff(minBackoff = 1.second, maxBackoff = 10.minutes, randomFactor = 0.2) {
-        () =>
-          {
-            Flow[(HttpRequest, Event)]
-              .via(sendingFlow)
-              .mapAsync(1) {
-                case (Success(resp), event) =>
-                  Unmarshaller
-                    .byteStringUnmarshaller(resp.entity)
-                    .map { _body =>
-                      val body = _body.utf8String
-
-                      logger.debug(s"Got response, status ${resp.status.value}, body: $body")
-
-                      if (resp.status.isSuccess()) {
-                        if (body != settings.expectedResponseBody)
-                          ToFB() -> event
-                        else
-                          Norm -> event
-                      } else {
-                        throw new RuntimeException("Got Non-2xx status code from endpoint")
-                      }
-                    }
-
-                case (Failure(ex), _) =>
-                  logger.debug(s"Got failed with $ex")
-                  // let it retry with failed cases (network issue, no response etc...)
-                  Future.failed(ex)
-              }
-          }
-      }
+    val retrySender =
+      system.actorOf(
+        Props(classOf[RetrySender], settings, runningContext),
+        runningContext.getStorySettings().name + "-http-sender"
+      )
 
     Flow[Event]
-      .map(e => createRequest(e) -> e)
-      .via(retrySendingFlow)
+      .mapAsync(settings.maxConcurrentRetries) { event =>
+        val retryTimeout = settings.totalRetryTimeout
 
+        import akka.pattern.ask
+        implicit val askTimeout: Timeout = Timeout(retryTimeout)
+
+        (retrySender ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
+          .mapTo[Try[HttpResponse]]
+          .map[(Status, Event)] {
+            case Success(resp) => (Norm, event)
+            case Failure(ex)   => (ToFB(Some(ex)), event)
+          }
+          .recover {
+            case ex: AskTimeoutException =>
+              logger.warn(
+                s"the request to ${settings.defaultRequest.getUri().toString} exceed retry-timeout $retryTimeout"
+              )
+              (Fail(ex), event)
+          }
+      }
+  }
+}
+
+object HttpSink {
+  object RetrySender {
+    case class Req(payload: HttpRequest, deadline: Deadline, retryTimes: Int = 1) {
+      def retry(): Req = copy(retryTimes = retryTimes + 1)
+    }
+    case class Retry(req: Req)
+    case class Resp(payload: HttpResponse)
+
+    private def calculateDelay(restartCount: Int,
+                               minBackoff: FiniteDuration,
+                               maxBackoff: FiniteDuration,
+                               randomFactor: Double): FiniteDuration = {
+      val rnd = 1.0 + ThreadLocalRandom.current().nextDouble() * randomFactor
+      if (restartCount >= 30) // Duration overflow protection (> 100 years)
+        maxBackoff
+      else
+        maxBackoff.min(minBackoff * math.pow(2, restartCount)) * rnd match {
+          case f: FiniteDuration ⇒ f
+          case _ ⇒ maxBackoff
+        }
+    }
+
+    class UnexpectedResponseException(info: String) extends RuntimeException(info)
+  }
+
+  class RetrySender(settings: HttpSinkSettings)(implicit runningContext: TaskRunningContext)
+      extends Actor
+      with ActorLogging {
+
+    import RetrySender._
+
+    implicit val system: ActorSystem = runningContext.getActorSystem()
+    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
+
+    val http = Http()
+    val poolSettings: ConnectionPoolSettings =
+      settings.poolSettings.getOrElse(ConnectionPoolSettings(runningContext.getActorSystem()))
+
+    def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
+      log.debug(s"replying response to the receiver")
+      receiver ! result
+    }
+
+    def backoffRetry(req: Req, receiver: ActorRef): Unit = if (req.deadline.hasTimeLeft()) {
+      val retryDelay = calculateDelay(req.retryTimes, 1.second, 30.seconds, 0.2)
+      if (req.deadline.compare(retryDelay.fromNow) > 0)
+        context.system.scheduler
+          .scheduleOnce(retryDelay, self, req.retry())(executionContext, receiver)
+    }
+
+    override def receive: Receive = {
+      case req @ Req(payload, _, retryTimes) =>
+        val receiver = sender()
+        val requestUrl = payload.getUri().toString
+        http
+          .singleRequest(request = payload, settings = poolSettings) andThen {
+          case Success(resp) => self.tell(Resp(resp), receiver)
+          case Failure(ex) =>
+            if (retryTimes == 1)
+              log.info(s"request to $requestUrl send failed with error: $ex")
+            else
+              log.debug(s"request to $requestUrl resend failed with error: $ex")
+
+            self.tell(Retry(req), receiver)
+        }
+
+      case Resp(resp @ HttpResponse(status, _, entity, _)) =>
+        val receiver = sender()
+        if (status.isSuccess()) {
+          Unmarshaller
+            .byteStringUnmarshaller(entity)
+            .map { _body =>
+              val body = _body.utf8String
+              log.debug(s"Got response with status code ${status.value} and body: $body")
+              if (body != "ok") {
+                // the response body was not expected
+                replyToReceiver(
+                  Failure(new UnexpectedResponseException("the response body was not expected")),
+                  receiver
+                )
+              } else {
+                replyToReceiver(Success(resp), receiver)
+              }
+            }
+        } else {
+          log.debug(s"Get response with non-200 [$status] status code")
+          resp.discardEntityBytes()
+          replyToReceiver(Failure(new UnexpectedResponseException("non-200 status code")), receiver)
+        }
+
+      case Retry(req) =>
+        backoffRetry(req, sender()) // not safe
+    }
   }
 }
 

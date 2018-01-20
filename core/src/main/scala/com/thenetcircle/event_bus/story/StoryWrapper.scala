@@ -18,7 +18,7 @@ class StoryWrapper(runningContextFactory: TaskRunningContextFactory, story: Stor
   import StoryWrapper._
 
   implicit val runningContext: TaskRunningContext =
-    runningContextFactory.createNewRunningContext(self)
+    runningContextFactory.createNewRunningContext(self, story.settings)
 
   val (killSwitch, doneFuture) = story.run()
   doneFuture.onComplete(_ => self ! Done)(runningContext.getExecutionContext())

@@ -24,7 +24,7 @@ import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, Task
 import com.thenetcircle.event_bus.event.LightEvent
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
-import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
+import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
@@ -53,7 +53,8 @@ abstract class BaseTest(_appContext: AppContext)
       system,
       materializer,
       testExecutionContext,
-      system.actorOf(TestActors.blackholeProps)
+      system.actorOf(TestActors.blackholeProps),
+      StorySettings("teststory")
     )
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
