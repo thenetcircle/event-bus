@@ -23,7 +23,6 @@ import com.thenetcircle.event_bus.story.StorySettings
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
-import scala.util.control.NonFatal
 
 class TaskRunningContext(appContext: AppContext,
                          system: ActorSystem,
@@ -39,23 +38,20 @@ class TaskRunningContext(appContext: AppContext,
   def getStoryWrapper(): ActorRef = storyWrapper
   def getStorySettings(): StorySettings = storySettings
 
-  def addShutdownHook(body: => Unit) = appContext.addShutdownHook(body)
+  def addShutdownHook(body: => Unit): Unit = appContext.addShutdownHook(body)
 
 }
 
 class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) extends StrictLogging {
   val decider: Supervision.Decider = {
-    case NonFatal(ex) =>
-      logger.error(s"supervision error: $ex")
-      Supervision.Resume
+    case ex: Throwable =>
+      logger.error(s"materializer supervision triggered by exception: $ex")
+      Supervision.Stop
   }
 
-  private lazy val materializer: Materializer = ActorMaterializer(
-    ActorMaterializerSettings(system)
-    // .withSupervisionStrategy(decider)
-  )(system)
+  private lazy val materializer: Materializer =
+    ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy(decider))(system)
 
-  // TODO: use another execution runningContext for computing
   private lazy val executionContext: ExecutionContext = ExecutionContext.global
 
   def createNewRunningContext(storyWrapper: ActorRef,

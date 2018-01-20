@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{StatusCode, _}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.pattern.AskTimeoutException
@@ -38,26 +38,23 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{Failure, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
                             expectedResponseBody: String,
-                            maxRetryTimes: Int = 9,
-                            maxConcurrentRetries: Int = 1,
-                            totalRetryTimeout: FiniteDuration = 6.seconds,
+                            minBackoff: FiniteDuration = 1.second,
+                            maxBackoff: FiniteDuration = 30.seconds,
+                            randomFactor: Double = 0.2,
+                            maxRetryTime: FiniteDuration = 6.seconds,
+                            concurrentRetries: Int = 1,
                             poolSettings: Option[ConnectionPoolSettings] = None)
 
 class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
 
   def createRequest(event: Event): HttpRequest = {
     settings.defaultRequest.withEntity(HttpEntity(event.body.data))
-  }
-
-  def checkResponse(status: StatusCode, headers: Seq[HttpHeader], body: Option[String]): Boolean = {
-    status == StatusCodes.OK && body.get == settings.expectedResponseBody
   }
 
   override def getHandler()(
@@ -75,8 +72,8 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
       )
 
     Flow[Event]
-      .mapAsync(settings.maxConcurrentRetries) { event =>
-        val retryTimeout = settings.totalRetryTimeout
+      .mapAsync(settings.concurrentRetries) { event =>
+        val retryTimeout = settings.maxRetryTime
 
         import akka.pattern.ask
         implicit val askTimeout: Timeout = Timeout(retryTimeout)
@@ -106,15 +103,15 @@ object HttpSink {
     case class Retry(req: Req)
     case class Resp(payload: HttpResponse)
 
-    private def calculateDelay(restartCount: Int,
+    private def calculateDelay(retryTimes: Int,
                                minBackoff: FiniteDuration,
                                maxBackoff: FiniteDuration,
                                randomFactor: Double): FiniteDuration = {
       val rnd = 1.0 + ThreadLocalRandom.current().nextDouble() * randomFactor
-      if (restartCount >= 30) // Duration overflow protection (> 100 years)
+      if (retryTimes >= 30) // Duration overflow protection (> 100 years)
         maxBackoff
       else
-        maxBackoff.min(minBackoff * math.pow(2, restartCount)) * rnd match {
+        maxBackoff.min(minBackoff * math.pow(2, retryTimes)) * rnd match {
           case f: FiniteDuration ⇒ f
           case _ ⇒ maxBackoff
         }
@@ -123,7 +120,7 @@ object HttpSink {
     class UnexpectedResponseException(info: String) extends RuntimeException(info)
   }
 
-  class RetrySender(settings: HttpSinkSettings)(implicit runningContext: TaskRunningContext)
+  class RetrySender(httpSinkSettings: HttpSinkSettings)(implicit runningContext: TaskRunningContext)
       extends Actor
       with ActorLogging {
 
@@ -135,7 +132,9 @@ object HttpSink {
 
     val http = Http()
     val poolSettings: ConnectionPoolSettings =
-      settings.poolSettings.getOrElse(ConnectionPoolSettings(runningContext.getActorSystem()))
+      httpSinkSettings.poolSettings.getOrElse(
+        ConnectionPoolSettings(runningContext.getActorSystem())
+      )
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
       log.debug(s"replying response to the receiver")
@@ -143,7 +142,12 @@ object HttpSink {
     }
 
     def backoffRetry(req: Req, receiver: ActorRef): Unit = if (req.deadline.hasTimeLeft()) {
-      val retryDelay = calculateDelay(req.retryTimes, 1.second, 30.seconds, 0.2)
+      val retryDelay = calculateDelay(
+        req.retryTimes,
+        httpSinkSettings.minBackoff,
+        httpSinkSettings.maxBackoff,
+        httpSinkSettings.randomFactor
+      )
       if (req.deadline.compare(retryDelay.fromNow) > 0)
         context.system.scheduler
           .scheduleOnce(retryDelay, self, req.retry())(executionContext, receiver)
@@ -173,7 +177,7 @@ object HttpSink {
             .map { _body =>
               val body = _body.utf8String
               log.debug(s"Got response with status code ${status.value} and body: $body")
-              if (body != "ok") {
+              if (body != httpSinkSettings.expectedResponseBody) {
                 // the response body was not expected
                 replyToReceiver(
                   Failure(new UnexpectedResponseException("the response body was not expected")),
@@ -228,9 +232,11 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
       val settings = HttpSinkSettings(
         defaultRequest,
         config.as[String]("expected-response"),
-        config.as[Int]("max-retry-times"),
-        config.as[Int]("max-concurrent-retries"),
-        config.as[FiniteDuration]("total-retry-timeout"),
+        config.as[FiniteDuration]("min-backoff"),
+        config.as[FiniteDuration]("max-backoff"),
+        config.as[Double]("random-factor"),
+        config.as[FiniteDuration]("max-retrytime"),
+        config.as[Int]("concurrent-retries"),
         poolSettingsOption
       )
 

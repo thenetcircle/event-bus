@@ -35,7 +35,8 @@ class HttpSinkBuilderTest extends BaseTest {
         |    "uri": "http://www.google.com"
         |  },
         |  "expected-response": "TEST_RESPONSE",
-        |  "total-retry-timeout": "10 m",
+        |  "min-backoff": "3 s",
+        |  "max-backoff": "1 m",
         |  "pool": {
         |    "max-retries": 10,
         |    "max-open-requests": 64,
@@ -45,9 +46,12 @@ class HttpSinkBuilderTest extends BaseTest {
 
     val settings = sink.settings
 
-    settings.maxRetryTimes shouldEqual 9
-    settings.maxConcurrentRetries shouldEqual 1
-    settings.totalRetryTimeout shouldEqual 10.minutes
+    settings.minBackoff shouldEqual 3.seconds
+    settings.maxBackoff shouldEqual 1.minute
+    settings.randomFactor shouldEqual 0.2
+    settings.maxRetryTime shouldEqual 12.hours
+    settings.concurrentRetries shouldEqual 1
+
     settings.defaultRequest shouldEqual HttpRequest(
       method = HttpMethods.POST,
       uri = Uri("http://www.google.com")
