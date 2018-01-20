@@ -40,7 +40,7 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
                             expectedResponseBody: String,
@@ -65,15 +65,14 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val exectionContext: ExecutionContext = runningContext.getExecutionContext()
 
+    // TODO later on can stop this actor on closing time of the story
+    // TODO performance test
+    val retrySender = system.actorOf(
+      Props(classOf[RetrySender], settings, runningContext),
+      runningContext.getStorySettings().name + "-http-sender"
+    )
+
     Flow[Event]
-      .mapMaterializedValue(oldMat => {
-        val retrySender = system.actorOf(
-          Props(classOf[RetrySender], settings, runningContext),
-          runningContext.getStorySettings().name + "-http-sender-" + Random.nextInt()
-        )
-        logger.debug(s"new retry sender $retrySender was created")
-        (oldMat, retrySender)
-      })
       .mapAsync(settings.concurrentRetries) { event =>
         val retryTimeout = settings.maxRetryTime
 
@@ -94,14 +93,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
               (Fail(ex), event)
           }
       }
-      .watchTermination() {
-        case ((oldMat, retrySender), done) =>
-          done.onComplete(_ => {
-            logger.debug(s"stopping retry sender $retrySender")
-            system.stop(retrySender)
-          })
-          oldMat
-      }
+
   }
 }
 
