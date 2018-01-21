@@ -26,8 +26,8 @@ object Dependencies {
   val kamonCore = "io.kamon" %% "kamon-core" % kamonVersion
   val kamonAkka = "io.kamon" %% "kamon-akka-2.5" % kamonVersion
   val kamonStatsd = "io.kamon" %% "kamon-statsd" % kamonVersion
-  val kamonLogReporter = "io.kamon" %% "kamon-log-reporter" % kamonVersion
   val kamonSystemMetrics = "io.kamon" %% "kamon-system-metrics" % kamonVersion
+  // val kamonLogReporter = "io.kamon" %% "kamon-log-reporter" % kamonVersion
 
   val ficus = "com.iheart" %% "ficus" % "1.4.2"
   // val akkaTracing = "com.github.levkhomich" %% "akka-tracing-core" % "0.6"
@@ -55,7 +55,6 @@ object Dependencies {
     kamonCore,
     kamonAkka,
     kamonStatsd,
-    kamonLogReporter,
     kamonSystemMetrics
   )
 

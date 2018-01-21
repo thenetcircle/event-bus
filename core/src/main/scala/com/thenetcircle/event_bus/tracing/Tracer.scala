@@ -17,8 +17,14 @@
 
 package com.thenetcircle.event_bus.tracing
 
+import com.thenetcircle.event_bus.context.AppContext
+import kamon.Kamon
+
 object Tracer {
 
-  def init(): Unit = {}
+  def init(appContext: AppContext): Unit = {
+    Kamon.start()
+    appContext.addShutdownHook(Kamon.shutdown())
+  }
 
 }

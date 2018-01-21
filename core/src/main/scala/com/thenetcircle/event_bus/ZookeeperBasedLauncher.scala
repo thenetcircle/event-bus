@@ -36,8 +36,6 @@ object ZookeeperBasedLauncher extends App with StrictLogging {
   implicit val appContext: AppContext = AppContext(config)
   implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
 
-  // Kamon.start()
-
   // Setup Zookeeper
   val zkManager: ZookeeperManager =
     ZookeeperManager(
@@ -65,7 +63,6 @@ object ZookeeperBasedLauncher extends App with StrictLogging {
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
-    // Kamon.shutdown()
     storyRunner.shutdown()
     appContext.shutdown()
     system.terminate()
