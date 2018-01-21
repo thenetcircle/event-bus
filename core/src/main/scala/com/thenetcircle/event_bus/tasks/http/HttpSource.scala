@@ -119,7 +119,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    killSwitchOption.foreach(_.shutdown())
+    killSwitchOption.foreach(k => { k.shutdown(); killSwitchOption = None })
   }
 }
 

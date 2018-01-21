@@ -105,7 +105,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    retrySender.foreach(runningContext.getActorSystem().stop)
+    retrySender.foreach(s => { runningContext.getActorSystem().stop(s); retrySender = None })
   }
 }
 

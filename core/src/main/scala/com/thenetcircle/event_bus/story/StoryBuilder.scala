@@ -20,21 +20,29 @@ package com.thenetcircle.event_bus.story
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
+import com.typesafe.scalalogging.StrictLogging
 
 import scala.util.matching.Regex
 
-class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext) {
+class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext)
+    extends StrictLogging {
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
   def buildStory(storyInfo: StoryInfo): Story = {
-    new Story(
-      StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
-      buildSourceTask(storyInfo.source).get,
-      buildSinkTask(storyInfo.sink).get,
-      storyInfo.transforms.map(_.flatMap(_v => buildTransformTask(_v))),
-      storyInfo.fallback.flatMap(buildFallbackTask)
-    )
+    try {
+      new Story(
+        StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
+        buildSourceTask(storyInfo.source).get,
+        buildSinkTask(storyInfo.sink).get,
+        storyInfo.transforms.map(_.flatMap(_v => buildTransformTask(_v))),
+        storyInfo.fallback.flatMap(buildFallbackTask)
+      )
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"story ${storyInfo.name} build failed with error $ex")
+        throw ex
+    }
   }
 
   def parseConfigString(configString: String): (String, String) = {

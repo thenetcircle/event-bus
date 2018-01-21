@@ -49,36 +49,46 @@ class Story(val settings: StorySettings,
   }
   def getStoryStatus(): StoryStatus = storyStatus
 
-  def run()(implicit runningContext: TaskRunningContext): Future[Done] = {
-    val sourceHandler = wrapTask(Flow[MR], s"story-$storyName-source", skipPreCheck = true)
+  private var runningFuture: Option[Future[Done]] = None
+  def run()(implicit runningContext: TaskRunningContext): Future[Done] = runningFuture getOrElse {
+    try {
+      val sourceHandler = wrapTask(Flow[MR], s"story-$storyName-source", skipPreCheck = true)
 
-    var transformId = 0
-    val transformsHandler =
-      transformTasks
-        .map(_.foldLeft(Flow[MR]) { (_chain, _transform) =>
-          {
-            transformId += 1
-            _chain
-              .via(
-                wrapTask(
-                  Flow[MR].map(_._2).via(_transform.getHandler()),
-                  s"story-$storyName-transform-$transformId"
+      var transformId = 0
+      val transformsHandler =
+        transformTasks
+          .map(_.foldLeft(Flow[MR]) { (_chain, _transform) =>
+            {
+              transformId += 1
+              _chain
+                .via(
+                  wrapTask(
+                    Flow[MR].map(_._2).via(_transform.getHandler()),
+                    s"story-$storyName-transform-$transformId"
+                  )
                 )
-              )
-          }
-        })
-        .getOrElse(Flow[MR])
+            }
+          })
+          .getOrElse(Flow[MR])
 
-    val sinkHandler =
-      wrapTask(Flow[MR].map(_._2).via(sinkTask.getHandler()), s"story-$storyName-sink")
+      val sinkHandler =
+        wrapTask(Flow[MR].map(_._2).via(sinkTask.getHandler()), s"story-$storyName-sink")
 
-    val doneFuture = sourceTask.runWith(
-      sourceHandler
-        .via(transformsHandler)
-        .via(sinkHandler)
-    )
+      runningFuture = Some(
+        sourceTask.runWith(
+          sourceHandler
+            .via(transformsHandler)
+            .via(sinkHandler)
+        )
+      )
 
-    doneFuture
+      runningFuture.get
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"story $storyName running failed with error $ex")
+        stop()
+        throw ex
+    }
   }
 
   def stop()(implicit runningContext: TaskRunningContext): Unit = {

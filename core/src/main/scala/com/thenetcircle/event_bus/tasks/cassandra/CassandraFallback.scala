@@ -1,3 +1,20 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * Contributors:
+ *     Beineng Ma <baineng.ma@gmail.com>
+ */
+
 package com.thenetcircle.event_bus.tasks.cassandra
 
 import akka.NotUsed
@@ -5,11 +22,13 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
-import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
-import com.thenetcircle.event_bus.interfaces.{Event, FallbackTask}
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
+import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.{Event, FallbackTask, FallbackTaskBuilder}
 import com.typesafe.scalalogging.StrictLogging
+import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
@@ -21,7 +40,7 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
   var cluster: Option[Cluster] = None
   var session: Option[Session] = None
 
-  def init(keyspace: String): Unit = if (session.isEmpty) {
+  def initializeCassandra(keyspace: String): Unit = if (session.isEmpty) {
     cluster = Some(
       Cluster
         .builder()
@@ -39,13 +58,15 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
       implicit runningContext: TaskRunningContext
   ): Flow[(Status, Event), (Status, Event), NotUsed] = {
 
-    val keyspace = s"eventbus_${runningContext.getAppContext().getAppName()}"
+    // val keyspace = s"eventbus_${runningContext.getAppContext().getAppName()}"
+
+    val keyspace = s"eventbus_test"
 
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    init(keyspace)
+    initializeCassandra(keyspace)
 
     val _session = session.get
     val statement = getPreparedStatement(_session)
@@ -102,8 +123,8 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    session.foreach(_.close())
-    cluster.foreach(_.close())
+    session.foreach(s => { s.close(); session = None })
+    cluster.foreach(c => { c.close(); cluster = None })
   }
 }
 
@@ -119,4 +140,24 @@ private[cassandra] object GuavaFutures {
       p.future
     }
   }
+}
+
+class CassandraFallbackBuilder() extends FallbackTaskBuilder {
+
+  override def build(
+      configString: String
+  )(implicit buildingContext: TaskBuildingContext): CassandraFallback = {
+    val config = ConfigStringParser
+      .convertStringToConfig(configString)
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.cassandra-fallback"))
+
+    val cassandraSettings = CassandraSettings(
+      contactPoints = config.as[List[String]]("contact-points"),
+      port = config.as[Int]("port"),
+      parallelism = config.as[Int]("parallelism")
+    )
+
+    new CassandraFallback(cassandraSettings)
+  }
+
 }

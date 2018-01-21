@@ -181,7 +181,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    killSwitchOption.foreach(_.shutdown())
+    killSwitchOption.foreach(k => { k.shutdown(); killSwitchOption = None })
   }
 }
 

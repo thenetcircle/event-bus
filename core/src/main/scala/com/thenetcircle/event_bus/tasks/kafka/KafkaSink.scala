@@ -120,7 +120,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    kafkaProducer.foreach(_.close(5, TimeUnit.SECONDS))
+    kafkaProducer.foreach(k => { k.close(5, TimeUnit.SECONDS); kafkaProducer = None })
   }
 }
 
