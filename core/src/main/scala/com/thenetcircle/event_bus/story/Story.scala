@@ -147,7 +147,7 @@ class Story(val settings: StorySettings,
               }
               .via(
                 fallbackTask
-                  .map(_task => Flow[MR].via(_task.getHandler(taskName)))
+                  .map(_task => Flow[MR].via(_task.getTaskFallbackHandler(taskName)))
                   .getOrElse(Flow[MR])
               )
 

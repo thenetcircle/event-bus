@@ -17,6 +17,8 @@
 
 package com.thenetcircle.event_bus.tasks.cassandra
 
+import java.util.Date
+
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
@@ -25,7 +27,7 @@ import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, FallbackTask, FallbackTaskBuilder}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -37,24 +39,27 @@ case class CassandraSettings(contactPoints: List[String], port: Int = 9042, para
 
 class CassandraFallback(settings: CassandraSettings) extends FallbackTask with StrictLogging {
 
-  var cluster: Option[Cluster] = None
-  var session: Option[Session] = None
+  var clusterOption: Option[Cluster] = None
+  var sessionOption: Option[Session] = None
+  var statementOption: Option[PreparedStatement] = None
 
-  def initializeCassandra(keyspace: String): Unit = if (session.isEmpty) {
-    cluster = Some(
+  def initializeCassandra(keyspace: String): Unit = if (sessionOption.isEmpty) {
+    clusterOption = Some(
       Cluster
         .builder()
         .addContactPoints(settings.contactPoints: _*)
         .withPort(settings.port)
         .build()
     )
-    session = cluster.map(_.connect(keyspace))
+    sessionOption = clusterOption.map(_.connect(keyspace))
+    sessionOption.foreach(s => { statementOption = Some(getPreparedStatement(s)) })
 
     // create tables if not exists
     // session.execute("")
+
   }
 
-  override def getHandler(failedTaskName: String)(
+  override def getTaskFallbackHandler(taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[(Status, Event), (Status, Event), NotUsed] = {
 
@@ -68,31 +73,41 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
 
     initializeCassandra(keyspace)
 
-    val _session = session.get
-    val statement = getPreparedStatement(_session)
-    val statementBinder = getStatementBinder(failedTaskName)
+    val session = sessionOption.get
+    val statementBinder = getStatementBinder(taskName)
 
     import GuavaFutures._
 
     Flow[(Status, Event)]
       .mapAsyncUnordered(settings.parallelism) {
-        case input @ (status, event) ⇒
-          _session
-            .executeAsync(statementBinder(input, statement))
-            .asScala()
-            .map[(Status, Event)](result => (Norm, event))
-            .recover {
-              case NonFatal(ex) =>
-                logger.warn(s"sending to cassandra fallback was failed with error $ex")
-                (Fail(ex), event)
-            }
+        case input @ (_, event) ⇒
+          try {
+            session
+              .executeAsync(statementBinder(input, statementOption.get))
+              .asScala()
+              .map[(Status, Event)](result => (InFB, event))
+              .recover {
+                case NonFatal(ex) =>
+                  logger.warn(s"sending to cassandra[1] fallback was failed with error $ex")
+                  (Fail(ex), event)
+              }
+          } catch {
+            case NonFatal(ex) =>
+              logger.debug(s"sending to cassandra[2] fallback failed with error $ex")
+              Future.successful((Fail(ex), event))
+          }
       }
-
   }
 
-  def getPreparedStatement(session: Session): PreparedStatement = session.prepare(
-    s"INSERT INTO eventbus_test VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-  )
+  def getPreparedStatement(session: Session): PreparedStatement = {
+    logger.debug(s"preparing statement ----")
+    session.prepare(s"""
+                       |INSERT INTO fallback
+                       |(uuid, storyname, eventname, createdat, fallbacktime, failedtaskname, group, providerid, providertype, generatorid, generatortype, actorid, actortype, targetid, targettype, body, format, cause)
+                       |VALUES
+                       |(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       |""".stripMargin)
+  }
 
   def getStatementBinder(failedTaskName: String)(
       implicit runningContext: TaskRunningContext
@@ -101,12 +116,14 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
       val cause =
         if (status.isInstanceOf[ToFB]) status.asInstanceOf[ToFB].cause.map(_.toString).getOrElse("")
         else ""
+      logger.debug(s"binding statement ----")
       statement.bind(
         event.uuid,
         runningContext.getStoryName(),
         event.metadata.name.getOrElse(""),
-        long2Long(event.createdAt.getTime),
-        long2Long(System.currentTimeMillis),
+        event.createdAt,
+        new Date(),
+        failedTaskName,
         event.metadata.group.getOrElse(""),
         event.metadata.provider.map(_._2).getOrElse(""),
         event.metadata.provider.map(_._1).getOrElse(""),
@@ -117,14 +134,14 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
         event.metadata.target.map(_._2).getOrElse(""),
         event.metadata.target.map(_._1).getOrElse(""),
         event.body.data,
-        event.body.format,
+        event.body.format.toString,
         cause
       )
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    session.foreach(s => { s.close(); session = None })
-    cluster.foreach(c => { c.close(); cluster = None })
+    sessionOption.foreach(s => { s.close(); sessionOption = None })
+    clusterOption.foreach(c => { c.close(); clusterOption = None })
   }
 }
 

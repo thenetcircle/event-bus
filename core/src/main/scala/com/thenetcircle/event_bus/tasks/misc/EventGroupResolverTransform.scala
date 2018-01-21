@@ -42,6 +42,12 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
 
   def init(): Unit = if (!inited) {
     // TODO: get data from zookeeper
+    /*updateMapping(
+      Map(
+        "event-user" -> Map("patterns" -> s"""user.*|||profile.*"""),
+        "event-message" -> Map("patterns" -> """message.*""")
+      )
+    )*/
     inited = true
   }
 

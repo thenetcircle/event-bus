@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.LightEvent
@@ -42,9 +42,17 @@ abstract class BaseTest(_appContext: AppContext)
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   implicit val appContext: AppContext = _appContext
+
+  val decider: Supervision.Decider = {
+    case ex: Throwable =>
+      logger.error(s"materializer supervision triggered by exception: $ex")
+      Supervision.Stop
+  }
   implicit val materializer: ActorMaterializer = ActorMaterializer(
-    ActorMaterializerSettings(system) //.withInputBuffer(initialSize = 1, maxSize = 1)
+    ActorMaterializerSettings(system)
+      .withSupervisionStrategy(decider) //.withInputBuffer(initialSize = 1, maxSize = 1)
   )
+
   implicit val testExecutionContext: ExecutionContext = materializer.executionContext
 
   implicit val runningContext: TaskRunningContext =

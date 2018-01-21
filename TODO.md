@@ -41,7 +41,7 @@ create table if not exists fallback(
     actortype text,
     targetid text, 
     targettype text, 
-    body blob, 
+    body text, 
     format text, 
     cause text,
     primary key (uuid, storyname, createdat, group, eventname)

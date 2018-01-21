@@ -23,8 +23,14 @@ import com.thenetcircle.event_bus.context.TaskRunningContext
 
 trait FallbackTask extends Task {
 
-  // Note that this method will be called on each tasks of stories
-  def getHandler(failedTaskName: String)(
+  /**
+   * Returns a [[Flow]] which bind on a specific task and accepts ToFB events then send them into fallback
+   * Note that this method will be called multiple times aon each tasks of stories
+   *
+   * @param taskName [[String]]
+   * @param runningContext [[TaskRunningContext]]
+   */
+  def getTaskFallbackHandler(taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[(Status, Event), (Status, Event), NotUsed]
 
