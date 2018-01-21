@@ -57,6 +57,8 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     settings.defaultRequest.withEntity(HttpEntity(event.body.data))
   }
 
+  var retrySender: Option[ActorRef] = None
+
   override def getHandler()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (Status, Event), NotUsed] = {
@@ -65,12 +67,18 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val exectionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    // TODO later on can stop this actor on closing time of the story
     // TODO performance test
-    val retrySender = system.actorOf(
-      Props(classOf[RetrySender], settings, runningContext),
-      runningContext.getStorySettings().name + "-http-sender"
-    )
+    // Init retry sender
+    val senderActor = retrySender.getOrElse({
+      retrySender = Some(
+        system
+          .actorOf(
+            Props(classOf[RetrySender], settings, runningContext),
+            runningContext.getStorySettings().name + "-http-sender"
+          )
+      )
+      retrySender.get
+    })
 
     Flow[Event]
       .mapAsync(settings.concurrentRetries) { event =>
@@ -79,7 +87,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         import akka.pattern.ask
         implicit val askTimeout: Timeout = Timeout(retryTimeout)
 
-        (retrySender ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
+        (senderActor ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
           .mapTo[Try[HttpResponse]]
           .map[(Status, Event)] {
             case Success(resp) => (Norm, event)
@@ -94,6 +102,10 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
           }
       }
 
+  }
+
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    retrySender.foreach(runningContext.getActorSystem().stop)
   }
 }
 

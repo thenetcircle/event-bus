@@ -37,7 +37,7 @@ import com.thenetcircle.event_bus.tasks.kafka.extended.{
 }
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
-import org.apache.kafka.clients.producer.{ProducerConfig, ProducerRecord}
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
 
@@ -99,21 +99,28 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     )
   }
 
+  var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
+
   override def getHandler()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (Status, Event), NotUsed] = {
 
     val kafkaSettings = getProducerSettings()
-    lazy val kafkaProducer = kafkaSettings.createKafkaProducer()
 
-    runningContext.addShutdownHook(kafkaProducer.close(10, TimeUnit.SECONDS))
+    val _kafkaProducer = kafkaProducer.getOrElse({
+      kafkaProducer = Some(kafkaSettings.createKafkaProducer())
+      kafkaProducer.get
+    })
 
     // Note that the flow might be materialized multiple times, like (from HttpSource)
     Flow[Event]
       .map(createMessage)
-      // TODO: take care of Supervision of mapAsync inside flow
-      .via(Producer.flow(kafkaSettings, kafkaProducer))
+      .via(Producer.flow(kafkaSettings, _kafkaProducer))
       .map(result => (Norm, result.message.passThrough))
+  }
+
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    kafkaProducer.foreach(_.close(5, TimeUnit.SECONDS))
   }
 }
 

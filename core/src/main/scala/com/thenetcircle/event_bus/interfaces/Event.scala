@@ -31,6 +31,7 @@ trait Event {
   def withPassThrough[T](_passThrough: T): Event
   def getPassThrough[T]: Option[T] = passThrough.map(_.asInstanceOf[T])
   def withGroup(_group: String): Event
+  def withUUID(_uuid: String): Event
 }
 
 case class EventMetaData(name: Option[String] = None,

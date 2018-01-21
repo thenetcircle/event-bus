@@ -108,6 +108,7 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
     })
   }
 
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 }
 
 class EventGroupResolverTransformBuilder() extends TransformTaskBuilder {

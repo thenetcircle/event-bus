@@ -78,86 +78,110 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
   )(implicit executionContext: ExecutionContext): Future[(Status, Event)] = {
-    val messageKeyOption = Option(message.record.key())
-    val eventExtractor =
-      messageKeyOption
-        .flatMap(_key => _key.data)
-        .map(_key => EventExtractorFactory.getExtractor(_key.eventFormat))
-        .getOrElse(EventExtractorFactory.defaultExtractor)
+    val kafkaKeyDataOption = Option(message.record.key()).flatMap(_key => _key.data)
     val messageValue = message.record.value()
+    val kafkaTopic = message.record.topic()
+
+    val eventExtractor =
+      kafkaKeyDataOption
+        .map(d => EventExtractorFactory.getExtractor(d.eventFormat))
+        .getOrElse(EventExtractorFactory.defaultExtractor)
+    val uuidOption = kafkaKeyDataOption.map(_.uuid)
 
     eventExtractor
       .extract(messageValue, Some(message.committableOffset))
-      .map(event => Norm -> event)
+      .map[(Status, Event)](event => {
+        var _event = event.withGroup(kafkaTopic)
+        if (uuidOption.isDefined) {
+          _event = _event.withUUID(uuidOption.get)
+        }
+        (Norm, _event)
+      })
       .recover {
         case ex: EventExtractingException =>
-          val dataFormat = eventExtractor.getFormat()
+          val eventFormat = eventExtractor.getFormat()
           logger.warn(
-            s"The event read from Kafka was extracting failed with format: $dataFormat and error: $ex"
+            s"The event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
           )
-          ToFB(Some(ex)) ->
-            LightEvent(body = EventBody(messageValue, dataFormat))
+          (
+            ToFB(Some(ex)),
+            LightEvent(body = EventBody(messageValue, eventFormat))
               .withPassThrough[CommittableOffset](message.committableOffset)
+          )
       }
   }
 
+  var killSwitchOption: Option[KillSwitch] = None
+
   override def runWith(
       handler: Flow[(Status, Event), (Status, Event), NotUsed]
-  )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
+  )(implicit runningContext: TaskRunningContext): Future[Done] = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    Consumer
-      .committablePartitionedSource(getConsumerSettings(), getSubscription())
-      .viaMat(KillSwitches.single)(Keep.right)
-      .mapAsyncUnordered(settings.maxConcurrentPartitions) {
-        case (topicPartition, source) =>
-          try {
-            source
-              .mapAsync(1)(extractEventFromMessage)
-              .via(handler)
-              .mapAsync(1) {
-                case (_: Succ, event) =>
-                  event.getPassThrough[CommittableOffset] match {
-                    case Some(co) =>
-                      logger.debug(s"The event ${event.uuid} is committing to kafka")
-                      co.commitScaladsl() // the commit logic
-                    case None =>
-                      val errorMessage =
-                        s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
-                      logger.debug(errorMessage)
-                      throw new IllegalStateException(errorMessage)
-                  }
-                case (Fail(ex), event) =>
-                  logger.debug(s"Event ${event.uuid} reaches the end with error $ex")
-                  // complete the stream if failure, before was using Future.successful(Done)
-                  throw ex
-              }
-              .toMat(Sink.ignore)(Keep.right)
-              .run()
-              .map(done => {
-                logger
-                  .info(s"The substream listening on topicPartition $topicPartition was completed.")
-                done
-              })
-              .recover {
-                case NonFatal(ex) =>
-                  logger.warn(
-                    s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
-                  )
-                  Done
-              }
-          } catch {
-            case NonFatal(ex) ⇒
-              logger.error(
-                s"Could not materialize topic $topicPartition listening stream with error: $ex"
-              )
-              throw ex
-          }
-      }
-      .toMat(Sink.ignore)(Keep.both)
-      .run()
+    val (killSwitch, doneFuture) =
+      Consumer
+        .committablePartitionedSource(getConsumerSettings(), getSubscription())
+        .viaMat(KillSwitches.single)(Keep.right)
+        .mapAsyncUnordered(settings.maxConcurrentPartitions) {
+          case (topicPartition, source) =>
+            try {
+              logger.debug(s"A new topicPartition $topicPartition is assigned to be listening")
+
+              source
+                .mapAsync(1)(extractEventFromMessage)
+                .via(handler)
+                .mapAsync(1) {
+                  case (_: Succ, event) =>
+                    event.getPassThrough[CommittableOffset] match {
+                      case Some(co) =>
+                        logger.debug(s"The event ${event.uuid} is committing to kafka")
+                        co.commitScaladsl() // the commit logic
+                      case None =>
+                        val errorMessage =
+                          s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
+                        logger.debug(errorMessage)
+                        throw new IllegalStateException(errorMessage)
+                    }
+                  case (Fail(ex), event) =>
+                    logger.debug(s"Event ${event.uuid} reaches the end with error $ex")
+                    // complete the stream if failure, before was using Future.successful(Done)
+                    throw ex
+                }
+                .toMat(Sink.ignore)(Keep.right)
+                .run()
+                .map(done => {
+                  logger
+                    .info(
+                      s"The substream listening on topicPartition $topicPartition was completed."
+                    )
+                  done
+                })
+                .recover {
+                  case NonFatal(ex) =>
+                    logger.warn(
+                      s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
+                    )
+                    Done
+                }
+            } catch {
+              case NonFatal(ex) ⇒
+                logger.error(
+                  s"Could not materialize topic $topicPartition listening stream with error: $ex"
+                )
+                throw ex
+            }
+        }
+        .toMat(Sink.ignore)(Keep.both)
+        .run()
+
+    killSwitchOption = Some(killSwitch)
+    doneFuture
+  }
+
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    killSwitchOption.foreach(_.shutdown())
   }
 }
 

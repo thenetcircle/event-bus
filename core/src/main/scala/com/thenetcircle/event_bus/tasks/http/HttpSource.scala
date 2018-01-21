@@ -42,7 +42,8 @@ import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.util.Success
 
 case class HttpSourceSettings(interface: String = "0.0.0.0",
                               port: Int = 8000,
@@ -80,9 +81,11 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       })
   }
 
+  var killSwitchOption: Option[KillSwitch] = None
+
   override def runWith(
       handler: Flow[(Status, Event), (Status, Event), NotUsed]
-  )(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
+  )(implicit runningContext: TaskRunningContext): Future[Done] = {
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
@@ -101,16 +104,23 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
         settings = settings.serverSettings
       )
 
-    val killSwitch = new KillSwitch {
+    val donePromise = Promise[Done]()
+
+    killSwitchOption = Some(new KillSwitch {
       override def abort(ex: Throwable): Unit = shutdown()
-      override def shutdown(): Unit = Await.ready(httpBindFuture.flatMap(_.unbind()), 5.seconds)
-    }
+      override def shutdown(): Unit =
+        Await.ready(
+          httpBindFuture.flatMap(_.unbind().map(_ => donePromise tryComplete Success(Done))),
+          5.seconds
+        )
+    })
 
-    runningContext.addShutdownHook(killSwitch.shutdown())
-
-    (killSwitch, httpBindFuture.map(_ => Done))
+    donePromise.future
   }
 
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    killSwitchOption.foreach(_.shutdown())
+  }
 }
 
 class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {

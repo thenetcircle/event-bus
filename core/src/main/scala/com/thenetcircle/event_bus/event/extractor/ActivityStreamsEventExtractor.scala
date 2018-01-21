@@ -78,7 +78,7 @@ class ActivityStreamsEventExtractor
       val activity = data.parseJson.convertTo[Activity]
 
       val uuid: String =
-        activity.title + "#" + activity.id.getOrElse(java.util.UUID.randomUUID().toString)
+        activity.id.getOrElse(activity.title + "#" + java.util.UUID.randomUUID().toString)
 
       val metaData = EventMetaData(
         name = Some(activity.title),

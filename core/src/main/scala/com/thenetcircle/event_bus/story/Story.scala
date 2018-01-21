@@ -28,6 +28,7 @@ import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
 
@@ -48,8 +49,7 @@ class Story(val settings: StorySettings,
   }
   def getStoryStatus(): StoryStatus = storyStatus
 
-  def run()(implicit runningContext: TaskRunningContext): (KillSwitch, Future[Done]) = {
-
+  def run()(implicit runningContext: TaskRunningContext): Future[Done] = {
     val sourceHandler = wrapTask(Flow[MR], s"story-$storyName-source", skipPreCheck = true)
 
     var transformId = 0
@@ -72,12 +72,27 @@ class Story(val settings: StorySettings,
     val sinkHandler =
       wrapTask(Flow[MR].map(_._2).via(sinkTask.getHandler()), s"story-$storyName-sink")
 
-    sourceTask.runWith(
+    val doneFuture = sourceTask.runWith(
       sourceHandler
         .via(transformsHandler)
         .via(sinkHandler)
     )
 
+    doneFuture
+  }
+
+  def stop()(implicit runningContext: TaskRunningContext): Unit = {
+    try {
+      logger.info(s"stopping story $storyName")
+      sourceTask.shutdown()
+      transformTasks.foreach(_.foreach(_.shutdown()))
+      fallbackTask.foreach(_.shutdown())
+      sinkTask.shutdown()
+    } catch {
+      case NonFatal(ex) =>
+        logger.error(s"get an error $ex when stopping story $storyName")
+        throw ex
+    }
   }
 
   def wrapTask(taskHandler: Flow[MR, MR, NotUsed], taskName: String, skipPreCheck: Boolean = false)(

@@ -37,6 +37,7 @@ class TaskRunningContext(appContext: AppContext,
   def getExecutionContext(): ExecutionContext = executionContext
   def getStoryWrapper(): ActorRef = storyWrapper
   def getStorySettings(): StorySettings = storySettings
+  def getStoryName(): String = storySettings.name
 
   def addShutdownHook(body: => Unit): Unit = appContext.addShutdownHook(body)
 

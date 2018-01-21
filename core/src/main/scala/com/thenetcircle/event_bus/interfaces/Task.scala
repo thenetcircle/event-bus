@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.interfaces
 
+import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 
 import scala.util.{Failure, Success, Try}
@@ -28,4 +29,6 @@ trait Task {
     case Success(_)  => ss
     case Failure(ex) => Fail(ex)
   }
+
+  def shutdown()(implicit runningContext: TaskRunningContext): Unit
 }

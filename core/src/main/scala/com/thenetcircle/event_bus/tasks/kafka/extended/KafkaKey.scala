@@ -21,6 +21,9 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interfaces.Event
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey._
 
+import scala.util.control.NonFatal
+import scala.util.matching.Regex
+
 class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {
   def this(data: KafkaKeyData) {
     this(packRawData(data), Some(data))
@@ -32,33 +35,35 @@ class KafkaKey(val rawData: String, val data: Option[KafkaKeyData]) {
 
 object KafkaKey {
   def apply(event: Event): KafkaKey =
-    new KafkaKey(KafkaKeyData(event.body.format, None))
+    new KafkaKey(KafkaKeyData(event.body.format, event.uuid))
+
+  /** Holds real data of the key of a kafka message */
+  case class KafkaKeyData(eventFormat: DataFormat, uuid: String)
+
+  val delimiter = "|||"
 
   /** Serializes [[KafkaKeyData]]
    * @param data
    * @return the serialized value
    */
   def packRawData(data: KafkaKeyData): String =
-    s"${data.eventFormat.toString}|${data.tracingId.getOrElse("")}|"
+    data.eventFormat.toString + delimiter + data.uuid + delimiter
 
   /** Deserializes rawdata to be [[KafkaKeyData]]
    * @param rawData
    * @return [[KafkaKeyData]]
    */
   def parseRawData(rawData: String): Option[KafkaKeyData] =
-    if (rawData.charAt(rawData.length - 1) == '|') {
-      val parsed = rawData.split('|')
-      val eventFormat = DataFormat(parsed(0))
-
-      val tracingId =
-        if (parsed.isDefinedAt(1) && parsed(1) != "") Some(parsed(1).toLong)
-        else None
-
-      Some(KafkaKeyData(eventFormat, tracingId))
-    } else {
-      None
+    try {
+      if (rawData.substring(rawData.length - delimiter.length) == delimiter) {
+        val parsed = rawData.split(Regex.quote(delimiter))
+        val eventFormat = DataFormat(parsed(0))
+        val uuid = if (parsed.isDefinedAt(1)) parsed(1) else ""
+        Some(KafkaKeyData(eventFormat, uuid))
+      } else {
+        None
+      }
+    } catch {
+      case NonFatal(_) => None
     }
-
-  /** Holds real data of the key of a kafka message */
-  case class KafkaKeyData(eventFormat: DataFormat, tracingId: Option[Long])
 }

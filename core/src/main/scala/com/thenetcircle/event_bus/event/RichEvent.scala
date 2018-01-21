@@ -28,13 +28,15 @@ case class RichEvent(uuid: String,
                      passThrough: Option[Any] = None)
     extends Event {
 
-  def withPassThrough[T](_passThrough: T): RichEvent = {
+  override def withPassThrough[T](_passThrough: T): Event = {
     if (passThrough.isDefined) {
       throw new Exception("event passthrough is defined already.")
     }
     copy(passThrough = Some(_passThrough))
   }
 
-  def withGroup(_group: String): RichEvent = copy(metadata = metadata.copy(group = Some(_group)))
+  override def withGroup(_group: String): Event =
+    copy(metadata = metadata.copy(group = Some(_group)))
 
+  override def withUUID(_uuid: String): Event = copy(uuid = _uuid)
 }
