@@ -45,5 +45,11 @@ case class LightEvent(uuid: String = "lightevent-" + java.util.UUID.randomUUID()
 
 object LightEvent {
   def apply(ex: Throwable): LightEvent =
-    new LightEvent(metadata = EventMetaData(provider = Some(ex.getClass.getName -> ex.getMessage)))
+    new LightEvent(
+      uuid = "failure-event-" + java.util.UUID.randomUUID().toString,
+      metadata = EventMetaData(
+        name = Some("eventbus.failure.trigger"),
+        provider = Some(ex.getClass.getName -> ex.getMessage)
+      )
+    )
 }
