@@ -27,8 +27,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
-import com.thenetcircle.event_bus.interfaces.{SinkTask, SinkTaskBuilder}
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
@@ -103,7 +102,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Status, Event), NotUsed] = {
+  ): Flow[Event, (EventStatus, Event), NotUsed] = {
 
     val kafkaSettings = getProducerSettings()
 

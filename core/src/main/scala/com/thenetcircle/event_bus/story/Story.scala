@@ -39,7 +39,7 @@ class Story(val settings: StorySettings,
             val fallbackTask: Option[FallbackTask] = None)
     extends StrictLogging {
 
-  type MR = (EventStatus, Event) // middle result type
+  type Payload = (EventStatus, Event) // middle result type
 
   val storyName: String = settings.name
 
@@ -52,27 +52,27 @@ class Story(val settings: StorySettings,
   private var runningFuture: Option[Future[Done]] = None
   def run()(implicit runningContext: TaskRunningContext): Future[Done] = runningFuture getOrElse {
     try {
-      val sourceHandler = wrapTask(Flow[MR], s"story-$storyName-source", skipPreCheck = true)
+      val sourceHandler = wrapTask(Flow[Payload], s"story-$storyName-source", skipPreCheck = true)
 
       var transformId = 0
       val transformsHandler =
         transformTasks
-          .map(_.foldLeft(Flow[MR]) { (_chain, _transform) =>
+          .map(_.foldLeft(Flow[Payload]) { (_chain, _transform) =>
             {
               transformId += 1
               _chain
                 .via(
                   wrapTask(
-                    Flow[MR].map(_._2).via(_transform.getHandler()),
+                    Flow[Payload].map(_._2).via(_transform.getHandler()),
                     s"story-$storyName-transform-$transformId"
                   )
                 )
             }
           })
-          .getOrElse(Flow[MR])
+          .getOrElse(Flow[Payload])
 
       val sinkHandler =
-        wrapTask(Flow[MR].map(_._2).via(sinkTask.getHandler()), s"story-$storyName-sink")
+        wrapTask(Flow[Payload].map(_._2).via(sinkTask.getHandler()), s"story-$storyName-sink")
 
       runningFuture = Some(
         sourceTask.runWith(
@@ -105,9 +105,11 @@ class Story(val settings: StorySettings,
     }
   }
 
-  def wrapTask(taskHandler: Flow[MR, MR, NotUsed], taskName: String, skipPreCheck: Boolean = false)(
-      implicit runningContext: TaskRunningContext
-  ): Flow[MR, MR, NotUsed] = {
+  def wrapTask(
+      taskHandler: Flow[Payload, Payload, NotUsed],
+      taskName: String,
+      skipPreCheck: Boolean = false
+  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] = {
 
     Flow
       .fromGraph(
@@ -117,7 +119,7 @@ class Story(val settings: StorySettings,
 
             // SkipPreCheck goes to 0, Norm goes to 0, Others goes to 1
             val preCheck =
-              builder.add(new Partition[MR](2, input => {
+              builder.add(new Partition[Payload](2, input => {
                 if (skipPreCheck) 0
                 else {
                   input match {
@@ -129,14 +131,14 @@ class Story(val settings: StorySettings,
 
             // ToFB goes to 1, Others goes to 0
             val postCheck =
-              builder.add(Partition[MR](2, {
+              builder.add(Partition[Payload](2, {
                 case (_: ToFB, _) => 1
                 case (_, _)       => 0
               }))
 
-            val output = builder.add(Merge[MR](3))
+            val output = builder.add(Merge[Payload](3))
 
-            val fallback = Flow[MR]
+            val fallback = Flow[Payload]
               .map {
                 case input @ (_, event) =>
                   val logMessage =
@@ -147,8 +149,8 @@ class Story(val settings: StorySettings,
               }
               .via(
                 fallbackTask
-                  .map(_task => Flow[MR].via(_task.getTaskFallbackHandler(taskName)))
-                  .getOrElse(Flow[MR])
+                  .map(_task => Flow[Payload].via(_task.getTaskFallbackHandler(taskName)))
+                  .getOrElse(Flow[Payload])
               )
 
             // format: off

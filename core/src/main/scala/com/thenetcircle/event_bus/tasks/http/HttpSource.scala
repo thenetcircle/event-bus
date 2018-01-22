@@ -35,7 +35,7 @@ import com.thenetcircle.event_bus.event.extractor.{
 }
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ}
-import com.thenetcircle.event_bus.interfaces.{Event, SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -52,7 +52,7 @@ case class HttpSourceSettings(interface: String = "0.0.0.0",
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  def createResponse(result: (Status, Event)): HttpResponse = result match {
+  def createResponse(result: (EventStatus, Event)): HttpResponse = result match {
     case (_: Succ, _) =>
       HttpResponse(entity = HttpEntity(settings.succeededResponse))
     case (Fail(ex), _) =>
@@ -64,14 +64,14 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
-  ): Flow[HttpRequest, (Status, Event), NotUsed] = {
+  ): Flow[HttpRequest, (EventStatus, Event), NotUsed] = {
     val unmarshaller: Unmarshaller[HttpEntity, Event] =
       EventExtractorFactory.getHttpEntityUnmarshaller(settings.format)
 
     Flow[HttpRequest]
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
-          .map[(Status, Event)](event => (Norm, event))
+          .map[(EventStatus, Event)](event => (Norm, event))
           .recover {
             case ex: EventExtractingException =>
               logger.debug(s"A http request unmarshaller failed with error $ex")
@@ -83,7 +83,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   var killSwitchOption: Option[KillSwitch] = None
 
   override def runWith(
-      handler: Flow[(Status, Event), (Status, Event), NotUsed]
+      handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): Future[Done] = {
     implicit val system: ActorSystem = runningContext.getActorSystem()
     implicit val materializer: Materializer = runningContext.getMaterializer()

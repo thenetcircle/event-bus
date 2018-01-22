@@ -21,8 +21,6 @@ import com.thenetcircle.event_bus.context.TaskRunningContext
 
 trait Task {
 
-  type Status = EventStatus
-
   /**
    * Shutdown the task when something got wrong or the task has to be finished
    * It's a good place to clear up the resources like connection, actor, etc...

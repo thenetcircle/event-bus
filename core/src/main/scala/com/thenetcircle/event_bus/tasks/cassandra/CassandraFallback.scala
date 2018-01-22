@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFut
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, ToFB}
-import com.thenetcircle.event_bus.interfaces.{Event, FallbackTask, FallbackTaskBuilder}
+import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, FallbackTask, FallbackTaskBuilder}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -61,7 +61,7 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
 
   override def getTaskFallbackHandler(taskName: String)(
       implicit runningContext: TaskRunningContext
-  ): Flow[(Status, Event), (Status, Event), NotUsed] = {
+  ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = {
 
     // val keyspace = s"eventbus_${runningContext.getAppContext().getAppName()}"
 
@@ -78,14 +78,14 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
 
     import GuavaFutures._
 
-    Flow[(Status, Event)]
+    Flow[(EventStatus, Event)]
       .mapAsyncUnordered(settings.parallelism) {
         case input @ (_, event) ⇒
           try {
             session
               .executeAsync(statementBinder(input, statementOption.get))
               .asScala()
-              .map[(Status, Event)](result => (InFB, event))
+              .map[(EventStatus, Event)](result => (InFB, event))
               .recover {
                 case NonFatal(ex) =>
                   logger.warn(s"sending to cassandra[1] fallback was failed with error $ex")
@@ -111,7 +111,7 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
 
   def getStatementBinder(failedTaskName: String)(
       implicit runningContext: TaskRunningContext
-  ): ((Status, Event), PreparedStatement) => BoundStatement = {
+  ): ((EventStatus, Event), PreparedStatement) => BoundStatement = {
     case ((status, event), statement) =>
       val cause =
         if (status.isInstanceOf[ToFB]) status.asInstanceOf[ToFB].cause.map(_.toString).getOrElse("")

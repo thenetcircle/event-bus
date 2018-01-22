@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.event.NormalEvent
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ, ToFB}
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody, SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -76,7 +76,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(Status, Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[(EventStatus, Event)] = {
     val kafkaKeyDataOption = Option(message.record.key()).flatMap(_key => _key.data)
     val messageValue = message.record.value()
     val kafkaTopic = message.record.topic()
@@ -89,7 +89,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     eventExtractor
       .extract(messageValue, Some(message.committableOffset))
-      .map[(Status, Event)](event => {
+      .map[(EventStatus, Event)](event => {
         var _event = event.withGroup(kafkaTopic)
         if (uuidOption.isDefined) {
           _event = _event.withUUID(uuidOption.get)
@@ -117,7 +117,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   var killSwitchOption: Option[KillSwitch] = None
 
   override def runWith(
-      handler: Flow[(Status, Event), (Status, Event), NotUsed]
+      handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): Future[Done] = {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()

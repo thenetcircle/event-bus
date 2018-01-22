@@ -24,8 +24,12 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
-import com.thenetcircle.event_bus.interfaces.{TransformTask, TransformTaskBuilder}
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.interfaces.{
+  Event,
+  EventStatus,
+  TransformTask,
+  TransformTaskBuilder
+}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.collection.mutable
@@ -100,7 +104,7 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
 
   override def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Status, Event), NotUsed] = {
+  ): Flow[Event, (EventStatus, Event), NotUsed] = {
 
     init()
 

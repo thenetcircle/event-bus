@@ -25,6 +25,6 @@ trait TransformTask extends Task {
 
   def getHandler()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (Status, Event), NotUsed]
+  ): Flow[Event, (EventStatus, Event), NotUsed]
 
 }
