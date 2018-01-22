@@ -31,9 +31,8 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.collection.JavaConverters._
 
-class ZookeeperManager private (connectString: String, rootPath: String)(
-    implicit appContext: AppContext
-) extends StrictLogging {
+class ZKManager private (connectString: String, rootPath: String)(implicit appContext: AppContext)
+    extends StrictLogging {
 
   private var client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
@@ -88,35 +87,38 @@ class ZookeeperManager private (connectString: String, rootPath: String)(
     }
   }
 
-  def getChildrenData(relativePath: String): Option[List[(String, String)]] = {
+  def getChildrenData(relativePath: String): Option[Map[String, String]] = {
     getChildren(relativePath)
       .map(children => {
         children
           .map(childName => getData(s"$relativePath/$childName").map(data => childName -> data))
           .filter(_.isDefined)
           .map(_.get)
+          .toMap
       })
   }
 
   def watchChildren(
       relativePath: String,
       startMode: StartMode = StartMode.NORMAL,
-      fetchData: Boolean = true
-  )(callback: (PathChildrenCacheEvent) => Unit): PathChildrenCache = {
+      fetchData: Boolean = false
+  )(callback: (PathChildrenCacheEvent, PathChildrenCache) => Unit): PathChildrenCache = {
     val watcher =
       new PathChildrenCache(client, getAbsPath(relativePath), fetchData)
     watcher.start(startMode)
 
     watcher.getListenable.addListener(new PathChildrenCacheListener {
       override def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent): Unit = {
+        val eventType = event.getType
+        val path = if (event.getData != null) event.getData.getPath else ""
         var data =
-          if (event.getData.getData.nonEmpty) new String(event.getData.getData, "UTF-8") else ""
+          if (event.getData != null && event.getData.getData.nonEmpty)
+            new String(event.getData.getData, "UTF-8")
+          else ""
 
-        logger.debug(
-          s"[zookeeper event] type: ${event.getType}, path: ${event.getData.getPath}, data: $data"
-        )
+        logger.debug(s"[zookeeper event] type: $eventType, path: $path, data: $data")
 
-        callback(event)
+        callback(event, watcher)
       }
     })
 
@@ -126,28 +128,27 @@ class ZookeeperManager private (connectString: String, rootPath: String)(
   }
 }
 
-object ZookeeperManager {
-  private var _instance: Option[ZookeeperManager] = None
+object ZKManager {
+  private var _instance: Option[ZKManager] = None
 
   /**
-   * Init ZookeeperManger and Start zookeeper client
+   * Init ZKManager and Start zookeeper lient
    *
    * @param connectString
    * @param rootPath
    */
-  def init(connectString: String, rootPath: String)(
-      implicit appContext: AppContext
-  ): ZookeeperManager = _instance.getOrElse {
-    if (connectString.isEmpty || rootPath.isEmpty) {
-      throw new IllegalArgumentException("Parameters are unavailable.")
+  def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager =
+    _instance.getOrElse {
+      if (connectString.isEmpty || rootPath.isEmpty) {
+        throw new IllegalArgumentException("Parameters are unavailable.")
+      }
+      _instance = Some(new ZKManager(connectString, rootPath))
+      _instance.foreach(_.start())
+      _instance.get
     }
-    _instance = Some(new ZookeeperManager(connectString, rootPath))
-    _instance.foreach(_.start())
-    _instance.get
-  }
 
   /**
    * @throws java.util.NoSuchElementException if not init yet.
    */
-  def getInstance(): ZookeeperManager = _instance.get
+  def getInstance(): ZKManager = _instance.get
 }

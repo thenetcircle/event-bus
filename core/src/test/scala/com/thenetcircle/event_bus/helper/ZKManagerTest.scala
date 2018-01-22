@@ -17,7 +17,9 @@
 
 package com.thenetcircle.event_bus.helper
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.story.{StoryBuilder, StoryZookeeperDAO, TaskBuilderFactory}
+import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent
 
 class ZKManagerTest extends BaseTest {
 
@@ -28,7 +30,7 @@ class ZKManagerTest extends BaseTest {
     val runnerName = "test-runner"
 
     val zkManager =
-      ZookeeperManager.init(
+      ZKManager.init(
         "maggie-zoo-1:2181,maggie-zoo-2:2181",
         s"/event-bus/${appContext.getAppName()}"
       )
@@ -78,7 +80,7 @@ class ZKManagerTest extends BaseTest {
           }
         })*/
 
-        zkManager.watchChildren(s"runners/$runnerName/stories") { event =>
+        /*zkManager.watchChildren(s"runners/$runnerName/stories") { event =>
           val path = event.getData.getPath
           val category = try {
             path.substring(path.lastIndexOf('/') + 1)
@@ -90,20 +92,28 @@ class ZKManagerTest extends BaseTest {
             s"==== ${event.getType} -- ${new String(event.getData.getData, "UTF-8")} --- ${event.getData.getPath} --- $category ===="
           )
 
-        }
+        }*/
 
-        zkManager.watchChildren(s"stories/$storyName") { event =>
-          val path = event.getData.getPath
-          val category = try {
-            path.substring(path.lastIndexOf('/') + 1)
-          } catch {
-            case _: Throwable => ""
+        zkManager
+          .watchChildren(s"stories/$storyName", startMode = StartMode.POST_INITIALIZED_EVENT) {
+            (event, watcher) =>
+              if (event.getType == PathChildrenCacheEvent.Type.INITIALIZED)
+                /*{
+                  import scala.collection.JavaConverters._
+                  watcher.getCurrentData.asScala.foreach(childData => childData.)
+                }*/
+                logger.debug(s" --- type: ${event.getType}, data: ${watcher.getCurrentData}")
+            /*val path = event.getData.getPath
+              val category = try {
+                path.substring(path.lastIndexOf('/') + 1)
+              } catch {
+                case _: Throwable => ""
+              }
+
+              logger.debug(
+                s"==== ${event.getType} -- ${new String(event.getData.getData, "UTF-8")} --- ${event.getData.getPath} --- $category ===="
+              )*/
           }
-
-          logger.debug(
-            s"==== ${event.getType} -- ${new String(event.getData.getData, "UTF-8")} --- ${event.getData.getPath} --- $category ===="
-          )
-        }
 
         /*logger.debug(s"get story name $storyName")
 

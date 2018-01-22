@@ -1,25 +1,16 @@
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus.helper
 
 import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.helper.ZookeeperManager
+import com.thenetcircle.event_bus.story.StoryInfo
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
-
-case class StoryInfo(name: String,
-                     status: String,
-                     settings: String,
-                     source: String,
-                     sink: String,
-                     transforms: Option[List[String]],
-                     fallback: Option[String])
 
 trait StoryDAO {
   def getRunnableStories(runnerName: String): List[String]
   def getStoryInfo(storyName: String): StoryInfo
 }
 
-class StoryZookeeperDAO(zkManager: ZookeeperManager)(implicit appContext: AppContext)
-    extends StoryDAO {
+class StoryZookeeperDAO(zkManager: ZKManager)(implicit appContext: AppContext) extends StoryDAO {
   // TODO: watch new stories, and story changes
   def getRunnableStories(runnerName: String): List[String] = {
     zkManager
@@ -35,7 +26,7 @@ class StoryZookeeperDAO(zkManager: ZookeeperManager)(implicit appContext: AppCon
     val source: String = zkManager.getData(s"$storyRootPath/source").get
     val sink: String = zkManager.getData(s"$storyRootPath/sink").get
     val transforms: Option[List[String]] =
-      zkManager.getChildrenData(s"$storyRootPath/transforms").map(_.map(_._2))
+      zkManager.getChildrenData(s"$storyRootPath/transforms").map(m => m.values.toList)
     val fallback: Option[String] = zkManager.getData(s"$storyRootPath/fallback")
 
     StoryInfo(storyName, status, settings, source, sink, transforms, fallback)
@@ -43,7 +34,7 @@ class StoryZookeeperDAO(zkManager: ZookeeperManager)(implicit appContext: AppCon
 }
 
 object StoryZookeeperDAO {
-  def apply(zkManager: ZookeeperManager)(implicit appContext: AppContext): StoryZookeeperDAO =
+  def apply(zkManager: ZKManager)(implicit appContext: AppContext): StoryZookeeperDAO =
     new StoryZookeeperDAO(zkManager)
 }
 

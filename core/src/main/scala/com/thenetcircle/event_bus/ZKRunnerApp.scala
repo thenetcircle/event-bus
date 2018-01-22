@@ -17,80 +17,118 @@
 
 package com.thenetcircle.event_bus
 
-import akka.actor.{ActorRef, ActorSystem}
-import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.helper.ZookeeperManager
+import com.thenetcircle.event_bus.helper.ZKManager
 import com.thenetcircle.event_bus.story._
-import com.typesafe.config.{Config, ConfigFactory}
-import com.typesafe.scalalogging.StrictLogging
-import org.apache.curator.framework.recipes.cache.PathChildrenCache
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
+import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 
 import scala.collection.mutable
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-object ZKRunnerApp extends App with StrictLogging {
-
-  logger.info("Application is initializing.")
-
-  // Base components
-  val config: Config = ConfigFactory.load()
-  implicit val appContext: AppContext = AppContext(config)
-  implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
-
-  // Initialize StoryRunner
-  var runnerName: String = config.getString("app.runner-name")
-  val storyRunner: ActorRef =
-    system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
-
-  // Setup shutdown hooks
-  sys.addShutdownHook({
-    logger.info("Application is shutting down...")
-    Await
-      .result(akka.pattern.gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()), 3.seconds)
-    appContext.shutdown()
-    system.terminate()
-    Await.result(system.whenTerminated, 6.seconds)
-  })
-
+object ZKRunnerApp extends AbstractApp {
   // Setup Zookeeper
   if (args.length == 0 || args(0).isEmpty) {
     throw new RuntimeException("Argument 1 zookeeper connect string is required.")
   }
   val zookeeperConnectString = args(0)
-  val zkManager: ZookeeperManager =
-    ZookeeperManager.init(zookeeperConnectString, s"/event-bus/${appContext.getAppName()}")
+  val zkManager: ZKManager =
+    ZKManager.init(zookeeperConnectString, s"/event-bus/${appContext.getAppName()}")
   zkManager.registerStoryRunner(runnerName)
 
-  // Fetch stories and run
   val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(config))
-  val storyDAO: StoryZookeeperDAO = StoryZookeeperDAO(zkManager)
 
-  val printColor = (msg: String) ⇒ s"""\u001B[32m${msg}B[0m"""
-  def runStory(storyName: String, restart: Boolean = false): Unit = {
-    try {
-      // TODO use the data returned by watcher
-      val storyInfo = storyDAO.getStoryInfo(storyName)
-      val story = storyBuilder.buildStory(storyInfo)
-      if (!restart)
-        storyRunner ! StoryRunner.Run(story)
-      else
-        storyRunner ! StoryRunner.Restart(story)
-    } catch {
-      case NonFatal(ex) =>
-        logger
-          .error(
-            printColor(
-              s"fetching or building story failed with error $ex, the story will not be run"
-            )
-          )
+  // Fetch stories and run
+  import PathChildrenCacheEvent.Type._
+  type Watcher = PathChildrenCache
+  var watchedStores = mutable.Map.empty[String, (Watcher, Watcher)]
+  // watching on zookeeper path to get updates of stories
+  zkManager.watchChildren(s"runners/$runnerName/stories") { (runnerEvent, runnerWatcher) =>
+    runnerEvent.getType match {
+
+      // new story has been assigned to this runner
+      case CHILD_ADDED =>
+        val storyName = getLastPartOfPath(runnerEvent.getData.getPath)
+        val storyRootPath = s"stories/$storyName"
+
+        runStory(storyName)
+
+        val storyWatcher =
+          zkManager.watchChildren(storyRootPath, StartMode.BUILD_INITIAL_CACHE) {
+            case (e, _) if e.getType == CHILD_UPDATED => updateStory(storyName)
+            case _                                    =>
+          }
+
+        val storyTransformsWatcher =
+          zkManager.watchChildren(s"$storyRootPath/transforms", StartMode.BUILD_INITIAL_CACHE) {
+            case (e, _)
+                if e.getType == CHILD_UPDATED || e.getType == CHILD_ADDED || e.getType == CHILD_REMOVED =>
+              updateStory(storyName)
+            case _ =>
+          }
+
+        watchedStores += (storyName -> (storyWatcher, storyTransformsWatcher))
+
+      // story has been removed from this runner
+      case CHILD_REMOVED =>
+        val storyName = getLastPartOfPath(runnerEvent.getData.getPath)
+
+        shutdownStory(storyName)
+
+        watchedStores
+          .get(storyName)
+          .foreach {
+            case (storyWatcher, storyTransformsWatcher) => {
+              storyWatcher.close()
+              storyTransformsWatcher.close()
+            }
+          }
+
+      case _ =>
     }
   }
+
+  def getStoryInfo(storyName: String): StoryInfo = {
+    val storyRootPath = s"stories/$storyName"
+
+    val status: String = zkManager.getData(s"$storyRootPath/status").getOrElse("INIT")
+    val settings: String = zkManager.getData(s"$storyRootPath/settings").getOrElse("")
+    val source: String = zkManager.getData(s"$storyRootPath/source").get
+    val sink: String = zkManager.getData(s"$storyRootPath/sink").get
+    val transforms: Option[List[String]] =
+      zkManager.getChildrenData(s"$storyRootPath/transforms").map(m => m.values.toList)
+    val fallback: Option[String] = zkManager.getData(s"$storyRootPath/fallback")
+
+    StoryInfo(storyName, status, settings, source, sink, transforms, fallback)
+  }
+
+  def runStory(storyName: String): Unit = {
+    try {
+      val story = storyBuilder.buildStory(getStoryInfo(storyName))
+      storyRunner ! StoryRunner.Run(story)
+    } catch {
+      case NonFatal(ex) =>
+        logger.error(
+          colorfulOutput(s"fetching or building story failed with error $ex, when run story")
+        )
+    }
+  }
+
+  def updateStory(storyName: String): Unit = {
+    try {
+      val story = storyBuilder.buildStory(getStoryInfo(storyName))
+      storyRunner ! StoryRunner.Rerun(story)
+    } catch {
+      case NonFatal(ex) =>
+        logger.error(
+          colorfulOutput(s"fetching or building story failed with error $ex, when update story")
+        )
+    }
+  }
+
   def shutdownStory(storyName: String): Unit = {
     storyRunner ! StoryRunner.Shutdown(Some(storyName))
   }
+
   def getLastPartOfPath(path: String): String =
     try {
       path.substring(path.lastIndexOf('/') + 1)
@@ -98,48 +136,5 @@ object ZKRunnerApp extends App with StrictLogging {
       case _: Throwable => ""
     }
 
-  import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
-  var watchedStores = mutable.Map.empty[String, (PathChildrenCache, PathChildrenCache)]
-  // watch assigned stories
-  zkManager.watchChildren(s"runners/$runnerName/stories", StartMode.NORMAL) { event =>
-    val path = event.getData.getPath
-    event.getType match {
-      case CHILD_ADDED =>
-        val storyName = getLastPartOfPath(path)
-
-        runStory(storyName)
-
-        val storyWatcher =
-          zkManager.watchChildren(s"stories/$storyName", StartMode.BUILD_INITIAL_CACHE) { event =>
-            if (event.getType == CHILD_UPDATED) {
-              val child = getLastPartOfPath(event.getData.getPath)
-              if (child == "source" || child == "sink" || child == "fallback") {
-                runStory(storyName, true)
-              }
-            }
-          }
-
-        val storyTransformsWatcher =
-          zkManager.watchChildren(s"stories/$storyName/transforms", StartMode.BUILD_INITIAL_CACHE) {
-            event =>
-              if (event.getType == CHILD_UPDATED || event.getType == CHILD_ADDED || event.getType == CHILD_REMOVED) {
-                runStory(storyName, true)
-              }
-          }
-
-        watchedStores += (storyName -> (storyWatcher, storyTransformsWatcher))
-
-      case CHILD_REMOVED =>
-        val storyName = getLastPartOfPath(path)
-        shutdownStory(storyName)
-
-        watchedStores
-          .get(storyName)
-          .foreach(w => {
-            w._1.close()
-            w._2.close()
-          })
-    }
-  }
-
+  def colorfulOutput(msg: String): String = s"""\u001B[32m${msg}B[0m"""
 }

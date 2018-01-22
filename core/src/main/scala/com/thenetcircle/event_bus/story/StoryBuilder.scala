@@ -24,6 +24,14 @@ import com.typesafe.scalalogging.StrictLogging
 
 import scala.util.matching.Regex
 
+case class StoryInfo(name: String,
+                     status: String,
+                     settings: String,
+                     source: String,
+                     sink: String,
+                     transforms: Option[List[String]],
+                     fallback: Option[String])
+
 class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext)
     extends StrictLogging {
 

@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZookeeperManager}
+import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZKManager}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{
   Event,
@@ -36,7 +36,7 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class TNCKafkaTopicResolver(zkManager: ZookeeperManager,
+class TNCKafkaTopicResolver(zkManager: ZKManager,
                             val defaultTopic: String,
                             val useCache: Boolean = false)
     extends TransformTask
@@ -132,7 +132,7 @@ class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
       .convertStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-topic-resolver"))
 
-    val zkManger = ZookeeperManager.getInstance()
+    val zkManger = ZKManager.getInstance()
 
     new TNCKafkaTopicResolver(
       zkManger,

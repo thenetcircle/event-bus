@@ -17,16 +17,14 @@
 
 package com.thenetcircle.event_bus.tasks.misc
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZookeeperManager}
+import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZKManager}
 
 class TNCKafkaTopicResolverTest extends BaseTest {
 
   behavior of "TNCKafkaTopicResolver"
 
-  val zkManager = ZookeeperManager.init(
-    "maggie-zoo-1:2181,maggie-zoo-2:2181",
-    s"/event-bus/${appContext.getAppName()}"
-  )
+  val zkManager =
+    ZKManager.init("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/${appContext.getAppName()}")
   val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
   val delimiter = ConfigStringParser.delimiter
   resolver.updateMapping(

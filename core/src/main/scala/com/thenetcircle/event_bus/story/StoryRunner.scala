@@ -25,7 +25,8 @@ import akka.actor.{
   OneForOneStrategy,
   Props,
   SupervisorStrategy,
-  Terminated
+  Terminated,
+  Timers
 }
 import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContextFactory}
 
@@ -37,13 +38,14 @@ object StoryRunner {
     Props(classOf[StoryRunner], runnerName, appContext, system)
 
   case class Run(story: Story)
-  case class Restart(story: Story)
+  case class Rerun(newStory: Story)
   case class Shutdown(storyNameOption: Option[String] = None)
 }
 
 class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: ActorSystem)
     extends Actor
-    with ActorLogging {
+    with ActorLogging
+    with Timers {
 
   import StoryRunner._
 
@@ -53,6 +55,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
     TaskRunningContextFactory(system, appContext)
 
   val runningStories: mutable.Map[ActorRef, String] = mutable.Map.empty
+  var increasingId: Int = 0
 
   // Supervision strategy
   val loggerSupervistionDecider: PartialFunction[Throwable, Throwable] = {
@@ -72,19 +75,23 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       val runningContext =
         runningContextFactory.createNewRunningContext(runnerName, self, story.settings)
 
-      val storyRunningCount = runningStories.count(_._2 == storyName)
+      val actorName = if (runningStories.exists(_._2 == storyName)) {
+        increasingId += 1
+        s"story-$storyName#$increasingId"
+      } else {
+        s"story-$storyName"
+      }
       val storyActor =
-        context.actorOf(
-          StoryActor.props(story, self)(runningContext),
-          s"story-$storyName-${storyRunningCount + 1}"
-        )
+        context.actorOf(StoryActor.props(story, self)(runningContext), actorName)
       context.watch(storyActor)
 
       runningStories += (storyActor -> storyName)
 
-    case Restart(story) =>
-      val storyName = story.storyName
-      log.info(s"going to restart story $storyName")
+    case Rerun(newStory) =>
+      val storyName = newStory.storyName
+      log.info(s"going to re-run story $storyName with new settings")
+      self ! Shutdown(Some(storyName))
+      timers.startSingleTimer(newStory, Run(newStory), 3.seconds)
 
     case Shutdown(storyNameOption) =>
       storyNameOption match {
@@ -95,8 +102,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       }
 
     case Terminated(storyActor) =>
-      val storyName = runningStories.getOrElse(storyActor, storyActor.path.name)
-      log.warning(s"story $storyName is terminated.")
+      log.warning(s"story ${storyActor.path} is terminated.")
       runningStories -= storyActor
   }
 }
