@@ -23,7 +23,7 @@ import com.thenetcircle.event_bus.context.TaskRunningContext
 
 trait TransformTask extends Task {
 
-  def getHandler()(
+  def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed]
 

@@ -100,7 +100,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
 
-  override def getHandler()(
+  override def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] = {
 

@@ -63,7 +63,7 @@ class Story(val settings: StorySettings,
               _chain
                 .via(
                   wrapTask(
-                    Flow[Payload].map(_._2).via(_transform.getHandler()),
+                    Flow[Payload].map(_._2).via(_transform.prepare()),
                     s"story-$storyName-transform-$transformId"
                   )
                 )
@@ -72,7 +72,7 @@ class Story(val settings: StorySettings,
           .getOrElse(Flow[Payload])
 
       val sinkHandler =
-        wrapTask(Flow[Payload].map(_._2).via(sinkTask.getHandler()), s"story-$storyName-sink")
+        wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story-$storyName-sink")
 
       runningFuture = Some(
         sourceTask.runWith(
@@ -149,7 +149,7 @@ class Story(val settings: StorySettings,
               }
               .via(
                 fallbackTask
-                  .map(_task => Flow[Payload].via(_task.getTaskFallbackHandler(taskName)))
+                  .map(_task => Flow[Payload].via(_task.prepareForTask(taskName)))
                   .getOrElse(Flow[Payload])
               )
 

@@ -59,7 +59,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
   var retrySender: Option[ActorRef] = None
 
-  override def getHandler()(
+  override def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] = {
 

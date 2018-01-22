@@ -50,7 +50,7 @@ class EventGroupResolverTransformTest extends BaseTest {
 
     val done = Source(0 to 100000)
       .map(i => createTestEvent(s"message.kick.$i"))
-      .via(resolver.getHandler())
+      .via(resolver.prepare())
       .runForeach {
         case (resultTry, event) =>
           println(event.metadata.group)

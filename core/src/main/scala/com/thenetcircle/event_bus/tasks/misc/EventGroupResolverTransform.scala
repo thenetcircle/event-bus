@@ -102,7 +102,7 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
     return event.withGroup(group)
   }
 
-  override def getHandler()(
+  override def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] = {
 

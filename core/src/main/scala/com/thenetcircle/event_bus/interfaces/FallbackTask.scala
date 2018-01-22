@@ -30,7 +30,7 @@ trait FallbackTask extends Task {
    * @param taskName [[String]]
    * @param runningContext [[TaskRunningContext]]
    */
-  def getTaskFallbackHandler(taskName: String)(
+  def prepareForTask(taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
 

@@ -59,7 +59,7 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
 
   }
 
-  override def getTaskFallbackHandler(taskName: String)(
+  override def prepareForTask(taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = {
 

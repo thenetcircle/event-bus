@@ -61,6 +61,7 @@ abstract class BaseTest(_appContext: AppContext)
       system,
       materializer,
       testExecutionContext,
+      "TestStoryRunner",
       system.actorOf(TestActors.blackholeProps),
       StorySettings("teststory")
     )
