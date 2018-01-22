@@ -37,11 +37,7 @@ object ZKRunnerApp extends App with StrictLogging {
   implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
 
   // Initialize StoryRunner
-  var runnerName: String = if (args.length > 0) args(0) else ""
-  if (runnerName.isEmpty) {
-    runnerName = appContext.getDefaultRunnerName()
-    logger.warn(s"Didn't set runner-name or it's empty, use $runnerName instead.")
-  }
+  var runnerName: String = config.getString("app.runner-name")
   val storyRunner: ActorRef =
     system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
 
@@ -56,12 +52,12 @@ object ZKRunnerApp extends App with StrictLogging {
   })
 
   // Setup Zookeeper
+  if (args.length == 0 || args(0).isEmpty) {
+    throw new RuntimeException("Argument 1 zookeeper connect string is required.")
+  }
+  val zookeeperConnectString = args(0)
   val zkManager: ZookeeperManager =
-    ZookeeperManager(
-      config.getString("app.zookeeper-server"),
-      s"/event-bus/${appContext.getAppName()}"
-    )
-  zkManager.start()
+    ZookeeperManager.init(zookeeperConnectString, s"/event-bus/${appContext.getAppName()}")
   zkManager.registerStoryRunner(runnerName)
 
   // Fetch stories and run
@@ -69,8 +65,9 @@ object ZKRunnerApp extends App with StrictLogging {
   val storyDAO: StoryDAO = StoryZookeeperDAO(zkManager)
 
   storyDAO
-    .getStoriesByRunnerName(runnerName)
-    .foreach(storyInfo => {
+    .getRunnableStoryNames(runnerName)
+    .foreach(storyName => {
+      val storyInfo = storyDAO.getStoryInfo(storyName)
       val story = storyBuilder.buildStory(storyInfo)
       storyRunner ! StoryRunner.Run(story)
     })

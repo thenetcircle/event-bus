@@ -17,6 +17,10 @@
 
 package com.thenetcircle.event_bus.helper
 import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.story.{Story, StoryBuilder, StoryZookeeperDAO, TaskBuilderFactory}
+import com.thenetcircle.event_bus.tasks.cassandra.CassandraFallback
+import com.thenetcircle.event_bus.tasks.http.HttpSource
+import com.thenetcircle.event_bus.tasks.kafka.KafkaSink
 
 class ZKManagerTest extends BaseTest {
 
@@ -24,15 +28,40 @@ class ZKManagerTest extends BaseTest {
 
   it should "do proper initialization" in {
 
-    /*val zkmanager = new ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181")
+    val runnerName = "test-runner"
 
-    zkmanager.init()
+    val zkManager =
+      ZookeeperManager.init(
+        "maggie-zoo-1:2181,maggie-zoo-2:2181",
+        s"/event-bus/${appContext.getAppName()}"
+      )
 
-    zkmanager.registerStoryExecutor("test")
+    zkManager.registerStoryRunner(runnerName)
 
-    println(zkmanager.fetchStories())
+    val storyDAO: StoryZookeeperDAO = StoryZookeeperDAO(zkManager)
+    val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
-    Thread.sleep(10000)*/
+    storyDAO
+      .getRunnableStoryNames(runnerName)
+      .foreach(storyName => {
+
+        logger.debug(s"get story name $storyName")
+
+        val storyInfo = storyDAO.getStoryInfo(storyName)
+
+        logger.debug(s"get story info $storyInfo")
+
+        val story: Story = storyBuilder.buildStory(storyInfo)
+        logger.debug(s"story settings ${story.settings}")
+        logger.debug(s"source task ${story.sourceTask.asInstanceOf[HttpSource].settings}")
+        logger.debug(s"sink task ${story.sinkTask.asInstanceOf[KafkaSink].settings}")
+        logger.debug(s"transform task ${story.transformTasks}")
+        logger
+          .debug(s"fallback task ${story.fallbackTask.asInstanceOf[CassandraFallback].settings}")
+
+      })
+
+    Thread.sleep(10000)
 
   }
 

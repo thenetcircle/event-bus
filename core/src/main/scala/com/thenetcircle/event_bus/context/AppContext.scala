@@ -45,8 +45,6 @@ class AppContext(appName: String,
     for (hook <- shutdownHooks) hook()
   }
 
-  def getDefaultRunnerName(): String = getSystemConfig().getString("app.default-runner-name")
-
 }
 
 object AppContext {

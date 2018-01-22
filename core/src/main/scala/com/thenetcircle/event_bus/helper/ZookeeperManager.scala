@@ -21,16 +21,15 @@ import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
-import org.apache.zookeeper.CreateMode
 
 import scala.collection.JavaConverters._
 
-class ZookeeperManager(connectString: String, rootPath: String) extends StrictLogging {
+class ZookeeperManager private (connectString: String, rootPath: String) extends StrictLogging {
 
-  val client: CuratorFramework =
+  private var client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
 
-  def start(): Unit = {
+  def start(): Unit = if (client.getState != CuratorFrameworkState.STARTED) {
     client.start()
     sys.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
 
@@ -47,21 +46,17 @@ class ZookeeperManager(connectString: String, rootPath: String) extends StrictLo
 
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
-  def registerStoryRunner(runnerName: String): String = {
-    val payload = ""
-    client
-      .create()
-      .creatingParentsIfNeeded()
-      .withProtection()
-      .withMode(CreateMode.EPHEMERAL_SEQUENTIAL)
-      .forPath(getAbsPath(s"runners/$runnerName/member"), payload.getBytes())
+  def registerStoryRunner(runnerName: String): Unit = {
+    if (client.checkExists().forPath(getAbsPath(s"runners/$runnerName")) == null) {
+      client.create().creatingParentsIfNeeded().forPath(getAbsPath(s"runners/$runnerName"))
+    }
   }
 
   def getClient(): CuratorFramework = client
 
   def getData(relativePath: String): Option[String] = {
     try {
-      Some(client.getData.forPath(relativePath).mkString)
+      Some(new String(client.getData.forPath(getAbsPath(relativePath)), "UTF-8"))
     } catch {
       case e: Throwable =>
         logger.info(s"getData from $relativePath failed with error: ${e.getMessage}")
@@ -105,10 +100,25 @@ class ZookeeperManager(connectString: String, rootPath: String) extends StrictLo
 }
 
 object ZookeeperManager {
-  def apply(connectString: String, rootPath: String): ZookeeperManager = {
+  private var _instance: Option[ZookeeperManager] = None
+
+  /**
+   * Init ZookeeperManger and Start zookeeper client
+   *
+   * @param connectString
+   * @param rootPath
+   */
+  def init(connectString: String, rootPath: String): ZookeeperManager = _instance.getOrElse {
     if (connectString.isEmpty || rootPath.isEmpty) {
       throw new IllegalArgumentException("Parameters are unavailable.")
     }
-    new ZookeeperManager(connectString, rootPath)
+    _instance = Some(new ZookeeperManager(connectString, rootPath))
+    _instance.foreach(_.start())
+    _instance.get
   }
+
+  /**
+   * @throws java.util.NoSuchElementException if not init yet.
+   */
+  def getInstance(): ZookeeperManager = _instance.get
 }

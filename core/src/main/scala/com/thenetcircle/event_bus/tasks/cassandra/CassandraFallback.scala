@@ -37,11 +37,11 @@ import scala.util.control.NonFatal
 
 case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraFallback(settings: CassandraSettings) extends FallbackTask with StrictLogging {
+class CassandraFallback(val settings: CassandraSettings) extends FallbackTask with StrictLogging {
 
-  var clusterOption: Option[Cluster] = None
-  var sessionOption: Option[Session] = None
-  var statementOption: Option[PreparedStatement] = None
+  private var clusterOption: Option[Cluster] = None
+  private var sessionOption: Option[Session] = None
+  private var statementOption: Option[PreparedStatement] = None
 
   def initializeCassandra(keyspace: String): Unit = if (sessionOption.isEmpty) {
     clusterOption = Some(
@@ -79,7 +79,7 @@ class CassandraFallback(settings: CassandraSettings) extends FallbackTask with S
     import GuavaFutures._
 
     Flow[(EventStatus, Event)]
-      .mapAsyncUnordered(settings.parallelism) {
+      .mapAsync(settings.parallelism) {
         case input @ (_, event) ⇒
           try {
             session
