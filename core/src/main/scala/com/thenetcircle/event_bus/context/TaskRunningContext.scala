@@ -40,8 +40,6 @@ class TaskRunningContext(appContext: AppContext,
   def getStoryRunner(): ActorRef = storyRunner
   def getStoryName(): String = storySettings.name
 
-  def addShutdownHook(body: => Unit): Unit = appContext.addShutdownHook(body)
-
 }
 
 class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) extends StrictLogging {

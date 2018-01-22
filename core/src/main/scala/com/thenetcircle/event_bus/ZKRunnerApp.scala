@@ -27,7 +27,7 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object ZKRunnerLauncher extends App with StrictLogging {
+object ZKRunnerApp extends App with StrictLogging {
 
   logger.info("Application is initializing.")
 
@@ -36,6 +36,25 @@ object ZKRunnerLauncher extends App with StrictLogging {
   implicit val appContext: AppContext = AppContext(config)
   implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
 
+  // Initialize StoryRunner
+  var runnerName: String = if (args.length > 0) args(0) else ""
+  if (runnerName.isEmpty) {
+    runnerName = appContext.getDefaultRunnerName()
+    logger.warn(s"Didn't set runner-name or it's empty, use $runnerName instead.")
+  }
+  val storyRunner: ActorRef =
+    system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
+
+  // Setup shutdown hooks
+  sys.addShutdownHook({
+    logger.info("Application is shutting down...")
+    Await
+      .result(akka.pattern.gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()), 3.seconds)
+    appContext.shutdown()
+    system.terminate()
+    Await.result(system.whenTerminated, 6.seconds)
+  })
+
   // Setup Zookeeper
   val zkManager: ZookeeperManager =
     ZookeeperManager(
@@ -43,19 +62,9 @@ object ZKRunnerLauncher extends App with StrictLogging {
       s"/event-bus/${appContext.getAppName()}"
     )
   zkManager.start()
-  appContext.setZookeeperManager(zkManager)
-
-  // Run Stories
-  var runnerName: String = if (args.length > 0) args(0) else ""
-  if (runnerName.isEmpty) {
-    runnerName = appContext.getDefaultRunnerName()
-    logger.warn(s"Didn't set runner-name or it's empty, use $runnerName instead.")
-  }
-
-  val storyRunner: ActorRef =
-    system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
   zkManager.registerStoryRunner(runnerName)
 
+  // Fetch stories and run
   val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(config))
   val storyDAO: StoryDAO = StoryZookeeperDAO(zkManager)
 
@@ -65,13 +74,5 @@ object ZKRunnerLauncher extends App with StrictLogging {
       val story = storyBuilder.buildStory(storyInfo)
       storyRunner ! StoryRunner.Run(story)
     })
-
-  sys.addShutdownHook({
-    logger.info("Application is shutting down...")
-    storyRunner ! StoryRunner.Shutdown()
-    appContext.shutdown()
-    system.terminate()
-    Await.result(system.whenTerminated, 60.seconds)
-  })
 
 }

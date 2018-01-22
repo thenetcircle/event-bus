@@ -17,7 +17,6 @@
 
 package com.thenetcircle.event_bus.context
 
-import com.thenetcircle.event_bus.helper.ZookeeperManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
@@ -45,12 +44,6 @@ class AppContext(appName: String,
   def shutdown(): Unit = {
     for (hook <- shutdownHooks) hook()
   }
-
-  var zkManager: Option[ZookeeperManager] = None
-  def setZookeeperManager(_zkManager: ZookeeperManager): Unit = synchronized {
-    zkManager = Some(_zkManager)
-  }
-  def getZookeeperManager(): Option[ZookeeperManager] = synchronized { zkManager }
 
   def getDefaultRunnerName(): String = getSystemConfig().getString("app.default-runner-name")
 
