@@ -2,9 +2,10 @@ import sbt._
 
 object Dependencies {
   val akkaVersion = "2.5.7"
-  val akkaHttpVersion = "10.0.9"
+  val akkaHttpVersion = "10.0.11"
   val kamonVersion = "0.6.7"
   val gatlingVersion = "2.2.2"
+  val zookeeperVersion = "3.4.11"
 
   // Dependencies
   val akka = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
@@ -17,7 +18,7 @@ object Dependencies {
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.7.2"
 
   val curator = "org.apache.curator" % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, needs to exclude original one
-  val zookeeper = "org.apache.zookeeper" % "zookeeper" % "3.4.11" exclude ("org.slf4j", "slf4j-log4j12")
+  val zookeeper = "org.apache.zookeeper" % "zookeeper" % zookeeperVersion exclude ("org.slf4j", "slf4j-log4j12")
 
   val sprayJson = "io.spray" %% "spray-json" % "1.3.3"
   val logback = "ch.qos.logback" % "logback-classic" % "1.2.3"

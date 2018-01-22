@@ -30,6 +30,6 @@ trait Task {
    *
    * @param runningContext [[TaskRunningContext]]
    */
-  def shutdown()(implicit runningContext: TaskRunningContext): Unit
+  def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 
 }
