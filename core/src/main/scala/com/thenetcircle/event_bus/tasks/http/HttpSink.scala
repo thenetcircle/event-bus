@@ -74,7 +74,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         system
           .actorOf(
             Props(classOf[RetrySender], settings, runningContext),
-            runningContext.getStorySettings().name + "-http-sender"
+            runningContext.getStoryName() + "-http-sender"
           )
       )
       retrySender.get

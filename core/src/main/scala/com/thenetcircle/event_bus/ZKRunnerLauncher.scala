@@ -17,8 +17,8 @@
 
 package com.thenetcircle.event_bus
 
-import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContextFactory}
+import akka.actor.{ActorRef, ActorSystem}
+import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.helper.ZookeeperManager
 import com.thenetcircle.event_bus.story._
 import com.typesafe.config.{Config, ConfigFactory}
@@ -27,7 +27,7 @@ import com.typesafe.scalalogging.StrictLogging
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object ZookeeperBasedLauncher extends App with StrictLogging {
+object ZKRunnerLauncher extends App with StrictLogging {
 
   logger.info("Application is initializing.")
 
@@ -46,24 +46,29 @@ object ZookeeperBasedLauncher extends App with StrictLogging {
   appContext.setZookeeperManager(zkManager)
 
   // Run Stories
-  // TODO append server info
-  val storyRunner: StoryRunner =
-    StoryRunner(if (args.length > 0) args(0) else "", TaskRunningContextFactory(system, appContext))
-  zkManager.registerStoryRunner(storyRunner.getName())
+  var runnerName: String = if (args.length > 0) args(0) else ""
+  if (runnerName.isEmpty) {
+    runnerName = appContext.getDefaultRunnerName()
+    logger.warn(s"Didn't set runner-name or it's empty, use $runnerName instead.")
+  }
+
+  val storyRunner: ActorRef =
+    system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
+  zkManager.registerStoryRunner(runnerName)
 
   val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(config))
   val storyDAO: StoryDAO = StoryZookeeperDAO(zkManager)
 
   storyDAO
-    .getStoriesByRunnerName(storyRunner.getName())
+    .getStoriesByRunnerName(runnerName)
     .foreach(storyInfo => {
       val story = storyBuilder.buildStory(storyInfo)
-      storyRunner.run(story)
+      storyRunner ! StoryRunner.Run(story)
     })
 
   sys.addShutdownHook({
     logger.info("Application is shutting down...")
-    storyRunner.shutdown()
+    storyRunner ! StoryRunner.Shutdown()
     appContext.shutdown()
     system.terminate()
     Await.result(system.whenTerminated, 60.seconds)

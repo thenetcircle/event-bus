@@ -28,15 +28,16 @@ class TaskRunningContext(appContext: AppContext,
                          system: ActorSystem,
                          materializer: Materializer,
                          executionContext: ExecutionContext,
-                         storyWrapper: ActorRef,
+                         storyRunnerName: String,
+                         storyRunner: ActorRef,
                          storySettings: StorySettings) {
 
   def getAppContext(): AppContext = appContext
   def getActorSystem(): ActorSystem = system
   def getMaterializer(): Materializer = materializer
   def getExecutionContext(): ExecutionContext = executionContext
-  def getStoryWrapper(): ActorRef = storyWrapper
-  def getStorySettings(): StorySettings = storySettings
+  def getStoryRunnerName(): String = storyRunnerName
+  def getStoryRunner(): ActorRef = storyRunner
   def getStoryName(): String = storySettings.name
 
   def addShutdownHook(body: => Unit): Unit = appContext.addShutdownHook(body)
@@ -50,19 +51,21 @@ class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) ext
       Supervision.Stop
   }
 
-  private lazy val materializer: Materializer =
+  lazy val materializer: Materializer =
     ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy(decider))(system)
 
-  private lazy val executionContext: ExecutionContext = ExecutionContext.global
+  lazy val executionContext: ExecutionContext = ExecutionContext.global
 
-  def createNewRunningContext(storyWrapper: ActorRef,
+  def createNewRunningContext(storyRunnerName: String,
+                              storyRunner: ActorRef,
                               storySettings: StorySettings): TaskRunningContext = {
     new TaskRunningContext(
       appContext,
       system,
       materializer,
       executionContext,
-      storyWrapper,
+      storyRunnerName,
+      storyRunner,
       storySettings
     )
   }
