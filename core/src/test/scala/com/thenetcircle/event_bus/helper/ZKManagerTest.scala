@@ -17,10 +17,7 @@
 
 package com.thenetcircle.event_bus.helper
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.story.{Story, StoryBuilder, StoryZookeeperDAO, TaskBuilderFactory}
-import com.thenetcircle.event_bus.tasks.cassandra.CassandraFallback
-import com.thenetcircle.event_bus.tasks.http.HttpSource
-import com.thenetcircle.event_bus.tasks.kafka.KafkaSink
+import com.thenetcircle.event_bus.story.{StoryBuilder, StoryZookeeperDAO, TaskBuilderFactory}
 
 class ZKManagerTest extends BaseTest {
 
@@ -42,10 +39,73 @@ class ZKManagerTest extends BaseTest {
     val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
     storyDAO
-      .getRunnableStoryNames(runnerName)
+      .getRunnableStories(runnerName)
       .foreach(storyName => {
 
-        logger.debug(s"get story name $storyName")
+        /*val pathCache =
+          new PathChildrenCache(
+            zkManager.getClient(),
+            s"/event-bus/${appContext.getAppName()}/stories/$storyName",
+            false
+          )
+
+        pathCache.start()
+
+        pathCache.getCurrentData.asScala
+          .foreach(c => logger.debug(s"---- ${c.getData} -- ${c.getData} ----"))
+
+        pathCache.getListenable.addListener(new PathChildrenCacheListener {
+          override def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent): Unit = {
+            logger.debug(
+              s"==== ${event.getType} -- ${event.getData.getData} --- ${event.getData.getPath} ===="
+            )
+          }
+        })
+
+        val treeCache =
+          new TreeCache(
+            zkManager.getClient(),
+            s"/event-bus/${appContext.getAppName()}/stories/$storyName"
+          )
+
+        treeCache.start()
+
+        treeCache.getListenable.addListener(new TreeCacheListener {
+          override def childEvent(client: CuratorFramework, event: TreeCacheEvent): Unit = {
+            logger.debug(
+              s"==== ${event.getType} -- ${event.getData.getData} --- ${event.getData.getPath} ===="
+            )
+          }
+        })*/
+
+        zkManager.watchChildren(s"runners/$runnerName/stories") { event =>
+          val path = event.getData.getPath
+          val category = try {
+            path.substring(path.lastIndexOf('/') + 1)
+          } catch {
+            case _: Throwable => ""
+          }
+
+          logger.debug(
+            s"==== ${event.getType} -- ${new String(event.getData.getData, "UTF-8")} --- ${event.getData.getPath} --- $category ===="
+          )
+
+        }
+
+        zkManager.watchChildren(s"stories/$storyName") { event =>
+          val path = event.getData.getPath
+          val category = try {
+            path.substring(path.lastIndexOf('/') + 1)
+          } catch {
+            case _: Throwable => ""
+          }
+
+          logger.debug(
+            s"==== ${event.getType} -- ${new String(event.getData.getData, "UTF-8")} --- ${event.getData.getPath} --- $category ===="
+          )
+        }
+
+        /*logger.debug(s"get story name $storyName")
 
         val storyInfo = storyDAO.getStoryInfo(storyName)
 
@@ -55,13 +115,19 @@ class ZKManagerTest extends BaseTest {
         logger.debug(s"story settings ${story.settings}")
         logger.debug(s"source task ${story.sourceTask.asInstanceOf[HttpSource].settings}")
         logger.debug(s"sink task ${story.sinkTask.asInstanceOf[KafkaSink].settings}")
-        logger.debug(s"transform task ${story.transformTasks}")
+        story.transformTasks.foreach(
+          _.foreach(
+            ts => logger.debug(s"transform task ${ts.asInstanceOf[TNCKafkaTopicResolver].useCache}")
+          )
+        )
         logger
-          .debug(s"fallback task ${story.fallbackTask.asInstanceOf[CassandraFallback].settings}")
+          .debug(
+            s"fallback task ${story.fallbackTask.get.asInstanceOf[CassandraFallback].settings}"
+          )*/
 
       })
 
-    Thread.sleep(10000)
+    Thread.sleep(180000)
 
   }
 

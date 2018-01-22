@@ -17,13 +17,17 @@
 
 package com.thenetcircle.event_bus.tasks.misc
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZookeeperManager}
 
-class EventGroupResolverTransformTest extends BaseTest {
+class TNCKafkaTopicResolverTest extends BaseTest {
 
-  behavior of "EventGroupResolverTransform"
+  behavior of "TNCKafkaTopicResolver"
 
-  val resolver = new EventGroupResolverTransform("event-default")
+  val zkManager = ZookeeperManager.init(
+    "maggie-zoo-1:2181,maggie-zoo-2:2181",
+    s"/event-bus/${appContext.getAppName()}"
+  )
+  val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
   val delimiter = ConfigStringParser.delimiter
   resolver.updateMapping(
     Map(

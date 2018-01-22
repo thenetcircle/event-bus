@@ -14,14 +14,14 @@ case class StoryInfo(name: String,
                      fallback: Option[String])
 
 trait StoryDAO {
-  def getRunnableStoryNames(runnerName: String): List[String]
+  def getRunnableStories(runnerName: String): List[String]
   def getStoryInfo(storyName: String): StoryInfo
 }
 
 class StoryZookeeperDAO(zkManager: ZookeeperManager)(implicit appContext: AppContext)
     extends StoryDAO {
   // TODO: watch new stories, and story changes
-  def getRunnableStoryNames(runnerName: String): List[String] = {
+  def getRunnableStories(runnerName: String): List[String] = {
     zkManager
       .getChildren(s"runners/$runnerName/stories")
       .getOrElse(List.empty[String])
@@ -87,7 +87,7 @@ class StoryConfigDAO(config: Config) extends StoryDAO {
     )
   )
 
-  override def getRunnableStoryNames(runnerName: String): List[String] = stories.map(_.name)
+  override def getRunnableStories(runnerName: String): List[String] = stories.map(_.name)
 
   override def getStoryInfo(storyName: String): StoryInfo = {
     stories.find(info => info.name == storyName).get

@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZookeeperManager}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{
   Event,
@@ -36,7 +36,9 @@ import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = false)
+class TNCKafkaTopicResolver(zkManager: ZookeeperManager,
+                            val defaultTopic: String,
+                            val useCache: Boolean = false)
     extends TransformTask
     with StrictLogging {
 
@@ -83,7 +85,7 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
     if (event.metadata.group.isDefined) return event
-    if (event.metadata.name.isEmpty) return event.withGroup(defaultGroup)
+    if (event.metadata.name.isEmpty) return event.withGroup(defaultTopic)
 
     val eventName = event.metadata.name.get
     var group = ""
@@ -92,11 +94,11 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
       if (cachedGroup != null) {
         group = cachedGroup
       } else {
-        group = getGroupFromIndex(eventName).getOrElse(defaultGroup)
+        group = getGroupFromIndex(eventName).getOrElse(defaultTopic)
         cached.put(eventName, group)
       }
     } else {
-      group = getGroupFromIndex(eventName).getOrElse(defaultGroup)
+      group = getGroupFromIndex(eventName).getOrElse(defaultTopic)
     }
 
     return event.withGroup(group)
@@ -121,17 +123,20 @@ class EventGroupResolverTransform(defaultGroup: String, useCache: Boolean = fals
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 }
 
-class EventGroupResolverTransformBuilder() extends TransformTaskBuilder {
+class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
 
   override def build(
       configString: String
-  )(implicit buildingContext: TaskBuildingContext): EventGroupResolverTransform = {
+  )(implicit buildingContext: TaskBuildingContext): TNCKafkaTopicResolver = {
     val config = ConfigStringParser
       .convertStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.event-group-resolver"))
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-topic-resolver"))
 
-    new EventGroupResolverTransform(
-      config.getString("default-group"),
+    val zkManger = ZookeeperManager.getInstance()
+
+    new TNCKafkaTopicResolver(
+      zkManger,
+      config.getString("default-topic"),
       config.getBoolean("use-cache")
     )
   }

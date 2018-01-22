@@ -17,21 +17,30 @@
 
 package com.thenetcircle.event_bus.helper
 
+import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.imps.CuratorFrameworkState
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
+import org.apache.curator.framework.recipes.cache.{
+  PathChildrenCache,
+  PathChildrenCacheEvent,
+  PathChildrenCacheListener
+}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.collection.JavaConverters._
 
-class ZookeeperManager private (connectString: String, rootPath: String) extends StrictLogging {
+class ZookeeperManager private (connectString: String, rootPath: String)(
+    implicit appContext: AppContext
+) extends StrictLogging {
 
   private var client: CuratorFramework =
     CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
 
   def start(): Unit = if (client.getState != CuratorFrameworkState.STARTED) {
     client.start()
-    sys.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
+    appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
 
     // Check and Create root nodes
     if (client.checkExists().forPath(getAbsPath("stories")) == null) {
@@ -80,23 +89,41 @@ class ZookeeperManager private (connectString: String, rootPath: String) extends
   }
 
   def getChildrenData(relativePath: String): Option[List[(String, String)]] = {
-    getChildren(relativePath).map(
-      _.flatMap(childName => getData(childName).map(data => childName -> data))
-    )
+    getChildren(relativePath)
+      .map(children => {
+        children
+          .map(childName => getData(s"$relativePath/$childName").map(data => childName -> data))
+          .filter(_.isDefined)
+          .map(_.get)
+      })
   }
 
-  /*def requestLeadership(relativePath: String,
-                        callback: (LeaderSelector, ZKManager) => Unit): Unit = {
-    val zkManager = this
-    val leaderSelector =
-      new LeaderSelector(client, getAbsPath(relativePath), new LeaderSelectorListenerAdapter {
-        override def takeLeadership(client: CuratorFramework): Unit = {
-          callback(this, zkManager)
-        }
-      })
-    leaderSelector.start()
-  }*/
+  def watchChildren(
+      relativePath: String,
+      startMode: StartMode = StartMode.NORMAL,
+      fetchData: Boolean = true
+  )(callback: (PathChildrenCacheEvent) => Unit): PathChildrenCache = {
+    val watcher =
+      new PathChildrenCache(client, getAbsPath(relativePath), fetchData)
+    watcher.start(startMode)
 
+    watcher.getListenable.addListener(new PathChildrenCacheListener {
+      override def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent): Unit = {
+        var data =
+          if (event.getData.getData.nonEmpty) new String(event.getData.getData, "UTF-8") else ""
+
+        logger.debug(
+          s"[zookeeper event] type: ${event.getType}, path: ${event.getData.getPath}, data: $data"
+        )
+
+        callback(event)
+      }
+    })
+
+    appContext.addShutdownHook(watcher.close())
+
+    watcher
+  }
 }
 
 object ZookeeperManager {
@@ -108,7 +135,9 @@ object ZookeeperManager {
    * @param connectString
    * @param rootPath
    */
-  def init(connectString: String, rootPath: String): ZookeeperManager = _instance.getOrElse {
+  def init(connectString: String, rootPath: String)(
+      implicit appContext: AppContext
+  ): ZookeeperManager = _instance.getOrElse {
     if (connectString.isEmpty || rootPath.isEmpty) {
       throw new IllegalArgumentException("Parameters are unavailable.")
     }

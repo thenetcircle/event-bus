@@ -42,7 +42,7 @@ import scala.concurrent.duration._
 
 case class KafkaSinkSettings(bootstrapServers: String,
                              defaultTopic: String = "event-default",
-                             useEventChannel: Boolean = true,
+                             useEventGroupAsTopic: Boolean = true,
                              parallelism: Int = 100,
                              closeTimeout: FiniteDuration = 60.seconds,
                              useDispatcher: Option[String] = None,
@@ -83,7 +83,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
   def createProducerRecord(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
     val topic: String =
-      if (settings.useEventChannel) event.metadata.group.getOrElse(settings.defaultTopic)
+      if (settings.useEventGroupAsTopic) event.metadata.group.getOrElse(settings.defaultTopic)
       else settings.defaultTopic
     val timestamp: Long = event.createdAt.getTime
     val key: ProducerKey = KafkaKey(event)
@@ -135,7 +135,7 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
       KafkaSinkSettings(
         config.as[String]("bootstrap-servers"),
         config.as[String]("default-topic"),
-        config.as[Boolean]("use-event-channel"),
+        config.as[Boolean]("use-event-group-as-topic"),
         config.as[Int]("parallelism"),
         config.as[FiniteDuration]("close-timeout"),
         config.as[Option[String]]("use-dispatcher"),

@@ -37,6 +37,7 @@ object StoryRunner {
     Props(classOf[StoryRunner], runnerName, appContext, system)
 
   case class Run(story: Story)
+  case class Restart(story: Story)
   case class Shutdown(storyNameOption: Option[String] = None)
 }
 
@@ -80,6 +81,10 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       context.watch(storyActor)
 
       runningStories += (storyActor -> storyName)
+
+    case Restart(story) =>
+      val storyName = story.storyName
+      log.info(s"going to restart story $storyName")
 
     case Shutdown(storyNameOption) =>
       storyNameOption match {
