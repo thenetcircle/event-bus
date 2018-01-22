@@ -24,12 +24,11 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.event.NormalEvent
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.event.LightEvent
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ, ToFB}
-import com.thenetcircle.event_bus.interfaces.{SourceTask, SourceTaskBuilder}
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody}
+import com.thenetcircle.event_bus.interfaces.{Event, EventBody, SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -105,8 +104,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
           )
           (
             ToFB(Some(ex)),
-            LightEvent(body = EventBody(messageValue, eventFormat))
-              .withPassThrough[CommittableOffset](message.committableOffset)
+            NormalEvent
+              .createFromFailure(
+                ex,
+                EventBody(messageValue, eventFormat),
+                Some(message.committableOffset)
+              )
           )
       }
   }

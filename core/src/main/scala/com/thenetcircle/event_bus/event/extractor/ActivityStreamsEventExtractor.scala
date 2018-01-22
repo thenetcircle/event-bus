@@ -104,7 +104,7 @@ class ActivityStreamsEventExtractor
         )
       }
 
-      RichEvent(
+      NormalEvent(
         uuid = uuid,
         metadata = metaData,
         body = EventBody(data, getFormat()),

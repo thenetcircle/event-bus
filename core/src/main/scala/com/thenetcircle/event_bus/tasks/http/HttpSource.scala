@@ -26,7 +26,7 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.LightEvent
+import com.thenetcircle.event_bus.event.NormalEvent
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{
   DataFormat,
@@ -35,8 +35,7 @@ import com.thenetcircle.event_bus.event.extractor.{
 }
 import com.thenetcircle.event_bus.helper.ConfigStringParser
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ}
-import com.thenetcircle.event_bus.interfaces.{SourceTask, SourceTaskBuilder}
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.interfaces.{Event, SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -72,11 +71,11 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     Flow[HttpRequest]
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
-          .map(event => Norm -> event)
+          .map[(Status, Event)](event => (Norm, event))
           .recover {
             case ex: EventExtractingException =>
               logger.debug(s"A http request unmarshaller failed with error $ex")
-              Fail(ex) -> LightEvent(ex)
+              (Fail(ex), NormalEvent.createFromFailure(ex))
           }
       })
   }
