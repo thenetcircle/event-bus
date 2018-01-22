@@ -109,15 +109,10 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
 
     watcher.getListenable.addListener(new PathChildrenCacheListener {
       override def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent): Unit = {
-        val eventType = event.getType
-        val path = if (event.getData != null) event.getData.getPath else ""
-        var data =
-          if (event.getData != null && event.getData.getData.nonEmpty)
-            new String(event.getData.getData, "UTF-8")
-          else ""
-
-        logger.debug(s"[zookeeper event] type: $eventType, path: $path, data: $data")
-
+        logger.debug(
+          s"get new event from zookeeper type: ${event.getType}, path: ${if (event.getData != null) event.getData.getPath
+          else ""}"
+        )
         callback(event, watcher)
       }
     })
