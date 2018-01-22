@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.helper
+package com.thenetcircle.event_bus.misc
 import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode

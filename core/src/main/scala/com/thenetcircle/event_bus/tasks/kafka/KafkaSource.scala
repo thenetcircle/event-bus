@@ -26,7 +26,7 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.NormalEvent
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ, ToFB}
 import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
@@ -202,8 +202,8 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): KafkaSource = {
-    val config = ConfigStringParser
-      .convertStringToConfig(configString)
+    val config = Util
+      .convertJsonStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.kafka-source"))
 
     val subscribedTopics: Either[Set[String], String] = {

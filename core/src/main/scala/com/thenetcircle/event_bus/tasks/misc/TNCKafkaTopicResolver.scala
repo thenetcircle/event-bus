@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZKManager}
+import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{
   Event,
@@ -65,7 +65,7 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
       case (group, submap) =>
         submap
           .get("patterns")
-          .foreach(_.split(Regex.quote(ConfigStringParser.delimiter)).foreach(pattern => {
+          .foreach(_.split(Regex.quote(Util.configDelimiter)).foreach(pattern => {
             _index += (pattern -> group)
           }))
     }
@@ -128,8 +128,8 @@ class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): TNCKafkaTopicResolver = {
-    val config = ConfigStringParser
-      .convertStringToConfig(configString)
+    val config = Util
+      .convertJsonStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-topic-resolver"))
 
     val zkManger = ZKManager.getInstance()

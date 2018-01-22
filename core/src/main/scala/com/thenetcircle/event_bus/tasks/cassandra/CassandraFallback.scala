@@ -26,7 +26,7 @@ import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, FallbackTask, FallbackTaskBuilder}
 import com.typesafe.scalalogging.StrictLogging
@@ -164,8 +164,8 @@ class CassandraFallbackBuilder() extends FallbackTaskBuilder {
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): CassandraFallback = {
-    val config = ConfigStringParser
-      .convertStringToConfig(configString)
+    val config = Util
+      .convertJsonStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.cassandra-fallback"))
 
     val cassandraSettings = CassandraSettings(

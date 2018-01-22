@@ -1,4 +1,4 @@
-package com.thenetcircle.event_bus.helper
+package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.story.StoryInfo

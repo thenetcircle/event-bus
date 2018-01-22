@@ -33,7 +33,7 @@ import com.thenetcircle.event_bus.event.extractor.{
   EventExtractingException,
   EventExtractorFactory
 }
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
@@ -129,8 +129,8 @@ class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
   )(implicit buildingContext: TaskBuildingContext): HttpSource = {
     try {
       val config: Config =
-        ConfigStringParser
-          .convertStringToConfig(configString)
+        Util
+          .convertJsonStringToConfig(configString)
           .withFallback(buildingContext.getSystemConfig().getConfig("task.http-source"))
 
       val serverSettingsMap = config.as[Map[String, String]]("server")

@@ -30,7 +30,7 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender
@@ -220,8 +220,8 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
   )(implicit buildingContext: TaskBuildingContext): HttpSink = {
 
     val config: Config =
-      ConfigStringParser
-        .convertStringToConfig(configString)
+      Util
+        .convertJsonStringToConfig(configString)
         .withFallback(buildingContext.getSystemConfig().getConfig("task.http-sink"))
 
     try {

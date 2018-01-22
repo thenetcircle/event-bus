@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.misc
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.helper.{ConfigStringParser, ZKManager}
+import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 
 class TNCKafkaTopicResolverTest extends BaseTest {
 
@@ -26,7 +26,7 @@ class TNCKafkaTopicResolverTest extends BaseTest {
   val zkManager =
     ZKManager.init("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/${appContext.getAppName()}")
   val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
-  val delimiter = ConfigStringParser.delimiter
+  val delimiter = Util.configDelimiter
   resolver.updateMapping(
     Map(
       "event-user" -> Map("patterns" -> s"""user.*${delimiter}profile.*"""),

@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
-import com.thenetcircle.event_bus.helper.ConfigStringParser
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -54,7 +54,7 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
   }
 
   def parseConfigString(configString: String): (String, String) = {
-    val re = configString.split(Regex.quote(ConfigStringParser.delimiter), 2)
+    val re = configString.split(Regex.quote(Util.configDelimiter), 2)
     (re(0), re(1))
   }
 

@@ -15,18 +15,20 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.helper
+package com.thenetcircle.event_bus.misc
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
-object ConfigStringParser {
+object Util {
 
-  val delimiter = """|||"""
+  val configDelimiter = """|||"""
 
   private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
-  def convertStringToConfig(configString: String): Config = {
+  def convertJsonStringToConfig(configString: String): Config = {
     // ConfigFactory.parseString(configString, parseOptions)
     ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
   }
+
+  def colorfulOutput(msg: String): String = s"""\u001B[32m${msg}B[0m"""
 
 }

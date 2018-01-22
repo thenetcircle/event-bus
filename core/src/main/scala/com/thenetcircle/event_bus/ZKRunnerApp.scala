@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus
 
-import com.thenetcircle.event_bus.helper.ZKManager
+import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 import com.thenetcircle.event_bus.story._
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
@@ -108,7 +108,7 @@ object ZKRunnerApp extends AbstractApp {
     } catch {
       case NonFatal(ex) =>
         logger.error(
-          colorfulOutput(s"fetching or building story failed with error $ex, when run story")
+          Util.colorfulOutput(s"fetching or building story failed with error $ex, when run story")
         )
     }
   }
@@ -120,7 +120,8 @@ object ZKRunnerApp extends AbstractApp {
     } catch {
       case NonFatal(ex) =>
         logger.error(
-          colorfulOutput(s"fetching or building story failed with error $ex, when update story")
+          Util
+            .colorfulOutput(s"fetching or building story failed with error $ex, when update story")
         )
     }
   }
@@ -136,5 +137,4 @@ object ZKRunnerApp extends AbstractApp {
       case _: Throwable => ""
     }
 
-  def colorfulOutput(msg: String): String = s"""\u001B[32m${msg}B[0m"""
 }
