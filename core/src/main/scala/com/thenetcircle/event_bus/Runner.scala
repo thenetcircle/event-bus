@@ -21,7 +21,7 @@ import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
-object ZKRunner extends AbstractApp with StrictLogging {
+object Runner extends AbstractApp with StrictLogging {
 
   def main(args: Array[String]): Unit = {
     val config: Config = ConfigFactory.load()

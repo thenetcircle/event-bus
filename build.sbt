@@ -15,12 +15,14 @@ lazy val core = (project in file("core"))
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}""""
   )
 
-lazy val admin = (project in file("admin"))
+lazy val admin = (project in file("admin/backend"))
+  .enablePlugins(JavaAppPackaging)
   .settings(
     name := "event-bus-admin",
     commonSettings
   )
   .dependsOn(core % "compile")
+
 
 lazy val integrationTest = (project in file("integrationtest"))
   .configs(IntegrationTest)
