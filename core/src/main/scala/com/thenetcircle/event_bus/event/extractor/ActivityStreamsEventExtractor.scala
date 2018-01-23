@@ -84,6 +84,7 @@ class ActivityStreamsEventExtractor
 
       val metaData = EventMetaData(
         name = activity.title,
+        verb = activity.verb,
         provider = activity.provider.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
         generator = activity.generator.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
         actor = activity.actor.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),

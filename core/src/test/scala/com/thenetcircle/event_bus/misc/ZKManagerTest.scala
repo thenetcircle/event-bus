@@ -17,9 +17,7 @@
 
 package com.thenetcircle.event_bus.misc
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
-import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent
+import com.thenetcircle.event_bus.story.StoryRunner
 
 class ZKManagerTest extends BaseTest {
 
@@ -27,17 +25,31 @@ class ZKManagerTest extends BaseTest {
 
   it should "do proper initialization" in {
 
-    val runnerName = "test-runner"
+    /*val forwarder = new TNCDinoEventsForwarder()
+    val event = Await.result(
+      EventExtractorFactory.defaultExtractor.extract(
+        """
+        |{"actor": {"id": "610800", "displayName": "a2piYmprYg==", "attachments": [{"objectType": "age", "content": "ODg="}, {"objectType": "gender", "content": "bQ=="}, {"objectType": "membership", "content": "MA=="}, {"objectType": "country", "content": "Y24="}, {"objectType": "city", "content": "amhi"}, {"objectType": "image", "content": "eQ=="}, {"objectType": "has_webcam", "content": "eQ=="}, {"objectType": "fake_checked", "content": "eQ=="}, {"objectType": "is_streaming", "content": "RmFsc2U="}]}, "published": "2018-01-22T09:34:00Z", "verb": "login", "id": "8b1927a9-e623-4a37-abb2-d4c8d9f6dcfe"}
+      """.stripMargin.getBytes
+      ),
+      1.second
+    )
+
+    println(event)
+
+    val newevent = forwarder.appendTitleField(event)
+
+    println(newevent)*/
+
+    val runnerName = "default"
 
     val zkManager =
-      ZKManager.init(
-        "maggie-zoo-1:2181,maggie-zoo-2:2181",
-        s"/event-bus/${appContext.getAppName()}"
-      )
+      ZKManager.init("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
 
-    zkManager.registerStoryRunner(runnerName)
+    new ZKStoryManager(zkManager, runnerName, system.actorOf(StoryRunner.props(runnerName)))
+      .runAndWatch()
 
-    val storyDAO: StoryZookeeperDAO = StoryZookeeperDAO(zkManager)
+    /*val storyDAO: StoryZookeeperDAO = StoryZookeeperDAO(zkManager)
     val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
     storyDAO
@@ -135,9 +147,9 @@ class ZKManagerTest extends BaseTest {
             s"fallback task ${story.fallbackTask.get.asInstanceOf[CassandraFallback].settings}"
           )*/
 
-      })
+      })*/
 
-    Thread.sleep(180000)
+    Thread.sleep(1800000)
 
   }
 

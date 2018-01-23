@@ -7,7 +7,7 @@ lazy val core = (project in file("core"))
     name := "event-bus",
     scalaVersion := "2.12.2",
     libraryDependencies ++= coreDependencies,
-    mainClass in Compile := Some("com.thenetcircle.event_bus.ZKRunnerApp"),
+    mainClass in Compile := Some("com.thenetcircle.event_bus.ZKBasedRunner"),
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}""""
   )
 

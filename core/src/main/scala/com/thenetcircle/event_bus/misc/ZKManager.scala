@@ -42,21 +42,17 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
     appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
 
     // Check and Create root nodes
-    if (client.checkExists().forPath(getAbsPath("stories")) == null) {
-      client.create().creatingParentsIfNeeded().forPath(getAbsPath("stories"))
-    }
-    if (client.checkExists().forPath(getAbsPath("runners")) == null) {
-      client.create().creatingParentsIfNeeded().forPath(getAbsPath("runners"))
-    }
+    ensurePath("stories")
+    ensurePath("runners")
   }
 
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
-  def registerStoryRunner(runnerName: String): Unit = {
-    if (client.checkExists().forPath(getAbsPath(s"runners/$runnerName")) == null) {
-      client.create().creatingParentsIfNeeded().forPath(getAbsPath(s"runners/$runnerName"))
+  def ensurePath(relativePath: String): Unit = {
+    if (client.checkExists().forPath(getAbsPath(relativePath)) == null) {
+      client.create().creatingParentsIfNeeded().forPath(getAbsPath(relativePath))
     }
   }
 
@@ -101,7 +97,7 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
   def watchChildren(
       relativePath: String,
       startMode: StartMode = StartMode.NORMAL,
-      fetchData: Boolean = false
+      fetchData: Boolean = true
   )(callback: (PathChildrenCacheEvent, PathChildrenCache) => Unit): PathChildrenCache = {
     val watcher =
       new PathChildrenCache(client, getAbsPath(relativePath), fetchData)

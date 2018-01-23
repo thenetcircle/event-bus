@@ -38,8 +38,16 @@ case class NormalEvent(uuid: String,
 
   override def withGroup(_group: String): NormalEvent =
     copy(metadata = metadata.copy(group = Some(_group)))
+  override def withNoGroup(): NormalEvent =
+    copy(metadata = metadata.copy(group = None))
+
+  override def withName(_name: String): NormalEvent =
+    copy(metadata = metadata.copy(name = Some(_name)))
 
   override def withUUID(_uuid: String): NormalEvent = copy(uuid = _uuid)
+
+  override def withBody(_body: EventBody): NormalEvent = copy(body = _body)
+  override def withBody(_data: String): NormalEvent = copy(body = body.copy(data = _data))
 }
 
 object NormalEvent {

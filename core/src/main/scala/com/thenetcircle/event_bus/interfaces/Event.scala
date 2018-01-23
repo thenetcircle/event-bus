@@ -31,11 +31,16 @@ trait Event {
   def withPassThrough[T](_passThrough: T): Event
   def getPassThrough[T]: Option[T] = passThrough.map(_.asInstanceOf[T])
   def withGroup(_group: String): Event
+  def withNoGroup(): Event
+  def withName(_name: String): Event
   def withUUID(_uuid: String): Event
+  def withBody(_body: EventBody): Event
+  def withBody(_data: String): Event
 }
 
 case class EventMetaData(name: Option[String] = None,
                          group: Option[String] = None,
+                         verb: Option[String] = None,
                          // who provided the event (type, id)
                          provider: Option[(String, String)] = None,
                          // who generated the event (type, id)

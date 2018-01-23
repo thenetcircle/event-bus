@@ -18,11 +18,11 @@
 package com.thenetcircle.event_bus.tasks.tnc
 
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{
   Event,
@@ -30,10 +30,13 @@ import com.thenetcircle.event_bus.interfaces.{
   TransformTask,
   TransformTaskBuilder
 }
+import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 import com.typesafe.scalalogging.StrictLogging
+import org.apache.curator.framework.recipes.cache.ChildData
+import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 
-import scala.collection.mutable
-import scala.util.matching.Regex
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 class TNCKafkaTopicResolver(zkManager: ZKManager,
@@ -47,51 +50,58 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
 
   def init(): Unit = if (!inited) {
-    fetchAndUpdateMapping()
+    updateAndWatchMapping()
     inited = true
   }
 
-  private def fetchAndUpdateMapping(): Unit = {
-    val mapping =
-      zkManager
-        .getChildren("topics")
-        .map(_.map(topic => {
-          zkManager.getChildrenData(s"topics/$topic").map(l => (topic, l))
-        }).filter(_.isDefined).map(_.get).toMap)
+  val zkInited = new AtomicBoolean(false)
+  private def updateAndWatchMapping(): Unit = {
+    zkManager.ensurePath("topics")
+    zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (et, wc) =>
+      if (et.getType == INITIALIZED ||
+          (et.getType == CHILD_ADDED && zkInited.get()) ||
+          et.getType == CHILD_UPDATED ||
+          et.getType == CHILD_REMOVED) {
+        if (et.getType == INITIALIZED) zkInited.compareAndSet(false, true)
+        val mapping = createMappingFromZKData(wc.getCurrentData.asScala.toList)
+        logger.info(s"get new mapping from zookeeper $mapping")
+        if (mapping.nonEmpty)
+          updateMapping(mapping)
+      }
+    }
+  }
 
-    if (mapping.isEmpty) {
-      logger.warn("get empty mapping from zookeeper")
-    } else {
-      logger.debug(s"get mapping from zookeeper, will update index: $mapping")
-      updateMapping(mapping.get)
+  def createMappingFromZKData(data: List[ChildData]): Map[String, String] = {
+    data.map(child => getLastPartOfPath(child.getPath) -> new String(child.getData, "UTF-8")).toMap
+  }
+
+  def getLastPartOfPath(path: String): String = {
+    try {
+      path.substring(path.lastIndexOf('/') + 1)
+    } catch {
+      case _: Throwable => ""
     }
   }
 
   def getIndex(): Map[String, String] = synchronized { index }
-  def updateIndex(_index: Map[String, String]): Unit = synchronized { index = _index }
-  def updateMapping(_mapping: Map[String, Map[String, String]]): Unit = {
-    val _index = mutable.Map.empty[String, String]
-    _mapping.foreach {
-      case (topic, submap) =>
-        submap
-          .get("patterns")
-          .foreach(_.split(Regex.quote(Util.configDelimiter)).foreach(pattern => {
-            _index += (pattern -> topic)
-          }))
-    }
-    updateIndex(_index.toMap)
+  def updateIndex(_index: Map[String, String]): Unit = synchronized {
+    logger.info(s"updating new index ${_index}")
+    index = _index
+  }
+  def updateMapping(_mapping: Map[String, String]): Unit = {
+    updateIndex(_mapping.map(v => v._2 -> v._1))
     if (useCache) cached.clear()
   }
 
   override def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] = {
-
     init()
-
     Flow[Event].map(event => {
       Try(resolveEvent(event)) match {
-        case Success(newEvent) => (Norm, newEvent)
+        case Success(newEvent) =>
+          logger.debug(s"new resolved event $newEvent")
+          (Norm, newEvent)
         case Failure(ex) =>
           logger.error(s"resolve topic failed with error $ex")
           (Fail(ex), event)

@@ -78,7 +78,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   }
 
   def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {
-    Message(createProducerRecord(event), event)
+    val record = createProducerRecord(event)
+    logger.debug(s"new record $record created, going to send to kafka")
+    Message(record, event)
   }
 
   def createProducerRecord(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
