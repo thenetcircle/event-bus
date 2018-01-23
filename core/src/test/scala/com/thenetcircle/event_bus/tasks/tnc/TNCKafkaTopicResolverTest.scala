@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.misc
+package com.thenetcircle.event_bus.tasks.tnc
 import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 

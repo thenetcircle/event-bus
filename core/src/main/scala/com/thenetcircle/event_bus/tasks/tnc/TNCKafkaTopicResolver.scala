@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.misc
+package com.thenetcircle.event_bus.tasks.tnc
 
 import java.util.concurrent.ConcurrentHashMap
 
@@ -47,14 +47,24 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
 
   def init(): Unit = if (!inited) {
-    // TODO: get data from zookeeper
-    /*updateMapping(
-      Map(
-        "event-user" -> Map("patterns" -> s"""user.*|||profile.*"""),
-        "event-message" -> Map("patterns" -> """message.*""")
-      )
-    )*/
+    fetchAndUpdateMapping()
     inited = true
+  }
+
+  private def fetchAndUpdateMapping(): Unit = {
+    val mapping =
+      zkManager
+        .getChildren("topics")
+        .map(_.map(topic => {
+          zkManager.getChildrenData(s"topics/$topic").map(l => (topic, l))
+        }).filter(_.isDefined).map(_.get).toMap)
+
+    if (mapping.isEmpty) {
+      logger.warn("get empty mapping from zookeeper")
+    } else {
+      logger.debug(s"get mapping from zookeeper, will update index: $mapping")
+      updateMapping(mapping.get)
+    }
   }
 
   def getIndex(): Map[String, String] = synchronized { index }
@@ -62,18 +72,34 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   def updateMapping(_mapping: Map[String, Map[String, String]]): Unit = {
     val _index = mutable.Map.empty[String, String]
     _mapping.foreach {
-      case (group, submap) =>
+      case (topic, submap) =>
         submap
           .get("patterns")
           .foreach(_.split(Regex.quote(Util.configDelimiter)).foreach(pattern => {
-            _index += (pattern -> group)
+            _index += (pattern -> topic)
           }))
     }
     updateIndex(_index.toMap)
     if (useCache) cached.clear()
   }
 
-  def getGroupFromIndex(eventName: String): Option[String] = {
+  override def prepare()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Event, (EventStatus, Event), NotUsed] = {
+
+    init()
+
+    Flow[Event].map(event => {
+      Try(resolveEvent(event)) match {
+        case Success(newEvent) => (Norm, newEvent)
+        case Failure(ex) =>
+          logger.error(s"resolve topic failed with error $ex")
+          (Fail(ex), event)
+      }
+    })
+  }
+
+  def getTopicFromIndex(eventName: String): Option[String] = {
     getIndex()
       .find {
         case (pattern, _) =>
@@ -88,39 +114,26 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
     if (event.metadata.name.isEmpty) return event.withGroup(defaultTopic)
 
     val eventName = event.metadata.name.get
-    var group = ""
+    var topic = ""
     if (useCache) {
-      val cachedGroup = cached.get(eventName)
-      if (cachedGroup != null) {
-        group = cachedGroup
+      val cachedTopic = cached.get(eventName)
+      if (cachedTopic != null) {
+        topic = cachedTopic
       } else {
-        group = getGroupFromIndex(eventName).getOrElse(defaultTopic)
-        cached.put(eventName, group)
+        topic = getTopicFromIndex(eventName).getOrElse(defaultTopic)
+        cached.put(eventName, topic)
       }
     } else {
-      group = getGroupFromIndex(eventName).getOrElse(defaultTopic)
+      topic = getTopicFromIndex(eventName).getOrElse(defaultTopic)
     }
 
-    return event.withGroup(group)
+    return event.withGroup(topic)
   }
 
-  override def prepare()(
-      implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] = {
-
-    init()
-
-    Flow[Event].map(event => {
-      Try(resolveEvent(event)) match {
-        case Success(newEvent) => (Norm, newEvent)
-        case Failure(ex) =>
-          logger.error(s"resolve group failed with error $ex")
-          (Fail(ex), event)
-      }
-    })
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    index = Map.empty
+    cached.clear()
   }
-
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 }
 
 class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {

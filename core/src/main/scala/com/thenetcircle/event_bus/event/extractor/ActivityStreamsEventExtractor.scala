@@ -30,7 +30,7 @@ import spray.json._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-case class Activity(title: String,
+case class Activity(title: Option[String],
                     id: Option[String],
                     published: Option[String],
                     verb: Option[String],
@@ -78,10 +78,12 @@ class ActivityStreamsEventExtractor
       val activity = data.parseJson.convertTo[Activity]
 
       val uuid: String =
-        activity.id.getOrElse(activity.title + "#" + java.util.UUID.randomUUID().toString)
+        activity.id.getOrElse(
+          activity.title.getOrElse("") + "#" + java.util.UUID.randomUUID().toString
+        )
 
       val metaData = EventMetaData(
-        name = Some(activity.title),
+        name = activity.title,
         provider = activity.provider.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
         generator = activity.generator.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
         actor = activity.actor.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
