@@ -15,12 +15,12 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tracing
+package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.context.AppContext
 import kamon.Kamon
 
-object Tracer {
+class KamonManager {
 
   def init(appContext: AppContext): Unit = {
     Kamon.start()

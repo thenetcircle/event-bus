@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -29,7 +28,7 @@ case class StoryInfo(name: String,
                      settings: String,
                      source: String,
                      sink: String,
-                     transforms: Option[List[String]],
+                     transforms: Option[String],
                      fallback: Option[String])
 
 class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext)
@@ -37,13 +36,21 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
+  val categoryDelimiter = ""","""
+  val taskDelimiter = """|||"""
+
   def buildStory(storyInfo: StoryInfo): Story = {
     try {
       new Story(
         StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
         buildSourceTask(storyInfo.source).get,
         buildSinkTask(storyInfo.sink).get,
-        storyInfo.transforms.map(_.flatMap(_v => buildTransformTask(_v))),
+        storyInfo.transforms.map(_tcs => {
+          _tcs
+            .split(Regex.quote(taskDelimiter))
+            .map(_cs => buildTransformTask(_cs).get)
+            .toList
+        }),
         storyInfo.fallback.flatMap(buildFallbackTask)
       )
     } catch {
@@ -54,8 +61,8 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
   }
 
   def parseConfigString(configString: String): (String, String) = {
-    val re = configString.split(Regex.quote(Util.configDelimiter), 2)
-    (re(0), re(1))
+    val re = configString.split(Regex.quote(categoryDelimiter), 2)
+    (re(0), if (re.length == 2) re(1) else "{}")
   }
 
   def buildSourceTask(configString: String): Option[SourceTask] = {

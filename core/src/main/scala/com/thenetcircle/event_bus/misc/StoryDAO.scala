@@ -25,8 +25,7 @@ class StoryZookeeperDAO(zkManager: ZKManager)(implicit appContext: AppContext) e
     val settings: String = zkManager.getData(s"$storyRootPath/settings").getOrElse("")
     val source: String = zkManager.getData(s"$storyRootPath/source").get
     val sink: String = zkManager.getData(s"$storyRootPath/sink").get
-    val transforms: Option[List[String]] =
-      zkManager.getChildrenData(s"$storyRootPath/transforms").map(m => m.values.toList)
+    val transforms: Option[String] = zkManager.getData(s"$storyRootPath/transforms")
     val fallback: Option[String] = zkManager.getData(s"$storyRootPath/fallback")
 
     StoryInfo(storyName, status, settings, source, sink, transforms, fallback)
@@ -73,7 +72,7 @@ class StoryConfigDAO(config: Config) extends StoryDAO {
         cf.as[String]("settings"),
         cf.as[String]("source"),
         cf.as[String]("sink"),
-        cf.as[Option[List[String]]]("transforms"),
+        cf.as[Option[String]]("transforms"),
         cf.as[Option[String]]("fallback")
     )
   )

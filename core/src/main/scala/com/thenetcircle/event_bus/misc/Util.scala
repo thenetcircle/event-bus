@@ -21,14 +21,20 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyn
 
 object Util {
 
-  val configDelimiter = """|||"""
-
   private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
   def convertJsonStringToConfig(configString: String): Config = {
     // ConfigFactory.parseString(configString, parseOptions)
     ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
   }
 
-  def colorfulOutput(msg: String): String = s"""\u001B[32m${msg}B[0m"""
+  def getLastPartOfPath(path: String): String = {
+    try {
+      path.substring(path.lastIndexOf('/') + 1)
+    } catch {
+      case _: Throwable => ""
+    }
+  }
+
+  def makeUTF8String(bytes: Array[Byte]): String = new String(bytes, "UTF-8")
 
 }

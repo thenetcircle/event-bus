@@ -32,7 +32,7 @@ import com.thenetcircle.event_bus.interfaces.{
 }
 import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.curator.framework.recipes.cache.ChildData
+import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache}
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 
@@ -48,6 +48,7 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   private var inited: Boolean = false
   private var index: Map[String, String] = Map.empty
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
+  private var zkWatcher: Option[PathChildrenCache] = None
 
   def init(): Unit = if (!inited) {
     updateAndWatchMapping()
@@ -57,30 +58,26 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   val zkInited = new AtomicBoolean(false)
   private def updateAndWatchMapping(): Unit = {
     zkManager.ensurePath("topics")
-    zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (et, wc) =>
-      if (et.getType == INITIALIZED ||
-          (et.getType == CHILD_ADDED && zkInited.get()) ||
-          et.getType == CHILD_UPDATED ||
-          et.getType == CHILD_REMOVED) {
-        if (et.getType == INITIALIZED) zkInited.compareAndSet(false, true)
-        val mapping = createMappingFromZKData(wc.getCurrentData.asScala.toList)
-        logger.info(s"get new mapping from zookeeper $mapping")
-        if (mapping.nonEmpty)
-          updateMapping(mapping)
+    zkWatcher = Some(
+      zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (et, wc) =>
+        if (et.getType == INITIALIZED ||
+            (et.getType == CHILD_ADDED && zkInited.get()) ||
+            et.getType == CHILD_UPDATED ||
+            et.getType == CHILD_REMOVED) {
+          if (et.getType == INITIALIZED) zkInited.compareAndSet(false, true)
+          val mapping = createMappingFromZKData(wc.getCurrentData.asScala.toList)
+          logger.info(s"get new mapping from zookeeper $mapping")
+          if (mapping.nonEmpty)
+            updateMapping(mapping)
+        }
       }
-    }
+    )
   }
 
   def createMappingFromZKData(data: List[ChildData]): Map[String, String] = {
-    data.map(child => getLastPartOfPath(child.getPath) -> new String(child.getData, "UTF-8")).toMap
-  }
-
-  def getLastPartOfPath(path: String): String = {
-    try {
-      path.substring(path.lastIndexOf('/') + 1)
-    } catch {
-      case _: Throwable => ""
-    }
+    data
+      .map(child => Util.getLastPartOfPath(child.getPath) -> Util.makeUTF8String(child.getData))
+      .toMap
   }
 
   def getIndex(): Map[String, String] = synchronized { index }
@@ -143,6 +140,7 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
     index = Map.empty
     cached.clear()
+    zkWatcher.foreach(_.close())
   }
 }
 

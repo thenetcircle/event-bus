@@ -16,6 +16,8 @@
  */
 
 package com.thenetcircle.event_bus.misc
+import java.util.concurrent.atomic.AtomicBoolean
+
 import akka.actor.{ActorRef, ActorSystem}
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.story._
@@ -31,7 +33,6 @@ import org.apache.curator.framework.recipes.cache.{
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.control.NonFatal
-import scala.util.matching.Regex
 
 class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: ActorRef)(
     implicit appContext: AppContext,
@@ -43,48 +44,68 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
   type ZEvent = PathChildrenCacheEvent
   type ZWatcher = PathChildrenCache
 
-  var watchingStores = mutable.Map.empty[String, ZWatcher]
+  val watchingStores = mutable.Map.empty[String, ZWatcher]
 
   zkManager.ensurePath(s"runners/$runnerName")
 
-  val runnableStoriesPath = s"runners/$runnerName/stories"
   def getStoryRootPath(storyName: String): String = s"stories/$storyName"
 
   def runAndWatch(): Unit = {
-    // watching on zookeeper path to get updates of stories
-    zkManager.watchChildren(runnableStoriesPath, fetchData = false) { (re, rw) =>
-      re.getType match {
-        // new story has been assigned to this runner
-        case CHILD_ADDED =>
-          val storyName = getLastPartOfPath(re.getData.getPath)
-          val storyWatcher =
-            zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) {
-              (se, sw) =>
-                if (se.getType == INITIALIZED ||
-                    se.getType == CHILD_UPDATED ||
-                    // (se.getType == CHILD_ADDED && se.getInitialData != null) ||
-                    se.getType == CHILD_REMOVED) {
+    val runnableStoriesPath = s"runners/$runnerName/stories"
 
-                  val storyOption = createStory(storyName, sw.getCurrentData.asScala.toList)
-                  storyOption.foreach(story => {
-                    if (se.getType == INITIALIZED)
-                      storyRunner ! StoryRunner.Run(story)
-                    else
-                      storyRunner ! StoryRunner.Rerun(story)
-                  })
-                }
-            }
-          watchingStores += (storyName -> storyWatcher)
+    val jobWatcher =
+      zkManager.watchChildren(runnableStoriesPath, fetchData = false) { (re, rw) =>
+        re.getType match {
+          // new story has been assigned to this runner
+          case CHILD_ADDED =>
+            val storyName = Util.getLastPartOfPath(re.getData.getPath)
+            val storyWatcher = runAndWatchStory(storyName)
+            watchingStores += (storyName -> storyWatcher)
 
-        // story has been removed from this runner
-        case CHILD_REMOVED =>
-          val storyName = getLastPartOfPath(re.getData.getPath)
-          logger.debug(s"removing story watcher of $storyName")
-          watchingStores.get(storyName).foreach(_.close())
-          storyRunner ! StoryRunner.Shutdown(Some(storyName))
+          // story has been removed from this runner
+          case CHILD_REMOVED =>
+            val storyName = Util.getLastPartOfPath(re.getData.getPath)
+            logger.debug(s"removing story watcher of $storyName")
+            storyRunner ! StoryRunner.Shutdown(Some(storyName))
+            watchingStores
+              .get(storyName)
+              .foreach(w => {
+                w.close()
+                watchingStores.remove(storyName)
+              })
 
-        case _ =>
+          case _ =>
+        }
       }
+
+    appContext.addShutdownHook {
+      watchingStores.foreach(_._2.close())
+      jobWatcher.close()
+    }
+  }
+
+  val storyInitStatus = mutable.Map.empty[String, AtomicBoolean]
+  def runAndWatchStory(storyName: String): PathChildrenCache = {
+    storyInitStatus += (storyName -> new AtomicBoolean())
+    zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) {
+      (se, sw) =>
+        if (se.getType == INITIALIZED ||
+            se.getType == CHILD_UPDATED ||
+            (se.getType == CHILD_ADDED && storyInitStatus(storyName).get()) ||
+            se.getType == CHILD_REMOVED) {
+
+          if (se.getType == INITIALIZED) {
+            storyInitStatus(storyName).compareAndSet(false, true)
+          }
+
+          val storyOption = createStory(storyName, sw.getCurrentData.asScala.toList)
+          storyOption.foreach(story => {
+            if (se.getType == INITIALIZED)
+              storyRunner ! StoryRunner.Run(story)
+            else
+              storyRunner ! StoryRunner.Rerun(story)
+          })
+        }
     }
   }
 
@@ -94,7 +115,6 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
         createStoryInfoFromZKData(storyName, data)
       logger.debug(s"new story info: $storyInfo")
       val story = storyBuilder.buildStory(storyInfo)
-      logger.debug(s"new story ${story}")
       Some(story)
     } catch {
       case NonFatal(ex) =>
@@ -106,14 +126,8 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
   def createStoryInfoFromZKData(storyName: String, data: List[ChildData]): StoryInfo = {
     val storyData = mutable.Map.empty[String, String]
     data.foreach(child => {
-      storyData += (getLastPartOfPath(child.getPath) -> new String(child.getData, "UTF-8"))
+      storyData += (Util.getLastPartOfPath(child.getPath) -> new String(child.getData, "UTF-8"))
     })
-
-    val transforms: Option[List[String]] = storyData
-      .get("transforms")
-      .map(s => {
-        s.split(Regex.quote("###")).toList
-      })
 
     StoryInfo(
       storyName,
@@ -121,16 +135,8 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
       storyData.getOrElse("settings", ""),
       storyData("source"),
       storyData("sink"),
-      transforms,
+      storyData.get("transforms"),
       storyData.get("fallback")
     )
-  }
-
-  def getLastPartOfPath(path: String): String = {
-    try {
-      path.substring(path.lastIndexOf('/') + 1)
-    } catch {
-      case _: Throwable => ""
-    }
   }
 }
