@@ -17,53 +17,54 @@
 
 package com.thenetcircle.event_bus
 
-import akka.actor.{ActorRef, ActorSystem}
-import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
-import com.thenetcircle.event_bus.story._
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
+object ZKBasedRunner extends AbstractApp with StrictLogging {
 
-object ZKBasedRunner extends App with StrictLogging {
-  logger.info("Application is initializing.")
+  def main(args: Array[String]): Unit = {
+    logger.info("Application is initializing.")
 
-  // Base components
-  val config: Config = ConfigFactory.load()
-  implicit val appContext: AppContext = AppContext(config)
-  implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
+    val config: Config = ConfigFactory.load()
 
-  // Initialize StoryRunner
-  checkArg(0, "the first argument runner-name is required")
-  var runnerName: String = args(0)
-  val storyRunner: ActorRef =
-    system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
+    if (args.length == 0) printUsageAndExit()
+    val options = parseArgs(args.toList)
 
-  // Setup shutdown hooks
-  sys.addShutdownHook({
-    logger.info("Application is shutting down...")
-    Await
-      .result(akka.pattern.gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()), 3.seconds)
-    appContext.shutdown()
-    system.terminate()
-    Await.result(system.whenTerminated, 6.seconds)
-  })
+    val runnerName = options.getOrElse('runnername, config.getString("app.default-runner-name"))
+    if (options.get('zkserver).isEmpty) printUsageAndExit()
+    val zkConnectString = options('zkserver)
 
-  // Setup Zookeeper
-  checkArg(1, "the second argument zkserver is required")
-  val zkConnectString = args(1)
-  val zkRootPath = s"/event-bus/${appContext.getAppName()}/${appContext.getAppEnv()}"
-  val zkManager: ZKManager = ZKManager.init(zkConnectString, zkRootPath)
+    implicit val (appContext, actorSystem, storyRunner) = initCoreComponents(config, runnerName)
 
-  // Start run
-  new ZKStoryManager(zkManager, runnerName, storyRunner).runAndWatch()
+    // Setup Zookeeper
+    val zkRootPath = s"/event-bus/${appContext.getAppName()}/${appContext.getAppEnv()}"
+    val zkManager: ZKManager = ZKManager.init(zkConnectString, zkRootPath)
 
-  def checkArg(index: Int, message: String): Unit = {
-    if (args.length <= index) {
-      Console.err.println(message)
-      sys.exit(1)
+    // Start run
+    new ZKStoryManager(zkManager, runnerName, storyRunner).runAndWatch()
+  }
+
+  def printUsageAndExit(): Unit = {
+    Console.err.println("""
+          |Usage: bin/xxx [--runner-name xxx] [--zkserver xxx]
+        """.stripMargin)
+    sys.exit(1)
+  }
+
+  def parseArgs(list: List[String], map: Map[Symbol, String] = Map.empty): Map[Symbol, String] = {
+    list match {
+      case Nil => map
+      case "--runner-name" :: value :: tail =>
+        parseArgs(tail, map ++ Map('runnername -> value))
+      case "--zkserver" :: value :: tail =>
+        parseArgs(tail, map ++ Map('zkserver -> value))
+      case string :: Nil => parseArgs(list.tail, map ++ Map('zkserver -> string))
+      case arga :: argb :: Nil =>
+        parseArgs(list.tail, map ++ Map('runnername -> arga, 'zkserver -> argb))
+      case option :: tail =>
+        println("Unknown option " + option)
+        sys.exit(1)
     }
   }
 }
