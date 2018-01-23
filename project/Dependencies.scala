@@ -58,6 +58,4 @@ object Dependencies {
     kamonStatsd,
     kamonSystemMetrics
   )
-
-  val benchmarkDependencies = Seq(gatlingChartsHighcharts, gatlingTestFramework, akkaHttp)
 }

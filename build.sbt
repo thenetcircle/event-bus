@@ -1,21 +1,32 @@
 import Dependencies._
 
+lazy val commonSettings = Seq(
+    scalaVersion := "2.12.2",
+    organization := "com.thenetcircle"
+)
+
 lazy val core = (project in file("core"))
   .enablePlugins(JavaAppPackaging, SbtAspectj)
   .settings(
-    organization := "com.thenetcircle",
-    name := "event-bus",
-    scalaVersion := "2.12.2",
+    name := "event-bus-core",
+    commonSettings,
     libraryDependencies ++= coreDependencies,
-    mainClass in Compile := Some("com.thenetcircle.event_bus.ZKBasedRunner"),
+    // mainClass in Compile := Some("com.thenetcircle.event_bus.ZKBasedRunner"),
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}""""
   )
 
-lazy val benchmark = (project in file("benchmark"))
-  .enablePlugins(GatlingPlugin)
+lazy val admin = (project in file("admin"))
   .settings(
-    organization := "com.thenetcircle",
-    name := "event-bus-benchmark",
-    scalaVersion := "2.11.8",
-    libraryDependencies ++= benchmarkDependencies
+    name := "event-bus-admin",
+    commonSettings
   )
+  .dependsOn(core % "compile")
+
+lazy val integrationTest = (project in file("integrationtest"))
+  .configs(IntegrationTest)
+  .settings(
+    name := "event-bus-integration-test",
+    commonSettings,
+    Defaults.itSettings
+  )
+  .dependsOn(core % "test")

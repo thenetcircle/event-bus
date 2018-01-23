@@ -21,7 +21,7 @@ import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
-object ZKAdmin extends AbstractApp with StrictLogging {
+object Admin extends AbstractApp with StrictLogging {
 
   def main(args: Array[String]): Unit = {
     val config: Config = ConfigFactory.load()
@@ -47,7 +47,7 @@ object ZKAdmin extends AbstractApp with StrictLogging {
 
   def printUsageAndExit(): Unit = {
     Console.err.println("""
-          |Usage: bin/xxx [--runner-name xxx] [--zkserver xxx]
+          |Usage: bin/xxx [--runner-xxxxxname xxx] [--zksxxxerver xxx]
         """.stripMargin)
     sys.exit(1)
   }
