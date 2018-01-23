@@ -21,11 +21,9 @@ import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
-object ZKBasedRunner extends AbstractApp with StrictLogging {
+object ZKRunner extends AbstractApp with StrictLogging {
 
   def main(args: Array[String]): Unit = {
-    logger.info("Application is initializing.")
-
     val config: Config = ConfigFactory.load()
 
     if (args.length == 0) printUsageAndExit()
@@ -34,6 +32,8 @@ object ZKBasedRunner extends AbstractApp with StrictLogging {
     val runnerName = options.getOrElse('runnername, config.getString("app.default-runner-name"))
     if (options.get('zkserver).isEmpty) printUsageAndExit()
     val zkConnectString = options('zkserver)
+
+    logger.info("Application is initializing.")
 
     implicit val (appContext, actorSystem, storyRunner) = initCoreComponents(config, runnerName)
 
