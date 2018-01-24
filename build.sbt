@@ -7,7 +7,7 @@ import scala.util.Try
 
 lazy val commonSettings = Seq(
   organization := "com.thenetcircle",
-  version := "0.0.1-SNAPSHOT",
+  version := "2.0.1-SNAPSHOT",
   scalaVersion := "2.12.4",
   crossScalaVersions := Seq(scalaVersion.value, "2.11.8"),
   crossVersion := CrossVersion.binary,

@@ -153,10 +153,13 @@ class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
       .convertJsonStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-topic-resolver"))
 
-    val zkManger = ZKManager.getInstance()
+    val zkMangerOption = buildingContext.getAppContext().getZKManager()
+    if (zkMangerOption.isEmpty) {
+      throw new IllegalArgumentException("ZKManager is required for TNCKafkaTopicResolver")
+    }
 
     new TNCKafkaTopicResolver(
-      zkManger,
+      zkMangerOption.get,
       config.getString("default-topic"),
       config.getBoolean("use-cache")
     )

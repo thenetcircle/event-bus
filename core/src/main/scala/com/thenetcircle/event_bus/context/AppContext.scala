@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.context
 
+import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
@@ -39,6 +40,10 @@ class AppContext(appName: String, appVersion: String, appEnv: String, debug: Boo
   }
   def shutdown(): Unit =
     for (hook <- shutdownHooks) hook()
+
+  var zkManager: Option[ZKManager]              = None
+  def setZKManager(_zkManager: ZKManager): Unit = zkManager = Some(_zkManager)
+  def getZKManager(): Option[ZKManager]         = zkManager
 
 }
 

@@ -112,26 +112,10 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
 }
 
 object ZKManager {
-  private var _instance: Option[ZKManager] = None
-
-  /**
-    * Init ZKManager and Start zookeeper lient
-    *
-    * @param connectString
-    * @param rootPath
-    */
-  def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager =
-    _instance.getOrElse {
-      if (connectString.isEmpty || rootPath.isEmpty) {
-        throw new IllegalArgumentException("Parameters are unavailable.")
-      }
-      _instance = Some(new ZKManager(connectString, rootPath))
-      _instance.foreach(_.start())
-      _instance.get
+  def apply(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager = {
+    if (connectString.isEmpty || rootPath.isEmpty) {
+      throw new IllegalArgumentException("parameters are not enough for creating ZKManager.")
     }
-
-  /**
-    * @throws java.util.NoSuchElementException if not init yet.
-    */
-  def getInstance(): ZKManager = _instance.get
+    new ZKManager(connectString, rootPath)
+  }
 }
