@@ -15,9 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.http
+package com.thenetcircle.event_bus.builder
+
 import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.event.extractor.DataFormat
+import com.thenetcircle.event_bus.tasks.http.HttpSourceBuilder
 
 import scala.concurrent.duration._
 

@@ -16,8 +16,10 @@
  */
 
 package com.thenetcircle.event_bus.misc
+
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.story.StoryRunner
+import org.apache.curator.framework.CuratorFramework
+import org.apache.curator.framework.recipes.cache.{TreeCache, TreeCacheEvent, TreeCacheListener}
 
 class ZKManagerTest extends BaseTest {
 
@@ -41,13 +43,32 @@ class ZKManagerTest extends BaseTest {
 
     println(newevent)*/
 
-    val runnerName = "default"
+    val zkManager =
+      ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
+
+    val treeCache =
+      new TreeCache(
+        zkManager.getClient(),
+        s"/event-bus/popp-lab/stories/"
+      )
+
+    treeCache.start()
+
+    treeCache.getListenable.addListener(new TreeCacheListener {
+      override def childEvent(client: CuratorFramework, event: TreeCacheEvent): Unit = {
+        logger.debug(
+          s"==== ${event.getType} -- ${event.getData.getData} --- ${event.getData.getPath} ===="
+        )
+      }
+    })
+
+    /*val runnerName = "default"
 
     val zkManager =
       ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
 
     new ZKStoryManager(zkManager, runnerName, system.actorOf(StoryRunner.props(runnerName)))
-      .runAndWatch()
+      .runAndWatch()*/
 
     /*val storyDAO: StoryZookeeperDAO = StoryZookeeperDAO(zkManager)
     val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))

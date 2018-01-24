@@ -15,10 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.http
+package com.thenetcircle.event_bus.builder
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.tasks.http.HttpSinkBuilder
 
 import scala.concurrent.duration._
 

@@ -15,8 +15,10 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.kafka
+package com.thenetcircle.event_bus.builder
+
 import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.tasks.kafka.{KafkaSource, KafkaSourceBuilder}
 
 class KafkaSourceBuilderTest extends BaseTest {
 

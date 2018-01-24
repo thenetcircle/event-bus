@@ -15,12 +15,13 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.event.extractor
+package com.thenetcircle.event_bus.extractor
 
 import java.text.SimpleDateFormat
 
 import com.thenetcircle.event_bus.BaseTest
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
+import com.thenetcircle.event_bus.event.extractor._
 import com.thenetcircle.event_bus.interfaces.{EventBody, EventMetaData}
 
 import scala.concurrent.Await

@@ -165,7 +165,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                 .recover {
                   case NonFatal(ex) => Failure(ex)
                 }
-                .collect{ case Success(co) => co }
+                .collect { case Success(co) => co }
                 // TODO add max to settings
                 .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
                   batch.updated(elem)

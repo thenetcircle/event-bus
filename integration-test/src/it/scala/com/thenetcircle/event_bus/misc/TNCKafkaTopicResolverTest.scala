@@ -15,9 +15,10 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.tnc
+package com.thenetcircle.event_bus.misc
+
 import com.thenetcircle.event_bus.BaseTest
-import com.thenetcircle.event_bus.misc.ZKManager
+import com.thenetcircle.event_bus.tasks.tnc.TNCKafkaTopicResolver
 
 class TNCKafkaTopicResolverTest extends BaseTest {
 

@@ -55,4 +55,4 @@ lazy val integrationTest = (project in file("integration-test"))
     parallelExecution := false,
     Defaults.itSettings
   )
-  .dependsOn(core % "test")
+  .dependsOn(core % "it->test")

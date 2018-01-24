@@ -51,9 +51,14 @@ class Main extends Core {
 
   def getRoute(): Route =
     pathSingleSlash {
-      complete("abcdef")
+      // homepage
+      complete("event-bus admin is running!")
+    } ~
+    get {
+      path("zk/copy") {
+        complete("event-bus admin is running!")
+      }
     }
-
 }
 
 object Main extends App { (new Main).run(args) }
