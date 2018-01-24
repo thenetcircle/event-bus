@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.tasks.kafka
 
-import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset}
+import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream._
@@ -36,6 +36,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
@@ -142,12 +143,13 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
               source
                 .mapAsync(1)(extractEventFromMessage)
                 .via(handler)
-                .mapAsync(1) {
+                .map {
                   case (_: Succ, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        logger.debug(s"The event ${event.uuid} is committing to kafka")
-                        co.commitScaladsl() // the commit logic
+                        logger.debug(s"The event ${event.uuid} adding to the batch committing to kafka")
+                        // co.commitScaladsl() // the commit logic
+                        Success(co)
                       case None =>
                         val errorMessage =
                           s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
@@ -159,6 +161,17 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                     // complete the stream if failure, before was using Future.successful(Done)
                     throw ex
                 }
+                // TODO some test
+                .recover {
+                  case NonFatal(ex) => Failure(ex)
+                }
+                .collect{ case Success(co) => co }
+                // TODO add max to settings
+                .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
+                  batch.updated(elem)
+                }
+                // TODO update parallelism and test order
+                .mapAsyncUnordered(1)(_.commitScaladsl())
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
