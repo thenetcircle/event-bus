@@ -8,6 +8,7 @@
 - ~~create Config runner and Zookeeper runner~~
 - ~~add rfc date parser and change published field format~~
 - Admin Interface
+- Improve Cassandra table structure
 - Kafa Batch Commit
 - Integrate kamon
 - Integrate Sentry
