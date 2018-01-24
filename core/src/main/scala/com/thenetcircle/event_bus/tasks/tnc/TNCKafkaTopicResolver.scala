@@ -24,12 +24,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
-import com.thenetcircle.event_bus.interfaces.{
-  Event,
-  EventStatus,
-  TransformTask,
-  TransformTaskBuilder
-}
+import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Util, ZKManager}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache}
@@ -37,6 +32,7 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 
 import scala.collection.JavaConverters._
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 class TNCKafkaTopicResolver(zkManager: ZKManager,
@@ -45,18 +41,12 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
     extends TransformTask
     with StrictLogging {
 
-  private var inited: Boolean = false
   private var index: Map[String, String] = Map.empty
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
   private var zkWatcher: Option[PathChildrenCache] = None
 
-  def init(): Unit = if (!inited) {
-    updateAndWatchMapping()
-    inited = true
-  }
-
   val zkInited = new AtomicBoolean(false)
-  private def updateAndWatchMapping(): Unit = {
+  private def updateAndWatchIndex(): Unit = {
     zkManager.ensurePath("topics")
     zkWatcher = Some(
       zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (et, wc) =>
@@ -65,18 +55,22 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
             et.getType == CHILD_UPDATED ||
             et.getType == CHILD_REMOVED) {
           if (et.getType == INITIALIZED) zkInited.compareAndSet(false, true)
-          val mapping = createMappingFromZKData(wc.getCurrentData.asScala.toList)
-          logger.info(s"get new mapping from zookeeper $mapping")
-          if (mapping.nonEmpty)
-            updateMapping(mapping)
+          val _index = createIndexFromZKData(wc.getCurrentData.asScala.toList)
+          if (_index.nonEmpty)
+            updateIndex(_index)
         }
       }
     )
   }
 
-  def createMappingFromZKData(data: List[ChildData]): Map[String, String] = {
+  val delimiter = """|||"""
+  def createIndexFromZKData(data: List[ChildData]): Map[String, String] = {
     data
-      .map(child => Util.getLastPartOfPath(child.getPath) -> Util.makeUTF8String(child.getData))
+      .flatMap(child => {
+        val topicName = Util.getLastPartOfPath(child.getPath)
+        val patternList = Util.makeUTF8String(child.getData).split(Regex.quote(delimiter))
+        patternList.map(pat => pat -> topicName)
+      })
       .toMap
   }
 
@@ -84,10 +78,11 @@ class TNCKafkaTopicResolver(zkManager: ZKManager,
   def updateIndex(_index: Map[String, String]): Unit = synchronized {
     logger.info(s"updating new index ${_index}")
     index = _index
-  }
-  def updateMapping(_mapping: Map[String, String]): Unit = {
-    updateIndex(_mapping.map(v => v._2 -> v._1))
     if (useCache) cached.clear()
+  }
+
+  def init(): Unit = if (zkWatcher.isEmpty) {
+    updateAndWatchIndex()
   }
 
   override def prepare()(
