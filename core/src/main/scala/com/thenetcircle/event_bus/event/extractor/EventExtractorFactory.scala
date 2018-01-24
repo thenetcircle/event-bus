@@ -30,30 +30,29 @@ object EventExtractorFactory {
 
   private val registeredExtractors: mutable.Map[DataFormat, EventExtractor] = mutable.Map.empty
 
-  def registerExtractor(extractor: EventExtractor): Unit = {
+  def registerExtractor(extractor: EventExtractor): Unit =
     registeredExtractors += (extractor.getFormat() -> extractor)
-  }
 
   registerExtractor(new ActivityStreamsEventExtractor())
 
   val defaultExtractor: EventExtractor = getExtractor(DataFormat.ACTIVITYSTREAMS)
 
   /**
-   * Returns [[EventExtractor]] based on [[DataFormat]]
-   */
+    * Returns [[EventExtractor]] based on [[DataFormat]]
+    */
   def getExtractor(format: DataFormat): EventExtractor = registeredExtractors(format)
 
   /**
-   * Returns Unmarshaller[ByteString, Event] based on [[DataFormat]]
-   */
+    * Returns Unmarshaller[ByteString, Event] based on [[DataFormat]]
+    */
   def getByteStringUnmarshaller(
       format: DataFormat
   )(implicit executionContext: ExecutionContext): Unmarshaller[ByteString, Event] =
     Unmarshaller.apply(_ => data => getExtractor(format).extract(data.toArray))
 
   /**
-   * Returns Unmarshaller[HttpEntity, Event] based on [[DataFormat]]
-   */
+    * Returns Unmarshaller[HttpEntity, Event] based on [[DataFormat]]
+    */
   def getHttpEntityUnmarshaller(
       format: DataFormat
   )(implicit executionContext: ExecutionContext): Unmarshaller[HttpEntity, Event] =

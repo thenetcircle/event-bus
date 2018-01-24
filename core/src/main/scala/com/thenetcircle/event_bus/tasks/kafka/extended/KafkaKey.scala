@@ -43,22 +43,22 @@ object KafkaKey {
   val delimiter = "|||"
 
   /** Serializes [[KafkaKeyData]]
-   * @param data
-   * @return the serialized value
-   */
+    * @param data
+    * @return the serialized value
+    */
   def packRawData(data: KafkaKeyData): String =
     data.eventFormat.toString + delimiter + data.uuid + delimiter
 
   /** Deserializes rawdata to be [[KafkaKeyData]]
-   * @param rawData
-   * @return [[KafkaKeyData]]
-   */
+    * @param rawData
+    * @return [[KafkaKeyData]]
+    */
   def parseRawData(rawData: String): Option[KafkaKeyData] =
     try {
       if (rawData.substring(rawData.length - delimiter.length) == delimiter) {
-        val parsed = rawData.split(Regex.quote(delimiter))
+        val parsed      = rawData.split(Regex.quote(delimiter))
         val eventFormat = DataFormat(parsed(0))
-        val uuid = if (parsed.isDefinedAt(1)) parsed(1) else ""
+        val uuid        = if (parsed.isDefinedAt(1)) parsed(1) else ""
         Some(KafkaKeyData(eventFormat, uuid))
       } else {
         None

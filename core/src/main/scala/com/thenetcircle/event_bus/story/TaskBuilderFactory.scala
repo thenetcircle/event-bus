@@ -22,25 +22,23 @@ import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 class TaskBuilderFactory() {
-  private var sourceTaskBuilders: Map[String, SourceTaskBuilder] = Map.empty
+  private var sourceTaskBuilders: Map[String, SourceTaskBuilder]       = Map.empty
   private var transformTaskBuilders: Map[String, TransformTaskBuilder] = Map.empty
-  private var sinkTaskBuilers: Map[String, SinkTaskBuilder] = Map.empty
-  private var fallbackTaskBuilers: Map[String, FallbackTaskBuilder] = Map.empty
+  private var sinkTaskBuilers: Map[String, SinkTaskBuilder]            = Map.empty
+  private var fallbackTaskBuilers: Map[String, FallbackTaskBuilder]    = Map.empty
 
   private def createInstance(cls: Class[TaskBuilder[Task]]): TaskBuilder[Task] = cls.newInstance()
 
-  def registerBuilder(category: String, builderClassName: String): Unit = {
+  def registerBuilder(category: String, builderClassName: String): Unit =
     registerBuilder(
       category,
       Class.forName(builderClassName).asInstanceOf[Class[TaskBuilder[Task]]]
     )
-  }
 
-  def registerBuilder(category: String, builderClass: Class[TaskBuilder[Task]]): Unit = {
+  def registerBuilder(category: String, builderClass: Class[TaskBuilder[Task]]): Unit =
     registerBuilder(category, createInstance(builderClass))
-  }
 
-  def registerBuilder(category: String, builder: TaskBuilder[Task]): Unit = {
+  def registerBuilder(category: String, builder: TaskBuilder[Task]): Unit =
     builder match {
       case _: SourceTaskBuilder =>
         sourceTaskBuilders += (category.toLowerCase -> builder.asInstanceOf[SourceTaskBuilder])
@@ -52,7 +50,6 @@ class TaskBuilderFactory() {
       case _: FallbackTaskBuilder =>
         fallbackTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[FallbackTaskBuilder])
     }
-  }
 
   def getSourceTaskBuilder(category: String): Option[SourceTaskBuilder] =
     sourceTaskBuilders.get(category.toLowerCase)

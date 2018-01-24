@@ -25,14 +25,16 @@ import org.apache.kafka.common.utils.Utils
 import org.apache.kafka.common.{Cluster, PartitionInfo}
 
 class KafkaPartitioner extends Partitioner {
-  override def partition(topic: String,
-                         key: scala.Any,
-                         keyBytes: Array[Byte],
-                         value: scala.Any,
-                         valueBytes: Array[Byte],
-                         cluster: Cluster): Int = {
+  override def partition(
+      topic: String,
+      key: scala.Any,
+      keyBytes: Array[Byte],
+      value: scala.Any,
+      valueBytes: Array[Byte],
+      cluster: Cluster
+  ): Int = {
     val partitions: util.List[PartitionInfo] = cluster.partitionsForTopic(topic)
-    val numPartitions: Int = partitions.size
+    val numPartitions: Int                   = partitions.size
 
     val event = value.asInstanceOf[Event]
     /*val keyBytes = event.metadata.actor
@@ -44,5 +46,5 @@ class KafkaPartitioner extends Partitioner {
   }
 
   override def configure(configs: util.Map[String, _]): Unit = {}
-  override def close(): Unit = {}
+  override def close(): Unit                                 = {}
 }

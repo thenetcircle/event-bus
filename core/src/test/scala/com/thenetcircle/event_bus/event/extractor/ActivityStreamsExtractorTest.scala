@@ -75,7 +75,7 @@ class ActivityStreamsExtractorTest extends BaseTest {
   }
 
   it should "be succeeded as well if there are proper data" in {
-    val time = "2017-08-15T13:49:55Z"
+    val time     = "2017-08-15T13:49:55Z"
     var testdata = s"""
         |{
         |  "version": "1.0",
@@ -94,7 +94,7 @@ class ActivityStreamsExtractorTest extends BaseTest {
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
     testevent.metadata shouldEqual EventMetaData(
       name = Some("message.send"),
-      actor = Some("actorType" -> "actorId"),
+      actor = Some("actorType"       -> "actorId"),
       provider = Some("providerType" -> "providerId"),
     )
 
@@ -102,7 +102,7 @@ class ActivityStreamsExtractorTest extends BaseTest {
   }
 
   it should "be succeeded as well with complete ActivityStreams data" in {
-    val time = "2017-08-15T13:49:55Z"
+    val time     = "2017-08-15T13:49:55Z"
     var testdata = s"""
          |{
          |  "version": "1.0",
@@ -172,10 +172,10 @@ class ActivityStreamsExtractorTest extends BaseTest {
     testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
     testevent.metadata shouldEqual EventMetaData(
       name = Some("message.send"),
-      actor = Some("actorType" -> "actorId"),
-      target = Some("targetType" -> "targetId"),
+      actor = Some("actorType"       -> "actorId"),
+      target = Some("targetType"     -> "targetId"),
       provider = Some("providerType" -> "providerId"),
-      generator = Some("library" -> "tnc-event-dispatcher")
+      generator = Some("library"     -> "tnc-event-dispatcher")
     )
   }
 

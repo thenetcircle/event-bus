@@ -40,8 +40,8 @@ class KafkaSinkBuilderTest extends BaseTest {
         |  }
         |}""".stripMargin)
 
-    val settings = sink.settings
-    val kafkaSink = new KafkaSink(settings)
+    val settings         = sink.settings
+    val kafkaSink        = new KafkaSink(settings)
     val producerSettings = kafkaSink.getProducerSettings()
 
     settings.bootstrapServers shouldEqual "testserver1,testserver2"

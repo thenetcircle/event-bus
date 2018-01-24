@@ -12,21 +12,20 @@ trait StoryDAO {
 
 class StoryZookeeperDAO(zkManager: ZKManager)(implicit appContext: AppContext) extends StoryDAO {
   // TODO: watch new stories, and story changes
-  def getRunnableStories(runnerName: String): List[String] = {
+  def getRunnableStories(runnerName: String): List[String] =
     zkManager
       .getChildren(s"runners/$runnerName/stories")
       .getOrElse(List.empty[String])
-  }
 
   def getStoryInfo(storyName: String): StoryInfo = {
     val storyRootPath = s"stories/$storyName"
 
-    val status: String = zkManager.getData(s"$storyRootPath/status").getOrElse("INIT")
-    val settings: String = zkManager.getData(s"$storyRootPath/settings").getOrElse("")
-    val source: String = zkManager.getData(s"$storyRootPath/source").get
-    val sink: String = zkManager.getData(s"$storyRootPath/sink").get
+    val status: String             = zkManager.getData(s"$storyRootPath/status").getOrElse("INIT")
+    val settings: String           = zkManager.getData(s"$storyRootPath/settings").getOrElse("")
+    val source: String             = zkManager.getData(s"$storyRootPath/source").get
+    val sink: String               = zkManager.getData(s"$storyRootPath/sink").get
     val transforms: Option[String] = zkManager.getData(s"$storyRootPath/transforms")
-    val fallback: Option[String] = zkManager.getData(s"$storyRootPath/fallback")
+    val fallback: Option[String]   = zkManager.getData(s"$storyRootPath/fallback")
 
     StoryInfo(storyName, status, settings, source, sink, transforms, fallback)
   }
@@ -79,9 +78,8 @@ class StoryConfigDAO(config: Config) extends StoryDAO {
 
   override def getRunnableStories(runnerName: String): List[String] = stories.map(_.name)
 
-  override def getStoryInfo(storyName: String): StoryInfo = {
+  override def getStoryInfo(storyName: String): StoryInfo =
     stories.find(info => info.name == storyName).get
-  }
 
 }
 

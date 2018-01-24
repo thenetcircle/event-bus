@@ -39,8 +39,8 @@ case class CassandraSettings(contactPoints: List[String], port: Int = 9042, para
 
 class CassandraFallback(val settings: CassandraSettings) extends FallbackTask with StrictLogging {
 
-  private var clusterOption: Option[Cluster] = None
-  private var sessionOption: Option[Session] = None
+  private var clusterOption: Option[Cluster]             = None
+  private var sessionOption: Option[Session]             = None
   private var statementOption: Option[PreparedStatement] = None
 
   def initializeCassandra(keyspace: String): Unit = if (sessionOption.isEmpty) {
@@ -67,13 +67,13 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
 
     val keyspace = s"eventbus_test"
 
-    implicit val system: ActorSystem = runningContext.getActorSystem()
-    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val system: ActorSystem                = runningContext.getActorSystem()
+    implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     initializeCassandra(keyspace)
 
-    val session = sessionOption.get
+    val session         = sessionOption.get
     val statementBinder = getStatementBinder(taskName)
 
     import GuavaFutures._
@@ -150,7 +150,7 @@ private[cassandra] object GuavaFutures {
     def asScala(): Future[A] = {
       val p = Promise[A]()
       val callback = new FutureCallback[A] {
-        override def onSuccess(a: A): Unit = p.success(a)
+        override def onSuccess(a: A): Unit           = p.success(a)
         override def onFailure(err: Throwable): Unit = p.failure(err)
       }
       Futures.addCallback(guavaFut, callback)

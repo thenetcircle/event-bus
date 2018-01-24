@@ -22,12 +22,12 @@ import com.thenetcircle.event_bus.context.TaskRunningContext
 trait Task {
 
   /**
-   * Shutdown the task when something got wrong or the task has to be finished
-   * It's a good place to clear up the resources like connection, actor, etc...
-   * It's recommended to make this method to be idempotent, Because it could be called multiple times
-   *
-   * @param runningContext [[TaskRunningContext]]
-   */
+    * Shutdown the task when something got wrong or the task has to be finished
+    * It's a good place to clear up the resources like connection, actor, etc...
+    * It's recommended to make this method to be idempotent, Because it could be called multiple times
+    *
+    * @param runningContext [[TaskRunningContext]]
+    */
   def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 
 }

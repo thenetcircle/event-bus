@@ -32,21 +32,21 @@ import scala.util.control.NonFatal
 
 case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
 
-class Story(val settings: StorySettings,
-            val sourceTask: SourceTask,
-            val sinkTask: SinkTask,
-            val transformTasks: Option[List[TransformTask]] = None,
-            val fallbackTask: Option[FallbackTask] = None)
-    extends StrictLogging {
+class Story(
+    val settings: StorySettings,
+    val sourceTask: SourceTask,
+    val sinkTask: SinkTask,
+    val transformTasks: Option[List[TransformTask]] = None,
+    val fallbackTask: Option[FallbackTask] = None
+) extends StrictLogging {
 
   type Payload = (EventStatus, Event) // middle result type
 
   val storyName: String = settings.name
 
   private var storyStatus: StoryStatus = settings.status
-  def updateStoryStatus(status: StoryStatus): Unit = {
+  def updateStoryStatus(status: StoryStatus): Unit =
     storyStatus = status
-  }
   def getStoryStatus(): StoryStatus = storyStatus
 
   private var runningFuture: Option[Future[Done]] = None
@@ -91,7 +91,7 @@ class Story(val settings: StorySettings,
     }
   }
 
-  def stop()(implicit runningContext: TaskRunningContext): Unit = {
+  def stop()(implicit runningContext: TaskRunningContext): Unit =
     try {
       logger.info(s"stopping story $storyName")
       sourceTask.shutdown()
@@ -103,14 +103,12 @@ class Story(val settings: StorySettings,
         logger.error(s"get an error $ex when stopping story $storyName")
         throw ex
     }
-  }
 
   def wrapTask(
       taskHandler: Flow[Payload, Payload, NotUsed],
       taskName: String,
       skipPreCheck: Boolean = false
-  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] = {
-
+  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
     Flow
       .fromGraph(
         GraphDSL
@@ -176,5 +174,4 @@ class Story(val settings: StorySettings,
           }
       )
       .named(taskName)
-  }
 }

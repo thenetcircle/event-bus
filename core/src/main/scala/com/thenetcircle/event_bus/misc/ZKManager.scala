@@ -21,11 +21,7 @@ import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
-import org.apache.curator.framework.recipes.cache.{
-  PathChildrenCache,
-  PathChildrenCacheEvent,
-  PathChildrenCacheListener
-}
+import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent, PathChildrenCacheListener}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 
@@ -50,15 +46,14 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
 
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
-  def ensurePath(relativePath: String): Unit = {
+  def ensurePath(relativePath: String): Unit =
     if (client.checkExists().forPath(getAbsPath(relativePath)) == null) {
       client.create().creatingParentsIfNeeded().forPath(getAbsPath(relativePath))
     }
-  }
 
   def getClient(): CuratorFramework = client
 
-  def getData(relativePath: String): Option[String] = {
+  def getData(relativePath: String): Option[String] =
     try {
       Some(new String(client.getData.forPath(getAbsPath(relativePath)), "UTF-8"))
     } catch {
@@ -66,9 +61,8 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
         logger.info(s"getData from $relativePath failed with error: ${e.getMessage}")
         None
     }
-  }
 
-  def getChildren(relativePath: String): Option[List[String]] = {
+  def getChildren(relativePath: String): Option[List[String]] =
     try {
       Some(
         client.getChildren
@@ -81,9 +75,8 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
         logger.info(s"getChildren from $relativePath failed with error: ${e.getMessage}")
         None
     }
-  }
 
-  def getChildrenData(relativePath: String): Option[Map[String, String]] = {
+  def getChildrenData(relativePath: String): Option[Map[String, String]] =
     getChildren(relativePath)
       .map(children => {
         children
@@ -92,7 +85,6 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
           .map(_.get)
           .toMap
       })
-  }
 
   def watchChildren(
       relativePath: String,
@@ -123,11 +115,11 @@ object ZKManager {
   private var _instance: Option[ZKManager] = None
 
   /**
-   * Init ZKManager and Start zookeeper lient
-   *
-   * @param connectString
-   * @param rootPath
-   */
+    * Init ZKManager and Start zookeeper lient
+    *
+    * @param connectString
+    * @param rootPath
+    */
   def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager =
     _instance.getOrElse {
       if (connectString.isEmpty || rootPath.isEmpty) {
@@ -139,7 +131,7 @@ object ZKManager {
     }
 
   /**
-   * @throws java.util.NoSuchElementException if not init yet.
-   */
+    * @throws java.util.NoSuchElementException if not init yet.
+    */
   def getInstance(): ZKManager = _instance.get
 }

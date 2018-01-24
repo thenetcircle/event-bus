@@ -20,8 +20,8 @@ import com.thenetcircle.event_bus.interfaces.Event
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey
 
 package object kafka {
-  type ProducerKey = KafkaKey
+  type ProducerKey   = KafkaKey
   type ProducerValue = Event
-  type ConsumerKey = KafkaKey
+  type ConsumerKey   = KafkaKey
   type ConsumerValue = Array[Byte]
 }

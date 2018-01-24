@@ -27,11 +27,10 @@ import scala.concurrent.duration._
 
 trait AbstractApp extends StrictLogging {
 
-  def initCoreComponents(config: Config,
-                         runnerName: String): (AppContext, ActorSystem, ActorRef) = {
+  def initCoreComponents(config: Config, runnerName: String): (AppContext, ActorSystem, ActorRef) = {
     // Base components
     implicit val appContext: AppContext = AppContext(config)
-    implicit val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
+    implicit val system: ActorSystem    = ActorSystem(appContext.getAppName(), config)
 
     // Initialize StoryRunner
     val storyRunner: ActorRef =

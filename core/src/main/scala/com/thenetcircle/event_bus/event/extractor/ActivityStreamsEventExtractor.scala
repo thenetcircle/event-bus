@@ -30,36 +30,36 @@ import spray.json._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 
-case class Activity(title: Option[String],
-                    id: Option[String],
-                    published: Option[String],
-                    verb: Option[String],
-                    actor: Option[ActivityObject],
-                    // `object`: Option[ActivityObject],
-                    target: Option[ActivityObject],
-                    provider: Option[ActivityObject],
-                    // content: Option[Any],
-                    generator: Option[ActivityObject])
+case class Activity(
+    title: Option[String],
+    id: Option[String],
+    published: Option[String],
+    verb: Option[String],
+    actor: Option[ActivityObject],
+    // `object`: Option[ActivityObject],
+    target: Option[ActivityObject],
+    provider: Option[ActivityObject],
+    // content: Option[Any],
+    generator: Option[ActivityObject]
+)
 
-case class ActivityObject(id: Option[String],
-                          objectType: Option[String],
-                          // attachments: Option[List[ActivityObject]],
-                          // content: Option[Any],
-                          // summary: Option[Any],
-                          // downstreamDuplicates: Option[List[String]],
-                          // upstreamDuplicates: Option[List[String]],
-                          // author: Option[ActivityObject]
+case class ActivityObject(
+    id: Option[String],
+    objectType: Option[String],
+    // attachments: Option[List[ActivityObject]],
+    // content: Option[Any],
+    // summary: Option[Any],
+    // downstreamDuplicates: Option[List[String]],
+    // upstreamDuplicates: Option[List[String]],
+    // author: Option[ActivityObject]
 )
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val activityObjectFormat = jsonFormat2(ActivityObject)
-  implicit val activityFormat = jsonFormat8(Activity)
+  implicit val activityFormat       = jsonFormat8(Activity)
 }
 
-class ActivityStreamsEventExtractor
-    extends EventExtractor
-    with ActivityStreamsProtocol
-    with StrictLogging {
+class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsProtocol with StrictLogging {
 
   override def getFormat(): DataFormat = DataFormat.ACTIVITYSTREAMS
 
@@ -85,10 +85,10 @@ class ActivityStreamsEventExtractor
       val metaData = EventMetaData(
         name = activity.title,
         verb = activity.verb,
-        provider = activity.provider.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
+        provider = activity.provider.map(o => o.objectType.getOrElse("")   -> o.id.getOrElse("")),
         generator = activity.generator.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
-        actor = activity.actor.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
-        target = activity.target.map(o => o.objectType.getOrElse("") -> o.id.getOrElse(""))
+        actor = activity.actor.map(o => o.objectType.getOrElse("")         -> o.id.getOrElse("")),
+        target = activity.target.map(o => o.objectType.getOrElse("")       -> o.id.getOrElse(""))
       )
 
       var createdAt: Option[Date] = None

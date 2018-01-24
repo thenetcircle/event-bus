@@ -37,8 +37,8 @@ class KafkaSourceBuilderTest extends BaseTest {
         |  }
         |}""".stripMargin)
 
-    val settings = sink.settings
-    val kafkaSource = new KafkaSource(settings)
+    val settings         = sink.settings
+    val kafkaSource      = new KafkaSource(settings)
     val consumerSettings = kafkaSource.getConsumerSettings()
 
     settings.bootstrapServers shouldEqual "test-server"

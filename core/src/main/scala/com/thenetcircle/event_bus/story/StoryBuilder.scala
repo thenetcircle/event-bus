@@ -23,23 +23,24 @@ import com.typesafe.scalalogging.StrictLogging
 
 import scala.util.matching.Regex
 
-case class StoryInfo(name: String,
-                     status: String,
-                     settings: String,
-                     source: String,
-                     sink: String,
-                     transforms: Option[String],
-                     fallback: Option[String])
+case class StoryInfo(
+    name: String,
+    status: String,
+    settings: String,
+    source: String,
+    sink: String,
+    transforms: Option[String],
+    fallback: Option[String]
+)
 
-class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext)
-    extends StrictLogging {
+class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext) extends StrictLogging {
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
   val categoryDelimiter = ""","""
-  val taskDelimiter = """|||"""
+  val taskDelimiter     = """|||"""
 
-  def buildStory(storyInfo: StoryInfo): Story = {
+  def buildStory(storyInfo: StoryInfo): Story =
     try {
       new Story(
         StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
@@ -58,7 +59,6 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
         logger.error(s"story ${storyInfo.name} build failed with error $ex")
         throw ex
     }
-  }
 
   def parseConfigString(configString: String): (String, String) = {
     val re = configString.split(Regex.quote(categoryDelimiter), 2)

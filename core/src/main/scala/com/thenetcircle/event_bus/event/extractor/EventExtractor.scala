@@ -25,17 +25,17 @@ import scala.concurrent.{ExecutionContext, Future}
 trait EventExtractor {
 
   /**
-   * Get the data format of this extractor
-   *
-   * @return [[DataFormat]]
-   */
+    * Get the data format of this extractor
+    *
+    * @return [[DataFormat]]
+    */
   def getFormat(): DataFormat
 
   /**
-   * Extract event from data according to data format
-   *
-   * @return [[Future[Event]]
-   */
+    * Extract event from data according to data format
+    *
+    * @return [[Future[Event]]
+    */
   def extract(data: Array[Byte], passThrough: Option[Any] = None)(
       implicit executionContext: ExecutionContext
   ): Future[Event]

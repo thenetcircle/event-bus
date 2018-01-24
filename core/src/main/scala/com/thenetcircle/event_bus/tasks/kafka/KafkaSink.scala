@@ -28,25 +28,22 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
-import com.thenetcircle.event_bus.tasks.kafka.extended.{
-  EventSerializer,
-  KafkaKey,
-  KafkaKeySerializer,
-  KafkaPartitioner
-}
+import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
 
-case class KafkaSinkSettings(bootstrapServers: String,
-                             defaultTopic: String = "event-default",
-                             useEventGroupAsTopic: Boolean = true,
-                             parallelism: Int = 100,
-                             closeTimeout: FiniteDuration = 60.seconds,
-                             useDispatcher: Option[String] = None,
-                             properties: Map[String, String] = Map.empty)
+case class KafkaSinkSettings(
+    bootstrapServers: String,
+    defaultTopic: String = "event-default",
+    useEventGroupAsTopic: Boolean = true,
+    parallelism: Int = 100,
+    closeTimeout: FiniteDuration = 60.seconds,
+    useDispatcher: Option[String] = None,
+    properties: Map[String, String] = Map.empty
+)
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
 
@@ -87,8 +84,8 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     val topic: String =
       if (settings.useEventGroupAsTopic) event.metadata.group.getOrElse(settings.defaultTopic)
       else settings.defaultTopic
-    val timestamp: Long = event.createdAt.getTime
-    val key: ProducerKey = KafkaKey(event)
+    val timestamp: Long      = event.createdAt.getTime
+    val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event
 
     new ProducerRecord[ProducerKey, ProducerValue](
@@ -120,9 +117,8 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       .map(result => (Norm, result.message.passThrough))
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
     kafkaProducer.foreach(k => { k.close(5, TimeUnit.SECONDS); kafkaProducer = None })
-  }
 }
 
 class KafkaSinkBuilder() extends SinkTaskBuilder {

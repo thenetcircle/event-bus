@@ -55,7 +55,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
     TaskRunningContextFactory(system, appContext)
 
   val runningStories: mutable.Map[ActorRef, String] = mutable.Map.empty
-  var increasingId: Int = 0
+  var increasingId: Int                             = 0
 
   // Supervision strategy
   val loggerSupervistionDecider: PartialFunction[Throwable, Throwable] = {

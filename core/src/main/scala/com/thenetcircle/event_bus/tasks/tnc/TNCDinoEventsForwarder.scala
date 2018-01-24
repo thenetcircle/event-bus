@@ -21,34 +21,27 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
-import com.thenetcircle.event_bus.interfaces.{
-  Event,
-  EventStatus,
-  TransformTask,
-  TransformTaskBuilder
-}
+import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.util.matching.Regex
 
 class TNCDinoEventsForwarder() extends TransformTask with StrictLogging {
 
-  def appendTitleField(event: Event): Event = {
+  def appendTitleField(event: Event): Event =
     if (event.metadata.verb.isDefined) {
       val shortGroup = event.metadata.group.map(g => g.split("-").last + ".").getOrElse("")
-      val newTitle = "dino." + shortGroup + event.metadata.verb.get
-      val newBody = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
+      val newTitle   = "dino." + shortGroup + event.metadata.verb.get
+      val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
       event.withNoGroup().withName(newTitle).withBody(newBody)
     } else {
       event
     }
-  }
 
   override def prepare()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] = {
+  ): Flow[Event, (EventStatus, Event), NotUsed] =
     Flow[Event].map(e => Norm -> appendTitleField(e))
-  }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 
@@ -58,8 +51,7 @@ class TNCDinoEventsForwarderBuilder() extends TransformTaskBuilder {
 
   override def build(
       configString: String
-  )(implicit buildingContext: TaskBuildingContext): TNCDinoEventsForwarder = {
+  )(implicit buildingContext: TaskBuildingContext): TNCDinoEventsForwarder =
     new TNCDinoEventsForwarder()
-  }
 
 }

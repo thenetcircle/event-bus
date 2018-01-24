@@ -22,7 +22,7 @@ import net.ceedubs.ficus.readers.ValueReader
 object DataFormat extends Enumeration {
   type DataFormat = Value
 
-  val UNKNOWN = Value(1, "UNKNOWN")
+  val UNKNOWN         = Value(1, "UNKNOWN")
   val ACTIVITYSTREAMS = Value(2, "ACTIVITYSTREAMS")
 
   def apply(name: String): DataFormat = name.toUpperCase match {

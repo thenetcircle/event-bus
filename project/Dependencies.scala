@@ -38,6 +38,12 @@ object Dependencies {
   val gatlingChartsHighcharts = "io.gatling.highcharts" % "gatling-charts-highcharts" % gatlingVersion % Test
   val gatlingTestFramework = "io.gatling" % "gatling-test-framework" % gatlingVersion % Test
 
+  val commonDependencies = Seq(
+    scalaLogging,
+    logback,
+    scalaTest
+  )
+
   val coreDependencies = Seq(
     akka,
     akkaStream,
@@ -49,9 +55,6 @@ object Dependencies {
     curator,
     zookeeper,
     sprayJson,
-    scalaLogging,
-    logback,
-    scalaTest,
     ficus,
     kamonCore,
     kamonAkka,

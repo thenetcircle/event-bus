@@ -22,12 +22,13 @@ import java.util.Date
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 
-case class NormalEvent(uuid: String,
-                       metadata: EventMetaData,
-                       body: EventBody,
-                       createdAt: Date = Date.from(Instant.now()),
-                       passThrough: Option[Any] = None)
-    extends Event {
+case class NormalEvent(
+    uuid: String,
+    metadata: EventMetaData,
+    body: EventBody,
+    createdAt: Date = Date.from(Instant.now()),
+    passThrough: Option[Any] = None
+) extends Event {
 
   override def withPassThrough[T](_passThrough: T): NormalEvent = {
     if (passThrough.isDefined) {
@@ -47,13 +48,15 @@ case class NormalEvent(uuid: String,
   override def withUUID(_uuid: String): NormalEvent = copy(uuid = _uuid)
 
   override def withBody(_body: EventBody): NormalEvent = copy(body = _body)
-  override def withBody(_data: String): NormalEvent = copy(body = body.copy(data = _data))
+  override def withBody(_data: String): NormalEvent    = copy(body = body.copy(data = _data))
 }
 
 object NormalEvent {
-  def createFromFailure(ex: Throwable,
-                        _body: EventBody = EventBody("", DataFormat.UNKNOWN),
-                        _passThrough: Option[Any] = None): NormalEvent = {
+  def createFromFailure(
+      ex: Throwable,
+      _body: EventBody = EventBody("", DataFormat.UNKNOWN),
+      _passThrough: Option[Any] = None
+  ): NormalEvent =
     NormalEvent(
       uuid = "FailureEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(
@@ -63,5 +66,4 @@ object NormalEvent {
       body = _body,
       passThrough = _passThrough
     )
-  }
 }

@@ -38,7 +38,7 @@ object Admin extends AbstractApp with StrictLogging {
     implicit val (appContext, actorSystem, storyRunner) = initCoreComponents(config, runnerName)
 
     // Setup Zookeeper
-    val zkRootPath = s"/event-bus/${appContext.getAppName()}/${appContext.getAppEnv()}"
+    val zkRootPath           = s"/event-bus/${appContext.getAppName()}/${appContext.getAppEnv()}"
     val zkManager: ZKManager = ZKManager.init(zkConnectString, zkRootPath)
 
     // Start run
@@ -52,7 +52,7 @@ object Admin extends AbstractApp with StrictLogging {
     sys.exit(1)
   }
 
-  def parseArgs(list: List[String], map: Map[Symbol, String] = Map.empty): Map[Symbol, String] = {
+  def parseArgs(list: List[String], map: Map[Symbol, String] = Map.empty): Map[Symbol, String] =
     list match {
       case Nil => map
       case "--runner-name" :: value :: tail =>
@@ -66,5 +66,4 @@ object Admin extends AbstractApp with StrictLogging {
         println("Unknown option " + option)
         sys.exit(1)
     }
-  }
 }

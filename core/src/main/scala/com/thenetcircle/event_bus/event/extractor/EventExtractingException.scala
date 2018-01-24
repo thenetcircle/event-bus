@@ -17,5 +17,4 @@
 
 package com.thenetcircle.event_bus.event.extractor
 
-class EventExtractingException(message: String, cause: Throwable)
-    extends RuntimeException(message, cause)
+class EventExtractingException(message: String, cause: Throwable) extends RuntimeException(message, cause)

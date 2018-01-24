@@ -24,11 +24,7 @@ import com.thenetcircle.event_bus.story._
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
-import org.apache.curator.framework.recipes.cache.{
-  ChildData,
-  PathChildrenCache,
-  PathChildrenCacheEvent
-}
+import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache, PathChildrenCacheEvent}
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
@@ -41,7 +37,7 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
 
   val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
-  type ZEvent = PathChildrenCacheEvent
+  type ZEvent   = PathChildrenCacheEvent
   type ZWatcher = PathChildrenCache
 
   val watchingStores = mutable.Map.empty[String, ZWatcher]
@@ -58,7 +54,7 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
         re.getType match {
           // new story has been assigned to this runner
           case CHILD_ADDED =>
-            val storyName = Util.getLastPartOfPath(re.getData.getPath)
+            val storyName    = Util.getLastPartOfPath(re.getData.getPath)
             val storyWatcher = runAndWatchStory(storyName)
             watchingStores += (storyName -> storyWatcher)
 
@@ -87,29 +83,28 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
   val storyInitStatus = mutable.Map.empty[String, AtomicBoolean]
   def runAndWatchStory(storyName: String): PathChildrenCache = {
     storyInitStatus += (storyName -> new AtomicBoolean())
-    zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) {
-      (se, sw) =>
-        if (se.getType == INITIALIZED ||
-            se.getType == CHILD_UPDATED ||
-            (se.getType == CHILD_ADDED && storyInitStatus(storyName).get()) ||
-            se.getType == CHILD_REMOVED) {
+    zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) { (se, sw) =>
+      if (se.getType == INITIALIZED ||
+          se.getType == CHILD_UPDATED ||
+          (se.getType == CHILD_ADDED && storyInitStatus(storyName).get()) ||
+          se.getType == CHILD_REMOVED) {
 
-          if (se.getType == INITIALIZED) {
-            storyInitStatus(storyName).compareAndSet(false, true)
-          }
-
-          val storyOption = createStory(storyName, sw.getCurrentData.asScala.toList)
-          storyOption.foreach(story => {
-            if (se.getType == INITIALIZED)
-              storyRunner ! StoryRunner.Run(story)
-            else
-              storyRunner ! StoryRunner.Rerun(story)
-          })
+        if (se.getType == INITIALIZED) {
+          storyInitStatus(storyName).compareAndSet(false, true)
         }
+
+        val storyOption = createStory(storyName, sw.getCurrentData.asScala.toList)
+        storyOption.foreach(story => {
+          if (se.getType == INITIALIZED)
+            storyRunner ! StoryRunner.Run(story)
+          else
+            storyRunner ! StoryRunner.Rerun(story)
+        })
+      }
     }
   }
 
-  def createStory(storyName: String, data: List[ChildData]): Option[Story] = {
+  def createStory(storyName: String, data: List[ChildData]): Option[Story] =
     try {
       val storyInfo =
         createStoryInfoFromZKData(storyName, data)
@@ -121,7 +116,6 @@ class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: Acto
         logger.error(s"fetching or building story failed with error $ex, when run story")
         None
     }
-  }
 
   def createStoryInfoFromZKData(storyName: String, data: List[ChildData]): StoryInfo = {
     val storyData = mutable.Map.empty[String, String]

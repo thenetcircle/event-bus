@@ -24,21 +24,23 @@ import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.ExecutionContext
 
-class TaskRunningContext(appContext: AppContext,
-                         system: ActorSystem,
-                         materializer: Materializer,
-                         executionContext: ExecutionContext,
-                         storyRunnerName: String,
-                         storyRunner: ActorRef,
-                         storySettings: StorySettings) {
+class TaskRunningContext(
+    appContext: AppContext,
+    system: ActorSystem,
+    materializer: Materializer,
+    executionContext: ExecutionContext,
+    storyRunnerName: String,
+    storyRunner: ActorRef,
+    storySettings: StorySettings
+) {
 
-  def getAppContext(): AppContext = appContext
-  def getActorSystem(): ActorSystem = system
-  def getMaterializer(): Materializer = materializer
+  def getAppContext(): AppContext             = appContext
+  def getActorSystem(): ActorSystem           = system
+  def getMaterializer(): Materializer         = materializer
   def getExecutionContext(): ExecutionContext = executionContext
-  def getStoryRunnerName(): String = storyRunnerName
-  def getStoryRunner(): ActorRef = storyRunner
-  def getStoryName(): String = storySettings.name
+  def getStoryRunnerName(): String            = storyRunnerName
+  def getStoryRunner(): ActorRef              = storyRunner
+  def getStoryName(): String                  = storySettings.name
 
 }
 
@@ -54,9 +56,11 @@ class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) ext
 
   lazy val executionContext: ExecutionContext = ExecutionContext.global
 
-  def createNewRunningContext(storyRunnerName: String,
-                              storyRunner: ActorRef,
-                              storySettings: StorySettings): TaskRunningContext = {
+  def createNewRunningContext(
+      storyRunnerName: String,
+      storyRunner: ActorRef,
+      storySettings: StorySettings
+  ): TaskRunningContext =
     new TaskRunningContext(
       appContext,
       system,
@@ -66,7 +70,6 @@ class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) ext
       storyRunner,
       storySettings
     )
-  }
 }
 
 object TaskRunningContextFactory {

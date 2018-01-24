@@ -41,7 +41,7 @@ abstract class BaseTest(_appContext: AppContext)
     with StrictLogging {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
-  implicit val appContext: AppContext = _appContext
+  implicit val appContext: AppContext         = _appContext
 
   val decider: Supervision.Decider = {
     case ex: Throwable =>
@@ -67,7 +67,7 @@ abstract class BaseTest(_appContext: AppContext)
     )
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
-  val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
+  val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
   def this() = {
     this(new AppContext("event-bus-test", "2.x", "test", true, ConfigFactory.load()))

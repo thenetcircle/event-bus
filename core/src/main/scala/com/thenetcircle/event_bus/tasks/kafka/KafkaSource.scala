@@ -78,8 +78,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       message: CommittableMessage[ConsumerKey, ConsumerValue]
   )(implicit executionContext: ExecutionContext): Future[(EventStatus, Event)] = {
     val kafkaKeyDataOption = Option(message.record.key()).flatMap(_key => _key.data)
-    val messageValue = message.record.value()
-    val kafkaTopic = message.record.topic()
+    val messageValue       = message.record.value()
+    val kafkaTopic         = message.record.topic()
 
     val eventExtractor =
       kafkaKeyDataOption
@@ -120,7 +120,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): Future[Done] = {
 
-    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     val (killSwitch, doneFuture) =
@@ -183,19 +183,20 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     doneFuture
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
     killSwitchOption.foreach(k => { k.shutdown(); killSwitchOption = None })
-  }
 }
 
 // TODO: change the consumer offset
-case class KafkaSourceSettings(bootstrapServers: String,
-                               groupId: String,
-                               subscribedTopics: Either[Set[String], String],
-                               maxConcurrentPartitions: Int = 100,
-                               commitTimeout: FiniteDuration = 15.seconds,
-                               useDispatcher: Option[String] = None,
-                               properties: Map[String, String] = Map.empty)
+case class KafkaSourceSettings(
+    bootstrapServers: String,
+    groupId: String,
+    subscribedTopics: Either[Set[String], String],
+    maxConcurrentPartitions: Int = 100,
+    commitTimeout: FiniteDuration = 15.seconds,
+    useDispatcher: Option[String] = None,
+    properties: Map[String, String] = Map.empty
+)
 
 class KafkaSourceBuilder() extends SourceTaskBuilder {
 

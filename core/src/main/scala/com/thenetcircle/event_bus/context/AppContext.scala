@@ -21,29 +21,24 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
 
-class AppContext(appName: String,
-                 appVersion: String,
-                 appEnv: String,
-                 debug: Boolean,
-                 systemConfig: Config) {
+class AppContext(appName: String, appVersion: String, appEnv: String, debug: Boolean, systemConfig: Config) {
 
-  def getAppEnv(): String = appEnv
-  def getAppName(): String = appName
-  def getAppVersion(): String = appVersion
+  def getAppEnv(): String       = appEnv
+  def getAppName(): String      = appName
+  def getAppVersion(): String   = appVersion
   def getSystemConfig(): Config = systemConfig
 
   def isDebug(): Boolean = debug
-  def isDev(): Boolean = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
-  def isTest(): Boolean = appEnv.toLowerCase == "test"
-  def isProd(): Boolean = appEnv.toLowerCase == "production" || appEnv.toLowerCase == "prod"
+  def isDev(): Boolean   = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
+  def isTest(): Boolean  = appEnv.toLowerCase == "test"
+  def isProd(): Boolean  = appEnv.toLowerCase == "production" || appEnv.toLowerCase == "prod"
 
   private val shutdownHooks = new ListBuffer[() => Unit]
   def addShutdownHook(body: => Unit) {
     shutdownHooks += (() => body)
   }
-  def shutdown(): Unit = {
+  def shutdown(): Unit =
     for (hook <- shutdownHooks) hook()
-  }
 
 }
 

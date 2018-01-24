@@ -20,12 +20,12 @@ package com.thenetcircle.event_bus.story
 object StoryStatus extends Enumeration {
   type StoryStatus = Value
 
-  val INIT = Value(1, "INIT")
+  val INIT      = Value(1, "INIT")
   val DEPLOYING = Value(2, "DEPLOYING")
-  val RUNNING = Value(3, "RUNNING")
-  val FAILED = Value(4, "FAILED")
-  val STOPPING = Value(5, "STOPPING")
-  val STOPPED = Value(6, "STOPPED")
+  val RUNNING   = Value(3, "RUNNING")
+  val FAILED    = Value(4, "FAILED")
+  val STOPPING  = Value(5, "STOPPING")
+  val STOPPED   = Value(6, "STOPPED")
 
   def apply(status: String): StoryStatus = status.toUpperCase match {
     case "DEPLOYING" => DEPLOYING
