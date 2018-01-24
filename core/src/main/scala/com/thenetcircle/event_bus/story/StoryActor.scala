@@ -25,7 +25,9 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
   override def preStart(): Unit = {
     log.info(s"the story actor of story $storyName is starting")
     val doneFuture = story.run()
-    doneFuture.onComplete(_ => self ! Shutdown)
+    // fix the case if this actor is dead already, the Shutdown commend will send to dead-letter
+    val selfPath = self.path
+    doneFuture.onComplete(_ => context.actorSelection(selfPath) ! Shutdown)
   }
 
   override def postStop(): Unit = {

@@ -42,7 +42,7 @@ class KafkaSourceBuilderTest extends BaseTest {
     val consumerSettings = kafkaSource.getConsumerSettings()
 
     settings.bootstrapServers shouldEqual "test-server"
-    settings.groupId shouldEqual "test-group"
+    settings.groupId.get shouldEqual "test-group"
     settings.subscribedTopics shouldEqual Left(Set[String]("abc", "def"))
     settings.maxConcurrentPartitions shouldEqual 50
     settings.useDispatcher.get shouldEqual "test-dispatcher"

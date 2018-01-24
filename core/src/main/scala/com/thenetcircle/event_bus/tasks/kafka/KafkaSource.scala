@@ -41,7 +41,6 @@ import scala.util.control.NonFatal
 class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
-  require(settings.groupId.nonEmpty, "group id is required.")
 
   def getSubscription(): AutoSubscription =
     if (settings.subscribedTopics.isLeft) {
@@ -67,11 +66,18 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
 
+    val groupId =
+      settings.groupId.getOrElse(
+        "EB-" + runningContext.getAppContext().getAppName() + "-" + runningContext
+          .getStoryRunnerName() + "-" + runningContext.getStoryName()
+      )
+
     _consumerSettings
       .withBootstrapServers(settings.bootstrapServers)
-      .withGroupId(settings.groupId)
+      .withGroupId(groupId)
       .withCommitTimeout(settings.commitTimeout)
-    // prevent the issue javax.management.InstanceAlreadyExistsException: kafka.consumer:type=...
+
+    // comment this to prevent the issue javax.management.InstanceAlreadyExistsException: kafka.consumer:type=...
     // .withProperty("client.id", clientId)
   }
 
@@ -191,7 +197,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 // TODO: change the consumer offset
 case class KafkaSourceSettings(
     bootstrapServers: String,
-    groupId: String,
+    groupId: Option[String],
     subscribedTopics: Either[Set[String], String],
     maxConcurrentPartitions: Int = 100,
     commitTimeout: FiniteDuration = 15.seconds,
@@ -218,7 +224,7 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
     val settings =
       KafkaSourceSettings(
         config.as[String]("bootstrap-servers"),
-        config.as[String]("group-id"),
+        config.as[Option[String]]("group-id"),
         subscribedTopics,
         config.as[Int]("max-concurrent-partitions"),
         config.as[FiniteDuration]("commit-timeout"),

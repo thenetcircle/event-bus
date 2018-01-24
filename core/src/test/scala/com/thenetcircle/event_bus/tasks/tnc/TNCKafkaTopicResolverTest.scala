@@ -24,7 +24,7 @@ class TNCKafkaTopicResolverTest extends BaseTest {
   behavior of "TNCKafkaTopicResolver"
 
   val zkManager =
-    ZKManager.init("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/${appContext.getAppName()}")
+    ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/${appContext.getAppName()}")
   val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
 
   it should "solve topic correctly" in {

@@ -44,7 +44,7 @@ class ZKManagerTest extends BaseTest {
     val runnerName = "default"
 
     val zkManager =
-      ZKManager.init("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
+      ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
 
     new ZKStoryManager(zkManager, runnerName, system.actorOf(StoryRunner.props(runnerName)))
       .runAndWatch()
