@@ -24,7 +24,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.NormalEvent
+import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ, ToFB}
@@ -104,7 +104,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
           )
           (
             ToFB(Some(ex)),
-            NormalEvent
+            EventImpl
               .createFromFailure(
                 ex,
                 EventBody(messageValue, eventFormat),

@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.NormalEvent
+import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
@@ -81,7 +81,7 @@ abstract class BaseTest(_appContext: AppContext)
   }
 
   def createTestEvent(name: String = "TestEvent", body: String = "body"): Event =
-    NormalEvent(
+    EventImpl(
       uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(name = Some(name)),
       body = EventBody(body, DataFormat.UNKNOWN)

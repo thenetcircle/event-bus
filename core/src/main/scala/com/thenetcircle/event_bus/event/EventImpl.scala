@@ -22,7 +22,7 @@ import java.util.Date
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 
-case class NormalEvent(
+case class EventImpl(
     uuid: String,
     metadata: EventMetaData,
     body: EventBody,
@@ -30,34 +30,34 @@ case class NormalEvent(
     passThrough: Option[Any] = None
 ) extends Event {
 
-  override def withPassThrough[T](_passThrough: T): NormalEvent = {
+  override def withPassThrough[T](_passThrough: T): EventImpl = {
     if (passThrough.isDefined) {
       throw new Exception("event passthrough is defined already.")
     }
     copy(passThrough = Some(_passThrough))
   }
 
-  override def withGroup(_group: String): NormalEvent =
+  override def withGroup(_group: String): EventImpl =
     copy(metadata = metadata.copy(group = Some(_group)))
-  override def withNoGroup(): NormalEvent =
+  override def withNoGroup(): EventImpl =
     copy(metadata = metadata.copy(group = None))
 
-  override def withName(_name: String): NormalEvent =
+  override def withName(_name: String): EventImpl =
     copy(metadata = metadata.copy(name = Some(_name)))
 
-  override def withUUID(_uuid: String): NormalEvent = copy(uuid = _uuid)
+  override def withUUID(_uuid: String): EventImpl = copy(uuid = _uuid)
 
-  override def withBody(_body: EventBody): NormalEvent = copy(body = _body)
-  override def withBody(_data: String): NormalEvent    = copy(body = body.copy(data = _data))
+  override def withBody(_body: EventBody): EventImpl = copy(body = _body)
+  override def withBody(_data: String): EventImpl    = copy(body = body.copy(data = _data))
 }
 
-object NormalEvent {
+object EventImpl {
   def createFromFailure(
       ex: Throwable,
       _body: EventBody = EventBody("", DataFormat.UNKNOWN),
       _passThrough: Option[Any] = None
-  ): NormalEvent =
-    NormalEvent(
+  ): EventImpl =
+    EventImpl(
       uuid = "FailureEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(
         name = Some("eventbus.failure.trigger"),

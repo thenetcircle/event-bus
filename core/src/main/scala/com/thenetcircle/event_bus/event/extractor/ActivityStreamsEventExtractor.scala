@@ -107,7 +107,7 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
         )
       }
 
-      NormalEvent(
+      EventImpl(
         uuid = uuid,
         metadata = metaData,
         body = EventBody(data, getFormat()),
