@@ -83,7 +83,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
                          |primary key (uuid, storyname, createdat, group, eventname)
                          |);""".stripMargin)
 
-    _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS fallback_by_storyname AS
+    _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspace.fallback_by_storyname AS
                          | SELECT * FROM fallback WHERE uuid IS NOT NULL AND storyname IS NOT NULL AND createdat IS NOT NULL AND eventname IS NOT NULl AND group IS NOT NULL
                          | PRIMARY KEY (storyname, createdat, eventname, group, uuid)""".stripMargin)
   }
@@ -92,9 +92,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
       implicit runningContext: TaskRunningContext
   ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = {
 
-    // val keyspace = s"eventbus_${runningContext.getAppContext().getAppName()}"
-
-    val keyspace = s"eventbus_test"
+    val keyspace = s"event-bus-${runningContext.getAppContext().getAppName()}"
 
     implicit val system: ActorSystem                = runningContext.getActorSystem()
     implicit val materializer: Materializer         = runningContext.getMaterializer()

@@ -17,14 +17,16 @@
 
 package com.thenetcircle.event_bus.admin
 
-import akka.actor.ActorRef
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives._
+import akka.stream.ActorMaterializer
 import com.thenetcircle.event_bus.Core
-import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
-import com.thenetcircle.event_bus.story.StoryRunner
+import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}
-import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 class Main extends Core {
 
@@ -35,7 +37,22 @@ class Main extends Core {
   zkManager.start()
   appContext.setZKManager(zkManager)
 
-  def run(args: Array[String]): Unit = {}
+  def run(args: Array[String]): Unit = {
+
+    implicit val materializer = ActorMaterializer()
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    val route: Route  = getRoute()
+    val bindingFuture = Http().bindAndHandle(route, "0.0.0.0", 8990)
+
+    appContext.addShutdownHook(Await.result(bindingFuture.map(_.unbind()), 5.seconds))
+
+  }
+
+  def getRoute(): Route =
+    pathSingleSlash {
+      complete("abcdef")
+    }
 
 }
 

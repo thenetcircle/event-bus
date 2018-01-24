@@ -16,6 +16,7 @@
  */
 
 package com.thenetcircle.event_bus.tasks.kafka.extended
+
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interfaces.Event
