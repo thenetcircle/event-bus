@@ -54,9 +54,38 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
     sessionOption = clusterOption.map(_.connect(keyspace))
     sessionOption.foreach(s => { statementOption = Some(getPreparedStatement(s)) })
 
+    val _session = sessionOption.get
     // create tables if not exists
-    // session.execute("")
+    _session.execute(
+      s"""create keyspace $keyspace if not exists
+          | with replication = {'class': 'SimpleStrategy', 'replication_factor': '2'}  and durable_writes = true;""".stripMargin
+    )
 
+    _session.execute(s"""create table if not exists $keyspace.fallback(
+                         |uuid text,
+                         |storyname text,
+                         |eventname text,
+                         |createdat timestamp,
+                         |fallbacktime timestamp,
+                         |failedtaskname text,
+                         |group text,
+                         |providerid text,
+                         |providertype text,
+                         |generatorid text,
+                         |generatortype text,
+                         |actorid text,
+                         |actortype text,
+                         |targetid text,
+                         |targettype text,
+                         |body text,
+                         |format text,
+                         |cause text,
+                         |primary key (uuid, storyname, createdat, group, eventname)
+                         |);""".stripMargin)
+
+    _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS fallback_by_storyname AS
+                         | SELECT * FROM fallback WHERE uuid IS NOT NULL AND storyname IS NOT NULL AND createdat IS NOT NULL AND eventname IS NOT NULl AND group IS NOT NULL
+                         | PRIMARY KEY (storyname, createdat, eventname, group, uuid)""".stripMargin)
   }
 
   override def prepareForTask(taskName: String)(
