@@ -71,7 +71,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       .withBootstrapServers(settings.bootstrapServers)
       .withGroupId(settings.groupId)
       .withCommitTimeout(settings.commitTimeout)
-      .withProperty("client.id", clientId)
+    // prevent the issue javax.management.InstanceAlreadyExistsException: kafka.consumer:type=...
+    // .withProperty("client.id", clientId)
   }
 
   def extractEventFromMessage(

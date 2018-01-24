@@ -17,12 +17,16 @@
 
 package com.thenetcircle.event_bus.admin
 
+import akka.actor.ActorRef
 import com.thenetcircle.event_bus.Core
-import com.thenetcircle.event_bus.misc.ZKManager
+import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
+import com.thenetcircle.event_bus.story.StoryRunner
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 
-object Main extends Core with App with StrictLogging {
+import scala.concurrent.Await
+
+class Main extends Core {
 
   val config: Config = ConfigFactory.load()
 
@@ -31,4 +35,8 @@ object Main extends Core with App with StrictLogging {
   zkManager.start()
   appContext.setZKManager(zkManager)
 
+  def run(args: Array[String]): Unit = {}
+
 }
+
+object Main extends App { (new Main).run(args) }

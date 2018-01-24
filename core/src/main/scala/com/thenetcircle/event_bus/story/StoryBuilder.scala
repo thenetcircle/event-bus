@@ -37,7 +37,7 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
-  val categoryDelimiter = ""","""
+  val categoryDelimiter = """#"""
   val taskDelimiter     = """|||"""
 
   def buildStory(storyInfo: StoryInfo): Story =

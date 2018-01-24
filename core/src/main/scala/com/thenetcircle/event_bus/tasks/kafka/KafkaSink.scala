@@ -71,7 +71,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       .withCloseTimeout(settings.closeTimeout)
       .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
       .withBootstrapServers(settings.bootstrapServers)
-      .withProperty("client.id", clientId)
+    // .withProperty("client.id", clientId)
   }
 
   def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {

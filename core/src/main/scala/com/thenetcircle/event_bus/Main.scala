@@ -18,21 +18,20 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorRef
+import akka.pattern.gracefulStop
 import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
 import com.thenetcircle.event_bus.story.StoryRunner
 import com.typesafe.config.{Config, ConfigFactory}
-import com.typesafe.scalalogging.StrictLogging
-import akka.pattern.gracefulStop
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-object Main extends Core with App with StrictLogging {
+class Main extends Core {
 
   val config: Config = ConfigFactory.load()
 
   // Initialize StoryRunner
-  val runnerName = config.getString("app.runner-name")
+  val runnerName: String = config.getString("app.runner-name")
   val storyRunner: ActorRef =
     system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
   appContext.addShutdownHook {
@@ -47,7 +46,9 @@ object Main extends Core with App with StrictLogging {
   zkManager.start()
   appContext.setZKManager(zkManager)
 
-  // Start run
-  new ZKStoryManager(zkManager, runnerName, storyRunner).runAndWatch()
+  def run(args: Array[String]): Unit =
+    new ZKStoryManager(zkManager, runnerName, storyRunner).runAndWatch()
 
 }
+
+object Main extends App { (new Main).run(args) }

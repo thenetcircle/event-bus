@@ -31,8 +31,8 @@ trait Core extends StrictLogging {
 
   def config: Config
 
-  implicit val appContext: AppContext   = AppContext(config)
-  implicit lazy val system: ActorSystem = ActorSystem(appContext.getAppName(), config)
+  implicit lazy val appContext: AppContext = AppContext(config)
+  implicit lazy val system: ActorSystem    = ActorSystem(appContext.getAppName(), config)
 
   // Setup shutdown hooks
   sys.addShutdownHook({
