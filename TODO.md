@@ -50,9 +50,3 @@ create table if not exists fallback(
 CREATE MATERIALIZED VIEW fallback_by_storyname AS
     SELECT * FROM fallback WHERE uuid IS NOT NULL AND storyname IS NOT NULL AND createdat IS NOT NULL AND eventname IS NOT NULl AND group IS NOT NULL
     PRIMARY KEY (storyname, createdat, eventname, group, uuid)
-
-
-sink	kafka|||{ "bootstrap-servers": "maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093" }
-source	http|||{ "port": 8899, "succeeded-response": "ok" }
-status	INIT
-transforms	tnc-topic-resolver|||{}
