@@ -17,11 +17,11 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.IntegrationTestBase
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.recipes.cache.{TreeCache, TreeCacheEvent, TreeCacheListener}
 
-class ZKManagerTest extends BaseTest {
+class ZKManagerTest extends IntegrationTestBase {
 
   behavior of "ZKManager"
 

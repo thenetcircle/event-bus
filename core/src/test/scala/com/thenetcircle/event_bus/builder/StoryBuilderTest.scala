@@ -17,9 +17,9 @@
 
 package com.thenetcircle.event_bus.builder
 
-import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.TestBase
 
-class StoryBuilderTest extends BaseTest {
+class StoryBuilderTest extends TestBase {
 
   behavior of "StoryBuilder"
 

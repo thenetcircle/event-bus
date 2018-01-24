@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
+import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
@@ -27,12 +28,11 @@ import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilde
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
-import akka.testkit.{ImplicitSender, TestActors, TestKit}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-abstract class BaseTest(_appContext: AppContext)
+abstract class TestBase(_appContext: AppContext)
     extends TestKit(ActorSystem(_appContext.getAppName(), _appContext.getSystemConfig()))
     with ImplicitSender
     with FlatSpecLike

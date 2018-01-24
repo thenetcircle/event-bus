@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.extractor
 
 import java.text.SimpleDateFormat
 
-import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor._
 import com.thenetcircle.event_bus.interfaces.{EventBody, EventMetaData}
@@ -27,7 +27,7 @@ import com.thenetcircle.event_bus.interfaces.{EventBody, EventMetaData}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class ActivityStreamsExtractorTest extends BaseTest {
+class ActivityStreamsExtractorTest extends TestBase {
 
   private val activityStreamsExtractor: EventExtractor =
     EventExtractorFactory.getExtractor(DataFormat.ACTIVITYSTREAMS)

@@ -17,10 +17,10 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.tasks.tnc.TNCKafkaTopicResolver
 
-class TNCKafkaTopicResolverTest extends BaseTest {
+class TNCKafkaTopicResolverTest extends IntegrationTestBase {
 
   behavior of "TNCKafkaTopicResolver"
 

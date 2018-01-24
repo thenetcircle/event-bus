@@ -17,13 +17,13 @@
 
 package com.thenetcircle.event_bus.builder
 
-import com.thenetcircle.event_bus.BaseTest
+import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.tasks.http.HttpSourceBuilder
 
 import scala.concurrent.duration._
 
-class HttpSourceBuilderTest extends BaseTest {
+class HttpSourceBuilderTest extends TestBase {
 
   behavior of "HttpSourceBuilder"
 
