@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus
 
 import akka.actor.ActorRef
 import akka.pattern.gracefulStop
-import com.thenetcircle.event_bus.misc.{ZKManager, ZKStoryManager}
+import com.thenetcircle.event_bus.misc.{ZKStoryManager, ZooKeeperManager}
 import com.thenetcircle.event_bus.story.StoryRunner
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -42,7 +42,7 @@ class Main extends Core {
   }
 
   // Setup Zookeeper
-  val zkManager: ZKManager = ZKManager(config.getString("app.zkserver"), config.getString("app.zkroot"))
+  val zkManager: ZooKeeperManager = ZooKeeperManager(config.getString("app.zkserver"), config.getString("app.zkroot"))
   zkManager.start()
   appContext.setZKManager(zkManager)
 

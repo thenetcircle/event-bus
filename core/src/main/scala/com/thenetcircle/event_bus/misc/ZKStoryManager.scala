@@ -30,7 +30,7 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
-class ZKStoryManager(zkManager: ZKManager, runnerName: String, storyRunner: ActorRef)(
+class ZKStoryManager(zkManager: ZooKeeperManager, runnerName: String, storyRunner: ActorRef)(
     implicit appContext: AppContext,
     system: ActorSystem
 ) extends StrictLogging {

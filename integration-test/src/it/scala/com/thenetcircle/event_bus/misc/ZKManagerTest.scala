@@ -23,7 +23,7 @@ import org.apache.curator.framework.recipes.cache.{TreeCache, TreeCacheEvent, Tr
 
 class ZKManagerTest extends IntegrationTestBase {
 
-  behavior of "ZKManager"
+  behavior of "ZooKeeperManager"
 
   it should "do proper initialization" in {
 
@@ -44,7 +44,7 @@ class ZKManagerTest extends IntegrationTestBase {
     println(newevent)*/
 
     val zkManager =
-      ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
+      ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
 
     val treeCache =
       new TreeCache(
@@ -55,17 +55,16 @@ class ZKManagerTest extends IntegrationTestBase {
     treeCache.start()
 
     treeCache.getListenable.addListener(new TreeCacheListener {
-      override def childEvent(client: CuratorFramework, event: TreeCacheEvent): Unit = {
+      override def childEvent(client: CuratorFramework, event: TreeCacheEvent): Unit =
         logger.debug(
           s"==== ${event.getType} -- ${event.getData.getData} --- ${event.getData.getPath} ===="
         )
-      }
     })
 
     /*val runnerName = "default"
 
     val zkManager =
-      ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
+      ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
 
     new ZKStoryManager(zkManager, runnerName, system.actorOf(StoryRunner.props(runnerName)))
       .runAndWatch()*/

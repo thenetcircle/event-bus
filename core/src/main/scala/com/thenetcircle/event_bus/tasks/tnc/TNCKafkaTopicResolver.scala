@@ -25,7 +25,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
-import com.thenetcircle.event_bus.misc.{Util, ZKManager}
+import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache}
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
@@ -35,7 +35,7 @@ import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class TNCKafkaTopicResolver(zkManager: ZKManager,
+class TNCKafkaTopicResolver(zkManager: ZooKeeperManager,
                             val defaultTopic: String,
                             val useCache: Boolean = false)
     extends TransformTask
@@ -150,7 +150,7 @@ class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
 
     val zkMangerOption = buildingContext.getAppContext().getZKManager()
     if (zkMangerOption.isEmpty) {
-      throw new IllegalArgumentException("ZKManager is required for TNCKafkaTopicResolver")
+      throw new IllegalArgumentException("ZooKeeperManager is required for TNCKafkaTopicResolver")
     }
 
     new TNCKafkaTopicResolver(

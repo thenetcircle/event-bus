@@ -27,7 +27,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.collection.JavaConverters._
 
-class ZKManager private (connectString: String, rootPath: String)(implicit appContext: AppContext)
+class ZooKeeperManager private (connectString: String, rootPath: String)(implicit appContext: AppContext)
     extends StrictLogging {
 
   private var client: CuratorFramework =
@@ -111,11 +111,11 @@ class ZKManager private (connectString: String, rootPath: String)(implicit appCo
   }
 }
 
-object ZKManager {
-  def apply(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager = {
+object ZooKeeperManager {
+  def apply(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
     if (connectString.isEmpty || rootPath.isEmpty) {
-      throw new IllegalArgumentException("parameters are not enough for creating ZKManager.")
+      throw new IllegalArgumentException("parameters are not enough for creating ZooKeeperManager.")
     }
-    new ZKManager(connectString, rootPath)
+    new ZooKeeperManager(connectString, rootPath)
   }
 }

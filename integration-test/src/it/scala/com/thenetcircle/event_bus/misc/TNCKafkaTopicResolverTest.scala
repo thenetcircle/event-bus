@@ -25,7 +25,7 @@ class TNCKafkaTopicResolverTest extends IntegrationTestBase {
   behavior of "TNCKafkaTopicResolver"
 
   val zkManager =
-    ZKManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/${appContext.getAppName()}")
+    ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/${appContext.getAppName()}")
   val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
 
   it should "solve topic correctly" in {
