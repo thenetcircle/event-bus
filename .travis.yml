@@ -1,6 +1,7 @@
 language: scala
 scala:
-  - "2.12.2"
+  - "2.12.4"
+  - "2.11.8"
 jdk:
   - oraclejdk8
 
@@ -17,7 +18,7 @@ deploy:
   api_key:
     secure: WShe3tUKCLtT3B5OWOpFoUS7Uiu7UP45nOxdrhEmdO4Jb5IcA1zcyQMSjaS8f3xmnFbiXDXYJIC+B8vCYWxh4b7spaHCe+/kdAmDcyLoxwLMvSSCAOkFPd4AqLE5j1tztynCCL8dm4r1ZkluaL3pRfbYmgRvxodw2iY79NcbUwhzJWqea7/JpqL/wj48KtCQ2GG2Y8DlX2W88Xpd/NYyaTVzrzjMewaQj6wBlNwaIdTFkYO2b6rP2DUCFLDY2RRJbTMwqnAasV4xVgzgLosHmiGSDy30GClD7oYDj0g+K1Ei7pBkfIFZhuM1ldMemnEnwpsE83dERkMjIRjHxkgHEw3qCEbB6S1Qqhc4cLqwKLdYPQR2Y9/E384m8oKs/Z0x3IuzBc2MGIekGrGr6FrHFXAFBQebIsqjIDy57SG9bEUIqcq7Y0BtgNQiBqDjXX1kmIVHK4y9P0vKXHRgKy5nyH1xzhnVr9iIuJXX5NfgpGNX/YMk9sQo54SqR4hIYM3hgpKnzYTfZYCUEbLuKUjJHJ1FFTdh1e7gfvVe5tOUp0DLnA6PVP9o46/WdUORcDCa1rwdvsx9tUHAAEz2ejoDZYAbEw50jJtodgwnlH+2AijgEvI2/fxhy4vn5KszTljImfYORLNLkin5jRPcl9BuhXR4bfh8aYNCVnxbbZwoeqk=
   file_glob: true
-  file: target/universal/*.zip
+  file: core/target/universal/*.zip
   skip_cleanup: true
   on:
     tags: true

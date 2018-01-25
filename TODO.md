@@ -15,5 +15,5 @@
 - logback config
 - run specific deployment task (there are start_task, force_handlers)
 - deployment rollback
-- support json inside topic mapping of zk
+- ~~support json inside topic mapping of zk~~
 - support variables inside the mapped patterns

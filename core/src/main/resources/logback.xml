@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+	<define name="loglevel" class="com.thenetcircle.event_bus.misc.LogbackPropertyDefiner">
+		<propertyName>app.loglevel</propertyName>
+	</define>
+	<define name="logref" class="com.thenetcircle.event_bus.misc.LogbackPropertyDefiner">
+		<propertyName>app.logref</propertyName>
+	</define>
 
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
 		<file>${EB_LOGDIR:-./log}/${EB_APPNAME}.log</file>
