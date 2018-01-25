@@ -19,10 +19,9 @@ package com.thenetcircle.event_bus.admin
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import com.thenetcircle.event_bus.Core
-import com.thenetcircle.event_bus.misc.ZKManager
+import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await
@@ -33,32 +32,22 @@ class Main extends Core {
   val config: Config = ConfigFactory.load()
 
   // Setup Zookeeper
-  val zkManager: ZKManager = ZKManager(config.getString("app.zkserver"), config.getString("app.zkroot"))
+  val zkManager: ZooKeeperManager = ZooKeeperManager(config.getString("app.zkserver"), config.getString("app.zkroot"))
   zkManager.start()
-  appContext.setZKManager(zkManager)
 
   def run(args: Array[String]): Unit = {
 
     implicit val materializer = ActorMaterializer()
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val route: Route  = getRoute()
+    val actionHandler = new ActionHandler(zkManager)
+    val route: Route  = new Router().getRoute(actionHandler)
     val bindingFuture = Http().bindAndHandle(route, "0.0.0.0", 8990)
 
     appContext.addShutdownHook(Await.result(bindingFuture.map(_.unbind()), 5.seconds))
 
   }
 
-  def getRoute(): Route =
-    pathSingleSlash {
-      // homepage
-      complete("event-bus admin is running!")
-    } ~
-    get {
-      path("zk/copy") {
-        complete("event-bus admin is running!")
-      }
-    }
 }
 
 object Main extends App { (new Main).run(args) }

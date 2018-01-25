@@ -42,6 +42,9 @@ class ZooKeeperManager private (connectString: String, rootPath: String)(implici
     ensurePath("runners")
   }
 
+  def assertPermission(path: String): Unit =
+    assert(path.startsWith(rootPath), s"the zookeeper path $path is not allow for operation")
+
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
@@ -58,7 +61,7 @@ class ZooKeeperManager private (connectString: String, rootPath: String)(implici
       Some(new String(client.getData.forPath(getAbsPath(relativePath)), "UTF-8"))
     } catch {
       case e: Throwable =>
-        logger.info(s"getData from $relativePath failed with error: ${e.getMessage}")
+        logger.info(s"getData from ${getAbsPath(relativePath)} failed with error: ${e.getMessage}")
         None
     }
 

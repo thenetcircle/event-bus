@@ -29,7 +29,6 @@ lazy val core = (project in file("core"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= coreDependencies,
-    // mainClass in Compile := Some("com.thenetcircle.event_bus.ZKBasedRunner"),
     bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}"""",
     buildInfoPackage := "com.thenetcircle.event_bus",
     buildInfoObject := "BuildInfo",
@@ -46,13 +45,11 @@ lazy val core = (project in file("core"))
 lazy val admin = (project in file("admin/backend"))
   .enablePlugins(JavaAppPackaging)
   .settings(commonSettings: _*)
-  .dependsOn(core)
+  .dependsOn(core % "test->test;compile->compile")
 
 lazy val integrationTest = (project in file("integration-test"))
-  .configs(IntegrationTest)
   .settings(commonSettings: _*)
   .settings(
-    parallelExecution := false,
-    Defaults.itSettings
+    parallelExecution := false
   )
-  .dependsOn(core % "it->test")
+  .dependsOn(admin % "test->test")
