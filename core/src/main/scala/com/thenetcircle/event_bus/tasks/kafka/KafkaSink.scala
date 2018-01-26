@@ -34,10 +34,11 @@ import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
+import scala.util.matching.Regex
 
 case class KafkaSinkSettings(
     bootstrapServers: String,
-    defaultTopic: String = "event-default",
+    defaultTopic: String = "event-${app_name}-default",
     useEventGroupAsTopic: Boolean = true,
     parallelism: Int = 100,
     closeTimeout: FiniteDuration = 60.seconds,
@@ -74,16 +75,33 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     // .withProperty("client.id", clientId)
   }
 
-  def createMessage(event: Event): Message[ProducerKey, ProducerValue, Event] = {
+  def createMessage(event: Event)(
+      implicit runningContext: TaskRunningContext
+  ): Message[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
     logger.debug(s"new record $record created, going to send to kafka")
     Message(record, event)
   }
 
-  def createProducerRecord(event: Event): ProducerRecord[ProducerKey, ProducerValue] = {
-    val topic: String =
+  def replaceSubstitutes(event: Event, _topic: String)(
+      implicit runningContext: TaskRunningContext
+  ): String = {
+    var topic = _topic
+    topic = topic.replaceAll(Regex.quote("""${app_name}"""), runningContext.getAppContext().getAppName())
+    topic = topic.replaceAll(Regex.quote("""${app_env}"""), runningContext.getAppContext().getAppEnv())
+    topic = topic.replaceAll(Regex.quote("""${story_name}"""), runningContext.getStoryName())
+    topic = topic.replaceAll(Regex.quote("""${provider}"""), event.metadata.provider.map(_._2).getOrElse(""))
+    topic
+  }
+
+  def createProducerRecord(event: Event)(
+      implicit runningContext: TaskRunningContext
+  ): ProducerRecord[ProducerKey, ProducerValue] = {
+    var topic: String =
       if (settings.useEventGroupAsTopic) event.metadata.group.getOrElse(settings.defaultTopic)
       else settings.defaultTopic
+    topic = replaceSubstitutes(event, topic)
+
     val timestamp: Long      = event.createdAt.getTime
     val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event

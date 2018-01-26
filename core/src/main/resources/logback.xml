@@ -2,10 +2,10 @@
 <configuration>
 
 	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>${EB_LOGDIR:-./log}/${EB_APPNAME:-default}${EB_ENV}.log</file>
+		<file>${EB_LOGDIR:-./log}/${EB_APPNAME:-default}-${EB_ENV:-dev}.log</file>
 		<append>true</append>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${EB_LOGDIR:-./log}/${EB_APPNAME:-default}${EB_ENV}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+			<fileNamePattern>${EB_LOGDIR:-./log}/${EB_APPNAME:-default}-${EB_ENV:-dev}.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
 			<timeBasedFileNamingAndTriggeringPolicy
 					class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
 				<!-- or whenever the file size reaches 50MB -->

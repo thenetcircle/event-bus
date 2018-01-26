@@ -7,3 +7,5 @@ target/
 /test_receiver/
 /site/
 /ansible/
+/event-bus-proxy/
+/zkdata/
