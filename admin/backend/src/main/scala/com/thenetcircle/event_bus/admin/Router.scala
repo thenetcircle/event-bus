@@ -17,8 +17,7 @@
 
 package com.thenetcircle.event_bus.admin
 
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Directives.{complete, get, path, pathSingleSlash}
+import akka.http.scaladsl.server.Directives.{complete, get, path, pathSingleSlash, _}
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 
@@ -29,12 +28,23 @@ class Router extends StrictLogging {
       // homepage
       complete("event-bus admin is running!")
     } ~
-      get {
-        path("zk" / "gettree") {
+      path("zk" / "tree") {
+        get {
           parameter("path") { path =>
-            complete(actionHandler.getZKNodeTreeAsConfigString(path))
+            complete(actionHandler.getZKNodeTreeAsJson(path))
           }
-        }
+        } ~
+          post {
+            parameter("path") { path =>
+              entity(as[String]) { json =>
+                try {
+                  complete(actionHandler.updateZKNodeTreeByJson(path, json))
+                } catch {
+                  case ex: Throwable => complete(ex)
+                }
+              }
+            }
+          }
       }
 
 }

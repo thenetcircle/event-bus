@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.admin
 
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.typesafe.config.ConfigFactory
 
 class ActionHandlerTest extends IntegrationTestBase {
 
@@ -30,9 +31,55 @@ class ActionHandlerTest extends IntegrationTestBase {
     zkManager.start()
     val actionHandler = new ActionHandler(zkManager)
 
-    val a = actionHandler.getZKNodeTreeAsConfigString("dev/stories/http-to-kafka")
+    val a = actionHandler.getZKNodeTreeAsJson("dev")
 
     logger.debug(a)
+  }
+
+  it should "handler config string" in {
+    val str =
+      """
+        |{
+        |  "stories": {
+        |    "http-to-kafka": {
+        |      "transforms": "tnc-topic-resolver#{}",
+        |      "source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}",
+        |      "sink": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}",
+        |      "status": "INIT"
+        |    },
+        |    "dino-forwarder": {
+        |      "transforms": "tnc-dino-forwarder#{}|||tnc-topic-resolver#{}",
+        |      "source": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\",  \"topics\": [ \"event-poppen-dino-wio\" ]}",
+        |      "sink": "kafka#{ \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\" }"
+        |    },
+        |    "update-to-masterbenn": {
+        |      "source": "kafka#{\"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\", \"topics\": [ \"event-dino\"]}",
+        |      "sink": "http#{ \"request\" : { \"uri\": \"http://master.benn.poppen.lab/frontend_dev.php/api/internal/tnc_event_dispatcher/receiver\" }, \"expected-response\": \"ok\" }"
+        |    },
+        |    "update-to-community": {
+        |      "source": "kafka#{\"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\",  \"topics\": [ \"event-dino\"]}",
+        |      "sink": "http#{  \"request\" : {    \"uri\": \"http://beta.blue.guangqi.poppen.lab/frontend_dev.php/api/internal/tnc_event_dispatcher/receiver\"  },  \"expected-response\": \"ok\"}"
+        |    }
+        |  },
+        |  "runners": {
+        |    "default-runner": {
+        |      "stories": {
+        |        "dino-forwarder": "",
+        |        "update-to-masterbenn": "",
+        |        "update-to-community": ""
+        |      }
+        |    }
+        |  },
+        |  "topics": {
+        |    "event-user": "user.*|||profile.*",
+        |    "event-message": "message.*",
+        |    "event-dino": "dino\\..*",
+        |    "event-bustest": "bus-.*"
+        |  }
+        |}
+      """.stripMargin
+
+    println(ConfigFactory.parseString(str).toString)
   }
 
 }

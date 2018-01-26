@@ -35,15 +35,13 @@ import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class TNCKafkaTopicResolver(zkManager: ZooKeeperManager,
-                            val defaultTopic: String,
-                            val useCache: Boolean = false)
+class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val defaultTopic: String, val useCache: Boolean = false)
     extends TransformTask
     with StrictLogging {
 
-  private var index: Map[String, String] = Map.empty
+  private var index: Map[String, String]                = Map.empty
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
-  private var zkWatcher: Option[PathChildrenCache] = None
+  private var zkWatcher: Option[PathChildrenCache]      = None
 
   val zkInited = new AtomicBoolean(false)
   private def updateAndWatchIndex(): Unit = {
@@ -64,19 +62,18 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager,
   }
 
   val delimiter = """|||"""
-  def createIndexFromZKData(data: List[ChildData]): Map[String, String] = {
+  def createIndexFromZKData(data: List[ChildData]): Map[String, String] =
     data
       .flatMap(child => {
-        val topicName = Util.getLastPartOfPath(child.getPath)
+        val topicName   = Util.getLastPartOfPath(child.getPath)
         val patternList = Util.makeUTF8String(child.getData).split(Regex.quote(delimiter))
         patternList.map(pat => pat -> topicName)
       })
       .toMap
-  }
 
   def getIndex(): Map[String, String] = synchronized { index }
   def updateIndex(_index: Map[String, String]): Unit = synchronized {
-    logger.info(s"updating new index ${_index}")
+    logger.info("updating new index" + _index)
     index = _index
     if (useCache) cached.clear()
   }
@@ -101,14 +98,13 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager,
     })
   }
 
-  def getTopicFromIndex(eventName: String): Option[String] = {
+  def getTopicFromIndex(eventName: String): Option[String] =
     getIndex()
       .find {
         case (pattern, _) =>
           eventName matches pattern
       }
       .map(_._2)
-  }
 
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
@@ -116,7 +112,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager,
     if (event.metadata.name.isEmpty) return event.withGroup(defaultTopic)
 
     val eventName = event.metadata.name.get
-    var topic = ""
+    var topic     = ""
     if (useCache) {
       val cachedTopic = cached.get(eventName)
       if (cachedTopic != null) {

@@ -116,7 +116,6 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
       )
     } catch {
       case NonFatal(ex) =>
-        logger.debug(s"Parsing data $data failed with error: ${ex.getMessage}")
         throw new EventExtractingException(ex.getMessage, ex)
     }
   }
