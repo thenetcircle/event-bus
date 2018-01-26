@@ -49,6 +49,10 @@ case class EventImpl(
 
   override def withBody(_body: EventBody): EventImpl = copy(body = _body)
   override def withBody(_data: String): EventImpl    = copy(body = body.copy(data = _data))
+
+  override def getExtra(_key: String): Option[String] = metadata.extra.get(_key)
+  override def withExtra(_key: String, _value: String): Event =
+    copy(metadata = metadata.copy(extra = metadata.extra + (_key -> _value)))
 }
 
 object EventImpl {
@@ -60,8 +64,11 @@ object EventImpl {
     EventImpl(
       uuid = "FailureEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(
-        name = Some("eventbus.failure.trigger"),
-        provider = Some(ex.getClass.getName -> ex.getMessage)
+        name = Some("event-bus.failure.trigger"),
+        extra = Map(
+          "class"   -> ex.getClass.getName,
+          "message" -> ex.getMessage
+        )
       ),
       body = _body,
       passThrough = _passThrough

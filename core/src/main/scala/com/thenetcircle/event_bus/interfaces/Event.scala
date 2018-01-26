@@ -36,20 +36,14 @@ trait Event {
   def withUUID(_uuid: String): Event
   def withBody(_body: EventBody): Event
   def withBody(_data: String): Event
+  def getExtra(_key: String): Option[String]
+  def withExtra(_key: String, _value: String): Event
 }
 
 case class EventMetaData(
     name: Option[String] = None,
     group: Option[String] = None,
-    verb: Option[String] = None,
-    // who provided the event (type, id)
-    provider: Option[(String, String)] = None,
-    // who generated the event (type, id)
-    generator: Option[(String, String)] = None,
-    // who triggered this event (type, id)
-    actor: Option[(String, String)] = None,
-    // the target of the event (type, id)
-    target: Option[(String, String)] = None
+    extra: Map[String, String] = Map.empty
 )
 
 case class EventBody(data: String, format: DataFormat)

@@ -38,7 +38,7 @@ import scala.util.matching.Regex
 
 case class KafkaSinkSettings(
     bootstrapServers: String,
-    defaultTopic: String = "event-{app_name}-default",
+    defaultTopic: String = "event-default",
     useEventGroupAsTopic: Boolean = true,
     parallelism: Int = 100,
     closeTimeout: FiniteDuration = 60.seconds,
@@ -83,24 +83,12 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     Message(record, event)
   }
 
-  def replaceSubstitutes(event: Event, _topic: String)(
-      implicit runningContext: TaskRunningContext
-  ): String = {
-    var topic = _topic
-    topic = topic.replaceAll(Regex.quote("""{app_name}"""), runningContext.getAppContext().getAppName())
-    topic = topic.replaceAll(Regex.quote("""{app_env}"""), runningContext.getAppContext().getAppEnv())
-    topic = topic.replaceAll(Regex.quote("""{story_name}"""), runningContext.getStoryName())
-    topic = topic.replaceAll(Regex.quote("""{provider}"""), event.metadata.provider.map(_._2).getOrElse(""))
-    topic
-  }
-
   def createProducerRecord(event: Event)(
       implicit runningContext: TaskRunningContext
   ): ProducerRecord[ProducerKey, ProducerValue] = {
     var topic: String =
       if (settings.useEventGroupAsTopic) event.metadata.group.getOrElse(settings.defaultTopic)
       else settings.defaultTopic
-    topic = replaceSubstitutes(event, topic)
 
     val timestamp: Long      = event.createdAt.getTime
     val key: ProducerKey     = KafkaKey(event)

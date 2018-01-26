@@ -82,13 +82,17 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
           activity.title.getOrElse("") + "#" + java.util.UUID.randomUUID().toString
         )
 
+      var extra: Map[String, String] = Map.empty
+      activity.verb.foreach(s => extra += ("verb"             -> s))
+      activity.provider.foreach(s => extra += ("providerId"   -> s.id, "providerType" -> s.objectType))
+      activity.generator.foreach(s => extra += ("generatorId" -> s.id, "generatorType" -> s.objectType))
+      activity.actor.foreach(s => extra += ("actorId"         -> s.id, "actorType" -> s.objectType))
+      activity.target.foreach(s => extra += ("targetId"       -> s.id, "targetType" -> s.objectType))
+
       val metaData = EventMetaData(
         name = activity.title,
-        verb = activity.verb,
-        provider = activity.provider.map(o => o.objectType.getOrElse("")   -> o.id.getOrElse("")),
-        generator = activity.generator.map(o => o.objectType.getOrElse("") -> o.id.getOrElse("")),
-        actor = activity.actor.map(o => o.objectType.getOrElse("")         -> o.id.getOrElse("")),
-        target = activity.target.map(o => o.objectType.getOrElse("")       -> o.id.getOrElse(""))
+        group = None,
+        extra = extra
       )
 
       var createdAt: Option[Date] = None

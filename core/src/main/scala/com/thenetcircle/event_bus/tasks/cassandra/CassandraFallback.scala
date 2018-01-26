@@ -57,35 +57,28 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
     val _session = sessionOption.get
     // create tables if not exists
     _session.execute(
-      s"""create keyspace $keyspace if not exists
-          | with replication = {'class': 'SimpleStrategy', 'replication_factor': '2'}  and durable_writes = true;""".stripMargin
+      s"""CREATE KEYSPACE IF NOT EXISTS $keyspace
+          | WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '2'}  and durable_writes = true;""".stripMargin
     )
 
-    _session.execute(s"""create table if not exists $keyspace.fallback(
-                         |uuid text,
-                         |storyname text,
-                         |eventname text,
-                         |createdat timestamp,
-                         |fallbacktime timestamp,
-                         |failedtaskname text,
-                         |group text,
-                         |providerid text,
-                         |providertype text,
-                         |generatorid text,
-                         |generatortype text,
-                         |actorid text,
-                         |actortype text,
-                         |targetid text,
-                         |targettype text,
-                         |body text,
-                         |format text,
-                         |cause text,
-                         |primary key (uuid, storyname, createdat, group, eventname)
+    _session.execute(s"""CREATE TABLE IF NOT EXISTS $keyspace.fallback(
+                         | uuid text,
+                         | story_name text,
+                         | event_name text,
+                         | created_at timestamp,
+                         | fallback_time timestamp,
+                         | failed_task_name text,
+                         | group text,
+                         | body text,
+                         | format text,
+                         | cause text,
+                         | extra map<text, text>,
+                         | PRIMARY KEY (uuid, story_name, created_at, group, event_name)
                          |);""".stripMargin)
 
-    _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspace.fallback_by_storyname AS
-                         | SELECT * FROM fallback WHERE uuid IS NOT NULL AND storyname IS NOT NULL AND createdat IS NOT NULL AND eventname IS NOT NULl AND group IS NOT NULL
-                         | PRIMARY KEY (storyname, createdat, eventname, group, uuid)""".stripMargin)
+    _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspace.fallback_by_story_name AS
+                         | SELECT * FROM fallback WHERE uuid IS NOT NULL AND story_name IS NOT NULL AND created_at IS NOT NULL AND event_name IS NOT NULl AND group IS NOT NULL
+                         | PRIMARY KEY (story_name, created_at, event_name, group, uuid)""".stripMargin)
   }
 
   override def prepareForTask(taskName: String)(
@@ -130,9 +123,9 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
     logger.debug(s"preparing statement ----")
     session.prepare(s"""
                        |INSERT INTO fallback
-                       |(uuid, storyname, eventname, createdat, fallbacktime, failedtaskname, group, providerid, providertype, generatorid, generatortype, actorid, actortype, targetid, targettype, body, format, cause)
+                       |(uuid, story_name, event_name, created_at, fallback_time, failed_task_name, group, provider_id, body, format, cause, extra)
                        |VALUES
-                       |(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       |(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                        |""".stripMargin)
   }
 
@@ -152,17 +145,10 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
         new Date(),
         failedTaskName,
         event.metadata.group.getOrElse(""),
-        event.metadata.provider.map(_._2).getOrElse(""),
-        event.metadata.provider.map(_._1).getOrElse(""),
-        event.metadata.generator.map(_._2).getOrElse(""),
-        event.metadata.generator.map(_._1).getOrElse(""),
-        event.metadata.actor.map(_._2).getOrElse(""),
-        event.metadata.actor.map(_._1).getOrElse(""),
-        event.metadata.target.map(_._2).getOrElse(""),
-        event.metadata.target.map(_._1).getOrElse(""),
         event.body.data,
         event.body.format.toString,
-        cause
+        cause,
+        event.metadata.extra
       )
   }
 

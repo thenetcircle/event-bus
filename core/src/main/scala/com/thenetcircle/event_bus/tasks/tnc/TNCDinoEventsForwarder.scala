@@ -28,15 +28,17 @@ import scala.util.matching.Regex
 
 class TNCDinoEventsForwarder() extends TransformTask with StrictLogging {
 
-  def appendTitleField(event: Event): Event =
-    if (event.metadata.verb.isDefined) {
+  def appendTitleField(event: Event): Event = {
+    val verbOption = event.getExtra("verb")
+    if (verbOption.isDefined) {
       val shortGroup = event.metadata.group.map(g => g.split("-").last + ".").getOrElse("")
-      val newTitle   = "dino." + shortGroup + event.metadata.verb.get
+      val newTitle   = "dino." + shortGroup + verbOption.get
       val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
       event.withNoGroup().withName(newTitle).withBody(newBody)
     } else {
       event
     }
+  }
 
   override def prepare()(
       implicit runningContext: TaskRunningContext

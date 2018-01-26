@@ -35,16 +35,38 @@ import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val defaultTopic: String, val useCache: Boolean = false)
+class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String, val useCache: Boolean = false)
     extends TransformTask
     with StrictLogging {
 
+  private var inited: Boolean                           = false
+  private var defaultTopic: String                      = _defaultTopic
   private var index: Map[String, String]                = Map.empty
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
   private var zkWatcher: Option[PathChildrenCache]      = None
 
+  def init()(
+      implicit runningContext: TaskRunningContext
+  ): Unit = if (!inited) {
+    defaultTopic = replaceSubstitutes(defaultTopic)
+    updateAndWatchIndex()
+    inited = true
+  }
+
+  def replaceSubstitutes(_topic: String)(
+      implicit runningContext: TaskRunningContext
+  ): String = {
+    var topic = _topic
+    topic = topic.replaceAll(Regex.quote("""{app_name}"""), runningContext.getAppContext().getAppName())
+    topic = topic.replaceAll(Regex.quote("""{app_env}"""), runningContext.getAppContext().getAppEnv())
+    topic = topic.replaceAll(Regex.quote("""{story_name}"""), runningContext.getStoryName())
+    topic
+  }
+
   val zkInited = new AtomicBoolean(false)
-  private def updateAndWatchIndex(): Unit = {
+  private def updateAndWatchIndex()(
+      implicit runningContext: TaskRunningContext
+  ): Unit = {
     zkManager.ensurePath("topics")
     zkWatcher = Some(
       zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (et, wc) =>
@@ -62,12 +84,14 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val defaultTopic: Strin
   }
 
   val delimiter = """|||"""
-  def createIndexFromZKData(data: List[ChildData]): Map[String, String] =
+  def createIndexFromZKData(data: List[ChildData])(
+      implicit runningContext: TaskRunningContext
+  ): Map[String, String] =
     data
       .flatMap(child => {
         val topicName   = Util.getLastPartOfPath(child.getPath)
         val patternList = Util.makeUTF8String(child.getData).split(Regex.quote(delimiter))
-        patternList.map(pat => pat -> topicName)
+        patternList.map(pat => pat -> replaceSubstitutes(topicName))
       })
       .toMap
 
@@ -76,10 +100,6 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val defaultTopic: Strin
     logger.info("updating new index" + _index)
     index = _index
     if (useCache) cached.clear()
-  }
-
-  def init(): Unit = if (zkWatcher.isEmpty) {
-    updateAndWatchIndex()
   }
 
   override def prepare()(
