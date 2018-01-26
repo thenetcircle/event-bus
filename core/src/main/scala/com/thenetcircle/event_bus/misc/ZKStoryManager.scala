@@ -43,6 +43,7 @@ class ZKStoryManager(zkManager: ZooKeeperManager, runnerName: String, storyRunne
   val watchingStores = mutable.Map.empty[String, ZWatcher]
 
   zkManager.ensurePath(s"runners/$runnerName")
+  zkManager.ensurePath("stories")
 
   def getStoryRootPath(storyName: String): String = s"stories/$storyName"
 

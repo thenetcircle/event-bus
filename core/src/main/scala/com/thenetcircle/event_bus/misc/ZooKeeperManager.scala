@@ -36,10 +36,6 @@ class ZooKeeperManager private (connectString: String, rootPath: String)(implici
   def start(): Unit = if (client.getState != CuratorFrameworkState.STARTED) {
     client.start()
     appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
-
-    // Check and Create root nodes
-    ensurePath("stories")
-    ensurePath("runners")
   }
 
   def assertPermission(path: String): Unit =
