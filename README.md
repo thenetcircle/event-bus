@@ -1,15 +1,9 @@
-<!-- language: lang-none -->
-                                    ____              __      ___         
-                                   / __/  _____ ___  / /_    / _ )__ _____
-                                  / _/| |/ / -_) _ \/ __/   / _  / // (_-<
-                                 /___/|___/\__/_//_/\__/   /____/\_,_/___/
+<!-- language: lang-scala -->
+# EventBus
 
 [![Build Status](https://travis-ci.org/thenetcircle/event-bus.svg?branch=master)](https://travis-ci.org/thenetcircle/event-bus)
-[![License](https://img.shields.io/github/license/thenetcircle/event-bus.svg)](LICENSE)
 
 EventBus is built for distributing unified events/messages(as a language everyone can understand) from multiple different sources to different targets. With abilities of messages persistence, tracing and manipulating.
-
-<a href="https://thenetcircle.github.io/event-bus/assets/workflow.png" target="_blank">![EventBus Workflow](https://thenetcircle.github.io/event-bus/assets/workflow.png)</a>
 
 Visit the [Documention](https://thenetcircle.github.io/event-bus/) for more details.
 
