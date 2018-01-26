@@ -49,9 +49,9 @@ class ZooKeeperManager private (connectString: String, rootPath: String)(implici
 
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
-  def ensurePath(relativePath: String): Unit =
+  def ensurePath(relativePath: String, data: String = ""): Unit =
     if (client.checkExists().forPath(getAbsPath(relativePath)) == null) {
-      client.create().creatingParentsIfNeeded().forPath(getAbsPath(relativePath))
+      client.create().creatingParentsIfNeeded().forPath(getAbsPath(relativePath), data.getBytes())
     }
 
   def getClient(): CuratorFramework = client

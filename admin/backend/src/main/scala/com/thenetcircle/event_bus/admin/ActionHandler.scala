@@ -20,10 +20,14 @@ package com.thenetcircle.event_bus.admin
 import akka.actor.ActorSystem
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValue}
+import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
-class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem) {
+import scala.collection.JavaConverters._
+
+class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
+    extends StrictLogging {
 
   def getZKNodeTreeAsJson(path: String, depth: Int = 1): String = {
     val subNodes = zkManager.getChildren(path)
@@ -67,14 +71,34 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
     block
   }
 
-  def updateZKNodeTreeByJson(path: String, json: String): String = {
+  def updateZKNodeTreeByJson(path: String, json: String): Unit = {
     zkManager.ensurePath(path)
-    val
-    val config = ConfigFactory.parseString(s"""
-        |"$path" $json
-      """.stripMargin).getObjectList()
+    logger.info(s"ensure path $path")
 
-    config.as[Map[String, Config]](path).toString()
+    import com.typesafe.config.ConfigValueType._
+    def update(parentPath: String, co: ConfigObject): Unit =
+      co.entrySet()
+        .asScala
+        .foreach(entry => {
+          val key      = entry.getKey
+          val currPath = s"$parentPath/$key"
+          val currType = entry.getValue.valueType()
+
+          currType match {
+            case OBJECT =>
+              zkManager.ensurePath(currPath)
+              logger.info(s"ensure path $currPath")
+              update(currPath, entry.getValue.asInstanceOf[ConfigObject])
+            case LIST =>
+            case NULL | STRING | BOOLEAN | NUMBER =>
+              val currValue = if (currType == NULL) "" else entry.getValue.unwrapped().toString
+              zkManager.ensurePath(currPath, currValue)
+              logger.info(s"ensure path $currPath with value $currValue")
+          }
+        })
+
+    val root = ConfigFactory.parseString(json).root()
+    update(path, root)
   }
 
 }

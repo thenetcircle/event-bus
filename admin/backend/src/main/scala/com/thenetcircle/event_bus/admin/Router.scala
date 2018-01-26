@@ -23,28 +23,37 @@ import com.typesafe.scalalogging.StrictLogging
 
 class Router extends StrictLogging {
 
+  def createResponse(code: Int, errorMessage: String = ""): String = {
+    val message = errorMessage.replaceAll("""\\""", """\\\\""").replaceAll("\"", "\\\\\"")
+    s"""{"code": "$code", "message": "$message"}"""
+  }
+
   def getRoute(actionHandler: ActionHandler): Route =
+    // format: off
+
     pathSingleSlash {
       // homepage
       complete("event-bus admin is running!")
     } ~
-      path("zk" / "tree") {
-        get {
-          parameter("path") { path =>
-            complete(actionHandler.getZKNodeTreeAsJson(path))
-          }
-        } ~
-          post {
-            parameter("path") { path =>
-              entity(as[String]) { json =>
-                try {
-                  complete(actionHandler.updateZKNodeTreeByJson(path, json))
-                } catch {
-                  case ex: Throwable => complete(ex)
-                }
-              }
+    path("zk" / "tree") {
+      get {
+        parameter("path") { path =>
+          complete(actionHandler.getZKNodeTreeAsJson(path))
+        }
+      } ~
+      post {
+        parameter("path") { path =>
+          entity(as[String]) { json =>
+            try {
+              actionHandler.updateZKNodeTreeByJson(path, json)
+              complete(createResponse(0))
+            } catch {
+              case ex: Throwable => complete(createResponse(1, ex.getMessage))
             }
           }
+        }
       }
+    }
 
+    // format: on
 }

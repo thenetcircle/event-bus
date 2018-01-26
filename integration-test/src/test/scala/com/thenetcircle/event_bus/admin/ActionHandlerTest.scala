@@ -25,61 +25,23 @@ class ActionHandlerTest extends IntegrationTestBase {
 
   behavior of "ActionHandler"
 
-  it should "get correct tree structure data from zookeeper" in {
-    val zkManager =
-      ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab")
-    zkManager.start()
-    val actionHandler = new ActionHandler(zkManager)
-
-    val a = actionHandler.getZKNodeTreeAsJson("dev")
-
-    logger.debug(a)
-  }
+  val zkManager =
+    ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab")
+  zkManager.start()
+  val actionHandler = new ActionHandler(zkManager)
 
   it should "handler config string" in {
     val str =
       """
         |{
-        |  "stories": {
-        |    "http-to-kafka": {
-        |      "transforms": "tnc-topic-resolver#{}",
-        |      "source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}",
-        |      "sink": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}",
-        |      "status": "INIT"
-        |    },
-        |    "dino-forwarder": {
-        |      "transforms": "tnc-dino-forwarder#{}|||tnc-topic-resolver#{}",
-        |      "source": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\",  \"topics\": [ \"event-poppen-dino-wio\" ]}",
-        |      "sink": "kafka#{ \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\" }"
-        |    },
-        |    "update-to-masterbenn": {
-        |      "source": "kafka#{\"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\", \"topics\": [ \"event-dino\"]}",
-        |      "sink": "http#{ \"request\" : { \"uri\": \"http://master.benn.poppen.lab/frontend_dev.php/api/internal/tnc_event_dispatcher/receiver\" }, \"expected-response\": \"ok\" }"
-        |    },
-        |    "update-to-community": {
-        |      "source": "kafka#{\"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\",  \"topics\": [ \"event-dino\"]}",
-        |      "sink": "http#{  \"request\" : {    \"uri\": \"http://beta.blue.guangqi.poppen.lab/frontend_dev.php/api/internal/tnc_event_dispatcher/receiver\"  },  \"expected-response\": \"ok\"}"
-        |    }
-        |  },
-        |  "runners": {
-        |    "default-runner": {
-        |      "stories": {
-        |        "dino-forwarder": "",
-        |        "update-to-masterbenn": "",
-        |        "update-to-community": ""
-        |      }
-        |    }
-        |  },
-        |  "topics": {
-        |    "event-user": "user.*|||profile.*",
-        |    "event-message": "message.*",
-        |    "event-dino": "dino\\..*",
-        |    "event-bustest": "bus-.*"
-        |  }
+        |  "transforms": "tnc-topic-resolver#{}",
+        |  "source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}",
+        |  "sink": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}",
+        |  "status": "INIT"
         |}
       """.stripMargin
 
-    println(ConfigFactory.parseString(str).toString)
+    println(actionHandler.updateZKNodeTreeByJson("test/test", str))
   }
 
 }
