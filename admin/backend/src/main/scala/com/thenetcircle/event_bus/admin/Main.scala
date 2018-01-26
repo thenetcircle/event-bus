@@ -42,7 +42,10 @@ class Main extends Core {
 
     val actionHandler = new ActionHandler(zkManager)
     val route: Route  = new Router().getRoute(actionHandler)
-    val bindingFuture = Http().bindAndHandle(route, "0.0.0.0", 8990)
+
+    val interface     = config.getString("admin.interface")
+    val port          = config.getInt("admin.port")
+    val bindingFuture = Http().bindAndHandle(route, interface, port)
 
     appContext.addShutdownHook(Await.result(bindingFuture.map(_.unbind()), 5.seconds))
 

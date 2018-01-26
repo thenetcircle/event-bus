@@ -38,7 +38,7 @@ import scala.util.matching.Regex
 
 case class KafkaSinkSettings(
     bootstrapServers: String,
-    defaultTopic: String = "event-${app_name}-default",
+    defaultTopic: String = "event-{app_name}-default",
     useEventGroupAsTopic: Boolean = true,
     parallelism: Int = 100,
     closeTimeout: FiniteDuration = 60.seconds,
@@ -87,10 +87,10 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       implicit runningContext: TaskRunningContext
   ): String = {
     var topic = _topic
-    topic = topic.replaceAll(Regex.quote("""${app_name}"""), runningContext.getAppContext().getAppName())
-    topic = topic.replaceAll(Regex.quote("""${app_env}"""), runningContext.getAppContext().getAppEnv())
-    topic = topic.replaceAll(Regex.quote("""${story_name}"""), runningContext.getStoryName())
-    topic = topic.replaceAll(Regex.quote("""${provider}"""), event.metadata.provider.map(_._2).getOrElse(""))
+    topic = topic.replaceAll(Regex.quote("""{app_name}"""), runningContext.getAppContext().getAppName())
+    topic = topic.replaceAll(Regex.quote("""{app_env}"""), runningContext.getAppContext().getAppEnv())
+    topic = topic.replaceAll(Regex.quote("""{story_name}"""), runningContext.getStoryName())
+    topic = topic.replaceAll(Regex.quote("""{provider}"""), event.metadata.provider.map(_._2).getOrElse(""))
     topic
   }
 
