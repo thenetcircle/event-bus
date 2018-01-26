@@ -36,7 +36,7 @@ case class Activity(
     published: Option[String],
     verb: Option[String],
     actor: Option[ActivityObject],
-    // `object`: Option[ActivityObject],
+    `object`: Option[ActivityObject],
     target: Option[ActivityObject],
     provider: Option[ActivityObject],
     // content: Option[Any],
@@ -46,6 +46,7 @@ case class Activity(
 case class ActivityObject(
     id: Option[String],
     objectType: Option[String],
+    url: Option[String]
     // attachments: Option[List[ActivityObject]],
     // content: Option[Any],
     // summary: Option[Any],
@@ -55,8 +56,8 @@ case class ActivityObject(
 )
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
-  implicit val activityObjectFormat = jsonFormat2(ActivityObject)
-  implicit val activityFormat       = jsonFormat8(Activity)
+  implicit val activityObjectFormat = jsonFormat3(ActivityObject)
+  implicit val activityFormat       = jsonFormat9(Activity)
 }
 
 class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsProtocol with StrictLogging {
@@ -83,11 +84,20 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
         )
 
       var extra: Map[String, String] = Map.empty
-      activity.verb.foreach(s => extra += ("verb"             -> s))
-      activity.provider.foreach(s => extra += ("providerId"   -> s.id, "providerType" -> s.objectType))
-      activity.generator.foreach(s => extra += ("generatorId" -> s.id, "generatorType" -> s.objectType))
-      activity.actor.foreach(s => extra += ("actorId"         -> s.id, "actorType" -> s.objectType))
-      activity.target.foreach(s => extra += ("targetId"       -> s.id, "targetType" -> s.objectType))
+      val setExtraFromActivityObject = (objOption: Option[ActivityObject], prefix: String) => {
+        objOption.foreach(o => {
+          o.id.foreach(s => extra = extra + (s"${prefix}Id"           -> s))
+          o.objectType.foreach(s => extra = extra + (s"${prefix}Type" -> s))
+          o.url.foreach(s => extra = extra + (s"${prefix}Url"         -> s))
+        })
+      }
+
+      activity.verb.foreach(s => extra = extra + ("verb" -> s))
+      setExtraFromActivityObject(activity.provider, "provider")
+      setExtraFromActivityObject(activity.actor, "actor")
+      setExtraFromActivityObject(activity.target, "target")
+      setExtraFromActivityObject(activity.`object`, "object")
+      setExtraFromActivityObject(activity.generator, "generator")
 
       val metaData = EventMetaData(
         name = activity.title,

@@ -12,6 +12,8 @@
 	<logger name="ch.qos.logback" level="WARN" />
 	<logger name="org.apache.kafka" level="INFO" />
 	<logger name="akka.event" level="INFO" />
+	<logger name="akka.event.slf4j" level="WARN" />
+	<logger name="akka.actor" level="INFO" />
 	<logger name="akka.http.impl.engine.client.PoolGateway" level="INFO" />
 	<logger name="akka.io.TcpOutgoingConnection" level="INFO" />
 	<logger name="org.apache.curator" level="INFO" />

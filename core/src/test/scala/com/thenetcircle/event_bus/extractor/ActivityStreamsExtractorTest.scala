@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor._
-import com.thenetcircle.event_bus.interfaces.{EventBody, EventMetaData}
+import com.thenetcircle.event_bus.interfaces.EventBody
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -56,9 +56,8 @@ class ActivityStreamsExtractorTest extends TestBase {
         |}
       """.stripMargin
 
-    assertThrows[EventExtractingException] {
-      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
-    }
+    val event = Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+    event.getExtra("verb") shouldEqual Some("login")
   }
 
   it should "be succeeded if there is a title" in {
@@ -93,13 +92,10 @@ class ActivityStreamsExtractorTest extends TestBase {
       Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
 
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
-    testevent.metadata shouldEqual EventMetaData(
-      name = Some("message.send"),
-      actor = Some("actorType"       -> "actorId"),
-      provider = Some("providerType" -> "providerId"),
-    )
-
     testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
+    testevent.metadata.name shouldEqual Some("message.send")
+    testevent.getExtra("providerId") shouldEqual Some("providerId")
+    testevent.getExtra("actorType") shouldEqual Some("actorType")
   }
 
   it should "be succeeded as well with complete ActivityStreams data" in {
@@ -160,7 +156,8 @@ class ActivityStreamsExtractorTest extends TestBase {
          |    "content": {
          |      "mode": "async",
          |      "class": "TNC\\\\EventDispatcher\\\\Interfaces\\\\Event\\\\TransportableEvent"
-         |    }
+         |    },
+         |    "url": "http://www.callback.com"
          |  }
          |}
       """.stripMargin
@@ -168,16 +165,23 @@ class ActivityStreamsExtractorTest extends TestBase {
     val testevent =
       Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
 
-    testevent.uuid shouldEqual "message.send-ED-providerId-message.send-actorId-59e704843e9cb"
+    testevent.uuid shouldEqual "ED-providerId-message.send-actorId-59e704843e9cb"
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
     testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
-    testevent.metadata shouldEqual EventMetaData(
-      name = Some("message.send"),
-      actor = Some("actorType"       -> "actorId"),
-      target = Some("targetType"     -> "targetId"),
-      provider = Some("providerType" -> "providerId"),
-      generator = Some("library"     -> "tnc-event-dispatcher")
-    )
+    testevent.metadata.name shouldEqual Some("message.send")
+    testevent.getExtra("verb") shouldEqual Some("send")
+    testevent.getExtra("providerId") shouldEqual Some("providerId")
+    testevent.getExtra("providerType") shouldEqual Some("providerType")
+    testevent.getExtra("actorId") shouldEqual Some("actorId")
+    testevent.getExtra("actorType") shouldEqual Some("actorType")
+    testevent.getExtra("objectId") shouldEqual Some("objectId")
+    testevent.getExtra("objectType") shouldEqual Some("objectType")
+    testevent.getExtra("targetId") shouldEqual Some("targetId")
+    testevent.getExtra("targetType") shouldEqual Some("targetType")
+    testevent.getExtra("generatorId") shouldEqual Some("tnc-event-dispatcher")
+    testevent.getExtra("generatorType") shouldEqual Some("library")
+    testevent.getExtra("generatorUrl") shouldEqual Some("http://www.callback.com")
+
   }
 
   it should "be succeeded with another EventFormat" in {
