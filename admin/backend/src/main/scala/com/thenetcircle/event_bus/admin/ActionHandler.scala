@@ -20,44 +20,40 @@ package com.thenetcircle.event_bus.admin
 import akka.actor.ActorSystem
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
-import com.typesafe.config.{Config, ConfigFactory, ConfigObject, ConfigValue}
+import com.typesafe.config.{ConfigFactory, ConfigObject}
 import com.typesafe.scalalogging.StrictLogging
-import net.ceedubs.ficus.Ficus._
 
 import scala.collection.JavaConverters._
 
 class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
     extends StrictLogging {
 
-  def getZKNodeTreeAsJson(path: String, depth: Int = 1): String = {
+  def getZKNodeTreeAsJson(path: String, indent: Boolean = true, depth: Int = 1): String = {
     val subNodes = zkManager.getChildren(path)
     var block    = ""
-    val prevPad  = "".padTo((depth - 1) * 2, ' ')
-    val pad      = "".padTo(depth * 2, ' ')
+    val prevPad  = if (indent) "".padTo((depth - 1) * 2, ' ') else ""
+    val pad      = if (indent) "".padTo(depth * 2, ' ') else ""
+    val newLine  = if (indent) "\n" else ""
 
     if (subNodes.isDefined && subNodes.get.nonEmpty) {
-      block += "{\n"
+      block += "{" + newLine
       subNodes.foreach(nodeList => {
         for (i <- nodeList.indices) {
           val nodename = nodeList(i)
           block += pad + s""""$nodename": """ +
-            getZKNodeTreeAsJson(s"$path/$nodename", depth + 1)
+            getZKNodeTreeAsJson(s"$path/$nodename", indent, depth + 1)
           if (i < nodeList.length - 1)
             block += ","
-          block += "\n"
+          block += newLine
         }
       })
       if (depth == 1)
-        block += "}\n"
+        block += "}" + newLine
       else
         block += prevPad + "}"
     } else {
       if (depth == 1) {
-        block = s""""$path": """ + "\"" + zkManager
-          .getData(path)
-          .getOrElse("")
-          .replaceAll("""\\""", """\\\\""")
-          .replaceAll("\"", "\\\\\"") + "\"" + "\n"
+        block = zkManager.getData(path).getOrElse("")
       } else {
         block = "\"" + zkManager
           .getData(path)

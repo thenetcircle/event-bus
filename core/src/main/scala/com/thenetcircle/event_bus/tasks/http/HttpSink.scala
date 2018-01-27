@@ -47,7 +47,7 @@ case class HttpSinkSettings(defaultRequest: HttpRequest,
                             minBackoff: FiniteDuration = 1.second,
                             maxBackoff: FiniteDuration = 30.seconds,
                             randomFactor: Double = 0.2,
-                            maxRetryTime: FiniteDuration = 6.seconds,
+                            maxRetryTime: FiniteDuration = 12.hours,
                             concurrentRetries: Int = 1,
                             poolSettings: Option[ConnectionPoolSettings] = None)
 

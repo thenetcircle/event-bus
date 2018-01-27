@@ -18,14 +18,11 @@
 package com.thenetcircle.event_bus.admin
 
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
 
 class ActionHandlerTest extends IntegrationTestBase {
 
   behavior of "ActionHandler"
 
-  val zkManager =
-    ZooKeeperManager.createInstance("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab")
   val actionHandler = new ActionHandler(zkManager)
 
   it should "handler config string" in {
@@ -34,12 +31,28 @@ class ActionHandlerTest extends IntegrationTestBase {
         |{
         |  "transforms": "tnc-topic-resolver#{}",
         |  "source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}",
-        |  "sink": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}",
+        |  "sink": {
+        |    "item1": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}"
+        |  },
         |  "status": "INIT"
         |}
       """.stripMargin
 
-    println(actionHandler.updateZKNodeTreeByJson("test/test", str))
+    actionHandler.updateZKNodeTreeByJson("test", str)
+
+    actionHandler
+      .getZKNodeTreeAsJson("test/transforms")
+      .trim shouldEqual """tnc-topic-resolver#{}"""
+
+    actionHandler
+      .getZKNodeTreeAsJson("test/sink/item1")
+      .trim shouldEqual """kafka#{  "bootstrap-servers": "maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093"}"""
+
+    actionHandler.getZKNodeTreeAsJson("test", false) shouldEqual """{"transforms": "tnc-topic-resolver#{}","source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}","sink": {"item1": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}"},"status": "INIT"}"""
+
+    zkManager.delete("test")
+
+    actionHandler.getZKNodeTreeAsJson("test") shouldEqual ""
   }
 
 }

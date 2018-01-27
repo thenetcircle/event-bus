@@ -42,7 +42,8 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
 
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
-  def withRootPath(_rootpath: String): ZooKeeperManager = new ZooKeeperManager(client, _rootpath)
+  def withNewRootPath(_rootpath: String): ZooKeeperManager = new ZooKeeperManager(client, _rootpath)
+  def getRootPath(): String                                = rootPath
 
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
@@ -63,6 +64,18 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
       case e: Throwable =>
         logger.info(s"getData from $absPath failed with error: ${e.getMessage}")
         None
+    }
+  }
+
+  def delete(relativePath: String): Boolean = {
+    val absPath = getAbsPath(relativePath)
+    try {
+      client.delete().deletingChildrenIfNeeded().forPath(absPath)
+      true
+    } catch {
+      case e: Throwable =>
+        logger.info(s"delete node $absPath failed with error: ${e.getMessage}")
+        false
     }
   }
 

@@ -28,6 +28,7 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
+import com.thenetcircle.event_bus.misc.ZooKeeperManager
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -69,8 +70,15 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
   lazy val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
+  private val _config = appContext.getSystemConfig()
+  lazy val zkManager: ZooKeeperManager =
+    ZooKeeperManager.createInstance(
+      _config.getString("app.zkserver"),
+      s"${_config.getString("app.zkroot")}/${appContext.getAppName()}"
+    )
+
   def this() = {
-    this(new AppContext("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
+    this(new AppContext("integration-test", "2.x", "test", true, ConfigFactory.load()))
   }
 
   override def beforeAll(): Unit = {}
