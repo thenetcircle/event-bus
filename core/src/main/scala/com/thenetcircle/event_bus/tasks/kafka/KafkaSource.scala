@@ -27,7 +27,7 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.misc.Util
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
 import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import com.typesafe.scalalogging.StrictLogging
@@ -144,7 +144,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                 .mapAsync(1)(extractEventFromMessage)
                 .via(handler)
                 .map {
-                  case (_: Succ, event) =>
+                  case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         logger.debug(s"The event ${event.uuid} adding to the batch committing to kafka")
@@ -156,8 +156,11 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                         logger.debug(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
+                  case (ToFB(_), event) =>
+                    logger.warn(s"Event ${event.uuid} reaches the end with ToFB status")
+                    throw new RuntimeException("Not handled ToFB status")
                   case (Fail(ex), event) =>
-                    logger.debug(s"Event ${event.uuid} reaches the end with error $ex")
+                    logger.warn(s"Event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     throw ex
                 }

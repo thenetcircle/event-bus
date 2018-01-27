@@ -28,7 +28,7 @@ class TNCKafkaTopicResolverTest extends IntegrationTestBase {
 
   it should "solve topic correctly" in {
 
-    val testEvent1 = createTestEvent("message.send")
+    /*val testEvent1 = createTestEvent("message.send")
     resolver.resolveEvent(testEvent1).metadata.group shouldEqual Some("event-message")
 
     val testEvent2 = createTestEvent("profile.kick")
@@ -38,7 +38,7 @@ class TNCKafkaTopicResolverTest extends IntegrationTestBase {
     resolver.resolveEvent(testEvent3).metadata.group shouldEqual Some("event-user")
 
     val testEvent4 = createTestEvent("payment.buy")
-    resolver.resolveEvent(testEvent4).metadata.group shouldEqual Some("event-default")
+    resolver.resolveEvent(testEvent4).metadata.group shouldEqual Some("event-default")*/
 
     /*val executionStart: Long = currentTime
 

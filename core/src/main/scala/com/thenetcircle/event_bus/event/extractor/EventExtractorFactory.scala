@@ -40,7 +40,7 @@ object EventExtractorFactory {
   /**
     * Returns [[EventExtractor]] based on [[DataFormat]]
     */
-  def getExtractor(format: DataFormat): EventExtractor = registeredExtractors(format)
+  def getExtractor(format: DataFormat): EventExtractor = registeredExtractors.getOrElse(format, defaultExtractor)
 
   /**
     * Returns Unmarshaller[ByteString, Event] based on [[DataFormat]]

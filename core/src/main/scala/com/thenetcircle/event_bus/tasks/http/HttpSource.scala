@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.tasks.http
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpEntity, HttpRequest, HttpResponse, StatusCodes}
 import akka.http.scaladsl.settings.ServerSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
@@ -28,13 +28,9 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.event.extractor.{
-  DataFormat,
-  EventExtractingException,
-  EventExtractorFactory
-}
+import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.misc.Util
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, Succ}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SourceTask, SourceTaskBuilder}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
@@ -44,22 +40,36 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
 import scala.util.Success
 
-case class HttpSourceSettings(interface: String = "0.0.0.0",
-                              port: Int = 8000,
-                              format: DataFormat = DataFormat("ActivityStreams"),
-                              succeededResponse: String = "ok",
-                              serverSettings: ServerSettings)
+case class HttpSourceSettings(
+    interface: String = "0.0.0.0",
+    port: Int = 8000,
+    format: DataFormat = DataFormat("ActivityStreams"),
+    succeededResponse: String = "ok",
+    serverSettings: Option[ServerSettings] = None
+)
 
 class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
 
-  def createResponse(result: (EventStatus, Event)): HttpResponse = result match {
-    case (_: Succ, _) =>
-      HttpResponse(entity = HttpEntity(settings.succeededResponse))
-    case (Fail(ex), _) =>
-      HttpResponse(
-        entity = HttpEntity(s"The request was processing failed with error ${ex.getMessage}.")
-      )
-  }
+  def createResponse(result: (EventStatus, Event)): HttpResponse =
+    result match {
+      case (_: SuccStatus, _) =>
+        HttpResponse(entity = HttpEntity(settings.succeededResponse))
+      case (ToFB(optionEx), _) =>
+        HttpResponse(
+          status = StatusCodes.InternalServerError,
+          entity = HttpEntity(optionEx.map(_.getMessage).getOrElse("unhandled ToFB status"))
+        )
+      case (Fail(ex: EventExtractingException), _) =>
+        HttpResponse(
+          status = StatusCodes.BadRequest,
+          entity = HttpEntity(ex.getMessage)
+        )
+      case (Fail(ex), _) =>
+        HttpResponse(
+          status = StatusCodes.InternalServerError,
+          entity = HttpEntity(ex.getMessage)
+        )
+    }
 
   def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
@@ -85,8 +95,8 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   override def runWith(
       handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
   )(implicit runningContext: TaskRunningContext): Future[Done] = {
-    implicit val system: ActorSystem = runningContext.getActorSystem()
-    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val system: ActorSystem                = runningContext.getActorSystem()
+    implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     val internalHandler =
@@ -100,7 +110,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
         handler = internalHandler,
         interface = settings.interface,
         port = settings.port,
-        settings = settings.serverSettings
+        settings = settings.serverSettings.getOrElse(ServerSettings(system))
       )
 
     val donePromise = Promise[Done]()
@@ -117,16 +127,15 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     donePromise.future
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
     killSwitchOption.foreach(k => { k.shutdown(); killSwitchOption = None })
-  }
 }
 
 class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
 
   override def build(
       configString: String
-  )(implicit buildingContext: TaskBuildingContext): HttpSource = {
+  )(implicit buildingContext: TaskBuildingContext): HttpSource =
     try {
       val config: Config =
         Util
@@ -134,13 +143,13 @@ class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
           .withFallback(buildingContext.getSystemConfig().getConfig("task.http-source"))
 
       val serverSettingsMap = config.as[Map[String, String]]("server")
-      val serverSettings = {
-        var _settingsStr =
+      val serverSettings = if (serverSettingsMap.nonEmpty) {
+        var settingsStr =
           serverSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
-        ServerSettings(s"""akka.http.server {
-                          |${_settingsStr}
-                          |}""".stripMargin)
-      }
+        Some(ServerSettings(s"""akka.http.server {
+                          |$settingsStr
+                          |}""".stripMargin))
+      } else None
 
       val settings = HttpSourceSettings(
         config.as[String]("interface"),
@@ -156,5 +165,4 @@ class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
         logger.error(s"Build HttpSource failed with error: $ex")
         throw ex
     }
-  }
 }

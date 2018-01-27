@@ -21,16 +21,14 @@ sealed trait EventStatus
 
 object EventStatus {
 
-  sealed trait Succ extends EventStatus
+  sealed trait SuccStatus extends EventStatus
+  sealed trait Norm       extends SuccStatus
+  case object Norm        extends Norm
+  sealed trait InFB       extends SuccStatus
+  case object InFB        extends InFB
 
-  sealed trait Norm extends Succ
-  case object Norm  extends Norm
-
-  case class ToFB(cause: Option[Throwable] = None) extends Succ
-
-  sealed trait InFB extends Succ
-  case object InFB  extends InFB
-
-  case class Fail(cause: Throwable) extends EventStatus
+  sealed trait FailStatus                          extends EventStatus
+  case class ToFB(cause: Option[Throwable] = None) extends FailStatus
+  case class Fail(cause: Throwable)                extends FailStatus
 
 }

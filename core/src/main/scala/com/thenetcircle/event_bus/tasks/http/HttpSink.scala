@@ -40,7 +40,7 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 case class HttpSinkSettings(defaultRequest: HttpRequest,
                             expectedResponseBody: String,
@@ -74,7 +74,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         system
           .actorOf(
             Props(classOf[RetrySender], settings, runningContext),
-            runningContext.getStoryName() + "-http-sender"
+            "http-sender-" + runningContext.getStoryName() + "-" + Random.nextInt()
           )
       )
       retrySender.get

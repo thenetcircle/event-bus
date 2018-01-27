@@ -47,9 +47,9 @@ class HttpSourceBuilderTest extends TestBase {
     settings.port shouldEqual 8888
     settings.format shouldEqual DataFormat.ACTIVITYSTREAMS
     settings.succeededResponse shouldEqual "okoo"
-    settings.serverSettings.maxConnections shouldEqual 1001
-    settings.serverSettings.requestTimeout shouldEqual 5.seconds
-    settings.serverSettings.lingerTimeout shouldEqual 1.minute
+    settings.serverSettings.get.maxConnections shouldEqual 1001
+    settings.serverSettings.get.requestTimeout shouldEqual 5.seconds
+    settings.serverSettings.get.lingerTimeout shouldEqual 1.minute
 
   }
 }
