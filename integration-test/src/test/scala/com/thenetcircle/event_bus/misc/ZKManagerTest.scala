@@ -44,7 +44,7 @@ class ZKManagerTest extends IntegrationTestBase {
     println(newevent)*/
 
     val zkManager =
-      ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
+      ZooKeeperManager.createInstance("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab/dev")
 
     val treeCache =
       new TreeCache(

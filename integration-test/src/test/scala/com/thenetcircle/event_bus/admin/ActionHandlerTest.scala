@@ -19,15 +19,13 @@ package com.thenetcircle.event_bus.admin
 
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
-import com.typesafe.config.ConfigFactory
 
 class ActionHandlerTest extends IntegrationTestBase {
 
   behavior of "ActionHandler"
 
   val zkManager =
-    ZooKeeperManager("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab")
-  zkManager.start()
+    ZooKeeperManager.createInstance("maggie-zoo-1:2181,maggie-zoo-2:2181", s"/event-bus/popp-lab")
   val actionHandler = new ActionHandler(zkManager)
 
   it should "handler config string" in {

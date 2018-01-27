@@ -42,8 +42,10 @@ class Main extends Core {
   }
 
   // Setup Zookeeper
-  val zkManager: ZooKeeperManager = ZooKeeperManager(config.getString("app.zkserver"), config.getString("app.zkroot"))
-  zkManager.start()
+  val rootPath: String = config.getString("app.zkroot") + s"/${appContext.getAppName()}/${appContext.getAppEnv()}"
+  val zkManager: ZooKeeperManager =
+    ZooKeeperManager.createInstance(config.getString("app.zkserver"), rootPath)
+
   appContext.setZKManager(zkManager)
 
   def run(args: Array[String]): Unit =

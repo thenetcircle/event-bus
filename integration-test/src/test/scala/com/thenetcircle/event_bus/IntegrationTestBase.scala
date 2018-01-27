@@ -43,31 +43,31 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   implicit val appContext: AppContext         = _appContext
 
-  val decider: Supervision.Decider = {
+  private val _decider: Supervision.Decider = {
     case ex: Throwable =>
       logger.error(s"materializer supervision triggered by exception: $ex")
       Supervision.Stop
   }
-  implicit val materializer: ActorMaterializer = ActorMaterializer(
+  lazy implicit val materializer: ActorMaterializer = ActorMaterializer(
     ActorMaterializerSettings(system)
-      .withSupervisionStrategy(decider) //.withInputBuffer(initialSize = 1, maxSize = 1)
+      .withSupervisionStrategy(_decider) //.withInputBuffer(initialSize = 1, maxSize = 1)
   )
 
-  implicit val testExecutionContext: ExecutionContext = materializer.executionContext
+  lazy implicit val executionContext: ExecutionContext = materializer.executionContext
 
-  implicit val runningContext: TaskRunningContext =
+  lazy implicit val runningContext: TaskRunningContext =
     new TaskRunningContext(
       appContext,
       system,
       materializer,
-      testExecutionContext,
+      executionContext,
       "TestStoryRunner",
       system.actorOf(TestActors.blackholeProps),
       StorySettings("teststory")
     )
 
-  implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
-  val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
+  lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
+  lazy val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
   def this() = {
     this(new AppContext("event-bus-test", "2.x", "test", true, ConfigFactory.load()))

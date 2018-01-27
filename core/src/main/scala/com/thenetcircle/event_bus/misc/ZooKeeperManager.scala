@@ -27,39 +27,44 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.collection.JavaConverters._
 
-class ZooKeeperManager private (connectString: String, rootPath: String)(implicit appContext: AppContext)
+class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(implicit appContext: AppContext)
     extends StrictLogging {
 
-  private var client: CuratorFramework =
-    CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
+  assert(
+    rootPath.startsWith(s"/event-bus/${appContext.getAppName()}"),
+    s"the zookeeper root path $rootPath is not allowed"
+  )
 
-  def start(): Unit = if (client.getState != CuratorFrameworkState.STARTED) {
-    client.start()
-    appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
-  }
+  logger.debug(s"new ZookeeperManager instance created with rootPath $rootPath")
 
   def assertPermission(path: String): Unit =
-    assert(path.startsWith(rootPath), s"the zookeeper path $path is not allow for operation")
+    assert(path.startsWith(rootPath), s"the zookeeper path $path is not allowed")
 
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
+  def withRootPath(_rootpath: String): ZooKeeperManager = new ZooKeeperManager(client, _rootpath)
+
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
-  def ensurePath(relativePath: String, data: String = ""): Unit =
-    if (client.checkExists().forPath(getAbsPath(relativePath)) == null) {
-      client.create().creatingParentsIfNeeded().forPath(getAbsPath(relativePath), data.getBytes())
+  def ensurePath(relativePath: String, data: String = ""): Unit = {
+    val absPath = getAbsPath(relativePath)
+    if (client.checkExists().forPath(absPath) == null) {
+      client.create().creatingParentsIfNeeded().forPath(absPath, data.getBytes())
     }
+  }
 
   def getClient(): CuratorFramework = client
 
-  def getData(relativePath: String): Option[String] =
+  def getData(relativePath: String): Option[String] = {
+    val absPath = getAbsPath(relativePath)
     try {
-      Some(new String(client.getData.forPath(getAbsPath(relativePath)), "UTF-8"))
+      Some(new String(client.getData.forPath(absPath), "UTF-8"))
     } catch {
       case e: Throwable =>
-        logger.info(s"getData from ${getAbsPath(relativePath)} failed with error: ${e.getMessage}")
+        logger.info(s"getData from $absPath failed with error: ${e.getMessage}")
         None
     }
+  }
 
   def getChildren(relativePath: String): Option[List[String]] =
     try {
@@ -111,10 +116,13 @@ class ZooKeeperManager private (connectString: String, rootPath: String)(implici
 }
 
 object ZooKeeperManager {
-  def apply(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
-    if (connectString.isEmpty || rootPath.isEmpty) {
-      throw new IllegalArgumentException("parameters are not enough for creating ZooKeeperManager.")
-    }
-    new ZooKeeperManager(connectString, rootPath)
+
+  def createInstance(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
+    val client: CuratorFramework =
+      CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
+    client.start()
+    appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
+    new ZooKeeperManager(client, rootPath)
   }
+
 }

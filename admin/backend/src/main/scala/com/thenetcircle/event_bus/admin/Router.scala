@@ -19,14 +19,21 @@ package com.thenetcircle.event_bus.admin
 
 import akka.http.scaladsl.server.Directives.{complete, get, path, pathSingleSlash, _}
 import akka.http.scaladsl.server.Route
+import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.scalalogging.StrictLogging
 
-class Router extends StrictLogging {
+class Router()(implicit appContext: AppContext) extends StrictLogging {
 
   def createResponse(code: Int, errorMessage: String = ""): String = {
     val message = errorMessage.replaceAll("""\\""", """\\\\""").replaceAll("\"", "\\\\\"")
     s"""{"code": "$code", "message": "$message"}"""
   }
+
+  def wrapPath(path: Option[String]): String =
+    if (path.isEmpty || path.get.isEmpty)
+      appContext.getAppEnv()
+    else
+      s"${appContext.getAppEnv()}/$path"
 
   def getRoute(actionHandler: ActionHandler): Route =
     // format: off
@@ -37,15 +44,15 @@ class Router extends StrictLogging {
     } ~
     path("zk" / "tree") {
       get {
-        parameter("path") { path =>
-          complete(actionHandler.getZKNodeTreeAsJson(path))
+        parameter("path".?) { path =>
+          complete(actionHandler.getZKNodeTreeAsJson(wrapPath(path)))
         }
       } ~
       post {
-        parameter("path") { path =>
+        parameter("path".?) { path =>
           entity(as[String]) { json =>
             try {
-              actionHandler.updateZKNodeTreeByJson(path, json)
+              actionHandler.updateZKNodeTreeByJson(wrapPath(path), json)
               complete(createResponse(0))
             } catch {
               case ex: Throwable => complete(createResponse(1, ex.getMessage))

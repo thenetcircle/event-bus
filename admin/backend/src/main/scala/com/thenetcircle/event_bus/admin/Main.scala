@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.admin
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.Core
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.typesafe.config.{Config, ConfigFactory}
@@ -31,14 +31,14 @@ class Main extends Core {
 
   val config: Config = ConfigFactory.load()
 
-  // Setup Zookeeper
-  val zkManager: ZooKeeperManager = ZooKeeperManager(config.getString("app.zkserver"), config.getString("app.zkroot"))
-  zkManager.start()
-
   def run(args: Array[String]): Unit = {
 
-    implicit val materializer = ActorMaterializer()
+    implicit val materializer: Materializer = ActorMaterializer()
     import scala.concurrent.ExecutionContext.Implicits.global
+
+    val rootPath = config.getString("app.zkroot") + "/" + appContext.getAppName()
+    val zkManager: ZooKeeperManager =
+      ZooKeeperManager.createInstance(config.getString("app.zkserver"), rootPath)
 
     val actionHandler = new ActionHandler(zkManager)
     val route: Route  = new Router().getRoute(actionHandler)
