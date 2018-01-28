@@ -31,7 +31,7 @@ object Monitor {
     monitor
   }
 
-  class EventMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
+  /*class EventMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
     val normal     = counter("normal")
     val inFallback = counter("in-fallback")
     val toFallback = counter("to-fallback")
@@ -41,7 +41,7 @@ object Monitor {
   object EventMetrics extends EntityRecorderFactory[EventMetrics] {
     def category: String                                                   = "event"
     def createRecorder(instrumentFactory: InstrumentFactory): EventMetrics = new EventMetrics(instrumentFactory)
-  }
+  }*/
 }
 
 class Monitor()(implicit appContext: AppContext) {
@@ -55,17 +55,17 @@ class Monitor()(implicit appContext: AppContext) {
     appContext.addShutdownHook(Kamon.shutdown())
   }
 
-  def traceEvent(status: EventStatus, event: Event, storyName: String): Unit = if (isKamonEnabled) {
-    val eventEntity = Kamon.metrics.entity(EventMetrics, storyName)
+  def watchStoryPayload(storyName: String, payload: (EventStatus, Event)): Unit = if (isKamonEnabled) {
+    val (status, event) = payload
     status match {
       case Norm =>
-        eventEntity.normal.increment()
+        Kamon.metrics.counter(s"story.$storyName.event.Counter", Map("taga"             -> "abc"))
+        Kamon.metrics.histogram(s"story.$storyName.event.histogram", Map("taga"         -> "abc"))
+        Kamon.metrics.minMaxCounter(s"story.$storyName.event.minMaxCounter", Map("taga" -> "abc"))
+        Kamon.metrics.gauge(s"story.$storyName.event.gauge", Map("taga"                 -> "abc"))
       case ToFB(opEx) =>
-        eventEntity.toFallback.increment()
-      case InFB =>
-        eventEntity.inFallback.increment()
-      case Fail(ex) =>
-        eventEntity.failure.increment()
+      case InFB       =>
+      case Fail(ex)   =>
     }
   }
 

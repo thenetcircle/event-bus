@@ -73,16 +73,15 @@ class Story(
       val sinkHandler =
         wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story-$storyName-sink")
 
-      val monitorFlow = Flow[Payload].map {
-        case payload @ (status, event) =>
-          runningContext
-            .getAppContext()
-            .getMonitor()
-            .foreach(m => {
-              m.traceEvent(status, event, storyName)
-            })
-          payload
-      }
+      val monitorFlow = Flow[Payload].map(payload => {
+        runningContext
+          .getAppContext()
+          .getMonitor()
+          .foreach(m => {
+            m.watchStoryPayload(storyName, payload)
+          })
+        payload
+      })
 
       runningFuture = Some(
         sourceTask.runWith(
