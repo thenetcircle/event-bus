@@ -71,7 +71,7 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   lazy val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
   private val _config                  = appContext.getSystemConfig()
-  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.createInstance(appendEnv = false)
+  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.init()
 
   def this() = {
     this(new AppContext("integration-test", "2.x", "test", true, ConfigFactory.load()))

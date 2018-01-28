@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.context
 
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.thenetcircle.event_bus.misc.{Monitor, ZooKeeperManager}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
@@ -44,6 +44,10 @@ class AppContext(appName: String, appVersion: String, appEnv: String, debug: Boo
   private var zkManager: Option[ZooKeeperManager]             = None
   def setZooKeeperManager(_zkManager: ZooKeeperManager): Unit = zkManager = Some(_zkManager)
   def getZooKeeperManager(): Option[ZooKeeperManager]         = zkManager
+
+  private var monitor: Option[Monitor]    = None
+  def setMonitor(_monitor: Monitor): Unit = monitor = Some(_monitor)
+  def getMonitor(): Option[Monitor]       = monitor
 
 }
 

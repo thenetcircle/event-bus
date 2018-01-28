@@ -17,7 +17,7 @@ class KafkaSourceTest extends IntegrationTestBase with BeforeAndAfter {
 
   behavior of "KafkaSource"
 
-  val bootstrapServers = appContext.getSystemConfig().getString("app.kafka.bootstrap-servers")
+  val bootstrapServers = appContext.getSystemConfig().getString("app.test.kafka.bootstrap-servers")
   val testTopic        = "event-bus-integration-test"
 
   val settings = KafkaSourceSettings(

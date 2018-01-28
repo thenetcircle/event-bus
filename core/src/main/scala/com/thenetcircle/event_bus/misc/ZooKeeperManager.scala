@@ -130,18 +130,17 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
 
 object ZooKeeperManager {
 
-  def createInstance(appendEnv: Boolean = true)(implicit appContext: AppContext): ZooKeeperManager = {
+  def init()(implicit appContext: AppContext): ZooKeeperManager = {
     val config = appContext.getSystemConfig()
     var rootPath: String =
-      config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
-    if (appendEnv) rootPath += s"/${appContext.getAppEnv()}"
-    createInstance(config.getString("app.zookeeper.servers"), rootPath)(appContext)
+      config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}/${appContext.getAppEnv()}"
+    init(config.getString("app.zookeeper.servers"), rootPath)(appContext)
   }
 
-  def createInstance(rootPath: String)(implicit appContext: AppContext): ZooKeeperManager =
-    createInstance(appContext.getSystemConfig().getString("app.zookeeper.servers"), rootPath)(appContext)
+  def init(rootPath: String)(implicit appContext: AppContext): ZooKeeperManager =
+    init(appContext.getSystemConfig().getString("app.zookeeper.servers"), rootPath)(appContext)
 
-  def createInstance(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
+  def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
     val client: CuratorFramework =
       CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
     client.start()

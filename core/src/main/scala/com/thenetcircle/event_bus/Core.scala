@@ -17,29 +17,40 @@
 
 package com.thenetcircle.event_bus
 
-import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.context.AppContext
-import com.typesafe.config.Config
-import com.typesafe.scalalogging.StrictLogging
+import akka.actor.ActorRef
+import akka.pattern.gracefulStop
+import com.thenetcircle.event_bus.misc.{Monitor, ZooKeeperManager}
+import com.thenetcircle.event_bus.story.{StoryBuilder, StoryRunner, StoryZooKeeperListener, TaskBuilderFactory}
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-trait Core extends StrictLogging {
+class Core extends AbstractApp {
 
-  logger.info("Application is initializing.")
+  val config: Config = ConfigFactory.load()
 
-  def config: Config
+  def run(args: Array[String]): Unit = {
 
-  implicit lazy val appContext: AppContext = AppContext(config)
-  implicit lazy val system: ActorSystem    = ActorSystem(appContext.getAppName(), config)
+    ZooKeeperManager.init()
+    Monitor.init()
 
-  // Setup shutdown hooks
-  sys.addShutdownHook({
-    logger.info("Application is shutting down...")
-    appContext.shutdown()
-    system.terminate()
-    Await.result(system.whenTerminated, 6.seconds)
-  })
+    // Initialize StoryRunner
+    val runnerName: String = config.getString("app.runner-name")
+    val storyRunner: ActorRef =
+      system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
+    appContext.addShutdownHook {
+      Await.ready(
+        gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()),
+        3.seconds
+      )
+    }
 
+    val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
+
+    StoryZooKeeperListener(runnerName, storyRunner, storyBuilder).start()
+
+  }
 }
+
+object Core extends App { (new Core).run(args) }

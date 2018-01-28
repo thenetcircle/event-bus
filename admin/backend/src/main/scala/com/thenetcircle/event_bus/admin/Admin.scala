@@ -20,26 +20,27 @@ package com.thenetcircle.event_bus.admin
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, Materializer}
-import com.thenetcircle.event_bus.Core
+import com.thenetcircle.event_bus.AbstractApp
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class Main extends Core {
+class Admin extends AbstractApp {
 
-  val config: Config = ConfigFactory.load()
+  val config: Config                   = ConfigFactory.load()
+  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.init()
 
   def run(args: Array[String]): Unit = {
 
-    implicit val materializer: Materializer = ActorMaterializer()
+    lazy implicit val materializer: Materializer = ActorMaterializer()
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val zkManager: ZooKeeperManager = ZooKeeperManager.createInstance(appendEnv = false)
-
-    val actionHandler = new ActionHandler(zkManager)
-    val route: Route  = new Router().getRoute(actionHandler)
+    val actionHandler = new ActionHandler(
+      zkManager.withNewRootPath(config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}")
+    )
+    val route: Route = new Router().getRoute(actionHandler)
 
     val interface     = config.getString("admin.interface")
     val port          = config.getInt("admin.port")
@@ -51,4 +52,4 @@ class Main extends Core {
 
 }
 
-object Main extends App { (new Main).run(args) }
+object Admin extends App { (new Admin).run(args) }

@@ -20,11 +20,19 @@ package com.thenetcircle.event_bus.misc
 import com.thenetcircle.event_bus.context.AppContext
 import kamon.Kamon
 
-class KamonManager {
+object Monitor {
 
-  def init(appContext: AppContext): Unit = {
-    Kamon.start()
-    appContext.addShutdownHook(Kamon.shutdown())
+  def init()()(implicit appContext: AppContext): Monitor = {
+    val ifStartKamon: Boolean = appContext.getSystemConfig().getString("app.monitor.kamon.auto-start") == "yes"
+    if (ifStartKamon) {
+      Kamon.start()
+      appContext.addShutdownHook(Kamon.shutdown())
+    }
+    val monitor = new Monitor
+    appContext.setMonitor(monitor)
+    monitor
   }
 
 }
+
+class Monitor() {}
