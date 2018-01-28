@@ -130,12 +130,25 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
 
 object ZooKeeperManager {
 
+  def createInstance(appendEnv: Boolean = true)(implicit appContext: AppContext): ZooKeeperManager = {
+    val config = appContext.getSystemConfig()
+    var rootPath: String =
+      config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
+    if (appendEnv) rootPath += s"/${appContext.getAppEnv()}"
+    createInstance(config.getString("app.zookeeper.servers"), rootPath)(appContext)
+  }
+
+  def createInstance(rootPath: String)(implicit appContext: AppContext): ZooKeeperManager =
+    createInstance(appContext.getSystemConfig().getString("app.zookeeper.servers"), rootPath)(appContext)
+
   def createInstance(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
     val client: CuratorFramework =
       CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
     client.start()
     appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
-    new ZooKeeperManager(client, rootPath)
+    val zkManager = new ZooKeeperManager(client, rootPath)
+    appContext.setZKManager(zkManager)
+    zkManager
   }
 
 }

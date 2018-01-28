@@ -70,12 +70,8 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
   lazy val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
-  private val _config = appContext.getSystemConfig()
-  lazy val zkManager: ZooKeeperManager =
-    ZooKeeperManager.createInstance(
-      _config.getString("app.zkserver"),
-      s"${_config.getString("app.zkroot")}/${appContext.getAppName()}"
-    )
+  private val _config                  = appContext.getSystemConfig()
+  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.createInstance(appendEnv = false)
 
   def this() = {
     this(new AppContext("integration-test", "2.x", "test", true, ConfigFactory.load()))

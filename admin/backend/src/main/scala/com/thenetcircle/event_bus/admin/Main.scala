@@ -36,9 +36,7 @@ class Main extends Core {
     implicit val materializer: Materializer = ActorMaterializer()
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val rootPath = config.getString("app.zkroot") + "/" + appContext.getAppName()
-    val zkManager: ZooKeeperManager =
-      ZooKeeperManager.createInstance(config.getString("app.zkserver"), rootPath)
+    val zkManager: ZooKeeperManager = ZooKeeperManager.createInstance(appendEnv = false)
 
     val actionHandler = new ActionHandler(zkManager)
     val route: Route  = new Router().getRoute(actionHandler)
