@@ -22,8 +22,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Norm, ToFB}
-import com.thenetcircle.event_bus.interfaces._
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.interfaces.{Event, _}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
@@ -74,11 +73,23 @@ class Story(
       val sinkHandler =
         wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story-$storyName-sink")
 
+      val monitorFlow = Flow[Payload].map {
+        case payload @ (status, event) =>
+          runningContext
+            .getAppContext()
+            .getMonitor()
+            .foreach(m => {
+              m.traceEvent(status, event, storyName)
+            })
+          payload
+      }
+
       runningFuture = Some(
         sourceTask.runWith(
           sourceHandler
             .via(transformsHandler)
             .via(sinkHandler)
+            .via(monitorFlow)
         )
       )
 

@@ -78,6 +78,7 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
     try {
       val activity = data.parseJson.convertTo[Activity]
 
+      // TODO set uuid back to event if not set before
       val uuid: String =
         activity.id.getOrElse(
           activity.title.getOrElse("") + "#" + java.util.UUID.randomUUID().toString
