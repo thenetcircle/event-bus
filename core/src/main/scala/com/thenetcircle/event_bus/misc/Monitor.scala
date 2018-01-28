@@ -24,6 +24,8 @@ import kamon.Kamon
 import kamon.metric.instrument.InstrumentFactory
 import kamon.metric.{EntityRecorderFactory, GenericEntityRecorder}
 
+import scala.util.Random
+
 object Monitor {
   def init()(implicit appContext: AppContext): Monitor = {
     val monitor = new Monitor()
@@ -59,9 +61,9 @@ class Monitor()(implicit appContext: AppContext) {
     val (status, event) = payload
     status match {
       case Norm =>
-        Kamon.metrics.counter(s"story.$storyName.event.Counter", Map("taga"             -> "abc"))
-        Kamon.metrics.histogram(s"story.$storyName.event.histogram", Map("taga"         -> "abc"))
-        Kamon.metrics.minMaxCounter(s"story.$storyName.event.minMaxCounter", Map("taga" -> "abc"))
+        Kamon.metrics.counter(s"story.$storyName.event.Counter", Map("taga"             -> "abc")).increment()
+        Kamon.metrics.histogram(s"story.$storyName.event.histogram", Map("taga"         -> "abc")).record(Random.nextInt())
+        Kamon.metrics.minMaxCounter(s"story.$storyName.event.minMaxCounter", Map("taga" -> "abc")).increment()
       // Kamon.metrics.gauge(s"story.$storyName.event.gauge", Map("taga"                 -> "abc"))
       case ToFB(opEx) =>
       case InFB       =>
