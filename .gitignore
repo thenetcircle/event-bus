@@ -9,3 +9,6 @@ target/
 /ansible/
 /nginx-proxy/
 /zkdata/
+/native/
+/integration-test/native/
+hs_err_*.log

@@ -32,7 +32,7 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
 
   override def postStop(): Unit = {
     log.warning(s"the story actor of story $storyName is stopping")
-    story.stop()
+    story.shutdown()
   }
 
   override def receive: Receive = {

@@ -19,19 +19,18 @@ package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
+import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.EventImpl
-import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractorFactory}
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
+import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
+import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
-import akka.testkit.{ImplicitSender, TestActors, TestKit}
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext}
 
 abstract class IntegrationTestBase(_appContext: AppContext)
     extends TestKit(ActorSystem(_appContext.getAppName(), _appContext.getSystemConfig()))
@@ -43,6 +42,7 @@ abstract class IntegrationTestBase(_appContext: AppContext)
 
   // implicit val defaultTimeOut: FiniteDuration = 3.seconds
   implicit val appContext: AppContext = _appContext
+  val config: Config                  = appContext.getSystemConfig()
 
   private val _decider: Supervision.Decider = {
     case ex: Throwable =>

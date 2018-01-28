@@ -42,8 +42,8 @@ class Admin extends AbstractApp {
     )
     val route: Route = new Router().getRoute(actionHandler)
 
-    val interface     = config.getString("admin.interface")
-    val port          = config.getInt("admin.port")
+    val interface     = config.getString("app.admin.interface")
+    val port          = config.getInt("app.admin.port")
     val bindingFuture = Http().bindAndHandle(route, interface, port)
 
     appContext.addShutdownHook(Await.result(bindingFuture.map(_.unbind()), 5.seconds))

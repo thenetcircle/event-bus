@@ -86,12 +86,12 @@ class Story(
     } catch {
       case ex: Throwable =>
         logger.error(s"story $storyName running failed with error $ex")
-        stop()
+        shutdown()
         throw ex
     }
   }
 
-  def stop()(implicit runningContext: TaskRunningContext): Unit =
+  def shutdown()(implicit runningContext: TaskRunningContext): Unit =
     try {
       logger.info(s"stopping story $storyName")
       sourceTask.shutdown()
