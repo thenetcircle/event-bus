@@ -19,8 +19,8 @@ package com.thenetcircle.event_bus
 
 import akka.actor.ActorRef
 import akka.pattern.gracefulStop
-import com.thenetcircle.event_bus.misc.{ZKStoryManager, ZooKeeperManager}
-import com.thenetcircle.event_bus.story.StoryRunner
+import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.thenetcircle.event_bus.story.{StoryBuilder, StoryRunner, StoryZooKeeperListener, TaskBuilderFactory}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await
@@ -28,25 +28,27 @@ import scala.concurrent.duration._
 
 class Main extends Core {
 
-  val config: Config = ConfigFactory.load()
+  val config: Config                   = ConfigFactory.load()
+  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.createInstance()
 
-  // Initialize StoryRunner
-  val runnerName: String = config.getString("app.runner-name")
-  val storyRunner: ActorRef =
-    system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
-  appContext.addShutdownHook {
-    Await.result(
-      gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()),
-      3.seconds
-    )
+  def run(args: Array[String]): Unit = {
+
+    // Initialize StoryRunner
+    val runnerName: String = config.getString("app.runner-name")
+    val storyRunner: ActorRef =
+      system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
+    appContext.addShutdownHook {
+      Await.ready(
+        gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()),
+        3.seconds
+      )
+    }
+
+    val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
+
+    StoryZooKeeperListener(runnerName, storyRunner, storyBuilder).start()
+
   }
-
-  // Setup Zookeeper
-  val zkManager: ZooKeeperManager = ZooKeeperManager.createInstance()
-
-  def run(args: Array[String]): Unit =
-    new ZKStoryManager(zkManager, runnerName, storyRunner).runAndWatch()
-
 }
 
 object Main extends App { (new Main).run(args) }

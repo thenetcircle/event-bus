@@ -49,7 +49,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
 
   import StoryRunner._
 
-  log.info("==========  story runner is starting  ==========")
+  log.info(s"==========  story runner $runnerName is starting  ==========")
 
   val runningContextFactory: TaskRunningContextFactory =
     TaskRunningContextFactory(system, appContext)

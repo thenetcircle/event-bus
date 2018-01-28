@@ -147,7 +147,7 @@ object ZooKeeperManager {
     client.start()
     appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
     val zkManager = new ZooKeeperManager(client, rootPath)
-    appContext.setZKManager(zkManager)
+    appContext.setZooKeeperManager(zkManager)
     zkManager
   }
 

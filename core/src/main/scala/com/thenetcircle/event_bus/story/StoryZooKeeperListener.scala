@@ -15,12 +15,13 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.misc
+package com.thenetcircle.event_bus.story
+
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.{ActorRef, ActorSystem}
 import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.story._
+import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
@@ -30,38 +31,51 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
-class ZKStoryManager(zkManager: ZooKeeperManager, runnerName: String, storyRunner: ActorRef)(
+object StoryZooKeeperListener {
+  def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
+      implicit appContext: AppContext,
+      system: ActorSystem
+  ): StoryZooKeeperListener =
+    new StoryZooKeeperListener(runnerName, storyRunner, storyBuilder)
+}
+
+class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
     implicit appContext: AppContext,
     system: ActorSystem
 ) extends StrictLogging {
 
-  val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
+  require(
+    appContext.getZooKeeperManager().isDefined,
+    "StoryZooKeeperListener requires AppContext with ZookeeperManager injected"
+  )
 
-  type ZEvent   = PathChildrenCacheEvent
-  type ZWatcher = PathChildrenCache
+  val zkManager: ZooKeeperManager = appContext.getZooKeeperManager().get
 
-  val watchingStores = mutable.Map.empty[String, ZWatcher]
+  type ZKEvent   = PathChildrenCacheEvent
+  type ZKWatcher = PathChildrenCache
+
+  private val watchingStores = mutable.Map.empty[String, ZKWatcher]
 
   zkManager.ensurePath(s"runners/$runnerName")
   zkManager.ensurePath("stories")
 
   def getStoryRootPath(storyName: String): String = s"stories/$storyName"
+  val assignedStoriesPath                         = s"runners/$runnerName/stories"
 
-  def runAndWatch(): Unit = {
-    val runnableStoriesPath = s"runners/$runnerName/stories"
+  def start(): Unit = {
+    val assigningWatcher =
+      zkManager.watchChildren(assignedStoriesPath, fetchData = false) { (_event, _watcher) =>
+        _event.getType match {
 
-    val jobWatcher =
-      zkManager.watchChildren(runnableStoriesPath, fetchData = false) { (re, rw) =>
-        re.getType match {
           // new story has been assigned to this runner
           case CHILD_ADDED =>
-            val storyName    = Util.getLastPartOfPath(re.getData.getPath)
-            val storyWatcher = runAndWatchStory(storyName)
+            val storyName    = Util.getLastPartOfPath(_event.getData.getPath)
+            val storyWatcher = watchStory(storyName)
             watchingStores += (storyName -> storyWatcher)
 
           // story has been removed from this runner
           case CHILD_REMOVED =>
-            val storyName = Util.getLastPartOfPath(re.getData.getPath)
+            val storyName = Util.getLastPartOfPath(_event.getData.getPath)
             logger.debug(s"removing story watcher of $storyName")
             storyRunner ! StoryRunner.Shutdown(Some(storyName))
             watchingStores
@@ -77,51 +91,48 @@ class ZKStoryManager(zkManager: ZooKeeperManager, runnerName: String, storyRunne
 
     appContext.addShutdownHook {
       watchingStores.foreach(_._2.close())
-      jobWatcher.close()
+      assigningWatcher.close()
     }
   }
 
-  val storyInitStatus = mutable.Map.empty[String, AtomicBoolean]
-  def runAndWatchStory(storyName: String): PathChildrenCache = {
-    storyInitStatus += (storyName -> new AtomicBoolean())
-    zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) { (se, sw) =>
-      if (se.getType == INITIALIZED ||
-          se.getType == CHILD_UPDATED ||
-          (se.getType == CHILD_ADDED && storyInitStatus(storyName).get()) ||
-          se.getType == CHILD_REMOVED) {
+  def watchStory(storyName: String): ZKWatcher = {
+    val inited: AtomicBoolean = new AtomicBoolean(false)
+    zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) { (_event, _watcher) =>
+      if (_event.getType == INITIALIZED) {
 
-        if (se.getType == INITIALIZED) {
-          storyInitStatus(storyName).compareAndSet(false, true)
-        }
+        inited.compareAndSet(false, true)
+        val optionStory = createStory(storyName, _event.getInitialData.asScala.toList)
+        optionStory.foreach(s => storyRunner ! StoryRunner.Run(s))
 
-        val storyOption = createStory(storyName, sw.getCurrentData.asScala.toList)
-        storyOption.foreach(story => {
-          if (se.getType == INITIALIZED)
-            storyRunner ! StoryRunner.Run(story)
-          else
-            storyRunner ! StoryRunner.Rerun(story)
-        })
+      } else if (inited.get() == true &&
+                 (_event.getType == INITIALIZED ||
+                 _event.getType == CHILD_UPDATED ||
+                 _event.getType == CHILD_ADDED ||
+                 _event.getType == CHILD_REMOVED)) {
+
+        val storyOption = createStory(storyName, _watcher.getCurrentData.asScala.toList)
+        storyOption.foreach(s => storyRunner ! StoryRunner.Rerun(s))
+
       }
     }
   }
 
   def createStory(storyName: String, data: List[ChildData]): Option[Story] =
     try {
-      val storyInfo =
-        createStoryInfoFromZKData(storyName, data)
-      logger.debug(s"new story info: $storyInfo")
+      val storyInfo = createStoryInfo(storyName, data)
+      logger.debug(s"story was updated on ZooKeeper, new story info: $storyInfo")
       val story = storyBuilder.buildStory(storyInfo)
       Some(story)
     } catch {
       case NonFatal(ex) =>
-        logger.error(s"fetching or building story failed with error $ex, when run story")
+        logger.error(s"fetching or building story $storyName failed according to the changes on ZooKeeper, error $ex")
         None
     }
 
-  def createStoryInfoFromZKData(storyName: String, data: List[ChildData]): StoryInfo = {
+  def createStoryInfo(storyName: String, data: List[ChildData]): StoryInfo = {
     val storyData = mutable.Map.empty[String, String]
     data.foreach(child => {
-      storyData += (Util.getLastPartOfPath(child.getPath) -> new String(child.getData, "UTF-8"))
+      storyData += (Util.getLastPartOfPath(child.getPath) -> Util.makeUTF8String(child.getData))
     })
 
     StoryInfo(

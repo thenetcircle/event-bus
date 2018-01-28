@@ -69,15 +69,15 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
   ): Unit = {
     zkManager.ensurePath("topics")
     zkWatcher = Some(
-      zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (et, wc) =>
-        if (et.getType == INITIALIZED ||
-            (et.getType == CHILD_ADDED && zkInited.get()) ||
-            et.getType == CHILD_UPDATED ||
-            et.getType == CHILD_REMOVED) {
-          if (et.getType == INITIALIZED) zkInited.compareAndSet(false, true)
-          val _index = createIndexFromZKData(wc.getCurrentData.asScala.toList)
-          if (_index.nonEmpty)
-            updateIndex(_index)
+      zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (_event, _watcher) =>
+        if (_event.getType == INITIALIZED) {
+          zkInited.compareAndSet(false, true)
+          val _index = createIndexFromZKData(_event.getInitialData.asScala.toList)
+          if (_index.nonEmpty) updateIndex(_index)
+        } else if (zkInited.get() == true &&
+                   (_event.getType == CHILD_ADDED || _event.getType == CHILD_UPDATED || _event.getType == CHILD_REMOVED)) {
+          val _index = createIndexFromZKData(_watcher.getCurrentData.asScala.toList)
+          if (_index.nonEmpty) updateIndex(_index)
         }
       }
     )
@@ -164,7 +164,7 @@ class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
       .convertJsonStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-topic-resolver"))
 
-    val zkMangerOption = buildingContext.getAppContext().getZKManager()
+    val zkMangerOption = buildingContext.getAppContext().getZooKeeperManager()
     if (zkMangerOption.isEmpty) {
       throw new IllegalArgumentException("ZooKeeperManager is required for TNCKafkaTopicResolver")
     }

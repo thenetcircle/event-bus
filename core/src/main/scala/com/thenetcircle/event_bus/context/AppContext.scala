@@ -41,9 +41,9 @@ class AppContext(appName: String, appVersion: String, appEnv: String, debug: Boo
   def shutdown(): Unit =
     for (hook <- shutdownHooks) hook()
 
-  var zkManager: Option[ZooKeeperManager]              = None
-  def setZKManager(_zkManager: ZooKeeperManager): Unit = zkManager = Some(_zkManager)
-  def getZKManager(): Option[ZooKeeperManager]         = zkManager
+  private var zkManager: Option[ZooKeeperManager]             = None
+  def setZooKeeperManager(_zkManager: ZooKeeperManager): Unit = zkManager = Some(_zkManager)
+  def getZooKeeperManager(): Option[ZooKeeperManager]         = zkManager
 
 }
 
