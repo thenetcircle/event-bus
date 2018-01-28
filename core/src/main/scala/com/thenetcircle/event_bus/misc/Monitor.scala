@@ -62,7 +62,7 @@ class Monitor()(implicit appContext: AppContext) {
         Kamon.metrics.counter(s"story.$storyName.event.Counter", Map("taga"             -> "abc"))
         Kamon.metrics.histogram(s"story.$storyName.event.histogram", Map("taga"         -> "abc"))
         Kamon.metrics.minMaxCounter(s"story.$storyName.event.minMaxCounter", Map("taga" -> "abc"))
-        Kamon.metrics.gauge(s"story.$storyName.event.gauge", Map("taga"                 -> "abc"))
+      // Kamon.metrics.gauge(s"story.$storyName.event.gauge", Map("taga"                 -> "abc"))
       case ToFB(opEx) =>
       case InFB       =>
       case Fail(ex)   =>
