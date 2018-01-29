@@ -43,8 +43,6 @@ object Monitor {
 
 }
 
-class Monitor()(implicit appContext: AppContext) {}
-
 trait MonitoringHelp {
 
   def getStoryMonitor(storyName: String): StoryMonitor = StoryMonitor(storyName)
@@ -55,38 +53,33 @@ class StoryMonitor(storyName: String) {
 
   import StoryMonitor._
 
+  val entity: Option[StoryMetrics] =
+    if (Monitor.isEnabled()) Some(Kamon.metrics.entity(StoryMetrics, storyName)) else None
+
   def newEvent(event: Event): StoryMonitor = {
-    if (Monitor.isEnabled())
-      Kamon.metrics.entity(StoryMetrics, storyName).newEvent.increment()
+    entity.foreach(_.newEvent.increment())
     this
   }
 
-  def watchTermination(ex: Throwable): StoryMonitor = {
-    if (Monitor.isEnabled()) {
-      val entity = Kamon.metrics.entity(StoryMetrics, storyName)
-      entity.terminationAmount.increment()
-      entity.terminationError(ex).increment()
-    }
+  def onCompleted(): StoryMonitor = {
+    entity.foreach(_.completion.increment())
     this
   }
 
-  def watchPayload(payload: (EventStatus, Event)): StoryMonitor = {
-    if (Monitor.isEnabled()) {
-      val (status, event) = payload
-      val entity          = Kamon.metrics.entity(StoryMetrics, storyName)
-      status match {
-        case Norm =>
-          entity.normEvent.increment()
+  def onTerminated(ex: Throwable): StoryMonitor = {
+    entity.foreach(e => {
+      e.termination.increment()
+      e.errors(ex).increment()
+    })
+    this
+  }
 
-        case ToFB(opEx) =>
-          entity.toFallbackEvent.increment()
-
-        case InFB =>
-          entity.inFallbackEvent.increment()
-
-        case Fail(ex) =>
-          entity.failureEvent.increment()
-      }
+  def onProcessed(status: EventStatus, event: Event): StoryMonitor = {
+    status match {
+      case Norm    => entity.foreach(_.normEvent.increment())
+      case ToFB(_) => entity.foreach(_.toFBEvent.increment())
+      case InFB    => entity.foreach(_.inFBEvent.increment())
+      case Fail(_) => entity.foreach(_.failEvent.increment())
     }
     this
   }
@@ -105,13 +98,14 @@ object StoryMonitor {
     })
 
   class StoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-    val newEvent: Counter               = counter("new-event")
-    val normEvent: Counter              = counter("processed.norm-event")
-    val toFallbackEvent: Counter        = counter("processed.to-fallback-event")
-    val inFallbackEvent: Counter        = counter("processed.in-fallback-event")
-    val failureEvent: Counter           = counter("processed.failure-event")
-    val terminationAmount: Counter      = counter("termination.amount")
-    def terminationError(ex: Throwable) = counter("termination.error." + ex.getClass.getName.replaceAll("\\.", "_"))
+    val newEvent: Counter     = counter("new-event")
+    val normEvent: Counter    = counter("processed.norm-event")
+    val toFBEvent: Counter    = counter("processed.tofb-event")
+    val inFBEvent: Counter    = counter("processed.infb-event")
+    val failEvent: Counter    = counter("processed.fail-event")
+    val completion: Counter   = counter("completion")
+    val termination: Counter  = counter("termination")
+    def errors(ex: Throwable) = counter("errors." + ex.getClass.getName.replaceAll("\\.", "_"))
   }
 
   object StoryMetrics extends EntityRecorderFactory[StoryMetrics] {

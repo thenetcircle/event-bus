@@ -28,6 +28,7 @@ import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
 
 case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
@@ -77,12 +78,15 @@ class Story(
 
       val monitorFlow = Flow[Payload]
         .map(payload => {
-          getStoryMonitor(storyName).newEvent(payload._2).watchPayload(payload)
+          getStoryMonitor(storyName).newEvent(payload._2).onProcessed(payload._1, payload._2)
           payload
         })
         .watchTermination() {
           case (mat, done) =>
-            done.failed.foreach(ex => getStoryMonitor(storyName).watchTermination(ex))
+            done.onComplete {
+              case Success(_)  => getStoryMonitor(storyName).onCompleted()
+              case Failure(ex) => getStoryMonitor(storyName).onTerminated(ex)
+            }(runningContext.getExecutionContext())
             mat
         }
 

@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.context
 
-import com.thenetcircle.event_bus.misc.{Monitor, ZooKeeperManager}
+import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
