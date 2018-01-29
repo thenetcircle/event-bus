@@ -61,9 +61,12 @@ class StoryMonitor(storyName: String) {
     this
   }
 
-  def watchError(ex: Throwable): StoryMonitor = {
-    if (Monitor.isEnabled())
-      Kamon.metrics.entity(StoryMetrics, storyName).onException(ex, "Error").increment()
+  def watchTermination(ex: Throwable): StoryMonitor = {
+    if (Monitor.isEnabled()) {
+      val entity = Kamon.metrics.entity(StoryMetrics, storyName)
+      entity.terminationAmount.increment()
+      entity.terminationError(ex).increment()
+    }
     this
   }
 
@@ -77,14 +80,12 @@ class StoryMonitor(storyName: String) {
 
         case ToFB(opEx) =>
           entity.toFallbackEvent.increment()
-          if (opEx.isDefined) entity.onException(opEx.get, "ToFB").increment()
 
         case InFB =>
           entity.inFallbackEvent.increment()
 
         case Fail(ex) =>
           entity.failureEvent.increment()
-          entity.onException(ex, "Fail").increment()
       }
     }
     this
@@ -104,12 +105,13 @@ object StoryMonitor {
     })
 
   class StoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-    val newEvent: Counter                            = counter("new-event")
-    val normEvent: Counter                           = counter("norm-event")
-    val inFallbackEvent: Counter                     = counter("in-fallback-event")
-    val toFallbackEvent: Counter                     = counter("to-fallback-event")
-    val failureEvent: Counter                        = counter("failure-event")
-    def onException(ex: Throwable, category: String) = counter(category + "." + ex.getClass.getName)
+    val newEvent: Counter               = counter("new-event")
+    val normEvent: Counter              = counter("processed.norm-event")
+    val toFallbackEvent: Counter        = counter("processed.to-fallback-event")
+    val inFallbackEvent: Counter        = counter("processed.in-fallback-event")
+    val failureEvent: Counter           = counter("processed.failure-event")
+    val terminationAmount: Counter      = counter("termination.amount")
+    def terminationError(ex: Throwable) = counter("termination.error." + ex.getClass.getName.replaceAll("\\.", "_"))
   }
 
   object StoryMetrics extends EntityRecorderFactory[StoryMetrics] {

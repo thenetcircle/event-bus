@@ -28,7 +28,6 @@ import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
-import scala.util.Success
 import scala.util.control.NonFatal
 
 case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
@@ -83,7 +82,7 @@ class Story(
         })
         .watchTermination() {
           case (mat, done) =>
-            done.failed.foreach(ex => getStoryMonitor(storyName).watchError(ex))
+            done.failed.foreach(ex => getStoryMonitor(storyName).watchTermination(ex))
             mat
         }
 
