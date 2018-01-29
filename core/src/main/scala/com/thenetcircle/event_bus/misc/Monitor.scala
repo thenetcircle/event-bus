@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.event.extractor.EventExtractingException
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
 import kamon.Kamon
@@ -69,17 +70,30 @@ class StoryMonitor(storyName: String) {
   def onTerminated(ex: Throwable): StoryMonitor = {
     entity.foreach(e => {
       e.termination.increment()
-      e.errors(ex).increment()
+      e.error(ex).increment()
     })
     this
   }
 
   def onProcessed(status: EventStatus, event: Event): StoryMonitor = {
     status match {
-      case Norm    => entity.foreach(_.normEvent.increment())
-      case ToFB(_) => entity.foreach(_.toFBEvent.increment())
-      case InFB    => entity.foreach(_.inFBEvent.increment())
-      case Fail(_) => entity.foreach(_.failEvent.increment())
+      case Norm => entity.foreach(_.normEvent.increment())
+      case ToFB(exOp) =>
+        entity.foreach(e => {
+          e.toFBEvent.increment()
+          exOp.foreach(e.exception(_).increment())
+        })
+      case InFB => entity.foreach(_.inFBEvent.increment())
+      case Fail(ex: EventExtractingException) =>
+        entity.foreach(e => {
+          e.badFormatEvent.increment()
+          e.exception(ex).increment()
+        })
+      case Fail(ex) =>
+        entity.foreach(e => {
+          e.failEvent.increment()
+          e.exception(ex).increment()
+        })
     }
     this
   }
@@ -98,14 +112,16 @@ object StoryMonitor {
     })
 
   class StoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-    val newEvent: Counter     = counter("new-event")
-    val normEvent: Counter    = counter("processed.norm-event")
-    val toFBEvent: Counter    = counter("processed.tofb-event")
-    val inFBEvent: Counter    = counter("processed.infb-event")
-    val failEvent: Counter    = counter("processed.fail-event")
-    val completion: Counter   = counter("completion")
-    val termination: Counter  = counter("termination")
-    def errors(ex: Throwable) = counter("errors." + ex.getClass.getName.replaceAll("\\.", "_"))
+    val newEvent: Counter        = counter("new-event")
+    val normEvent: Counter       = counter("processed.normal")
+    val toFBEvent: Counter       = counter("processed.tofallback")
+    val inFBEvent: Counter       = counter("processed.infallback")
+    val failEvent: Counter       = counter("processed.failure")
+    val badFormatEvent: Counter  = counter("processed.badformat")
+    val completion: Counter      = counter("completion")
+    val termination: Counter     = counter("termination")
+    def exception(ex: Throwable) = counter("exceptions." + ex.getClass.getSimpleName)
+    def error(ex: Throwable)     = counter("errors." + ex.getClass.getSimpleName)
   }
 
   object StoryMetrics extends EntityRecorderFactory[StoryMetrics] {
