@@ -23,10 +23,12 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, _}
+import com.thenetcircle.event_bus.misc.MonitoringHelp
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
+import scala.util.Success
 import scala.util.control.NonFatal
 
 case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
@@ -37,7 +39,8 @@ class Story(
     val sinkTask: SinkTask,
     val transformTasks: Option[List[TransformTask]] = None,
     val fallbackTask: Option[FallbackTask] = None
-) extends StrictLogging {
+) extends StrictLogging
+    with MonitoringHelp {
 
   type Payload = (EventStatus, Event) // middle result type
 
@@ -73,15 +76,16 @@ class Story(
       val sinkHandler =
         wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story-$storyName-sink")
 
-      val monitorFlow = Flow[Payload].map(payload => {
-        runningContext
-          .getAppContext()
-          .getMonitor()
-          .foreach(m => {
-            m.watchStoryPayload(storyName, payload)
-          })
-        payload
-      })
+      val monitorFlow = Flow[Payload]
+        .map(payload => {
+          getStoryMonitor(storyName).newEvent(payload._2).watchPayload(payload)
+          payload
+        })
+        .watchTermination() {
+          case (mat, done) =>
+            done.failed.foreach(ex => getStoryMonitor(storyName).watchError(ex))
+            mat
+        }
 
       runningFuture = Some(
         sourceTask.runWith(

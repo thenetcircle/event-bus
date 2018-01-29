@@ -45,10 +45,6 @@ class AppContext(appName: String, appVersion: String, appEnv: String, debug: Boo
   def setZooKeeperManager(_zkManager: ZooKeeperManager): Unit = zkManager = Some(_zkManager)
   def getZooKeeperManager(): Option[ZooKeeperManager]         = zkManager
 
-  private var monitor: Option[Monitor]    = None
-  def setMonitor(_monitor: Monitor): Unit = monitor = Some(_monitor)
-  def getMonitor(): Option[Monitor]       = monitor
-
 }
 
 object AppContext {
