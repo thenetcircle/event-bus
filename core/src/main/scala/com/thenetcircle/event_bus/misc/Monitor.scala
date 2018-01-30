@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.misc
 
+import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.event.extractor.EventExtractingException
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, Norm, ToFB}
@@ -28,15 +29,28 @@ import kamon.metric.{EntityRecorderFactory, GenericEntityRecorder}
 import scala.collection.mutable
 
 object Monitor {
-  private var isKamonEnabled: Boolean = false
+  private var isKamonEnabled: Boolean  = false
+  private var isSentryEnabled: Boolean = false
 
   def init()(implicit appContext: AppContext): Unit = {
-    isKamonEnabled =
-      appContext.getSystemConfig().getString("app.monitor.kamon.auto-start") == "yes"
+    isKamonEnabled = appContext.getSystemConfig().getBoolean("app.monitor.kamon.enable")
+    isSentryEnabled = appContext.getSystemConfig().getBoolean("app.monitor.sentry.enable")
 
     if (isKamonEnabled) {
       Kamon.start()
       appContext.addShutdownHook(Kamon.shutdown())
+    }
+
+    if (isSentryEnabled) {
+      import io.sentry.Sentry
+
+      val release     = BuildInfo.version
+      val environment = appContext.getAppEnv()
+      val tags        = s"app_name:${appContext.getAppName()}"
+
+      Sentry.init(
+        s"http://6d41dd5bb5c045aaa6b8f9ffd518e6c0:a62c806cf0cc4d4a85d96db9d337577e@thin.thenetcircle.lab:8080/2?release=$release&environment=$environment&tags=$tags&stacktrace.app.packages=com.thenetcircle.event_bus"
+      )
     }
   }
 

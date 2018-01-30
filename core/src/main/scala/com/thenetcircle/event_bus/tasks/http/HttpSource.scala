@@ -84,7 +84,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
           .map[(EventStatus, Event)](event => (Norm, event))
           .recover {
             case ex: EventExtractingException =>
-              logger.debug(s"A http request unmarshaller failed with error $ex")
+              logger.info(s"A http request unmarshaller failed with error $ex")
               (Fail(ex), EventImpl.createFromFailure(ex))
           }
       })

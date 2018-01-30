@@ -32,8 +32,8 @@ class Core extends AbstractApp {
 
   def run(args: Array[String]): Unit = {
 
-    ZooKeeperManager.init()
     Monitor.init()
+    ZooKeeperManager.init()
 
     // Initialize StoryRunner
     val runnerName: String = config.getString("app.runner-name")

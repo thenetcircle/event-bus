@@ -24,11 +24,12 @@ object Dependencies {
   val logback   = "ch.qos.logback" % "logback-classic" % "1.2.3"
   val scalaTest = "org.scalatest"  %% "scalatest"      % "3.0.1" % Test
 
-  val kamonCore          = "io.kamon" %% "kamon-core"           % kamonVersion
-  val kamonAkka          = "io.kamon" %% "kamon-akka-2.5"       % kamonVersion
-  val kamonStatsd        = "io.kamon" %% "kamon-statsd"         % kamonVersion
-  val kamonSystemMetrics = "io.kamon" %% "kamon-system-metrics" % kamonVersion
-  val kamonLogReporter   = "io.kamon" %% "kamon-log-reporter"   % kamonVersion
+  val kamonCore          = "io.kamon"  %% "kamon-core"           % kamonVersion
+  val kamonAkka          = "io.kamon"  %% "kamon-akka-2.5"       % kamonVersion
+  val kamonStatsd        = "io.kamon"  %% "kamon-statsd"         % kamonVersion
+  val kamonSystemMetrics = "io.kamon"  %% "kamon-system-metrics" % kamonVersion
+  val kamonLogReporter   = "io.kamon"  %% "kamon-log-reporter"   % kamonVersion
+  val sentry             = "io.sentry" % "sentry-logback"        % "1.6.6"
 
   val ficus = "com.iheart" %% "ficus" % "1.4.2"
   // val akkaTracing = "com.github.levkhomich" %% "akka-tracing-core" % "0.6"
@@ -60,7 +61,8 @@ object Dependencies {
     // kamonAkka,
     kamonStatsd,
     kamonSystemMetrics,
-    kamonLogReporter
+    kamonLogReporter,
+    sentry
   )
 
   val integrationTestDependencies = Seq(

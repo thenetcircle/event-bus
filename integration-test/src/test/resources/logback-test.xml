@@ -9,6 +9,12 @@
 		</encoder>
 	</appender>
 
+	<appender name="Sentry" class="io.sentry.logback.SentryAppender">
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>DEBUG</level>
+		</filter>
+	</appender>
+
 	<logger name="ch.qos.logback" level="WARN" />
 	<logger name="org.apache.kafka" level="INFO" />
 	<logger name="akka.event" level="INFO" />
@@ -19,6 +25,7 @@
 
 	<root level="DEBUG">
 		<appender-ref ref="STDOUT" />
+		<appender-ref ref="Sentry" />
 	</root>
 
 </configuration>

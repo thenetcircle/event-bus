@@ -17,6 +17,8 @@
 
 package com.thenetcircle.event_bus.story
 
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpEntity, HttpRequest, Uri}
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.misc.Monitor
 import com.thenetcircle.event_bus.tasks.http.{HttpSource, HttpSourceSettings}
@@ -45,10 +47,11 @@ class MonitorTest extends IntegrationTestBase {
 
     story.run()
 
-    /*for (i <- 1 to 1000) {
-      Http().singleRequest(HttpRequest(uri = Uri("http://127.0.0.1:55650"), entity = HttpEntity("{}")))
+    for (i <- 1 to 1000) {
+      Http().singleRequest(HttpRequest(uri = Uri("http://127.0.0.1:55650"), entity = HttpEntity("abcdef")))
       Thread.sleep(1000)
-    }*/
+    }
+
     StdIn.readLine()
 
   }
