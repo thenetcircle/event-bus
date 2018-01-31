@@ -49,7 +49,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
 
   import StoryRunner._
 
-  log.info(s"==========  story runner $runnerName is starting  ==========")
+  log.info(s"------ story runner $runnerName is starting ------")
 
   val runningContextFactory: TaskRunningContextFactory =
     TaskRunningContextFactory(system, appContext)
@@ -60,7 +60,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
   // Supervision strategy
   val loggerSupervistionDecider: PartialFunction[Throwable, Throwable] = {
     case ex: Throwable =>
-      log.warning(s"a story was failed with error $ex, now will go through SupervisorStrategy")
+      log.error(s"a story was failed with error $ex, now will go through SupervisorStrategy")
       ex
   }
   override def supervisorStrategy: SupervisorStrategy =
@@ -71,7 +71,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
   override def receive: Receive = {
     case Run(story) =>
       val storyName = story.storyName
-      log.info(s"going to run story $storyName")
+      log.info(s"preparing to run story $storyName")
       val runningContext =
         runningContextFactory.createNewRunningContext(runnerName, self, story.settings)
 
@@ -89,7 +89,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
 
     case Rerun(newStory) =>
       val storyName = newStory.storyName
-      log.info(s"going to re-run story $storyName with new settings")
+      log.warning(s"scheduling to restart story $storyName")
       self ! Shutdown(Some(storyName))
       timers.startSingleTimer(newStory, Run(newStory), 3.seconds)
 
@@ -102,7 +102,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       }
 
     case Terminated(storyActor) =>
-      log.warning(s"story ${storyActor.path} is terminated.")
+      log.warning(s"story actor ${storyActor.path} is terminated.")
       runningStories -= storyActor
   }
 }

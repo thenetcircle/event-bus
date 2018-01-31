@@ -33,8 +33,9 @@ object Monitor {
   private var isSentryEnabled: Boolean = false
 
   def init()(implicit appContext: AppContext): Unit = {
-    isKamonEnabled = appContext.getSystemConfig().getBoolean("app.monitor.kamon.enable")
-    isSentryEnabled = appContext.getSystemConfig().getBoolean("app.monitor.sentry.enable")
+    val config = appContext.getSystemConfig()
+    isKamonEnabled = config.getBoolean("app.monitor.kamon.enable")
+    isSentryEnabled = config.getBoolean("app.monitor.sentry.enable")
 
     if (isKamonEnabled) {
       Kamon.start()
@@ -44,12 +45,14 @@ object Monitor {
     if (isSentryEnabled) {
       import io.sentry.Sentry
 
-      val release     = BuildInfo.version
-      val environment = appContext.getAppEnv()
-      val tags        = s"app_name:${appContext.getAppName()}"
+      val dsn          = config.getString("app.monitor.sentry.dsn")
+      val release      = BuildInfo.version
+      val environment  = appContext.getAppEnv()
+      val tags         = s"app_name:${appContext.getAppName()}"
+      val app_packages = "com.thenetcircle.event_bus"
 
       Sentry.init(
-        s"http://6d41dd5bb5c045aaa6b8f9ffd518e6c0:a62c806cf0cc4d4a85d96db9d337577e@thin.thenetcircle.lab:8080/2?release=$release&environment=$environment&tags=$tags&stacktrace.app.packages=com.thenetcircle.event_bus"
+        s"$dsn?release=$release&environment=$environment&tags=$tags&stacktrace.app.packages=$app_packages"
       )
     }
   }
@@ -126,20 +129,24 @@ object StoryMonitor {
     })
 
   class StoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-    val newEvent: Counter        = counter("new-event")
-    val normEvent: Counter       = counter("processed.normal")
-    val toFBEvent: Counter       = counter("processed.tofallback")
-    val inFBEvent: Counter       = counter("processed.infallback")
-    val failEvent: Counter       = counter("processed.failure")
-    val badFormatEvent: Counter  = counter("processed.badformat")
-    val completion: Counter      = counter("completion")
-    val termination: Counter     = counter("termination")
+    val newEvent: Counter       = counter("new-event")
+    val normEvent: Counter      = counter("processed.normal")
+    val toFBEvent: Counter      = counter("processed.tofallback")
+    val inFBEvent: Counter      = counter("processed.infallback")
+    val failEvent: Counter      = counter("processed.failure")
+    val badFormatEvent: Counter = counter("processed.badformat")
+    val completion: Counter     = counter("completion")
+    val termination: Counter    = counter("termination")
+
     def exception(ex: Throwable) = counter("exceptions." + ex.getClass.getSimpleName)
-    def error(ex: Throwable)     = counter("errors." + ex.getClass.getSimpleName)
+
+    def error(ex: Throwable) = counter("errors." + ex.getClass.getSimpleName)
   }
 
   object StoryMetrics extends EntityRecorderFactory[StoryMetrics] {
-    def category: String                                                   = "story"
+    def category: String = "story"
+
     def createRecorder(instrumentFactory: InstrumentFactory): StoryMetrics = new StoryMetrics(instrumentFactory)
   }
+
 }

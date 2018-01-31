@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.context
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Materializer, Supervision}
 import com.thenetcircle.event_bus.story.StorySettings
-import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.concurrent.ExecutionContext
 
@@ -44,7 +44,7 @@ class TaskRunningContext(
 
 }
 
-class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) extends StrictLogging {
+class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) extends LazyLogging {
   val decider: Supervision.Decider = {
     case ex: Throwable =>
       logger.error(s"materializer supervision triggered by exception: $ex")

@@ -37,10 +37,8 @@ class Admin extends AbstractApp {
     lazy implicit val materializer: Materializer = ActorMaterializer()
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val actionHandler = new ActionHandler(
-      zkManager.withNewRootPath(config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}")
-    )
-    val route: Route = new Router().getRoute(actionHandler)
+    val actionHandler = new ActionHandler(zkManager.withAppRootPath())
+    val route: Route  = new Router().getRoute(actionHandler)
 
     val interface     = config.getString("app.admin.interface")
     val port          = config.getInt("app.admin.port")

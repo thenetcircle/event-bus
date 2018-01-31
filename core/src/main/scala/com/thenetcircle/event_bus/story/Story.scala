@@ -102,7 +102,7 @@ class Story(
       runningFuture.get
     } catch {
       case ex: Throwable =>
-        logger.error(s"story $storyName running failed with error $ex")
+        logger.error(s"run story $storyName failed with error $ex")
         shutdown()
         throw ex
     }

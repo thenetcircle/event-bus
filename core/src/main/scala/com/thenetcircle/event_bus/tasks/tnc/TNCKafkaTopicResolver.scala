@@ -73,11 +73,11 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
         if (_event.getType == INITIALIZED) {
           zkInited.compareAndSet(false, true)
           val _index = createIndexFromZKData(_event.getInitialData.asScala.toList)
-          if (_index.nonEmpty) updateIndex(_index)
+          updateIndex(_index)
         } else if (zkInited.get() == true &&
                    (_event.getType == CHILD_ADDED || _event.getType == CHILD_UPDATED || _event.getType == CHILD_REMOVED)) {
           val _index = createIndexFromZKData(_watcher.getCurrentData.asScala.toList)
-          if (_index.nonEmpty) updateIndex(_index)
+          updateIndex(_index)
         }
       }
     )
@@ -97,7 +97,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
   def getIndex(): Map[String, String] = synchronized { index }
   def updateIndex(_index: Map[String, String]): Unit = synchronized {
-    logger.info("updating new index" + _index)
+    logger.info("updating topic mapping " + _index)
     index = _index
     if (useCache) cached.clear()
   }

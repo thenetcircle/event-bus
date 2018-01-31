@@ -34,6 +34,8 @@ class TNCDinoEventsForwarder() extends TransformTask with StrictLogging {
       val shortGroup = event.metadata.group.map(g => g.split("-").last + ".").getOrElse("")
       val newTitle   = "dino." + shortGroup + verbOption.get
       val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
+
+      logger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
       event.withNoGroup().withName(newTitle).withBody(newBody)
     } else {
       event

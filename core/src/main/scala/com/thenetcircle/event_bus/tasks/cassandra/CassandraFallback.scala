@@ -26,9 +26,9 @@ import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, FallbackTask, FallbackTaskBuilder}
+import com.thenetcircle.event_bus.misc.Util
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
@@ -120,7 +120,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
   }
 
   def getPreparedStatement(session: Session): PreparedStatement = {
-    logger.debug(s"preparing statement ----")
+    logger.debug(s"preparing cassandra statement")
     session.prepare(s"""
                        |INSERT INTO fallback
                        |(uuid, story_name, event_name, created_at, fallback_time, failed_task_name, group, provider_id, body, format, cause, extra)
@@ -136,7 +136,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
       val cause =
         if (status.isInstanceOf[ToFB]) status.asInstanceOf[ToFB].cause.map(_.toString).getOrElse("")
         else ""
-      logger.debug(s"binding statement ----")
+      logger.debug(s"binding cassandra statement")
       statement.bind(
         event.uuid,
         runningContext.getStoryName(),

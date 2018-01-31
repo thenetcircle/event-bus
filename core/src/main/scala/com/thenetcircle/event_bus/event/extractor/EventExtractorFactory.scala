@@ -22,11 +22,12 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interfaces.Event
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-object EventExtractorFactory {
+object EventExtractorFactory extends LazyLogging {
 
   private val registeredExtractors: mutable.Map[DataFormat, EventExtractor] = mutable.Map.empty
 
@@ -40,7 +41,14 @@ object EventExtractorFactory {
   /**
     * Returns [[EventExtractor]] based on [[DataFormat]]
     */
-  def getExtractor(format: DataFormat): EventExtractor = registeredExtractors.getOrElse(format, defaultExtractor)
+  def getExtractor(format: DataFormat): EventExtractor =
+    try {
+      registeredExtractors(format)
+    } catch {
+      case _: NoSuchElementException =>
+        logger.warn(s"there is no EventExtractor match format $format, use the DefaultExtractor instead.")
+        defaultExtractor
+    }
 
   /**
     * Returns Unmarshaller[ByteString, Event] based on [[DataFormat]]

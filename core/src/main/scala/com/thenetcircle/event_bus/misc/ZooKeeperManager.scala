@@ -30,21 +30,25 @@ import scala.collection.JavaConverters._
 class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(implicit appContext: AppContext)
     extends StrictLogging {
 
+  val appRootPath: String =
+    appContext.getSystemConfig().getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
+
   assert(
-    rootPath.startsWith(s"/event-bus/${appContext.getAppName()}"),
+    rootPath.startsWith(appRootPath),
     s"the zookeeper root path $rootPath is not allowed"
   )
 
-  logger.debug(s"new ZookeeperManager instance created with rootPath $rootPath")
+  logger.info(s"new ZookeeperManager instance created with rootPath $rootPath")
 
   def assertPermission(path: String): Unit =
     assert(path.startsWith(rootPath), s"the zookeeper path $path is not allowed")
 
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
-  def withNewRootPath(_rootpath: String): ZooKeeperManager = new ZooKeeperManager(client, _rootpath)
-  def getRootPath(): String                                = rootPath
+  def withAppRootPath(): ZooKeeperManager               = withRootPath(appRootPath)
+  def withRootPath(_rootpath: String): ZooKeeperManager = new ZooKeeperManager(client, _rootpath)
 
+  def getRootPath(): String                    = rootPath
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
   def ensurePath(relativePath: String, data: String = ""): Unit = {
@@ -61,8 +65,8 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
     try {
       Some(new String(client.getData.forPath(absPath), "UTF-8"))
     } catch {
-      case e: Throwable =>
-        logger.info(s"getData from $absPath failed with error: ${e.getMessage}")
+      case ex: Throwable =>
+        logger.error(s"getData from ZooKeeper path: $absPath failed with error: $ex")
         None
     }
   }
@@ -73,8 +77,8 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
       client.delete().deletingChildrenIfNeeded().forPath(absPath)
       true
     } catch {
-      case e: Throwable =>
-        logger.info(s"delete node $absPath failed with error: ${e.getMessage}")
+      case ex: Throwable =>
+        logger.error(s"delete ZooKeeper node: $absPath failed with error: $ex")
         false
     }
   }
@@ -88,8 +92,8 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
           .toList
       )
     } catch {
-      case e: Throwable =>
-        logger.info(s"getChildren from $relativePath failed with error: ${e.getMessage}")
+      case ex: Throwable =>
+        logger.error(s"getChildren from ZooKeeper path: $relativePath failed with error: $ex")
         None
     }
 

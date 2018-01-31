@@ -8,12 +8,17 @@
 - ~~create Config runner and Zookeeper runner~~
 - ~~add rfc date parser and change published field format~~
 - Admin Interface
-- Improve Cassandra table structure
+- ~~Improve Cassandra table structure~~
 - ~~Kafa Batch Commit~~
-- Integrate kamon
-- Integrate Sentry
+- ~~Integrate kamon~~
+- ~~Integrate Sentry~~
 - ~~logback config~~
 - run specific deployment task (there are start_task, force_handlers)
 - deployment rollback
 - ~~support json inside topic mapping of zk~~
 - ~~support variables inside the mapped patterns~~
+- update story status and update that which runners running it
+- http sink retry according to the response content
+- test cassdandra
+- update uuid for no uuid events
+- update event version to be v2

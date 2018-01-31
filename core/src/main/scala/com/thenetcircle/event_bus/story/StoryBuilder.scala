@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
 import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
-import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.matching.Regex
 
@@ -33,7 +33,7 @@ case class StoryInfo(
     fallback: Option[String]
 )
 
-class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext) extends StrictLogging {
+class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext) extends LazyLogging {
 
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
@@ -52,7 +52,7 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
             .map(_cs => buildTransformTask(_cs).get)
             .toList
         }),
-        storyInfo.fallback.flatMap(buildFallbackTask)
+        storyInfo.fallback.map(buildFallbackTask(_).get)
       )
     } catch {
       case ex: Throwable =>

@@ -24,7 +24,6 @@ import java.util.Date
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
-import com.typesafe.scalalogging.StrictLogging
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -60,7 +59,7 @@ trait ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val activityFormat       = jsonFormat9(Activity)
 }
 
-class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsProtocol with StrictLogging {
+class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsProtocol {
 
   override def getFormat(): DataFormat = DataFormat.ACTIVITYSTREAMS
 

@@ -69,14 +69,15 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
 
           // new story has been assigned to this runner
           case CHILD_ADDED =>
-            val storyName    = Util.getLastPartOfPath(_event.getData.getPath)
+            val storyName = Util.getLastPartOfPath(_event.getData.getPath)
+            logger.info(s"new story $storyName is assigned to runner $runnerName")
             val storyWatcher = watchStory(storyName)
             watchingStores += (storyName -> storyWatcher)
 
           // story has been removed from this runner
           case CHILD_REMOVED =>
             val storyName = Util.getLastPartOfPath(_event.getData.getPath)
-            logger.debug(s"removing story watcher of $storyName")
+            logger.info(s"story $storyName is removed from runner $runnerName")
             storyRunner ! StoryRunner.Shutdown(Some(storyName))
             watchingStores
               .get(storyName)
@@ -120,7 +121,7 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
   def createStory(storyName: String, data: List[ChildData]): Option[Story] =
     try {
       val storyInfo = createStoryInfo(storyName, data)
-      logger.debug(s"story was updated on ZooKeeper, new story info: $storyInfo")
+      logger.info(s"story $storyName was inited or updated according to ZooKeeper data, info: $storyInfo")
       val story = storyBuilder.buildStory(storyInfo)
       Some(story)
     } catch {

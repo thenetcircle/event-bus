@@ -25,10 +25,17 @@
 		</encoder>
 	</appender>
 
+	<appender name="Sentry" class="io.sentry.logback.SentryAppender">
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>WARN</level>
+		</filter>
+	</appender>
+
 	<logger name="org.apache.kafka" level="INFO" />
 
 	<root level="${EB_LOGLEVEL:-DEBUG}">
 		<appender-ref ref="${EB_LOGREF:-STDOUT}" />
+		<appender-ref ref="Sentry" />
 	</root>
 
 </configuration>

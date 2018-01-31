@@ -23,7 +23,7 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
   implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
   override def preStart(): Unit = {
-    log.info(s"the story actor of story $storyName is starting")
+    log.info(s"starting the actor of story $storyName")
     val doneFuture = story.run()
     // fix the case if this actor is dead already, the Shutdown commend will send to dead-letter
     val selfPath = self.path
@@ -31,13 +31,13 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
   }
 
   override def postStop(): Unit = {
-    log.warning(s"the story actor of story $storyName is stopping")
+    log.warning(s"stopping the actor of story $storyName")
     story.shutdown()
   }
 
   override def receive: Receive = {
     case Shutdown =>
-      log.debug(s"the story actor of story $storyName get Shutdown signal")
+      log.debug(s"shutting down the actor of story $storyName")
       context.stop(self)
   }
 }
