@@ -131,9 +131,13 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
+    val kafkaConsumerSettings = getConsumerSettings()
+    val kafkaSubscription     = getSubscription()
+    logger.info(s"going to subscribe kafka topics: $kafkaSubscription")
+
     val (killSwitch, doneFuture) =
       Consumer
-        .committablePartitionedSource(getConsumerSettings(), getSubscription())
+        .committablePartitionedSource(kafkaConsumerSettings, kafkaSubscription)
         .viaMat(KillSwitches.single)(Keep.right)
         .mapAsyncUnordered(settings.maxConcurrentPartitions) {
           case (topicPartition, source) =>
