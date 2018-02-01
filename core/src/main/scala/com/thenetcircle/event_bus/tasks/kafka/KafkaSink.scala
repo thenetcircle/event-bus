@@ -34,8 +34,6 @@ import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
-import scala.util.Failure
-import scala.util.control.NonFatal
 
 case class KafkaSinkSettings(
     bootstrapServers: String,
