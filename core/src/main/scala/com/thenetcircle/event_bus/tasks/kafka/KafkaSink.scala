@@ -25,16 +25,17 @@ import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 
 import scala.concurrent.duration._
-import scala.util.matching.Regex
+import scala.util.Failure
+import scala.util.control.NonFatal
 
 case class KafkaSinkSettings(
     bootstrapServers: String,
@@ -79,7 +80,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       implicit runningContext: TaskRunningContext
   ): Message[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    logger.debug(s"new record $record created, going to send to kafka")
+    logger.debug(s"new kafka ProducerRecord $record is created")
     Message(record, event)
   }
 
@@ -112,19 +113,28 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     val kafkaSettings = getProducerSettings()
 
     val _kafkaProducer = kafkaProducer.getOrElse({
+      logger.info("creating new kakfa producer")
       kafkaProducer = Some(kafkaSettings.createKafkaProducer())
       kafkaProducer.get
     })
 
-    // Note that the flow might be materialized multiple times, like (from HttpSource)
+    // Note that the flow might be materialized multiple times,
+    // like from HttpSource(multiple connections), KafkaSource(multiple topicPartitions)
     Flow[Event]
       .map(createMessage)
       .via(Producer.flow(kafkaSettings, _kafkaProducer))
-      .map(result => (Norm, result.message.passThrough))
+      .map(result => {
+        logger.debug(s"sending event to kafka succeeded with metadata: ${result.metadata}")
+        (Norm, result.message.passThrough)
+      })
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
-    kafkaProducer.foreach(k => { k.close(5, TimeUnit.SECONDS); kafkaProducer = None })
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    logger.info(s"shutting down kafka-sink of story ${runningContext.getStoryName()}.")
+    kafkaProducer.foreach(k => {
+      k.close(5, TimeUnit.SECONDS); kafkaProducer = None
+    })
+  }
 }
 
 class KafkaSinkBuilder() extends SinkTaskBuilder {

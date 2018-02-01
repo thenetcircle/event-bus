@@ -22,3 +22,6 @@
 - test cassdandra
 - update uuid for no uuid events
 - update event version to be v2
+- add fields of cassandra for retry and status
+- allow event to send to different endpoint
+- kafka consumer offset update

@@ -57,7 +57,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       case (ToFB(optionEx), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
-          entity = HttpEntity(optionEx.map(_.getMessage).getOrElse("unhandled ToFB status"))
+          entity = HttpEntity(optionEx.map(_.getMessage).getOrElse("Unhandled ToFallBack Status"))
         )
       case (Fail(ex: EventExtractingException), _) =>
         HttpResponse(
@@ -81,10 +81,13 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
     Flow[HttpRequest]
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
-          .map[(EventStatus, Event)](event => (Norm, event))
+          .map[(EventStatus, Event)](event => {
+            logger.debug(s"get a new event ${event.uuid}")
+            (Norm, event)
+          })
           .recover {
             case ex: EventExtractingException =>
-              logger.info(s"A http request unmarshaller failed with error $ex")
+              logger.warn(s"extract event from a http request failed with error $ex")
               (Fail(ex), EventImpl.createFromFailure(ex))
           }
       })
@@ -117,18 +120,24 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
 
     killSwitchOption = Some(new KillSwitch {
       override def abort(ex: Throwable): Unit = shutdown()
-      override def shutdown(): Unit =
+      override def shutdown(): Unit = {
+        logger.info(s"unbinding http port.")
         Await.ready(
           httpBindFuture.flatMap(_.unbind().map(_ => donePromise tryComplete Success(Done))),
           5.seconds
         )
+      }
     })
 
     donePromise.future
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
-    killSwitchOption.foreach(k => { k.shutdown(); killSwitchOption = None })
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    logger.info(s"shutting down http-source of story ${runningContext.getStoryName()}.")
+    killSwitchOption.foreach(k => {
+      k.shutdown(); killSwitchOption = None
+    })
+  }
 }
 
 class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {

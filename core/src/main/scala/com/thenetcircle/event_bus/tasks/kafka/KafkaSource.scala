@@ -169,7 +169,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                   case NonFatal(ex) => Failure(ex)
                 }
                 .collect { case Success(co) => co }
-                // TODO add max to settings
+                // TODO add "max" to settings
                 .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
                   batch.updated(elem)
                 }
@@ -206,8 +206,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     doneFuture
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
-    killSwitchOption.foreach(k => { k.shutdown(); killSwitchOption = None })
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    logger.info(s"shutting down kafka-source of story ${runningContext.getStoryName()}.")
+    killSwitchOption.foreach(k => {
+      k.shutdown(); killSwitchOption = None
+    })
+  }
 }
 
 // TODO: change the consumer offset

@@ -153,6 +153,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    logger.info(s"shutting down cassandra-fallback of story ${runningContext.getStoryName()}.")
     sessionOption.foreach(s => { s.close(); sessionOption = None })
     clusterOption.foreach(c => { c.close(); clusterOption = None })
   }

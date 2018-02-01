@@ -42,20 +42,21 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{Failure, Random, Success, Try}
 
-case class HttpSinkSettings(defaultRequest: HttpRequest,
-                            expectedResponseBody: String,
-                            minBackoff: FiniteDuration = 1.second,
-                            maxBackoff: FiniteDuration = 30.seconds,
-                            randomFactor: Double = 0.2,
-                            maxRetryTime: FiniteDuration = 12.hours,
-                            concurrentRetries: Int = 1,
-                            poolSettings: Option[ConnectionPoolSettings] = None)
+case class HttpSinkSettings(
+    defaultRequest: HttpRequest,
+    expectedResponseBody: String,
+    minBackoff: FiniteDuration = 1.second,
+    maxBackoff: FiniteDuration = 30.seconds,
+    randomFactor: Double = 0.2,
+    maxRetryTime: FiniteDuration = 12.hours,
+    concurrentRetries: Int = 1,
+    poolSettings: Option[ConnectionPoolSettings] = None
+)
 
 class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
 
-  def createRequest(event: Event): HttpRequest = {
+  def createRequest(event: Event): HttpRequest =
     settings.defaultRequest.withEntity(HttpEntity(event.body.data))
-  }
 
   var retrySender: Option[ActorRef] = None
 
@@ -63,8 +64,8 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] = {
 
-    implicit val system: ActorSystem = runningContext.getActorSystem()
-    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val system: ActorSystem               = runningContext.getActorSystem()
+    implicit val materializer: Materializer        = runningContext.getMaterializer()
     implicit val exectionContext: ExecutionContext = runningContext.getExecutionContext()
 
     // TODO performance test
@@ -87,17 +88,21 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         import akka.pattern.ask
         implicit val askTimeout: Timeout = Timeout(retryTimeout)
 
+        val endPoint: String = settings.defaultRequest.getUri().toString
+
         (senderActor ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
           .mapTo[Try[HttpResponse]]
           .map[(EventStatus, Event)] {
-            case Success(resp) => (Norm, event)
-            case Failure(ex)   => (ToFB(Some(ex)), event)
+            case Success(resp) =>
+              logger.debug(s"sending event ${event.uuid} to $endPoint succeeded.")
+              (Norm, event)
+            case Failure(ex) =>
+              logger.warn(s"sending event ${event.uuid} to $endPoint failed with error $ex")
+              (ToFB(Some(ex)), event)
           }
           .recover {
             case ex: AskTimeoutException =>
-              logger.warn(
-                s"the request to ${settings.defaultRequest.getUri().toString} exceed retry-timeout $retryTimeout"
-              )
+              logger.warn(s"sending event ${event.uuid} to $endPoint timeout, exceed $retryTimeout")
               (Fail(ex), event)
           }
       }
@@ -105,7 +110,11 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    retrySender.foreach(s => { runningContext.getActorSystem().stop(s); retrySender = None })
+    logger.info(s"shutting down http-sink of story ${runningContext.getStoryName()}.")
+    retrySender.foreach(s => {
+      runningContext.getActorSystem().stop(s);
+      retrySender = None
+    })
   }
 }
 
@@ -117,17 +126,19 @@ object HttpSink {
     case class Retry(req: Req)
     case class Resp(payload: HttpResponse)
 
-    private def calculateDelay(retryTimes: Int,
-                               minBackoff: FiniteDuration,
-                               maxBackoff: FiniteDuration,
-                               randomFactor: Double): FiniteDuration = {
+    private def calculateDelay(
+        retryTimes: Int,
+        minBackoff: FiniteDuration,
+        maxBackoff: FiniteDuration,
+        randomFactor: Double
+    ): FiniteDuration = {
       val rnd = 1.0 + ThreadLocalRandom.current().nextDouble() * randomFactor
       if (retryTimes >= 30) // Duration overflow protection (> 100 years)
         maxBackoff
       else
         maxBackoff.min(minBackoff * math.pow(2, retryTimes)) * rnd match {
           case f: FiniteDuration ⇒ f
-          case _ ⇒ maxBackoff
+          case _                 ⇒ maxBackoff
         }
     }
 
@@ -140,8 +151,8 @@ object HttpSink {
 
     import RetrySender._
 
-    implicit val system: ActorSystem = runningContext.getActorSystem()
-    implicit val materializer: Materializer = runningContext.getMaterializer()
+    implicit val system: ActorSystem                = runningContext.getActorSystem()
+    implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     val http = Http()
@@ -151,7 +162,7 @@ object HttpSink {
       )
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
-      log.debug(s"replying response to the receiver")
+      log.debug(s"replying response to http-sink")
       receiver ! result
     }
 
@@ -169,16 +180,16 @@ object HttpSink {
 
     override def receive: Receive = {
       case req @ Req(payload, _, retryTimes) =>
-        val receiver = sender()
+        val receiver   = sender()
         val requestUrl = payload.getUri().toString
         http
           .singleRequest(request = payload, settings = poolSettings) andThen {
           case Success(resp) => self.tell(Resp(resp), receiver)
           case Failure(ex) =>
             if (retryTimes == 1)
-              log.info(s"request to $requestUrl send failed with error: $ex")
+              log.warning(s"sending request to $requestUrl failed with error $ex, going to retry now.")
             else
-              log.debug(s"request to $requestUrl resend failed with error: $ex")
+              log.info(s"resending request to $requestUrl failed with error $ex, retry-times is $retryTimes")
 
             self.tell(Retry(req), receiver)
         }
@@ -190,11 +201,11 @@ object HttpSink {
             .byteStringUnmarshaller(entity)
             .map { _body =>
               val body = _body.utf8String
-              log.debug(s"Got response with status code ${status.value} and body: $body")
+              log.debug(s"get response from upstream with status code ${status.value} and body $body")
               if (body != httpSinkSettings.expectedResponseBody) {
                 // the response body was not expected
                 replyToReceiver(
-                  Failure(new UnexpectedResponseException("the response body was not expected")),
+                  Failure(new UnexpectedResponseException(s"the response body $body was not expected.")),
                   receiver
                 )
               } else {
@@ -202,9 +213,10 @@ object HttpSink {
               }
             }
         } else {
-          log.debug(s"Get response with non-200 [$status] status code")
+          val errorMsg = s"get response from upstream with non-200 [$status] status code"
+          log.debug(errorMsg)
           resp.discardEntityBytes()
-          replyToReceiver(Failure(new UnexpectedResponseException("non-200 status code")), receiver)
+          replyToReceiver(Failure(new UnexpectedResponseException(errorMsg)), receiver)
         }
 
       case Retry(req) =>
@@ -231,15 +243,15 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
         case unacceptedMethod =>
           throw new IllegalArgumentException(s"Request method $unacceptedMethod is not supported.")
       }
-      val requsetUri = Uri(config.as[String]("request.uri"))
+      val requsetUri                  = Uri(config.as[String]("request.uri"))
       val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
 
       val poolSettingsMap = config.as[Map[String, String]]("pool")
       val poolSettingsOption = if (poolSettingsMap.nonEmpty) {
-        var _settingsStr =
+        var settingsStr =
           poolSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
         Some(ConnectionPoolSettings(s"""akka.http.host-connection-pool {
-             |${_settingsStr}
+             |$settingsStr
              |}""".stripMargin))
       } else None
 

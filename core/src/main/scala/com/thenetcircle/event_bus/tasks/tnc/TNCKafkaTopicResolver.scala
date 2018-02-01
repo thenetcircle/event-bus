@@ -149,6 +149,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    logger.info(s"shutting down TNCKafkaTopicResolver of story ${runningContext.getStoryName()}.")
     index = Map.empty
     cached.clear()
     zkWatcher.foreach(_.close())
