@@ -44,16 +44,19 @@ object Monitor {
 
     if (isSentryEnabled) {
       import io.sentry.Sentry
+      val dsn = config.getString("app.monitor.sentry.dsn")
+      if (dsn.nonEmpty) {
 
-      val dsn          = config.getString("app.monitor.sentry.dsn")
-      val release      = BuildInfo.version
-      val environment  = appContext.getAppEnv()
-      val tags         = s"app_name:${appContext.getAppName()}"
-      val app_packages = "com.thenetcircle.event_bus"
+        val release      = BuildInfo.version
+        val environment  = appContext.getAppEnv()
+        val tags         = s"app_name:${appContext.getAppName()}"
+        val app_packages = "com.thenetcircle.event_bus"
 
-      Sentry.init(
-        s"$dsn?release=$release&environment=$environment&tags=$tags&stacktrace.app.packages=$app_packages"
-      )
+        Sentry.init(
+          s"$dsn?release=$release&environment=$environment&tags=$tags&stacktrace.app.packages=$app_packages"
+        )
+
+      }
     }
   }
 

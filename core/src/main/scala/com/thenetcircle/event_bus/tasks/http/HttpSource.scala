@@ -82,7 +82,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            logger.debug(s"get a new event ${event.uuid}")
+            logger.debug(s"get a new event $event")
             (Norm, event)
           })
           .recover {

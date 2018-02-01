@@ -25,3 +25,4 @@
 - add fields of cassandra for retry and status
 - allow event to send to different endpoint
 - kafka consumer offset update
+- update story status and register runner on story

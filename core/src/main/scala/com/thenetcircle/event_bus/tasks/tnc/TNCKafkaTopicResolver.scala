@@ -109,10 +109,9 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
     Flow[Event].map(event => {
       Try(resolveEvent(event)) match {
         case Success(newEvent) =>
-          logger.debug(s"new resolved event $newEvent")
           (Norm, newEvent)
         case Failure(ex) =>
-          logger.error(s"resolve topic failed with error $ex")
+          logger.error(s"resolve kafka topic failed with error $ex")
           (Fail(ex), event)
       }
     })
@@ -128,8 +127,14 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
   // TODO: performance test
   def resolveEvent(event: Event): Event = {
-    if (event.metadata.group.isDefined) return event
-    if (event.metadata.name.isEmpty) return event.withGroup(defaultTopic)
+    if (event.metadata.group.isDefined) {
+      logger.debug(s"event ${event.uuid} has group ${event.metadata.group.get} already, will not be resolving again.")
+      return event
+    }
+    if (event.metadata.name.isEmpty) {
+      logger.debug(s"event ${event.uuid} has not name, will be send to default topic $defaultTopic.")
+      return event.withGroup(defaultTopic)
+    }
 
     val eventName = event.metadata.name.get
     var topic     = ""
@@ -145,6 +150,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
       topic = getTopicFromIndex(eventName).getOrElse(defaultTopic)
     }
 
+    logger.debug(s"event ${event.uuid} has been resolved to new topic $topic")
     return event.withGroup(topic)
   }
 

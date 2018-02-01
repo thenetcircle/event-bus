@@ -80,7 +80,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       implicit runningContext: TaskRunningContext
   ): Message[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    logger.debug(s"new kafka ProducerRecord $record is created")
+    logger.debug(s"new kafka record $record is created")
     Message(record, event)
   }
 
@@ -118,13 +118,17 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       kafkaProducer.get
     })
 
+    // TODO issue when send to new topics, check here https://github.com/akka/reactive-kafka/issues/163
+
     // Note that the flow might be materialized multiple times,
     // like from HttpSource(multiple connections), KafkaSource(multiple topicPartitions)
     Flow[Event]
       .map(createMessage)
       .via(Producer.flow(kafkaSettings, _kafkaProducer))
       .map(result => {
-        logger.debug(s"sending event to kafka succeeded with metadata: ${result.metadata}")
+        logger.debug(
+          s"sending event to kafka succeeded with metadata: ${result.metadata.toString}, key: ${result.message.record.key().rawData}"
+        )
         (Norm, result.message.passThrough)
       })
   }
