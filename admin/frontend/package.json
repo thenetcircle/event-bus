@@ -12,12 +12,16 @@
   "author": "baineng <baineng.ma@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "axios": "0.17.1",
+    "element-ui": "2.1.0",
     "vue": "2.5.13"
   },
   "devDependencies": {
     "css-loader": "0.28.9",
+    "file-loader": "1.1.6",
     "ts-loader": "3.4.0",
     "typescript": "2.7.1",
+    "url-loader": "0.6.2",
     "vue-loader": "14.1.1",
     "vue-template-compiler": "2.5.13",
     "webpack": "3.10.0"

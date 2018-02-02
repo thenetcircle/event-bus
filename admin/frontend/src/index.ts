@@ -1,18 +1,11 @@
 import Vue from "vue";
-import HelloComponent from "./components/Hello.vue"
+import Element from "element-ui";
+import App from "./components/App.vue";
+import 'element-ui/lib/theme-chalk/index.css'
+
+Vue.use(Element)
 
 let v = new Vue({
   el: "#app",
-  template: `
-  <div>
-    Name: <input v-model="name" type="text">
-    <hello-component :name="name" :initialEnthusiasm="5" />
-  </div>
-  `,
-  data: {
-    name: "World"
-  },
-  components: {
-      HelloComponent
-  }
+  render: h => h(App)
 });
