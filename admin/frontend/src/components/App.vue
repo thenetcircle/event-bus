@@ -1,36 +1,38 @@
 <template>
   <el-container>
+
     <el-header>
-      <el-menu class="el-menu-demo" mode="horizontal">
-        <el-menu-item index="1">Dashboard</el-menu-item>
-        <el-menu-item index="2">Stories</el-menu-item>
-        <el-menu-item index="3">Runners</el-menu-item>
+      <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" router="true">
+        <el-menu-item index="/">Dashboard</el-menu-item>
+        <el-menu-item index="/stories">Stories</el-menu-item>
+        <el-menu-item index="/runners">Runners</el-menu-item>
       </el-menu>
     </el-header>
 
     <el-main>
-      <el-steps align-center>
-        <el-step title="步骤1" description="这是一段很长很长很长的描述性文字" status="process"></el-step>
-        <el-step title="步骤2" description="这是一段很长很长很长的描述性文字" status="process"></el-step>
-        <el-step title="步骤3" description="这是一段很长很长很长的描述性文字" status="process"></el-step>
-        <el-step title="步骤4" description="这是一段很长很长很长的描述性文字" status="process"></el-step>
-      </el-steps>
+      <router-view></router-view>
     </el-main>
 
   </el-container>
 </template>
 
 <script lang="ts">
-  import Vue from "vue";
-  import HelloComponent from "./Hello.vue";
+  import Vue from "vue"
+  import 'element-ui/lib/theme-chalk/index.css'
 
-  export default {
+  export default Vue.extend({
     data() {
       return {
-        name: "app"
+        name: "app",
+        activeIndex: this.$route.path
       }
     }
-  }
+  })
 </script>
 
-<style></style>
+<style>
+  body > .el-container {
+    margin: 0px auto;
+    width: 80%;
+  }
+</style>

@@ -14,7 +14,8 @@
   "dependencies": {
     "axios": "0.17.1",
     "element-ui": "2.1.0",
-    "vue": "2.5.13"
+    "vue": "2.5.13",
+    "vue-router": "3.0.1"
   },
   "devDependencies": {
     "css-loader": "0.28.9",
