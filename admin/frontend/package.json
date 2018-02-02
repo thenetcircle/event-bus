@@ -1,36 +1,25 @@
 {
-  "name": "event-bus-admin",
-  "description": "A Vue.js project",
+  "name": "event-bus-admin-frontend",
   "version": "1.0.0",
-  "author": "baineng <baineng.ma@gmail.com>",
-  "license": "Apache 2.0",
-  "private": true,
+  "description": "admin frontend of event-bus",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development webpack-dev-server --open --hot",
-    "build": "cross-env NODE_ENV=production webpack --progress --hide-modules"
+    "build": "webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "axios": "^0.17.1",
-    "element-ui": "^2.1.0",
-    "vue": "^2.5.11"
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not ie <= 8"
+  "keywords": [
+    "even-bus"
   ],
+  "author": "baineng <baineng.ma@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "vue": "2.5.13"
+  },
   "devDependencies": {
-    "babel-core": "^6.26.0",
-    "babel-loader": "^7.1.2",
-    "babel-preset-env": "^1.6.0",
-    "babel-preset-stage-3": "^6.24.1",
-    "cross-env": "^5.0.5",
-    "css-loader": "^0.28.7",
-    "file-loader": "^1.1.4",
-    "url-loader": "^0.6.2",
-    "vue-loader": "^13.0.5",
-    "vue-template-compiler": "^2.4.4",
-    "webpack": "^3.6.0",
-    "webpack-dev-server": "^2.9.1"
+    "css-loader": "0.28.9",
+    "ts-loader": "3.4.0",
+    "typescript": "2.7.1",
+    "vue-loader": "14.1.1",
+    "vue-template-compiler": "2.5.13",
+    "webpack": "3.10.0"
   }
 }
