@@ -19,7 +19,7 @@
 - ~~support variables inside the mapped patterns~~
 - update story status and update that which runners running it
 - http sink retry according to the response content
-- test cassdandra
+- test cassandra
 - update uuid for no uuid events
 - update event version to be v2
 - add fields of cassandra for retry and status
