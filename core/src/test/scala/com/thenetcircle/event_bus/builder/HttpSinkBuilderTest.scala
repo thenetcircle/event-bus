@@ -35,7 +35,6 @@ class HttpSinkBuilderTest extends TestBase {
         |  "request" : {
         |    "uri": "http://www.google.com"
         |  },
-        |  "expected-response": "TEST_RESPONSE",
         |  "min-backoff": "3 s",
         |  "max-backoff": "1 m",
         |  "pool": {
@@ -57,7 +56,6 @@ class HttpSinkBuilderTest extends TestBase {
       method = HttpMethods.POST,
       uri = Uri("http://www.google.com")
     )
-    settings.expectedResponseBody shouldEqual "TEST_RESPONSE"
     settings.poolSettings.get.maxRetries shouldEqual 10
     settings.poolSettings.get.maxOpenRequests shouldEqual 64
     settings.poolSettings.get.idleTimeout shouldEqual 10.minutes

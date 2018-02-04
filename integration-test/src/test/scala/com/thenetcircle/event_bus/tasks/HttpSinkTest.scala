@@ -23,7 +23,6 @@ class HttpSinkTest extends IntegrationTestBase {
   def sendToUri(uri: String): (TestPublisher.Probe[Event], TestSubscriber.Probe[(EventStatus, Event)]) = {
     val settings = HttpSinkSettings(
       defaultRequest = HttpRequest(uri = Uri(uri)),
-      expectedResponseBody = "ok",
       maxRetryTime = 5.seconds
     )
 

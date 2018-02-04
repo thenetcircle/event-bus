@@ -44,7 +44,6 @@ import scala.util.{Failure, Random, Success, Try}
 
 case class HttpSinkSettings(
     defaultRequest: HttpRequest,
-    expectedResponseBody: String,
     minBackoff: FiniteDuration = 1.second,
     maxBackoff: FiniteDuration = 30.seconds,
     randomFactor: Double = 0.2,
@@ -119,12 +118,16 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 }
 
 object HttpSink {
+
+  val RESPONSE_OK                  = "ok"
+  val RESPONSE_EXPONENTIAL_BACKOFF = "exponential_backoff"
+
   object RetrySender {
     case class Req(payload: HttpRequest, deadline: Deadline, retryTimes: Int = 1) {
       def retry(): Req = copy(retryTimes = retryTimes + 1)
     }
     case class Retry(req: Req)
-    case class Resp(payload: HttpResponse)
+    case class CheckResp(resp: HttpResponse, req: Req)
 
     private def calculateDelay(
         retryTimes: Int,
@@ -184,7 +187,7 @@ object HttpSink {
         val requestUrl = payload.getUri().toString
         http
           .singleRequest(request = payload, settings = poolSettings) andThen {
-          case Success(resp) => self.tell(Resp(resp), receiver)
+          case Success(resp) => self.tell(CheckResp(resp, req), receiver)
           case Failure(ex) =>
             if (retryTimes == 1)
               log.warning(s"sending request to $requestUrl failed with error $ex, going to retry now.")
@@ -194,7 +197,7 @@ object HttpSink {
             self.tell(Retry(req), receiver)
         }
 
-      case Resp(resp @ HttpResponse(status, _, entity, _)) =>
+      case CheckResp(resp @ HttpResponse(status, _, entity, _), req) =>
         val receiver = sender()
         if (status.isSuccess()) {
           Unmarshaller
@@ -202,14 +205,17 @@ object HttpSink {
             .map { _body =>
               val body = _body.utf8String
               log.debug(s"get response from upstream with status code ${status.value} and body $body")
-              if (body != httpSinkSettings.expectedResponseBody) {
+              if (body == RESPONSE_OK) {
+                replyToReceiver(Success(resp), receiver)
+              } else if (body == RESPONSE_EXPONENTIAL_BACKOFF) {
+                log.debug(s"going to retry now since got retry signal from the endpoint")
+                self.tell(Retry(req), receiver)
+              } else {
                 // the response body was not expected
                 replyToReceiver(
                   Failure(new UnexpectedResponseException(s"the response body $body was not expected.")),
                   receiver
                 )
-              } else {
-                replyToReceiver(Success(resp), receiver)
               }
             }
         } else {
@@ -257,7 +263,6 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
 
       val settings = HttpSinkSettings(
         defaultRequest,
-        config.as[String]("expected-response"),
         config.as[FiniteDuration]("min-backoff"),
         config.as[FiniteDuration]("max-backoff"),
         config.as[Double]("random-factor"),
