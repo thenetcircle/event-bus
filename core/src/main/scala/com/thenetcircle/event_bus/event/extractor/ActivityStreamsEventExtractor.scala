@@ -28,6 +28,7 @@ import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
+import scala.util.matching.Regex
 
 case class Activity(
     title: Option[String],
@@ -77,12 +78,6 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
     try {
       val activity = data.parseJson.convertTo[Activity]
 
-      // TODO set uuid back to event if not set before
-      val uuid: String =
-        activity.id.getOrElse(
-          activity.title.getOrElse("") + "#" + java.util.UUID.randomUUID().toString
-        )
-
       var extra: Map[String, String] = Map.empty
       val setExtraFromActivityObject = (objOption: Option[ActivityObject], prefix: String) => {
         objOption.foreach(o => {
@@ -121,10 +116,19 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
         )
       }
 
+      var uuid: String = ""
+      var body: String = data
+      if (activity.id.isDefined) {
+        uuid = activity.id.get
+      } else {
+        uuid = activity.title.getOrElse("") + "#" + java.util.UUID.randomUUID().toString
+        body.replaceFirst(Regex.quote("{"), s"""{"id": "$uuid",""")
+      }
+
       EventImpl(
         uuid = uuid,
         metadata = metaData,
-        body = EventBody(data, getFormat()),
+        body = EventBody(body, getFormat()),
         createdAt = createdAt.getOrElse(Date.from(Instant.now())),
         passThrough = passThrough
       )
