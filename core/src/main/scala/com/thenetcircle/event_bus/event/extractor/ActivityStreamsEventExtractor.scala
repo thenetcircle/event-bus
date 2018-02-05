@@ -87,6 +87,7 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
         })
       }
 
+      // TODO performance test for parse how many fields
       activity.verb.foreach(s => extra = extra + ("verb" -> s))
       setExtraFromActivityObject(activity.provider, "provider")
       setExtraFromActivityObject(activity.actor, "actor")

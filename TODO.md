@@ -27,3 +27,4 @@
 - kafka consumer offset update
 - update story status and register runner on story
 - dont send syncplus and so on events to community side
+- upgrade document
