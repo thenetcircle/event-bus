@@ -26,11 +26,9 @@ lazy val root = (project in file("."))
 
 lazy val core = (project in file("core"))
   .enablePlugins(JavaAppPackaging, BuildInfoPlugin)
-  // .enablePlugins(SbtAspectj)
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= coreDependencies,
-    // bashScriptExtraDefines += s"""addJava "${(aspectjWeaverOptions in Aspectj).value.mkString(" ")}"""",
     buildInfoPackage := "com.thenetcircle.event_bus",
     buildInfoObject := "BuildInfo",
     buildInfoKeys := Seq[BuildInfoKey](
@@ -49,12 +47,10 @@ lazy val admin = (project in file("admin/backend"))
   .dependsOn(core)
 
 lazy val integrationTest = (project in file("integration-test"))
-// .enablePlugins(SbtAspectj)
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= integrationTestDependencies,
     parallelExecution := false
-    /* fork in Test := true,
-    javaOptions in Test ++= Seq((aspectjWeaverOptions in Aspectj).value.mkString(" ")) */
+    // fork in Test := true
   )
   .dependsOn(admin, core)

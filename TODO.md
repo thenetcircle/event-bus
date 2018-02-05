@@ -23,7 +23,7 @@
 - ~~update uuid for no uuid events~~ to be test
 - ~~update event version to be v2~~
 - add fields of cassandra for retry and status
-- allow event to send to different endpoint
+- ~~allow event to send to different endpoint~~ to be test
 - kafka consumer offset update
 - update story status and register runner on story
 - dont send syncplus and so on events to community side
