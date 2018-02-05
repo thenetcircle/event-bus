@@ -32,7 +32,7 @@ class HttpSinkBuilderTest extends TestBase {
   it should "build correct HttpSink with the default config" in {
 
     val sink = builder.build("""{
-        |  "request" : {
+        |  "default-request" : {
         |    "uri": "http://www.google.com"
         |  },
         |  "min-backoff": "3 s",

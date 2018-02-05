@@ -54,8 +54,12 @@ case class HttpSinkSettings(
 
 class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
 
-  def createRequest(event: Event): HttpRequest =
-    settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+  def createRequest(event: Event): HttpRequest = {
+    var _request = settings.defaultRequest.withEntity(HttpEntity(event.body.data))
+    if (event.getExtra("generatorUrl").isDefined)
+      _request = _request.withUri(event.getExtra("generatorUrl").get)
+    _request
+  }
 
   var retrySender: Option[ActorRef] = None
 
@@ -243,13 +247,13 @@ class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
         .withFallback(buildingContext.getSystemConfig().getConfig("task.http-sink"))
 
     try {
-      val requestMethod = config.as[String]("request.method").toUpperCase match {
+      val requestMethod = config.as[String]("default-request.method").toUpperCase match {
         case "POST" => HttpMethods.POST
         case "GET"  => HttpMethods.GET
         case unacceptedMethod =>
           throw new IllegalArgumentException(s"Request method $unacceptedMethod is not supported.")
       }
-      val requsetUri                  = Uri(config.as[String]("request.uri"))
+      val requsetUri                  = Uri(config.as[String]("default-request.uri"))
       val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
 
       val poolSettingsMap = config.as[Map[String, String]]("pool")
