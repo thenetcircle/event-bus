@@ -36,6 +36,7 @@ trait Event {
   def withUUID(_uuid: String): Event
   def withBody(_body: EventBody): Event
   def withBody(_data: String): Event
+  def hasExtra(_key: String): Boolean
   def getExtra(_key: String): Option[String]
   def withExtra(_key: String, _value: String): Event
 }

@@ -56,7 +56,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
 
   def createRequest(event: Event): HttpRequest = {
     var _request = settings.defaultRequest.withEntity(HttpEntity(event.body.data))
-    if (event.getExtra("generatorUrl").isDefined)
+    if (event.hasExtra("generatorUrl"))
       _request = _request.withUri(event.getExtra("generatorUrl").get)
     _request
   }

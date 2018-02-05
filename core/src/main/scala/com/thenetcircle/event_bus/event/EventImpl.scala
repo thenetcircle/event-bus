@@ -51,6 +51,7 @@ case class EventImpl(
   override def withBody(_body: EventBody): EventImpl = copy(body = _body)
   override def withBody(_data: String): EventImpl    = copy(body = body.copy(data = _data))
 
+  override def hasExtra(_key: String): Boolean        = getExtra(_key).isDefined
   override def getExtra(_key: String): Option[String] = metadata.extra.get(_key)
   override def withExtra(_key: String, _value: String): Event =
     copy(metadata = metadata.copy(extra = metadata.extra + (_key -> _value)))

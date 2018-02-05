@@ -122,7 +122,7 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
       if (activity.id.isDefined) {
         uuid = activity.id.get
       } else {
-        uuid = activity.title.getOrElse("") + "#" + java.util.UUID.randomUUID().toString
+        uuid = "EB-" + activity.title.map(_ + "-").getOrElse("") + java.util.UUID.randomUUID().toString
         body.replaceFirst(Regex.quote("{"), s"""{"id": "$uuid",""")
       }
 
