@@ -71,7 +71,7 @@ abstract class TestBase(_appContext: AppContext)
   lazy val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
   def this() = {
-    this(new AppContext("event-bus-test", "2.x", "test", true, ConfigFactory.load()))
+    this(new AppContext("event-bus-test", "test", ConfigFactory.load()))
   }
 
   override def beforeAll(): Unit = {}

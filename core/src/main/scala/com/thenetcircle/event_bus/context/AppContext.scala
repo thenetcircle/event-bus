@@ -22,17 +22,15 @@ import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
 
-class AppContext(appName: String, appVersion: String, appEnv: String, debug: Boolean, systemConfig: Config) {
+class AppContext(appName: String, appEnv: String, systemConfig: Config) {
 
   def getAppEnv(): String       = appEnv
   def getAppName(): String      = appName
-  def getAppVersion(): String   = appVersion
   def getSystemConfig(): Config = systemConfig
 
-  def isDebug(): Boolean = debug
-  def isDev(): Boolean   = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
-  def isTest(): Boolean  = appEnv.toLowerCase == "test"
-  def isProd(): Boolean  = appEnv.toLowerCase == "production" || appEnv.toLowerCase == "prod"
+  def isDev(): Boolean  = appEnv.toLowerCase == "development" || appEnv.toLowerCase == "dev"
+  def isTest(): Boolean = appEnv.toLowerCase == "test"
+  def isProd(): Boolean = appEnv.toLowerCase == "production" || appEnv.toLowerCase == "prod"
 
   private val shutdownHooks = new ListBuffer[() => Unit]
   def addShutdownHook(body: => Unit) {
@@ -52,13 +50,10 @@ object AppContext {
 
   def apply(systemConfig: Config): AppContext = {
     systemConfig.checkValid(ConfigFactory.defaultReference(), "app")
-    val appName = systemConfig.getString("app.name")
 
     new AppContext(
-      appName,
-      systemConfig.getString("app.version"),
+      systemConfig.getString("app.name"),
       systemConfig.getString("app.env"),
-      systemConfig.getBoolean("app.debug"),
       systemConfig
     )
   }

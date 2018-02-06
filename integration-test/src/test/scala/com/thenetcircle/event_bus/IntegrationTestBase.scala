@@ -74,7 +74,7 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   lazy val zkManager: ZooKeeperManager = ZooKeeperManager.init()
 
   def this() = {
-    this(new AppContext("integration-test", "2.x", "test", true, ConfigFactory.load()))
+    this(new AppContext("integration-test", "test", ConfigFactory.load()))
   }
 
   override def afterAll(): Unit = {
