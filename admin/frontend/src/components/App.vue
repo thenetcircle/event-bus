@@ -1,38 +1,52 @@
 <template>
-  <el-container>
+  <div>
 
-    <el-header>
-      <el-menu :default-active="activeIndex" class="el-menu-demo" mode="horizontal" router="true">
-        <el-menu-item index="/">Dashboard</el-menu-item>
-        <el-menu-item index="/stories">Stories</el-menu-item>
-        <el-menu-item index="/runners">Runners</el-menu-item>
-      </el-menu>
-    </el-header>
+    <section class="hero is-link" style="margin-bottom: 10px;">
+      <div class="hero-head">
+        <nav class="navbar" role="navigation" aria-label="main navigation">
+          <div class="container">
 
-    <el-main>
+            <div class="navbar-brand">
+              <a class="navbar-item" href="/"><img src="/logo.png" style="max-height:46px;" /></a>
+            </div>
+
+            <div class="navbar-menu">
+              <router-link to="/" class="navbar-item" exact-active-class="is-active">Dashboard
+              </router-link>
+              <router-link to="/stories" class="navbar-item" exact-active-class="is-active">
+                Stories
+              </router-link>
+              <router-link to="/runners" class="navbar-item" exact-active-class="is-active">
+                Runners
+              </router-link>
+              <router-link to="/topics" class="navbar-item" exact-active-class="is-active">
+                Topics
+              </router-link>
+            </div>
+
+          </div>
+        </nav>
+      </div>
+    </section>
+
+    <transition name="fade">
       <router-view></router-view>
-    </el-main>
+    </transition>
 
-  </el-container>
+  </div>
 </template>
 
 <script lang="ts">
   import Vue from "vue"
-  import 'element-ui/lib/theme-chalk/index.css'
 
   export default Vue.extend({
     data() {
       return {
-        name: "app",
-        activeIndex: this.$route.path
+        name: "app"
       }
     }
   })
 </script>
 
 <style>
-  body > .el-container {
-    margin: 0px auto;
-    width: 80%;
-  }
 </style>

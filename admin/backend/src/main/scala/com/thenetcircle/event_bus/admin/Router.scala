@@ -24,6 +24,8 @@ import com.typesafe.scalalogging.StrictLogging
 
 class Router()(implicit appContext: AppContext) extends StrictLogging {
 
+  val staticDir = appContext.getSystemConfig().getString("app.admin.static_dir")
+
   def createResponse(code: Int, errorMessage: String = ""): String = {
     val message = errorMessage.replaceAll("""\\""", """\\\\""").replaceAll("\"", "\\\\\"")
     s"""{"code": "$code", "message": "$message"}"""
@@ -33,33 +35,37 @@ class Router()(implicit appContext: AppContext) extends StrictLogging {
     if (path.isEmpty || path.get.isEmpty)
       appContext.getAppEnv()
     else
-      s"${appContext.getAppEnv()}/$path"
+      s"${appContext.getAppEnv()}/${path.get}"
 
   def getRoute(actionHandler: ActionHandler): Route =
     // format: off
-
-    pathSingleSlash {
-      // homepage
-      complete("event-bus admin is running!")
-    } ~
-    path("zk" / "tree") {
-      get {
-        parameter("path".?) { path =>
-          complete(actionHandler.getZKNodeTreeAsJson(wrapPath(path)))
-        }
-      } ~
-      post {
-        parameter("path".?) { path =>
-          entity(as[String]) { json =>
-            try {
-              actionHandler.updateZKNodeTreeByJson(wrapPath(path), json)
-              complete(createResponse(0))
-            } catch {
-              case ex: Throwable => complete(createResponse(1, ex.getMessage))
+    pathPrefix("api") {
+      path("internal" / "zktree") {
+        get {
+          parameter("path".?) { path =>
+            complete(actionHandler.getZKNodeTreeAsJson(wrapPath(path)))
+          }
+        } ~
+        post {
+          parameter("path".?) { path =>
+            entity(as[String]) { json =>
+              try {
+                actionHandler.updateZKNodeTreeByJson(wrapPath(path), json)
+                complete(createResponse(0))
+              } catch {
+                case ex: Throwable => complete(createResponse(1, ex.getMessage))
+              }
             }
           }
         }
+      } ~
+      path("stories") {
+        complete(actionHandler.getZKNodeTreeAsJson(wrapPath(Some("stories"))))
       }
+    } ~
+    getFromDirectory(staticDir) ~
+    pathEndOrSingleSlash {
+      getFromFile(s"$staticDir/index.html")
     }
 
     // format: on

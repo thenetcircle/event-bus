@@ -1,13 +1,20 @@
 import Vue from "vue"
 import VueRouter from "vue-router"
-import Element from "element-ui"
+
 import App from "./components/App.vue"
-import routes from "./routes"
+import Dashboard from "./components/Dashboard.vue"
+import Stories from "./components/Stories.vue"
+import Runners from "./components/Runners.vue"
 
 Vue.use(VueRouter);
-Vue.use(Element);
 
-const router = new VueRouter({ routes });
+const router = new VueRouter({
+  routes: [
+    {path: '/', component: Dashboard},
+    {path: '/stories', component: Stories},
+    {path: '/runners', component: Runners}
+  ]
+});
 
 new Vue({
   el: '#app',
