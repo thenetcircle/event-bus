@@ -7,7 +7,6 @@ import scala.util.Try
 
 lazy val commonSettings = Seq(
   organization := "com.thenetcircle",
-  // version := "2.0.1-SNAPSHOT",
   scalaVersion := "2.12.4",
   crossScalaVersions := Seq(scalaVersion.value, "2.11.8"),
   crossVersion := CrossVersion.binary,
@@ -18,15 +17,23 @@ lazy val commonSettings = Seq(
 )
 
 lazy val root = (project in file("."))
-  .settings(commonSettings: _*)
+  .enablePlugins(JavaAppPackaging)
+  .settings(commonSettings)
   .settings(
-    name := "event-bus"
+    maintainer := "Baineng Ma <baineng.ma@gmail.com>",
+    packageDescription := "A event distributing system stay among services",
+    packageSummary := "A event distributing system stay among services",
+    mappings in (Compile, packageDoc) := Seq(),
+    name := "runner",
+    mainClass in Compile := Some("com.thenetcircle.event_bus.Runner"),
+    discoveredMainClasses in Compile := Seq("com.thenetcircle.event_bus.admin.Admin")
   )
-  .aggregate(core, admin)
+  .aggregate(core, admin) // run commands on each sub project
+  .dependsOn(core, admin) // does the actual aggregation
 
 lazy val core = (project in file("core"))
-  .enablePlugins(JavaAppPackaging, BuildInfoPlugin)
-  .settings(commonSettings: _*)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(commonSettings)
   .settings(
     libraryDependencies ++= coreDependencies,
     buildInfoPackage := "com.thenetcircle.event_bus",
@@ -42,12 +49,11 @@ lazy val core = (project in file("core"))
   )
 
 lazy val admin = (project in file("admin/backend"))
-  .enablePlugins(JavaAppPackaging)
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .dependsOn(core)
 
 lazy val integrationTest = (project in file("integration-test"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     libraryDependencies ++= integrationTestDependencies,
     parallelExecution := false

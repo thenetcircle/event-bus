@@ -26,7 +26,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class Core extends AbstractApp {
+class Runner extends AbstractApp {
 
   val config: Config = ConfigFactory.load()
 
@@ -53,4 +53,4 @@ class Core extends AbstractApp {
   }
 }
 
-object Core extends App { (new Core).run(args) }
+object Runner extends App { (new Runner).run(args) }
