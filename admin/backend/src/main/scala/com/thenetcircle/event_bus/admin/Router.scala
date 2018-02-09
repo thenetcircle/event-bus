@@ -26,6 +26,8 @@ class Router()(implicit appContext: AppContext) extends StrictLogging {
 
   val staticDir = appContext.getSystemConfig().getString("app.admin.static_dir")
 
+  logger.debug(s"static directory $staticDir")
+
   def createResponse(code: Int, errorMessage: String = ""): String = {
     val message = errorMessage.replaceAll("""\\""", """\\\\""").replaceAll("\"", "\\\\\"")
     s"""{"code": "$code", "message": "$message"}"""

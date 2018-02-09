@@ -2,7 +2,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import Dependencies._
-import NativePackagerHelper._
+import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper._
 
 import scala.util.Try
 
@@ -30,7 +30,7 @@ lazy val root = (project in file("."))
     discoveredMainClasses in Compile := Seq("com.thenetcircle.event_bus.admin.Admin"),
     // integrate admin frontend static files
     mappings in Universal ++= directory("admin/frontend/dist"),
-    bashScriptExtraDefines += """addJava "-Dapp.admin.static_dir=${app_home}/../dist""""
+    bashScriptExtraDefines += """addJava "-Dapp.admin.static_dir=$(dirname $0)/../dist""""
   )
   .aggregate(core, admin) // run commands on each sub project
   .dependsOn(core, admin) // does the actual aggregation
@@ -52,8 +52,22 @@ lazy val core = (project in file("core"))
     )
   )
 
+lazy val buildFrontend = taskKey[Unit]("Build admin frontend")
 lazy val admin = (project in file("admin/backend"))
   .settings(commonSettings)
+  .settings(
+    buildFrontend := {
+      val frontendHomeDir = baseDirectory.value / ".." / "frontend"
+      def runNpmCommand(command: String) = {
+        println(s"""Running command "npm $command" in directory $frontendHomeDir""")
+        Process(s"npm $command", frontendHomeDir).!
+      }
+
+      if (runNpmCommand("install") != 0) throw new Exception("Npm install failed.")
+      if (runNpmCommand("run build") != 0) throw new Exception("Npm build failed.")
+    },
+    compile in Compile := (compile in Compile).dependsOn(buildFrontend).value
+  )
   .dependsOn(core)
 
 lazy val integrationTest = (project in file("integration-test"))
