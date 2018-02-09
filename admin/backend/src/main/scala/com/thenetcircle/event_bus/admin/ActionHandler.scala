@@ -28,7 +28,15 @@ import scala.collection.JavaConverters._
 class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
     extends StrictLogging {
 
-  def getZKNodeTreeAsJson(path: String, indent: Boolean = true, depth: Int = 1): String = {
+  def getZKNodeTreeAsJson(path: String): String =
+    try {
+      val block = _getZKNodeTreeAsJson(path)
+      if (block == "") "{}" else block
+    } catch {
+      case _ => "{}"
+    }
+
+  def _getZKNodeTreeAsJson(path: String, indent: Boolean = true, depth: Int = 1): String = {
     val subNodes = zkManager.getChildren(path)
     var block    = ""
     val prevPad  = if (indent) "".padTo((depth - 1) * 2, ' ') else ""
@@ -41,7 +49,7 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
         for (i <- nodeList.indices) {
           val nodename = nodeList(i)
           block += pad + s""""$nodename": """ +
-            getZKNodeTreeAsJson(s"$path/$nodename", indent, depth + 1)
+            _getZKNodeTreeAsJson(s"$path/$nodename", indent, depth + 1)
           if (i < nodeList.length - 1)
             block += ","
           block += newLine

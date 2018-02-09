@@ -1,13 +1,13 @@
 <template>
   <div>
 
-    <section class="hero is-link" style="margin-bottom: 10px;">
+    <section class="hero is-link" style="margin-bottom: 28px;">
       <div class="hero-head">
         <nav class="navbar" role="navigation" aria-label="main navigation">
           <div class="container">
 
             <div class="navbar-brand">
-              <a class="navbar-item" href="/"><img src="/logo.png" style="max-height:46px;" /></a>
+              <a class="navbar-item" href="/"><img src="/logo.png" style="max-height:46px;"/></a>
             </div>
 
             <div class="navbar-menu">

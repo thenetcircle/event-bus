@@ -63,12 +63,15 @@ class Router()(implicit appContext: AppContext) extends StrictLogging {
       } ~
       path("stories") {
         complete(actionHandler.getZKNodeTreeAsJson(wrapPath(Some("stories"))))
+      } ~
+      path("story" / Segment) { storyName =>
+        complete(actionHandler.getZKNodeTreeAsJson(wrapPath(Some(s"stories/$storyName"))))
       }
     } ~
     getFromDirectory(staticDir) ~
-    pathEndOrSingleSlash {
+    // (pathPrefix("story") | pathEndOrSingleSlash)
+    get {
       getFromFile(s"$staticDir/index.html")
     }
-
     // format: on
 }

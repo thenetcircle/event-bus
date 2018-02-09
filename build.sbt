@@ -55,7 +55,7 @@ lazy val core = (project in file("core"))
 lazy val buildFrontend = taskKey[Unit]("Build admin frontend")
 lazy val admin = (project in file("admin/backend"))
   .settings(commonSettings)
-  .settings(
+  /*.settings(
     buildFrontend := {
       val frontendHomeDir = baseDirectory.value / ".." / "frontend"
       def runNpmCommand(command: String) = {
@@ -67,7 +67,7 @@ lazy val admin = (project in file("admin/backend"))
       if (runNpmCommand("run build") != 0) throw new Exception("Npm build failed.")
     },
     compile in Compile := (compile in Compile).dependsOn(buildFrontend).value
-  )
+  )*/
   .dependsOn(core)
 
 lazy val integrationTest = (project in file("integration-test"))

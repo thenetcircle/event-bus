@@ -13,9 +13,11 @@
   "dependencies": {
     "axios": "0.17.1",
     "vue": "2.5.13",
+    "vue-loading": "0.1.4",
     "vue-router": "3.0.1"
   },
   "devDependencies": {
+    "@types/json-editor": "0.0.4",
     "css-loader": "0.28.9",
     "file-loader": "1.1.6",
     "ts-loader": "3.4.0",
