@@ -2,6 +2,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 import Dependencies._
+import NativePackagerHelper._
 
 import scala.util.Try
 
@@ -26,7 +27,10 @@ lazy val root = (project in file("."))
     mappings in (Compile, packageDoc) := Seq(),
     name := "runner",
     mainClass in Compile := Some("com.thenetcircle.event_bus.Runner"),
-    discoveredMainClasses in Compile := Seq("com.thenetcircle.event_bus.admin.Admin")
+    discoveredMainClasses in Compile := Seq("com.thenetcircle.event_bus.admin.Admin"),
+    // integrate admin frontend static files
+    mappings in Universal ++= directory("admin/frontend/dist"),
+    bashScriptExtraDefines += """addJava "-Dapp.admin.static_dir=${app_home}/../dist""""
   )
   .aggregate(core, admin) // run commands on each sub project
   .dependsOn(core, admin) // does the actual aggregation
