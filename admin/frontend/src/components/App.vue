@@ -7,11 +7,11 @@
           <div class="container">
 
             <div class="navbar-brand">
-              <a class="navbar-item" href="/"><img src="/logo.png" style="max-height:46px;"/></a>
+              <a class="navbar-item" href="/"><img src="/assets/logo.png" style="max-height:46px;"/></a>
             </div>
 
             <div class="navbar-menu">
-              <router-link to="/" class="navbar-item" exact-active-class="is-active">Dashboard
+              <router-link to="/" class="navbar-item" exact-active-class="is-active">Home
               </router-link>
               <router-link to="/stories" class="navbar-item" exact-active-class="is-active">
                 Stories
@@ -21,6 +21,9 @@
               </router-link>
               <router-link to="/topics" class="navbar-item" exact-active-class="is-active">
                 Topics
+              </router-link>
+              <router-link to="/topics" class="navbar-item" exact-active-class="is-active">
+                Docs
               </router-link>
             </div>
 

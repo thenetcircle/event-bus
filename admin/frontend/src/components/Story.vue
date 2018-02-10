@@ -36,13 +36,13 @@
         <th>Source</th>
         <td><span class="tag is-light">{{ storyInfo.source.type }}</span></td>
         <td>{{ storyInfo.source.settings }}</td>
-        <td><a v-on:click="onEditTask" class="button is-rounded is-small">Update</a></td>
+        <td><a @click="onEditTask('Source', storyInfo.source.type, storyInfo.source.settings)" class="button is-rounded is-small">Update</a></td>
       </tr>
-      <tr v-for="trans in storyInfo.transforms">
-        <th>Transform</th>
+      <tr v-for="(trans, index) in storyInfo.transforms">
+        <th>Transform {{ index + 1 }}</th>
         <td><span class="tag is-light">{{ trans.type }}</span></td>
         <td>{{ trans.settings }}</td>
-        <td><a class="button is-rounded is-small">Update</a></td>
+        <td><a @click="onEditTask('Transform ' + (index + 1), trans.type, trans.settings)" class="button is-rounded is-small">Update</a></td>
       </tr>
       <tr>
         <th>Sink</th>
@@ -59,14 +59,20 @@
       </tbody>
     </table>
 
-    <task-editor :show="showTaskEditor" title="test" />
+    <transition>
+      <task-editor v-bind="taskEditor" @close="onTaskEditorClose" />
+    </transition>
 
-    <p class="subtitle is-3">Monitor:</p>
-    <iframe :src="grafanaLinkOfProcessedEvents" width="100%" height="200" frameborder="0"></iframe>
+    <p class="subtitle is-3">Monitoring:</p>
+    <graph :storyname="storyName" type="processed"></graph>
 
     <div class="columns is-gapless">
-      <div class="column is-half"><iframe :src="grafanaLinkOfCompletion" width="100%" height="200" frameborder="0"></iframe></div>
-      <div class="column"><iframe :src="grafanaLinkOfException" width="100%" height="200" frameborder="0"></iframe></div>
+      <div class="column is-half">
+        <graph :storyname="storyName" type="completion"></graph>
+      </div>
+      <div class="column">
+        <graph :storyname="storyName" type="exception"></graph>
+      </div>
     </div>
 
   </div>
@@ -78,18 +84,25 @@
   import axios from "axios"
   import {StoryInfo, StoryUtils} from '../lib/story-utils';
   import TaskEditor from "./TaskEditor.vue"
+  import Graph from './Graph.vue'
 
   export default Vue.extend({
     data() {
       return {
-        showTaskEditor: false,
+        taskEditor: {
+          show: false,
+          title: '',
+          type: '',
+          settings: ''
+        },
         storyName: this.$route.params.storyName,
         storyInfo: <StoryInfo>{}
       }
     },
 
     components: {
-      TaskEditor
+      TaskEditor,
+      Graph
     },
 
     created() {
@@ -98,20 +111,6 @@
 
     watch: {
       '$route': 'fetchData'
-    },
-
-    computed: {
-      grafanaLinkOfProcessedEvents(): string {
-        return `http://fat:3003/dashboard-solo/db/event-bus-final?from=1518160194700&to=1518161994700&var-Community=kauf&var-StoryName=${this.storyName}&var-Prefix=event-bus&theme=light&panelId=3`
-      },
-
-      grafanaLinkOfCompletion(): string {
-        return `http://fat:3003/dashboard-solo/db/event-bus-final?from=1518167243055&to=1518169043055&var-Community=kauf&var-StoryName=${this.storyName}&var-Prefix=event-bus&theme=light&panelId=73`
-      },
-
-      grafanaLinkOfException(): string {
-        return `http://fat:3003/dashboard-solo/db/event-bus-final?from=1518167346922&to=1518169146922&var-Community=kauf&var-StoryName=${this.storyName}&var-Prefix=event-bus&theme=light&panelId=74`
-      }
     },
 
     methods: {
@@ -129,8 +128,12 @@
           })
       },
 
-      onEditTask() {
-        this.showTaskEditor = true
+      onEditTask(title: string, type: string, settings: string) {
+        this.taskEditor = { ...this.taskEditor, ...{show: true, title: title, type: type, settings: settings} }
+      },
+
+      onTaskEditorClose() {
+        this.taskEditor = { ...this.taskEditor, ...{show: false} }
       }
     }
   })

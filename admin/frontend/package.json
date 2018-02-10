@@ -13,7 +13,7 @@
   "dependencies": {
     "axios": "0.17.1",
     "vue": "2.5.13",
-    "vue-loading": "0.1.4",
+    "vue-loading-template": "^0.1.7",
     "vue-router": "3.0.1"
   },
   "devDependencies": {
