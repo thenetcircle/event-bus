@@ -1,4 +1,4 @@
-export enum StoryStatus { INIT }
+export enum StoryStatus { INIT = 'INIT' }
 
 export interface StoryTask {
   type: string,

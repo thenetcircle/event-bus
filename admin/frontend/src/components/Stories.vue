@@ -4,7 +4,7 @@
     <div class="columns is-multiline">
       <div class="column is-half" v-for="story in stories">
 
-        <a class="box" :href="story.link">
+        <a class="box story" :href="story.link">
           <p class="title is-spaced">
             {{ story.name }}
           </p>
@@ -13,11 +13,7 @@
             <tbody>
             <tr>
               <th>Status:</th>
-              <td>{{ story.info.status.toString() }}</td>
-              <th v-if="story.info.fallback">Fallback:</th>
-              <td v-if="story.info.fallback">{{ story.info.fallback.type }}</td>
-            </tr>
-            <tr>
+              <td>{{ story.info.status }}</td>
               <th>Runners:</th>
               <td>default-runner</td>
             </tr>
@@ -74,10 +70,16 @@
                   let storyInfo = StoryUtils.parseStory(data[key])
 
                   let summary: string[] = [];
-                  summary.push(`from <span class="tag is-info is-medium">${storyInfo.source.type}</span>`)
+                  summary.push(`<span class="tag is-link">${storyInfo.source.type} Source</span>`)
+
                   storyInfo.transforms.forEach(trans =>
-                    summary.push(`to <span class="tag is-light is-medium">${trans.type}</span>`))
-                  summary.push(`to <span class="tag is-primary is-medium">${storyInfo.sink.type}</span>`)
+                    summary.push(`<span class="tag is-light">${trans.type} Transform</span>`))
+
+                  summary.push(`<span class="tag is-primary">${storyInfo.sink.type} Sink</span>`)
+
+                  if (storyInfo.fallback) {
+                    summary.push(`<span class="tag is-warning">${storyInfo.fallback.type} Fallback</span>`)
+                  }
 
                   stories.push({
                     name: key,
@@ -101,4 +103,11 @@
 </script>
 
 <style>
+  .story {
+    background-color: white;
+    background-image: -webkit-linear-gradient(top, #fefefe, #efefef, #fefefe, #fefefe, white);
+    background-image: -moz-linear-gradient(top, #fefefe, #efefef, #fefefe, #fefefe, white);
+    background-image: -o-linear-gradient(top, #fefefe, #efefef, #fefefe, #fefefe, white);
+    background-image: linear-gradient(to bottom, #fefefe, #efefef, #fefefe, #fefefe, white);
+  }
 </style>
