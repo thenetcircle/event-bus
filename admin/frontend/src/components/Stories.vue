@@ -2,23 +2,25 @@
 
   <div class="container">
     <div class="columns is-multiline">
-      <div class="column is-half" v-for="story in stories">
+      <div class="column is-12" v-for="story in stories">
 
         <a class="box story" :href="story.link">
-          <p class="title is-spaced">
-            {{ story.name }}
-          </p>
 
-          <table class="table is-narrow">
-            <tbody>
-            <tr>
-              <th>Status:</th>
-              <td>{{ story.info.status }}</td>
-              <th>Runners:</th>
-              <td>default-runner</td>
-            </tr>
-            </tbody>
-          </table>
+          <div class="level">
+            <div class="level-left">
+              <div class="level-item">
+                <p class="title is-spaced">
+                  {{ story.name }}
+                </p>
+              </div>
+              <div class="level-item">
+                <div class="tags has-addons">
+                  <span class="tag is-dark">Status:</span>
+                  <span class="tag is-link">{{ story.info.status }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <span v-html="story.summary"></span>
         </a>
@@ -70,7 +72,7 @@
                   let storyInfo = StoryUtils.parseStory(data[key])
 
                   let summary: string[] = [];
-                  summary.push(`<span class="tag is-link">${storyInfo.source.type} Source</span>`)
+                  summary.push(`<span class="tag is-success">${storyInfo.source.type} Source</span>`)
 
                   storyInfo.transforms.forEach(trans =>
                     summary.push(`<span class="tag is-light">${trans.type} Transform</span>`))

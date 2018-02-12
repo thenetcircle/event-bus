@@ -1,104 +1,67 @@
 <template>
 
   <div class="container box story">
-    <p class="title is-1 is-spaced story-name">
-      {{ storyName }}
-
-      <span class="tag is-info is-medium">{{ storyInfo.status }}</span>
-    </p>
+    <div class="level">
+      <div class="level-left">
+        <div class="level-item">
+          <p class="title is-1 is-spaced story-name">{{ storyName }}</p>
+        </div>
+        <div class="level-item">
+          <div class="tags has-addons">
+            <span class="tag is-dark">Status:</span>
+            <span class="tag is-info">{{ storyInfo.status }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="tabs is-medium">
       <ul>
         <li :class="{ 'is-active': isOverview }" @click="changeTab('overview')"><a>Overview</a></li>
-        <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"><a>Failed Events</a></li>
-        <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')"><a>Statistics</a></li>
+        <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"><a>Failed Events</a>
+        </li>
+        <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')">
+          <a>Statistics</a></li>
       </ul>
     </div>
 
     <div v-show="isOverview">
 
-      <div class="columns">
+      <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"></story-graph>
 
-        <div class="column">
-          <a class="box" @click="onEditTask('Source', 'source', storyInfo.source.type, storyInfo.source.settings)">
-            <h5 class="title is-5">Source <span class="tag is-link">{{ storyInfo.source.type }}</span></h5>
-            <div class="content">
-              {{ storyInfo.source.settings }}
-            </div>
-          </a>
-        </div>
-
-        <div class="delimiter">-></div>
-
-        <div class="column" v-for="(trans, index) in storyInfo.transforms">
-          <a class="box" @click="onEditTask('Transform ' + (index + 1), 'transform', trans.type, trans.settings)">
-            <h5 class="title is-5">Transform {{ index + 1 }} <span class="tag is-light">{{ trans.type }}</span></h5>
-            <div class="content">
-              {{ trans.settings }}
-            </div>
-          </a>
-        </div>
-
-        <div class="delimiter" v-if="storyInfo.transforms.length > 0">-></div>
-
-
-        <div class="column">
-          <a class="box" @click="onEditTask('Sink', 'sink', storyInfo.sink.type, storyInfo.sink.settings)">
-            <h5 class="title is-5">Sink <span class="tag is-primary">{{ storyInfo.sink.type }}</span></h5>
-            <div class="content">
-              {{ storyInfo.sink.settings }}
-            </div>
-          </a>
-        </div>
-
-        <div class="delimiter" v-if="storyInfo.fallback">-></div>
-
-        <div class="column" v-if="storyInfo.fallback">
-          <a class="box" @click="onEditTask('Fallback', 'fallback', storyInfo.fallback.type, storyInfo.fallback.settings)">
-            <h5 class="title is-5">Fallback <span class="tag is-warning">{{ storyInfo.fallback.type }}</span></h5>
-            <div class="content">
-              {{ storyInfo.fallback.settings }}
-            </div>
-          </a>
-        </div>
-
-      </div>
-
-      <p class="subtitle is-4">Runners:</p>
-      <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
-        <thead>
-        <tr>
-          <th>Name</th>
-          <th>Server</th>
-          <th>Version</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-          <td>default-runner</td>
-          <td>cloud-host-01</td>
-          <td></td>
-        </tr>
-        </tbody>
-      </table>
-
-      <transition>
-        <task-editor v-if="taskEditor.show" v-bind="taskEditor" @close="onTaskEditorClose" @save="onTaskEditorSave"/>
-      </transition>
+      <section style="margin-top: 1rem;">
+        <p class="subtitle is-4">Runners:</p>
+        <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Server</th>
+            <th>Version</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td>default-runner</td>
+            <td>cloud-host-01</td>
+            <td></td>
+          </tr>
+          </tbody>
+        </table>
+      </section>
 
     </div>
 
     <div v-show="isFallback"></div>
 
     <div v-if="isMonitoring">
-      <graph :storyname="storyName" type="processed"></graph>
+      <grafana-graph :storyname="storyName" type="processed"></grafana-graph>
 
       <div class="columns" style="margin-top: 6px;">
         <div class="column is-half">
-          <graph :storyname="storyName" type="completion"></graph>
+          <grafana-graph :storyname="storyName" type="completion"></grafana-graph>
         </div>
         <div class="column">
-          <graph :storyname="storyName" type="exception"></graph>
+          <grafana-graph :storyname="storyName" type="exception"></grafana-graph>
         </div>
       </div>
     </div>
@@ -111,28 +74,22 @@
   import Vue from "vue"
   import axios from "axios"
   import {StoryInfo, StoryUtils} from '../lib/story-utils';
-  import TaskEditor from "./TaskEditor.vue"
-  import Graph from './Graph.vue'
+  import StoryGraph from './StoryGraph.vue'
+  import GrafanaGraph from './GrafanaGraph.vue'
+
 
   export default Vue.extend({
     data() {
       return {
-        taskEditor: {
-          show: false,
-          title: '',
-          tasktype: 'source',
-          type: 'http',
-          settings: ''
-        },
         storyName: this.$route.params.storyName,
-        storyInfo: <StoryInfo>{},
+        storyInfo: {} as StoryInfo,
         currTab: 'overview'
       }
     },
 
     components: {
-      TaskEditor,
-      Graph
+      StoryGraph,
+      GrafanaGraph
     },
 
     created() {
@@ -149,35 +106,12 @@
           .then(response => {
             let data = response.data
             if (data) {
-              console.debug(data)
               this.storyInfo = StoryUtils.parseStory(data)
             }
           })
           .catch(error => {
             console.error(error)
           })
-      },
-
-      onEditTask(title: string, tasktype: string, type: string, settings: string) {
-        this.taskEditor = {
-          ...this.taskEditor, ...{
-            show: true,
-            title: title,
-            tasktype: tasktype,
-            type: type,
-            settings: settings
-          }
-        }
-      },
-
-      onTaskEditorClose() {
-        this.taskEditor = {...this.taskEditor, ...{show: false}}
-      },
-
-      onTaskEditorSave(newSettings: string) {
-        console.log(newSettings)
-        this.storyInfo.source.settings = newSettings
-        this.onTaskEditorClose()
       },
 
       changeTab(tab: string) {
@@ -218,5 +152,9 @@
 
   .content {
     font-size: 0.9rem;
+  }
+
+  pre.settings {
+    width: 100%;
   }
 </style>

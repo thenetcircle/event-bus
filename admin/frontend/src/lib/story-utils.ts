@@ -1,24 +1,24 @@
 export enum StoryStatus { INIT = 'INIT' }
 
+export interface StoryData {
+  source: string;
+  sink: string;
+  status: string;
+  transforms?: string;
+  fallback?: string;
+}
+
 export interface StoryTask {
-  type: string,
-  settings: string
+  type: string;
+  settings: string;
 }
 
 export interface StoryInfo {
-  source: StoryTask,
-  sink: StoryTask,
-  status: StoryStatus,
-  transforms: StoryTask[],
-  fallback: StoryTask|undefined
-}
-
-export interface StoryData {
-  source: string,
-  sink: string,
-  status: string,
-  transforms: string|undefined,
-  fallback: string|undefined
+  source: StoryTask;
+  sink: StoryTask;
+  status: StoryStatus;
+  transforms: StoryTask[];
+  fallback?: StoryTask;
 }
 
 function _createStoryTaskFromString(str: string): StoryTask {
@@ -63,4 +63,17 @@ export class StoryUtils {
 
   }
 
+}
+
+
+export enum TaskEditType { ADD, EDIT }
+export class TaskEditAction {
+  readonly type: TaskEditType
+  readonly taskCategory: string
+  readonly task: StoryTask
+  constructor(type: TaskEditType, taskCategory: string, task: StoryTask) {
+    this.type = type
+    this.taskCategory = taskCategory
+    this.task = task
+  }
 }
