@@ -69,6 +69,32 @@ export class StoryUtils {
     info.transforms.forEach((trans: StoryTask) => copied.transforms.push({ ...trans }))
     return copied
   }
+
+  static jsonPretty(json: string): string {
+    return JSON.stringify(JSON.parse(json), undefined, 2);
+  }
+
+  static checkStoryName(name: string): true | string {
+    if (name.length <= 0) {
+      return 'story name can not be empty'
+    }
+    if (/^[a-z]+(?:[\_\-][a-z]+)+$/i.test(name)) {
+      return true
+    }
+    else {
+      return 'story name could only includes letters and _, -'
+    }
+  }
+
+  static checkStoryInfo(info: StoryInfo): true | string {
+    if (info.source.type.length <= 0 || info.source.settings.length <= 0) {
+      return 'story source is incorrect'
+    }
+    if (info.sink.type.length <= 0 || info.sink.settings.length <= 0) {
+      return 'story sink is incorrect'
+    }
+    return true
+  }
 }
 
 

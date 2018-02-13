@@ -84,7 +84,7 @@
           /*'disable_edit_json': true,
           'disable_properties': true,*/
           'schema': schema || {},
-          'display_required_only': false
+          'display_required_only': true
         }
         this.editor = new JSONEditor(ele, options)
       }

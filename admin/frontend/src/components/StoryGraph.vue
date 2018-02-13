@@ -1,16 +1,29 @@
 <template>
   <div>
 
-    <div class="is-clearfix" style="margin-bottom: 1rem;">
+    <div style="margin-bottom: 1rem;">
 
-      <div class="field is-pulled-right">
-        <button class="button" @click="onAddTask('Add a Transform', 'transform')">Add Transform
-        </button>
-        <button class="button" v-if="!storyInfo.fallback"
-                @click="onAddTask('Add a Fallback', 'fallback')">Add Fallback
-        </button>
-        <button class="button is-info" v-if="changed">Save Changes</button>
-        <button class="button is-danger" v-if="changed" @click="onResetChanges">Reset</button>
+      <div class="level">
+        <div class="level-left">
+          <div class="level-item">
+            <button class="button" @click="onAddTask('Add a Transform', 'transform')">
+              Add Transform
+            </button>
+          </div>
+          <div class="level-item" v-if="!storyInfo.fallback">
+            <button class="button" @click="onAddTask('Add a Fallback', 'fallback')">Add Fallback
+            </button>
+          </div>
+        </div>
+        <div class="level-right">
+          <div class="level-item" v-if="changed">
+            <button class="button is-info" @click="onSaveStory">Save</button>
+          </div>
+          <div class="level-item" v-if="changed">
+            <button class="button is-light" @click="onResetChanges">Reset</button>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -38,7 +51,8 @@
             <h5 class="title is-5">
               {{ trans.type }}
               <span class="tag is-light">transform</span>
-              <a class="icon" @click.stop="onRemoveTask('transform', index)"><i class="fas fa-trash-alt"></i></a>
+              <a class="icon" @click.stop="onRemoveTask('transform', index)"><i
+                class="fas fa-trash-alt"></i></a>
             </h5>
 
             <div class="content">
@@ -61,17 +75,18 @@
 
       </div>
 
-      <hr/>
+      <div class="arrow"><div></div><span></span></div>
 
       <div class="columns" v-if="storyInfo.fallback">
-        <div class="column"></div>
+        <div class="column" style="text-align: right"><div style="margin-top: 5rem; color: #ccc;"> ------ Failed Events ----> </div></div>
         <div class="column" :class="fatColumnClass">
           <a class="box"
              @click="onEditTask('Fallback', 'fallback', storyInfo.fallback)">
             <h5 class="title is-5">
               {{ storyInfo.fallback.type }}
               <span class="tag is-warning">fallback</span>
-              <a class="icon" @click.stop="onRemoveTask('fallback')"><i class="fas fa-trash-alt"></i></a>
+              <a class="icon" @click.stop="onRemoveTask('fallback')"><i
+                class="fas fa-trash-alt"></i></a>
             </h5>
 
             <div class="content">
@@ -87,6 +102,22 @@
       <task-editor v-if="taskEditor.show" v-bind="taskEditor" @close="onTaskEditorClose"
                    @save="onTaskEditorSave"/>
     </transition>
+
+    <div class="modal" :class="{ 'is-active': confirmation.show }">
+      <div class="modal-background"></div>
+      <div class="modal-card">
+        <header class="modal-card-head">
+          <p class="modal-card-title">{{ confirmation.title }}</p>
+          <button class="delete" @click.prevent="onNotConfirm()" aria-label="close"></button>
+        </header>
+        <section class="modal-card-body" v-html="confirmation.message"></section>
+        <footer class="modal-card-foot">
+          <button class="button is-info" @click.prevent="onConfirm()">Yes</button>
+          <button class="button" @click.prevent="onNotConfirm()">No</button>
+        </footer>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -109,7 +140,12 @@
       return {
         changed: false,
         storyInfo: StoryUtils.copyStoryInfo(this.info),
-        taskEditor: {show: false, title: '', action: {} as TaskEditAction}
+        taskEditor: {show: false, title: '', action: {} as TaskEditAction},
+        confirmation: {
+          show: false,
+          title: '',
+          message: ''
+        }
       }
     },
 
@@ -131,9 +167,7 @@
     },
 
     filters: {
-      jsonPretty: function (json: string): string {
-        return JSON.stringify(JSON.parse(json), undefined, 2);
-      }
+      jsonPretty: StoryUtils.jsonPretty
     },
 
     methods: {
@@ -158,8 +192,11 @@
       },
 
       onRemoveTask(category: string, index?: number) {
-        switch (category)
-        {
+        if (!confirm(`Are you sure delete this ${category}?`)) {
+          return;
+        }
+
+        switch (category) {
           case 'transform':
             if (index != undefined && this.storyInfo.transforms[index]) {
               console.log(this.storyInfo.transforms)
@@ -207,10 +244,33 @@
       },
 
       onResetChanges() {
+        if (!confirm('Are you sure to reset everything?')) {
+          return;
+        }
         this.storyInfo = StoryUtils.copyStoryInfo(this.info)
         this.changed = false
-      }
+      },
 
+      onSaveStory() {
+        let message = StoryUtils.jsonPretty(JSON.stringify(this.storyInfo));
+        this.confirmation = {
+          ...this.confirmation, ...{
+            show: true,
+            title: 'Are you sure to save the Story?',
+            message: `<article class="content"><pre>${message}</pre></article>`
+          }
+        }
+      },
+
+      onConfirm() {
+        this.$emit('save', this.storyInfo)
+        // this.changed = false
+        this.onNotConfirm()
+      },
+
+      onNotConfirm() {
+        this.confirmation = {...this.confirmation, ...{show: false}}
+      }
     }
   })
 
@@ -220,8 +280,44 @@
   a.icon {
     color: black;
   }
+
   a.icon:hover {
     color: red;
+  }
+
+  .arrow {
+    /*clear: both;
+    border-color: #ccc;
+    border-style: dashed;
+    border-width: 0.05em;*/
+    margin-bottom: 1.5rem;
+    position: relative;
+  }
+
+  .arrow div {
+    height: 5px;
+    border-bottom: 2px dashed #ccc;
+  }
+
+  .arrow span {
+    border-style: dashed;
+    border-color: transparent;
+    border-width: 0.08em;
+    display: -moz-inline-box;
+    display: inline-block;
+    /* Use font-size to control the size of the arrow. */
+    font-size: 80px;
+    height: 0;
+    line-height: 0;
+    position: absolute;
+    top: -2px;
+    right: -10px;
+    vertical-align: middle;
+    width: 0;
+    background-color: #fff; /* change background color acc to bg color */
+    border-left-width: 0.15em;
+    border-left-style: solid;
+    border-left-color: #ccc;
   }
 
 </style>

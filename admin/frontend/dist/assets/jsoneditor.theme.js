@@ -63,6 +63,13 @@ JSONEditor.defaults.themes.eventbus = JSONEditor.AbstractTheme.extend({
     return el;
   },
   getButton: function(text, icon, title) {
+    if (text == 'Object Properties') {
+      text = 'More Options...';
+    }
+    if (text == 'Edit JSON') {
+      text = 'JSON';
+    }
+
     var el = this._super(text, icon, title);
     el.className += ' button is-small is-light';
     return el;

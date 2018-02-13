@@ -1,11 +1,17 @@
 <template>
 
   <div class="container">
+
+    <div style="margin-bottom: 1rem;">
+      <div class="field">
+        <a class="button is-info" href="/newstory">Create New Story</a>
+      </div>
+    </div>
+
     <div class="columns is-multiline">
+
       <div class="column is-12" v-for="story in stories">
-
         <a class="box story" :href="story.link">
-
           <p class="title is-spaced">
             {{ story.name }}
           </p>
@@ -25,8 +31,8 @@
 
           <span v-html="story.summary"></span>
         </a>
-
       </div>
+
     </div>
   </div>
 

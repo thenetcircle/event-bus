@@ -27,9 +27,10 @@
 
     <div v-show="isOverview">
 
-      <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"></story-graph>
+      <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"
+                   @save="onSaveStory"></story-graph>
 
-      <section style="margin-top: 1rem;">
+      <section style="margin-top: 3rem;">
         <p class="subtitle is-4">Runners:</p>
         <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
           <thead>
@@ -65,6 +66,8 @@
         </div>
       </div>
     </div>
+
+
 
   </div>
 
@@ -116,6 +119,14 @@
 
       changeTab(tab: string) {
         this.currTab = tab
+      },
+
+      onSaveStory(newStoryInfo: StoryInfo) {
+        /*if (confirm('are you sure to save?')) {
+          this.storyInfo = StoryUtils.copyStoryInfo(newStoryInfo)
+          this.storyInfo.source.settings = '{}'
+          console.log()
+        }*/
       }
     },
 

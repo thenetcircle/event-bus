@@ -5,7 +5,8 @@ const sourceSchema: any = {
     "properties": {
       "interface": {
         "type": "string",
-        "default": "0.0.0.0"
+        "default": "0.0.0.0",
+        "required": true
       },
       "port": {
         "type": "integer",
@@ -79,17 +80,20 @@ const sourceSchema: any = {
         "items": {
           "type": "string",
           "title": "topic"
-        }
+        },
+        "required": true
       },
       "topic-pattern": {
         "type": "string",
         "title": "Subscribed Topic Pattern",
         "description": "supports regex pattern, if topics is set, will use it instead",
-        "default": ""
+        "default": "",
+        "required": true
       },
       "max-concurrent-partitions": {
         "type": "integer",
-        "default": 100
+        "default": 100,
+        "required": true
       },
       "commit-timeout": {
         "type": "string",
@@ -101,17 +105,18 @@ const sourceSchema: any = {
       },
       "max-connections": {
         "type": "integer",
-        "default": 1024
+        "default": 1024,
+        "required": true
       },
       "properties": {
         "type": "object",
         "title": "Kafka Consumer Properties",
         "properties": {
-          "enable.auto.commit": {
+          /*"enable.auto.commit": {
             "type": "boolean",
             "title": "Enable auto commit?",
             "default": false
-          }
+          }*/
         }
       }
     }
@@ -127,13 +132,15 @@ const transformSchema: any = {
         "type": "string",
         "title": "Default Topic",
         "description": "supports substitutes: {app_name}, {app_env}, {story_name}",
-        "default": "event-{app_name}-default"
+        "default": "event-{app_name}-default",
+        "required": true
       },
       "use-cache": {
         "type": "boolean",
         "title": "Use Cache",
         "descript": "If cache the events topics",
-        "default": false
+        "default": false,
+        "required": true
       }
     }
   },
@@ -164,15 +171,18 @@ const sinkSchema: any = {
             "type": "string",
             "description": "when event does not include url info, use this default one"
           }
-        }
+        },
+        "required": true
       },
       "min-backoff": {
         "type": "string",
-        "default": "1 s"
+        "default": "1 s",
+        "required": true
       },
       "max-backoff": {
         "type": "string",
-        "default": "30 s"
+        "default": "30 s",
+        "required": true
       },
       "random-factor": {
         "type": "number",
@@ -180,11 +190,13 @@ const sinkSchema: any = {
       },
       "max-retrytime": {
         "type": "string",
-        "default": "12 h"
+        "default": "12 h",
+        "required": true
       },
       "concurrent-retries": {
         "type": "integer",
-        "default": 1
+        "default": 1,
+        "required": true
       },
       "pool": {
         "type": "object",
@@ -232,15 +244,18 @@ const sinkSchema: any = {
       },
       "default-topic": {
         "type": "string",
-        "default": "event-default"
+        "default": "event-default",
+        "required": true
       },
       "use-event-group-as-topic": {
         "type": "boolean",
-        "default": true
+        "default": true,
+        "required": true
       },
       "parallelism": {
         "type": "integer",
-        "default": 100
+        "default": 100,
+        "required": true
       },
       "close-timeout": {
         "type": "string",
@@ -270,15 +285,18 @@ const fallbackSchema: any = {
         "items": {
           "type": "string",
           "title": "host"
-        }
+        },
+        "required": true
       },
       "port": {
         "type": "integer",
-        "default": 9042
+        "default": 9042,
+        "required": true
       },
       "parallelism": {
         "type": "integer",
-        "default": 3
+        "default": 3,
+        "required": true
       }
     }
   }
