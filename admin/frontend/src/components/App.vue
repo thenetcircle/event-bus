@@ -27,6 +27,8 @@
               </router-link>
             </div>
 
+            <bounce-loader :loading="isLoading" color="#FFFFFF"></bounce-loader>
+
           </div>
         </nav>
       </div>
@@ -41,12 +43,28 @@
 
 <script lang="ts">
   import Vue from "vue"
+  import bus from "../lib/bus"
+  import BounceLoader from 'vue-spinner/src/BounceLoader.vue'
 
   export default Vue.extend({
     data() {
       return {
-        name: "app"
+        name: "app",
+        isLoading: false
       }
+    },
+
+    created() {
+      bus.$on('loading', () => {
+        this.isLoading = true
+      })
+      bus.$on('loaded', () => {
+        this.isLoading = false
+      })
+    },
+
+    components: {
+      BounceLoader
     }
   })
 </script>

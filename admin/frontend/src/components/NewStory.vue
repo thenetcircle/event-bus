@@ -24,7 +24,6 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import axios from "axios"
   import {StoryInfo, StoryUtils} from '../lib/story-utils';
   import StoryGraph from './StoryGraph.vue'
 

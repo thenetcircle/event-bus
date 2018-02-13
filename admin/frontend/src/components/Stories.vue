@@ -40,7 +40,7 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import axios from "axios"
+  import request from "../lib/request"
   import {StoryInfo, StoryUtils} from '../lib/story-utils';
 
   interface StorySummary {
@@ -67,44 +67,38 @@
 
     methods: {
       fetchData() {
-        axios.get('/api/stories')
-          .then(response => {
-            let data = response.data
+        request.getStories()
+          .then(result => {
+
             let stories: StorySummary[] = []
 
-            if (data) {
-              for (let key in data) {
-                if (data.hasOwnProperty(key)) {
+            result.forEach((item: [string, StoryInfo]) => {
 
-                  let storyInfo = StoryUtils.parseStory(data[key])
+              let [storyName, storyInfo] = item
 
-                  let summary: string[] = [];
-                  summary.push(`<span class="tag is-success">${storyInfo.source.type} Source</span>`)
+              let summary: string[] = [];
+              summary.push(`<span class="tag is-success">${storyInfo.source.type} Source</span>`)
 
-                  storyInfo.transforms.forEach(trans =>
-                    summary.push(`<span class="tag is-light">${trans.type} Transform</span>`))
+              storyInfo.transforms.forEach(trans =>
+                summary.push(`<span class="tag is-light">${trans.type} Transform</span>`))
 
-                  summary.push(`<span class="tag is-primary">${storyInfo.sink.type} Sink</span>`)
+              summary.push(`<span class="tag is-primary">${storyInfo.sink.type} Sink</span>`)
 
-                  if (storyInfo.fallback) {
-                    summary.push(`<span class="tag is-warning">${storyInfo.fallback.type} Fallback</span>`)
-                  }
-
-                  stories.push({
-                    name: key,
-                    summary: summary.join(' -> '),
-                    info: storyInfo,
-                    link: '/story/' + key
-                  })
-
-                }
+              if (storyInfo.fallback) {
+                summary.push(`<span class="tag is-warning">${storyInfo.fallback.type} Fallback</span>`)
               }
-            }
+
+              stories.push({
+                name: storyName,
+                summary: summary.join(' -> '),
+                info: storyInfo,
+                link: '/story/' + storyName
+              })
+
+            })
 
             this.stories = stories
-          })
-          .catch(error => {
-            console.error(error)
+
           })
       }
     }

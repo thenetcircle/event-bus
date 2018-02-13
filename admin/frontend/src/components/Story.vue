@@ -75,7 +75,7 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import axios from "axios"
+  import request from '../lib/request';
   import {StoryInfo, StoryUtils} from '../lib/story-utils';
   import StoryGraph from './StoryGraph.vue'
   import GrafanaGraph from './GrafanaGraph.vue'
@@ -105,15 +105,9 @@
 
     methods: {
       fetchData() {
-        axios.get('/api/story/' + this.storyName)
-          .then(response => {
-            let data = response.data
-            if (data) {
-              this.storyInfo = StoryUtils.parseStory(data)
-            }
-          })
-          .catch(error => {
-            console.error(error)
+        request.getStory(this.storyName)
+          .then(storyInfo => {
+            this.storyInfo = storyInfo
           })
       },
 
