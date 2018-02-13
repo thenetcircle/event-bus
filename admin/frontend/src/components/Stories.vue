@@ -6,21 +6,22 @@
 
         <a class="box story" :href="story.link">
 
-          <div class="level">
-            <div class="level-left">
-              <div class="level-item">
-                <p class="title is-spaced">
-                  {{ story.name }}
-                </p>
-              </div>
-              <div class="level-item">
-                <div class="tags has-addons">
-                  <span class="tag is-dark">Status:</span>
-                  <span class="tag is-link">{{ story.info.status }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <p class="title is-spaced">
+            {{ story.name }}
+          </p>
+
+          <table class="table is-narrow">
+            <tbody>
+            <tr>
+              <th>Status:</th>
+              <td>{{ story.info.status }}</td>
+            </tr>
+            <tr>
+              <th>Runners:</th>
+              <td>Cassandra</td>
+            </tr>
+            </tbody>
+          </table>
 
           <span v-html="story.summary"></span>
         </a>

@@ -63,6 +63,12 @@ export class StoryUtils {
 
   }
 
+  static copyStoryInfo(info: StoryInfo): StoryInfo {
+    let copied = <StoryInfo>{ ...info }
+    copied.transforms = []
+    info.transforms.forEach((trans: StoryTask) => copied.transforms.push({ ...trans }))
+    return copied
+  }
 }
 
 
