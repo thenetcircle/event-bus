@@ -24,8 +24,10 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import {StoryInfo, StoryUtils} from '../lib/story-utils';
+  import {StoryInfo, StoryUtils} from '../lib/story-utils'
   import StoryGraph from './StoryGraph.vue'
+  import request from '../lib/request'
+  import bus from '../lib/bus'
 
   export default Vue.extend({
     data() {
@@ -59,7 +61,12 @@
           return;
         }
 
-        // save new story
+        request.createStory(this.storyName, newStoryInfo)
+          .then(() => {
+            this.$router.push('stories', () => {
+              bus.$emit('notify', `new story ${this.storyName} has been created.`)
+            })
+          })
       }
     }
   })

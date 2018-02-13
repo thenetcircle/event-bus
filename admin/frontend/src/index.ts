@@ -13,11 +13,11 @@ Vue.use(VueRouter);
 const router = new VueRouter({
   mode: 'history',
   routes: [
-    {path: '/', component: Home},
-    {path: '/runners', component: Runners},
-    {path: '/stories', component: Stories},
-    {path: '/newstory', component: NewStory},
-    {path: '/story/:storyName', component: Story}
+    {path: '/', component: Home, name: 'home'},
+    {path: '/runners', component: Runners, name: 'runners'},
+    {path: '/stories', component: Stories, name: 'stories'},
+    {path: '/newstory', component: NewStory, name: 'newstory'},
+    {path: '/story/:storyName', component: Story, name: 'editstory'}
   ]
 });
 

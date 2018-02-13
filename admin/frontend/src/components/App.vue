@@ -1,13 +1,16 @@
 <template>
   <div>
 
-    <section class="hero is-link" style="margin-bottom: 28px;">
+    <section class="hero is-link" style="margin-bottom: 1.3rem;">
       <div class="hero-head">
         <nav class="navbar" role="navigation" aria-label="main navigation">
           <div class="container">
 
             <div class="navbar-brand">
-              <a class="navbar-item" href="/"><img src="/assets/logo.png" style="max-height:46px;"/></a>
+              <a class="navbar-item" href="/">
+                <img src="/assets/logo.png" style="max-height:46px;"/>
+                <span class="tag is-white">POPP</span>
+              </a>
             </div>
 
             <div class="navbar-menu">
@@ -34,6 +37,13 @@
       </div>
     </section>
 
+    <div class="container" style="margin-bottom: 1.3rem;" v-if="notification.show">
+      <div class="notification" :class="notification.classname">
+        <button class="delete" @click="onCloseNotification"></button>
+        {{ notification.message }}
+      </div>
+    </div>
+
     <transition name="fade">
       <router-view></router-view>
     </transition>
@@ -50,7 +60,12 @@
     data() {
       return {
         name: "app",
-        isLoading: false
+        isLoading: false,
+        notification: {
+          show: false,
+          classname: 'is-success',
+          message: ''
+        }
       }
     },
 
@@ -61,10 +76,19 @@
       bus.$on('loaded', () => {
         this.isLoading = false
       })
+      bus.$on('notify', (message: string, classname: string = 'is-success') => {
+        this.notification = { ...this.notification, ...{ show: true, classname: classname, message: message } }
+      })
     },
 
     components: {
       BounceLoader
+    },
+
+    methods: {
+      onCloseNotification() {
+        this.notification = { ...this.notification, ...{ show: false } }
+      }
     }
   })
 </script>
