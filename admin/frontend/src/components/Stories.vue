@@ -4,7 +4,7 @@
 
     <div style="margin-bottom: 1rem;">
       <div class="field">
-        <a class="button is-info" href="/newstory">Create New Story</a>
+        <router-link class="button is-info" :to="{ name: 'newstory' }">Create New Story</router-link>
       </div>
     </div>
 

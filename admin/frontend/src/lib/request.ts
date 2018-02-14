@@ -10,13 +10,20 @@ type StorableStoryInfo = {
   fallback?: string
 }
 
-class Request {
+interface Request {
+  getStories(): Promise<any>
+  getStory(storyName: string): Promise<any>
+  createStory(storyName: string, storyInfo: StoryInfo): Promise<any>
+  updateStory(storyName: string, storyInfo: StoryInfo): Promise<any>
+}
+
+class RequestImpl implements Request {
 
   getStories(): Promise<any> {
 
     bus.$emit('loading')
 
-    return axios.get('/api/stories')
+    return axios.get(`${URL_PREFIX}/api/stories`)
       .then(response => {
         let data = response.data
         let result: [string, StoryInfo][] = []
@@ -38,7 +45,7 @@ class Request {
 
     bus.$emit('loading')
 
-    return axios.get('/api/story/' + storyName)
+    return axios.get(`${URL_PREFIX}/api/story/` + storyName)
       .then(response => {
         let data = response.data
         let result = {} as StoryInfo
@@ -54,7 +61,7 @@ class Request {
   createStory(storyName: string, storyInfo: StoryInfo): Promise<any> {
     bus.$emit('loading')
 
-    return axios.post('/api/create_story', {
+    return axios.post(`${URL_PREFIX}/api/create_story`, {
       'name': storyName,
       'info': this.createStorableStoryInfo(storyInfo)
     })
@@ -71,7 +78,7 @@ class Request {
   updateStory(storyName: string, storyInfo: StoryInfo): Promise<any> {
     bus.$emit('loading')
 
-    return axios.post('/api/update_story', {
+    return axios.post(`${URL_PREFIX}/api/update_story`, {
       'name': storyName,
       'info': this.createStorableStoryInfo(storyInfo)
     })
@@ -90,7 +97,6 @@ class Request {
     bus.$emit('notify', error.message, 'is-danger')
     throw error
   }
-
 
   private createStorableStoryInfo(storyInfo: StoryInfo): StorableStoryInfo {
     let data: StorableStoryInfo = {
@@ -111,4 +117,4 @@ class Request {
 
 }
 
-export default new Request()
+export default new RequestImpl()

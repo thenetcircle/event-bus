@@ -2,9 +2,6 @@ declare module "*.vue" {
   import Vue from "vue";
   export default Vue;
 }
-declare module "vue-loading"
-declare module "vue-loading-template" {
-  import Component from "vue"
-  export default Component
-}
-
+declare const APP_NAME: string
+declare const URL_PREFIX: string
+declare const IS_OFFLINE: boolean

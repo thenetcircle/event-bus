@@ -7,27 +7,27 @@
           <div class="container">
 
             <div class="navbar-brand">
-              <a class="navbar-item" href="/">
+              <router-link class="navbar-item" :to="{ name: 'home' }">
                 <img src="/assets/logo.png" style="max-height:46px;"/>
-                <span class="tag is-white">POPP</span>
-              </a>
+                <span class="tag is-white">{{ app_name }}</span>
+              </router-link>
             </div>
 
             <div class="navbar-menu">
-              <router-link to="/" class="navbar-item" exact-active-class="is-active">Home
+              <router-link :to="{ name: 'home' }" class="navbar-item" exact-active-class="is-active">Home
               </router-link>
-              <router-link to="/stories" class="navbar-item" exact-active-class="is-active">
+              <router-link :to="{ name: 'stories' }" class="navbar-item" exact-active-class="is-active">
                 Stories
               </router-link>
-              <router-link to="/runners" class="navbar-item" exact-active-class="is-active">
+              <router-link :to="{ name: 'runners' }" class="navbar-item" exact-active-class="is-active">
                 Runners
               </router-link>
-              <router-link to="/topics" class="navbar-item" exact-active-class="is-active">
+              <router-link :to="{ name: 'topics' }" class="navbar-item" exact-active-class="is-active">
                 Topics
               </router-link>
-              <router-link to="/topics" class="navbar-item" exact-active-class="is-active">
+              <a href="https://thenetcircle.github.io/event-bus/" target="_blank" class="navbar-item">
                 Docs
-              </router-link>
+              </a>
             </div>
 
             <bounce-loader :loading="isLoading" color="#FFFFFF"></bounce-loader>
@@ -59,7 +59,7 @@
   export default Vue.extend({
     data() {
       return {
-        name: "app",
+        app_name: APP_NAME,
         isLoading: false,
         notification: {
           show: false,

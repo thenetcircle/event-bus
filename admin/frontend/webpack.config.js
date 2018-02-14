@@ -1,5 +1,6 @@
 var path = require('path')
 var webpack = require('webpack')
+var HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
   entry: './src/index.ts',
@@ -56,6 +57,17 @@ module.exports = {
       'vue$': 'vue/dist/vue.esm.js'
     }
   },
+  plugins: [
+    new webpack.DefinePlugin({
+      'APP_NAME': JSON.stringify(process.env.EB_APPNAME || 'app'),
+      'URL_PREFIX': JSON.stringify(process.env.EB_URLPREFIX || ''),
+      'IS_OFFLINE': JSON.stringify(process.env.EB_OFFLINE || false)
+    }),
+    new HtmlWebpackPlugin({
+      template: path.resolve(__dirname, './index.html'),
+      inject: false
+    })
+  ],
   devServer: {
     historyApiFallback: true,
     noInfo: true
