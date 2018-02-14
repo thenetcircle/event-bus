@@ -81,6 +81,10 @@
       })
     },
 
+    watch: {
+      '$route': 'onCloseNotification'
+    },
+
     components: {
       BounceLoader
     },

@@ -1,7 +1,6 @@
 <template>
 
-  <div class="container">
-
+  <div class="container box">
   </div>
 
 </template>

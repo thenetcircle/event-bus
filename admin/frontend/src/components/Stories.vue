@@ -11,7 +11,7 @@
     <div class="columns is-multiline">
 
       <div class="column is-12" v-for="story in stories">
-        <a class="box story" :href="story.link">
+        <router-link class="box" :to="{ name: 'story', params: { 'storyName': story.name } }">
           <p class="title is-spaced">
             {{ story.name }}
           </p>
@@ -24,13 +24,13 @@
             </tr>
             <tr>
               <th>Runners:</th>
-              <td>Cassandra</td>
+              <td>default-runner</td>
             </tr>
             </tbody>
           </table>
 
           <span v-html="story.summary"></span>
-        </a>
+        </router-link>
       </div>
 
     </div>
@@ -46,8 +46,7 @@
   interface StorySummary {
     name: string,
     summary: string,
-    info: StoryInfo,
-    link: string
+    info: StoryInfo
   }
 
   export default Vue.extend({
@@ -91,8 +90,7 @@
               stories.push({
                 name: storyName,
                 summary: summary.join(' -> '),
-                info: storyInfo,
-                link: '/story/' + storyName
+                info: storyInfo
               })
 
             })

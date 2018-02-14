@@ -4,7 +4,7 @@
     <div class="level">
       <div class="level-left">
         <div class="level-item">
-          <p class="title is-1 is-spaced story-name">{{ storyName }}</p>
+          <p class="title is-2 is-spaced story-name">{{ storyName }}</p>
         </div>
         <div class="level-item">
           <div class="tags has-addons">

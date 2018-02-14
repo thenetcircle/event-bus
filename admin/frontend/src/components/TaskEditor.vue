@@ -37,14 +37,16 @@
     data() {
       return {
         editor: {} as any,
-        currType: this.action.task.type || ''
+        currType: ''
       }
     },
 
     mounted() {
       let action: TaskEditAction = this.action
-      if (action.task.type) {
-        this.renderJSONEditor(taskSchema[this.action.taskCategory][action.task.type], JSON.parse(action.task.settings))
+      let schema = taskSchema[this.action.taskCategory]
+      if (action.task.type && schema[action.task.type]) {
+        this.currType = action.task.type
+        this.renderJSONEditor(schema[action.task.type], JSON.parse(action.task.settings))
       }
     },
 

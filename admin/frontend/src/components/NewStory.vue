@@ -34,8 +34,8 @@
       return {
         storyName: '',
         storyInfo: {
-          source: {type: 'http', settings: '{}'},
-          sink: {type: 'kafka', settings: '{}'},
+          source: {type: 'click to set', settings: '{}'},
+          sink: {type: 'click to set', settings: '{}'},
           status: 'INIT',
           transforms: [],
           fallback: undefined
