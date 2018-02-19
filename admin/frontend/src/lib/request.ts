@@ -2,6 +2,7 @@ import axios from "axios"
 import bus from "../lib/bus"
 import {StoryInfo, StoryStatus, StoryUtils} from "./story-utils";
 import {polyfill, Promise, Thenable} from "es6-promise";
+import {RunnerInfo, RunnerStatus} from "./runner-utils";
 
 // ES6 Promise Polyfill
 polyfill()
@@ -22,6 +23,8 @@ interface Request {
   createStory(storyName: string, storyInfo: StoryInfo): Thenable<void>
 
   updateStory(storyName: string, storyInfo: StoryInfo): Thenable<void>
+
+  getStoryRunners(storyName: string): Thenable<RunnerInfo>
 }
 
 class RequestImpl implements Request {
@@ -44,7 +47,7 @@ class RequestImpl implements Request {
         bus.$emit('loaded')
         return result
       })
-      .catch(this.errorHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
   getStory(storyName: string): Thenable<any> {
@@ -61,7 +64,7 @@ class RequestImpl implements Request {
         bus.$emit('loaded')
         return result
       })
-      .catch(this.errorHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
   createStory(storyName: string, storyInfo: StoryInfo): Thenable<any> {
@@ -69,7 +72,7 @@ class RequestImpl implements Request {
 
     return axios.post(`${URL_PREFIX}/api/create_story`, {
       'name': storyName,
-      'info': this.createStorableStoryInfo(storyInfo)
+      'info': RequestImpl.createStorableStoryInfo(storyInfo)
     })
       .then(response => {
         let data = response.data
@@ -78,7 +81,7 @@ class RequestImpl implements Request {
         }
         bus.$emit('loaded')
       })
-      .catch(this.errorHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
   updateStory(storyName: string, storyInfo: StoryInfo): Thenable<void> {
@@ -86,7 +89,7 @@ class RequestImpl implements Request {
 
     return axios.post(`${URL_PREFIX}/api/update_story`, {
       'name': storyName,
-      'info': this.createStorableStoryInfo(storyInfo)
+      'info': RequestImpl.createStorableStoryInfo(storyInfo)
     })
       .then(response => {
         let data = response.data
@@ -95,10 +98,14 @@ class RequestImpl implements Request {
         }
         bus.$emit('loaded')
       })
-      .catch(this.errorHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
-  private errorHandler(error: any): void {
+  getStoryRunners(storyName: string): Thenable<RunnerInfo> {
+    return Promise.resolve({} as RunnerInfo);
+  }
+
+  private static errorHandler(error: any): void {
     bus.$emit('loaded')
     if (error instanceof Error) {
       bus.$emit('notify', error.message, 'is-danger')
@@ -106,7 +113,7 @@ class RequestImpl implements Request {
     }
   }
 
-  private createStorableStoryInfo(storyInfo: StoryInfo): StorableStoryInfo {
+  private static createStorableStoryInfo(storyInfo: StoryInfo): StorableStoryInfo {
     let data: StorableStoryInfo = {
       'status': storyInfo.status.toString(),
       'source': `${storyInfo.source.type}#${storyInfo.source.settings}`,
@@ -126,6 +133,22 @@ class RequestImpl implements Request {
 }
 
 class OfflineRequest implements Request {
+  testRunners: RunnerInfo[] = [
+    {
+      name: 'default-runner',
+      status: RunnerStatus.RUNNING,
+      server: 'test-server-01',
+      stories: ['http-to-kafka-with-fallback'],
+      version: '2.1.0'
+    },
+    {
+      name: 'extra-runner',
+      status: RunnerStatus.RUNNING,
+      server: 'test-server-02',
+      stories: ['kafka-to-http-without-fallback'],
+      version: '2.1.0'
+    }
+  ]
 
   testStories: [string, StoryInfo][] = [
     ['http-to-kafka-with-fallback', {
@@ -208,6 +231,12 @@ class OfflineRequest implements Request {
   updateStory(storyName: string, storyInfo: StoryInfo): Thenable<void> {
     return Promise.resolve();
   }
+
+  getStoryRunners(storyName: string): Thenable<RunnerInfo> {
+    let result: RunnerInfo[] = this.testRunners.filter()
+    this.testRunners.forEach()
+    return Promise.resolve();
+  }
 }
 
-export default IS_OFFLINE ? new OfflineRequest() : new RequestImpl()
+export default <Request>(IS_OFFLINE ? new OfflineRequest() : new RequestImpl())
