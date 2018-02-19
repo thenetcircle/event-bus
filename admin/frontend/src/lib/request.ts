@@ -1,6 +1,7 @@
 import axios from "axios"
 import bus from "../lib/bus"
-import {StoryInfo, StoryUtils} from "./story-utils";
+import {StoryInfo, StoryStatus, StoryUtils} from "./story-utils";
+import {Promise as ES6Promise} from "es6-promise";
 
 type StorableStoryInfo = {
   status: string;
@@ -11,10 +12,10 @@ type StorableStoryInfo = {
 }
 
 interface Request {
-  getStories(): Promise<any>
-  getStory(storyName: string): Promise<any>
-  createStory(storyName: string, storyInfo: StoryInfo): Promise<any>
-  updateStory(storyName: string, storyInfo: StoryInfo): Promise<any>
+  getStories(): Promise<[string, StoryInfo][]>
+  getStory(storyName: string): Promise<StoryInfo>
+  createStory(storyName: string, storyInfo: StoryInfo): Promise<void>
+  updateStory(storyName: string, storyInfo: StoryInfo): Promise<void>
 }
 
 class RequestImpl implements Request {
@@ -31,7 +32,6 @@ class RequestImpl implements Request {
           for (let key in data) {
             if (data.hasOwnProperty(key)) {
               result.push([key, StoryUtils.parseStory(data[key])])
-
             }
           }
         }
@@ -75,7 +75,7 @@ class RequestImpl implements Request {
       .catch(this.errorHandler)
   }
 
-  updateStory(storyName: string, storyInfo: StoryInfo): Promise<any> {
+  updateStory(storyName: string, storyInfo: StoryInfo): Promise<void> {
     bus.$emit('loading')
 
     return axios.post(`${URL_PREFIX}/api/update_story`, {
@@ -92,10 +92,12 @@ class RequestImpl implements Request {
       .catch(this.errorHandler)
   }
 
-  private errorHandler(error: Error): void {
+  private errorHandler(error: any): void {
     bus.$emit('loaded')
-    bus.$emit('notify', error.message, 'is-danger')
-    throw error
+    if (error instanceof Error) {
+      bus.$emit('notify', error.message, 'is-danger')
+      throw error
+    }
   }
 
   private createStorableStoryInfo(storyInfo: StoryInfo): StorableStoryInfo {
@@ -117,4 +119,36 @@ class RequestImpl implements Request {
 
 }
 
-export default new RequestImpl()
+class OfflineRequest implements Request {
+  testStories: [string, StoryInfo][] = [
+    ['teststory', {
+      source: { type: 'http', settings: '{}' },
+      sink: { type: 'kafka', settings: '{}' },
+      status: StoryStatus.INIT,
+      transforms: [{ type: 'tnc-topic-resolver', settings: '{}' }],
+      fallback: { type: 'cassandra', settings: '{}' }
+    } as StoryInfo]
+  ]
+
+  getStories(): Promise<[string, StoryInfo][]> {
+    return Promise.resolve(this.testStories)
+  }
+
+  getStory(storyName: string): Promise<StoryInfo> {
+    let result = {} as StoryInfo
+    this.testStories.forEach(s => {
+      if (storyName == s[0]) result = s[1]
+    })
+    return Promise.resolve(result);
+  }
+
+  createStory(storyName: string, storyInfo: StoryInfo): Promise<void> {
+    return Promise.resolve();
+  }
+
+  updateStory(storyName: string, storyInfo: StoryInfo): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+export default IS_OFFLINE ? new OfflineRequest() : new RequestImpl()
