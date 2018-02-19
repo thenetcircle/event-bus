@@ -123,14 +123,7 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import {
-    StoryInfo,
-    StoryStatus,
-    StoryTask,
-    TaskEditAction,
-    TaskEditType,
-    StoryUtils
-  } from '../lib/story-utils';
+  import {StoryTask, StoryUtils, TaskEditAction, TaskEditType} from '../lib/story-utils';
   import TaskEditor from "./TaskEditor.vue"
 
   export default Vue.extend({

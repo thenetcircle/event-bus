@@ -76,10 +76,9 @@
 <script lang="ts">
   import Vue from "vue"
   import request from '../lib/request';
-  import {StoryInfo, StoryUtils} from '../lib/story-utils';
+  import {StoryInfo} from '../lib/story-utils';
   import StoryGraph from './StoryGraph.vue'
   import GrafanaGraph from './GrafanaGraph.vue'
-
 
   export default Vue.extend({
     data() {

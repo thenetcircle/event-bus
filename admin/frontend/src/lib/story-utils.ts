@@ -100,12 +100,5 @@ export class StoryUtils {
 
 export enum TaskEditType { ADD, EDIT }
 export class TaskEditAction {
-  readonly type: TaskEditType
-  readonly taskCategory: string
-  readonly task: StoryTask
-  constructor(type: TaskEditType, taskCategory: string, task: StoryTask) {
-    this.type = type
-    this.taskCategory = taskCategory
-    this.task = task
-  }
+  constructor(readonly type: TaskEditType, readonly taskCategory: string, readonly task: StoryTask) {}
 }

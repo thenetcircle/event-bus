@@ -8,8 +8,8 @@
 
             <div class="navbar-brand">
               <router-link class="navbar-item" :to="{ name: 'home' }">
-                <img src="/assets/logo.png" style="max-height:46px;"/>
-                <span class="tag is-white">{{ app_name }}</span>
+                <img :src="logoImg" style="max-height:46px;"/>
+                <span class="tag is-white">{{ appName }}</span>
               </router-link>
             </div>
 
@@ -59,7 +59,8 @@
   export default Vue.extend({
     data() {
       return {
-        app_name: APP_NAME,
+        appName: APP_NAME,
+        logoImg: URL_PREFIX + '/assets/logo.png',
         isLoading: false,
         notification: {
           show: false,
