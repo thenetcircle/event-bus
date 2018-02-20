@@ -9,27 +9,7 @@
           <p class="title is-spaced">
             {{ info.name }}
           </p>
-
-          <table class="table is-narrow">
-            <tbody>
-            <tr>
-              <th>Status:</th>
-              <td>{{ info.status }}</td>
-            </tr>
-            <tr>
-              <th>Server:</th>
-              <td>{{ info.server }}</td>
-            </tr>
-            <tr>
-              <th>Assigned Stories:</th>
-              <td>{{ info.stories.join(', ') }}</td>
-            </tr>
-            <tr>
-              <th>Version:</th>
-              <td>{{ info.version }}</td>
-            </tr>
-            </tbody>
-          </table>
+          <runner-summary :info="info"></runner-summary>
         </router-link>
       </div>
 
@@ -40,33 +20,36 @@
 </template>
 
 <script lang="ts">
-
   import Vue from "vue"
-  import request from "../lib/request"
-  import {RunnerInfo, RunnerStatus} from "../lib/runner-utils";
-
-  let testRunners = [
-    {
-      name: 'default-runner',
-      status: RunnerStatus.RUNNING,
-      server: 'thin_thenetcircle_lab',
-      stories: ['http-to-benn'],
-      version: 'master'
-    },
-
-    {
-      name: 'test-runner',
-      status: RunnerStatus.IDLE,
-      server: 'thin_thenetcircle_lab',
-      stories: ['http-to-kafka', 'kafka-to-master-benn'],
-      version: 'master'
-    }
-  ]
+  import {RunnerInfo} from "../lib/runner-utils";
+  import RunnerSummary from './RunnerSummary.vue'
+  import request from "../lib/request";
 
   export default Vue.extend({
     data() {
       return {
-        runners: <RunnerInfo[]>testRunners
+        runners: <RunnerInfo[]>[]
+      }
+    },
+
+    components: {
+      RunnerSummary
+    },
+
+    created() {
+      this.fetchData()
+    },
+
+    watch: {
+      '$route': 'fetchData'
+    },
+
+    methods: {
+      fetchData() {
+        request.getRunners()
+          .then(items => {
+            this.runners = items
+          })
       }
     }
   })

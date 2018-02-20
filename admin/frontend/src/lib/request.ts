@@ -24,7 +24,15 @@ interface Request {
 
   updateStory(storyName: string, storyInfo: StoryInfo): Thenable<void>
 
-  getStoryRunners(storyName: string): Thenable<RunnerInfo>
+  getRunners(): Thenable<RunnerInfo[]>
+
+  getStoryRunners(storyName: string): Thenable<RunnerInfo[]>
+
+  getRunner(runnerName: string): Thenable<RunnerInfo>
+
+  assignRunner(storyName: string, runnerName: string): Thenable<void>
+
+  dismissRunner(storyName: string, runnerName: string): Thenable<void>
 }
 
 class RequestImpl implements Request {
@@ -101,8 +109,24 @@ class RequestImpl implements Request {
       .catch(RequestImpl.errorHandler)
   }
 
-  getStoryRunners(storyName: string): Thenable<RunnerInfo> {
-    return Promise.resolve({} as RunnerInfo);
+  getRunners(): Thenable<RunnerInfo[]> {
+    return Promise.resolve([{} as RunnerInfo]);
+  }
+
+  getStoryRunners(storyName: string): Thenable<RunnerInfo[]> {
+    return Promise.resolve([{} as RunnerInfo]);
+  }
+
+  assignRunner(storyName: string, runnerName: string): Thenable<void> {
+    return Promise.resolve();
+  }
+
+  dismissRunner(storyName: string, runnerName: string): Thenable<void> {
+    return Promise.resolve();
+  }
+
+  getRunner(runnerName: string): Thenable<RunnerInfo> {
+    return Promise.resolve({} as RunnerInfo)
   }
 
   private static errorHandler(error: any): void {
@@ -176,6 +200,7 @@ class OfflineRequest implements Request {
   "parallelism": 3
 }`}
     }],
+
     ['kafka-to-http-without-fallback', {
       source: {
         type: 'kafka', settings: `{
@@ -200,15 +225,7 @@ class OfflineRequest implements Request {
   "concurrent-retries": 1
 }`},
       status: StoryStatus.INIT,
-      transforms: [],
-      fallback: {type: 'cassandra', settings: `{
-  "contact-points": [
-    "cassandra-server-01",
-    "cassandra-server-02"
-  ],
-  "port": 9042,
-  "parallelism": 3
-}`}
+      transforms: []
     }]
   ]
 
@@ -225,17 +242,55 @@ class OfflineRequest implements Request {
   }
 
   createStory(storyName: string, storyInfo: StoryInfo): Thenable<void> {
+    this.testStories.push([storyName, storyInfo])
     return Promise.resolve();
   }
 
   updateStory(storyName: string, storyInfo: StoryInfo): Thenable<void> {
+    this.testStories.forEach((info, index) => {
+      if (info[0] == storyName) {
+        this.testStories[index][1] = storyInfo
+      }
+    })
     return Promise.resolve();
   }
 
-  getStoryRunners(storyName: string): Thenable<RunnerInfo> {
-    let result: RunnerInfo[] = this.testRunners.filter()
-    this.testRunners.forEach()
+  getRunners(): Thenable<RunnerInfo[]> {
+    return Promise.resolve(this.testRunners)
+  }
+
+  getStoryRunners(storyName: string): Thenable<RunnerInfo[]> {
+    let result: RunnerInfo[] = this.testRunners.filter((info) => {
+      return info.stories.indexOf(storyName) !== -1
+    })
+    return Promise.resolve(result)
+  }
+
+  assignRunner(storyName: string, runnerName: string): Thenable<void> {
+    this.testRunners.forEach((info) => {
+      if (info.name == runnerName && info.stories.indexOf(storyName) === -1) {
+        info.stories.push(storyName)
+      }
+    })
     return Promise.resolve();
+  }
+
+  dismissRunner(storyName: string, runnerName: string): Thenable<void> {
+    this.testRunners.forEach((info) => {
+      let index = info.stories.indexOf(storyName)
+      if (info.name == runnerName &&  index !== -1) {
+        info.stories.splice(index, 1)
+      }
+    })
+    return Promise.resolve();
+  }
+
+  getRunner(runnerName: string): Thenable<RunnerInfo> {
+    let result = {} as RunnerInfo
+    this.testRunners.forEach(info => {
+      if (runnerName == info.name) result = info
+    })
+    return Promise.resolve(result);
   }
 }
 

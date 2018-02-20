@@ -7,6 +7,7 @@ import Stories from "./components/Stories.vue"
 import NewStory from "./components/NewStory.vue"
 import Story from "./components/Story.vue"
 import Runners from "./components/Runners.vue"
+import Runner from "./components/Runner.vue"
 
 Vue.use(VueRouter);
 
@@ -15,7 +16,7 @@ const router = new VueRouter({
   routes: [
     {path: `${URL_PREFIX}/`, component: Home, name: 'home'},
     {path: `${URL_PREFIX}/runners`, component: Runners, name: 'runners'},
-    {path: `${URL_PREFIX}/runner/:runnerName`, component: Story, name: 'runner'},
+    {path: `${URL_PREFIX}/runner/:runnerName`, component: Runner, name: 'runner'},
     {path: `${URL_PREFIX}/stories`, component: Stories, name: 'stories'},
     {path: `${URL_PREFIX}/newstory`, component: NewStory, name: 'newstory'},
     {path: `${URL_PREFIX}/story/:storyName`, component: Story, name: 'story'}

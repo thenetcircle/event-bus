@@ -1,6 +1,6 @@
 <template>
 
-  <div class="container box story">
+  <div class="container box story" style="margin-bottom: 1rem">
     <div class="level">
       <div class="level-left">
         <div class="level-item">
@@ -18,10 +18,12 @@
     <div class="tabs is-medium">
       <ul>
         <li :class="{ 'is-active': isOverview }" @click="changeTab('overview')"><a>Overview</a></li>
-        <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"><a>Failed Events</a>
-        </li>
+        <li :class="{ 'is-active': isRunners }" @click="changeTab('runners')"><a>Runners</a></li>
         <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')">
           <a>Statistics</a></li>
+        <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"
+            v-if="storyInfo.fallback !== undefined"><a>Failed Events</a>
+        </li>
       </ul>
     </div>
 
@@ -30,25 +32,45 @@
       <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"
                    @save="onSaveStory"></story-graph>
 
-      <section style="margin-top: 3rem;">
-        <p class="subtitle is-4">Runners:</p>
-        <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
-          <thead>
-          <tr>
-            <th>Name</th>
-            <th>Server</th>
-            <th>Version</th>
-          </tr>
-          </thead>
-          <tbody>
-          <tr>
-            <td>default-runner</td>
-            <td>cloud-host-01</td>
-            <td></td>
-          </tr>
-          </tbody>
-        </table>
-      </section>
+    </div>
+
+    <div v-show="isRunners">
+
+      <div class="level">
+        <div class="level-left">
+        </div>
+        <div class="level-right">
+          <div class="level-item">
+            <a class="button" @click="onOpenChooseRunner">Assign to a new runner</a>
+          </div>
+        </div>
+      </div>
+
+      <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+        <thead>
+        <tr>
+          <th>Name</th>
+          <th>Server</th>
+          <th>Version</th>
+          <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="item in runners">
+          <td>
+            <router-link :to="{ name: 'runner', params: { 'runnerName': item.name } }">{{
+              item.name }}
+            </router-link>
+          </td>
+          <td>{{ item.server }}</td>
+          <td>{{ item.version }}</td>
+          <td><a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a></td>
+        </tr>
+        </tbody>
+      </table>
+
+      <choose-runner v-if="chooseRunner" @close="onCloseChooseRunner" @choose="onAssignRunner"
+                     :excludes="runners.map(info => info.name)"></choose-runner>
 
     </div>
 
@@ -68,30 +90,34 @@
     </div>
 
 
-
   </div>
 
 </template>
 
 <script lang="ts">
   import Vue from "vue"
-  import request from '../lib/request';
-  import {StoryInfo} from '../lib/story-utils';
+  import request from '../lib/request'
+  import {StoryInfo, StoryUtils} from '../lib/story-utils'
   import StoryGraph from './StoryGraph.vue'
   import GrafanaGraph from './GrafanaGraph.vue'
+  import {RunnerInfo} from '../lib/runner-utils'
+  import ChooseRunner from './ChooseRunner.vue'
 
   export default Vue.extend({
     data() {
       return {
         storyName: this.$route.params.storyName,
         storyInfo: {} as StoryInfo,
-        currTab: 'overview'
+        currTab: 'overview',
+        runners: <RunnerInfo[]>[],
+        chooseRunner: false
       }
     },
 
     components: {
       StoryGraph,
-      GrafanaGraph
+      GrafanaGraph,
+      ChooseRunner
     },
 
     created() {
@@ -108,6 +134,10 @@
           .then(storyInfo => {
             this.storyInfo = storyInfo
           })
+        request.getStoryRunners(this.storyName)
+          .then(infos => {
+            this.runners = infos
+          })
       },
 
       changeTab(tab: string) {
@@ -115,11 +145,43 @@
       },
 
       onSaveStory(newStoryInfo: StoryInfo) {
-        /*if (confirm('are you sure to save?')) {
-          this.storyInfo = StoryUtils.copyStoryInfo(newStoryInfo)
-          this.storyInfo.source.settings = '{}'
-          console.log()
-        }*/
+        request.updateStory(this.storyName, newStoryInfo)
+          .then(() => {
+            this.storyInfo = StoryUtils.copyStoryInfo(newStoryInfo)
+          })
+      },
+
+      onOpenChooseRunner(): void {
+        this.chooseRunner = true
+      },
+      onCloseChooseRunner(): void {
+        this.chooseRunner = false
+      },
+      onAssignRunner(runnerInfo: RunnerInfo): void {
+        if (confirm(`Are you sure to assign story "${this.storyName}" to runner "${runnerInfo.name}"?`)) {
+          this.onCloseChooseRunner()
+          request.assignRunner(this.storyName, runnerInfo.name)
+            .then(() => {
+              this.runners.push(runnerInfo)
+            })
+        }
+      },
+      onDismissRunner(runnerInfo: RunnerInfo): void {
+        if (confirm(`Are you sure to dismiss story "${this.storyName}" from runner "${runnerInfo.name}"?`)) {
+          request.dismissRunner(this.storyName, runnerInfo.name)
+            .then(() => {
+              let index = -1
+              this.runners.forEach((info, _index) => {
+                if (info.name == runnerInfo.name) {
+                  index = _index
+                  return;
+                }
+              })
+              if (index !== -1) {
+                this.runners.splice(index, 1)
+              }
+            })
+        }
       }
     },
 
@@ -132,6 +194,9 @@
       },
       isMonitoring(): boolean {
         return this.currTab == 'monitoring'
+      },
+      isRunners(): boolean {
+        return this.currTab == 'runners'
       }
     }
   })

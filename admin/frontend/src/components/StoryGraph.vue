@@ -1,33 +1,6 @@
 <template>
   <div>
 
-    <div style="margin-bottom: 1rem;">
-
-      <div class="level">
-        <div class="level-left">
-          <div class="level-item">
-            <button class="button" @click="onAddTask('Add a Transform', 'transform')">
-              Add Transform
-            </button>
-          </div>
-          <div class="level-item" v-if="!storyInfo.fallback">
-            <button class="button" @click="onAddTask('Add a Fallback', 'fallback')">Add Fallback
-            </button>
-          </div>
-        </div>
-        <div class="level-right">
-          <div class="level-item" v-if="changed">
-            <button class="button is-info" @click="onSaveStory">Save</button>
-          </div>
-          <div class="level-item" v-if="changed">
-            <button class="button is-light" @click="onResetChanges">Reset</button>
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
     <div class="box">
 
       <div class="columns">
@@ -94,6 +67,33 @@
             </div>
           </a>
         </div>
+      </div>
+
+    </div>
+
+    <div style="margin-bottom: 1rem;">
+
+      <div class="level">
+        <div class="level-left">
+          <div class="level-item">
+            <button class="button" @click="onAddTask('Add a Transform', 'transform')">
+              Add Transform
+            </button>
+          </div>
+          <div class="level-item" v-if="!storyInfo.fallback">
+            <button class="button" @click="onAddTask('Add a Fallback', 'fallback')">Add Fallback
+            </button>
+          </div>
+        </div>
+        <div class="level-right">
+          <div class="level-item" v-if="changed">
+            <button class="button is-info" @click="onSaveStory">Save</button>
+          </div>
+          <div class="level-item" v-if="changed">
+            <button class="button is-light" @click="onResetChanges">Reset</button>
+          </div>
+        </div>
+
       </div>
 
     </div>
@@ -257,7 +257,7 @@
 
       onConfirm() {
         this.$emit('save', this.storyInfo)
-        // this.changed = false
+        this.changed = false
         this.onNotConfirm()
       },
 
