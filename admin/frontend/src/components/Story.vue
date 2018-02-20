@@ -77,16 +77,7 @@
     <div v-show="isFallback"></div>
 
     <div v-if="isMonitoring">
-      <grafana-graph :storyname="storyName" type="processed"></grafana-graph>
-
-      <div class="columns" style="margin-top: 6px;">
-        <div class="column is-half">
-          <grafana-graph :storyname="storyName" type="completion"></grafana-graph>
-        </div>
-        <div class="column">
-          <grafana-graph :storyname="storyName" type="exception"></grafana-graph>
-        </div>
-      </div>
+      <story-statistics :storyname="storyName"></story-statistics>
     </div>
 
 
@@ -102,6 +93,8 @@
   import GrafanaGraph from './GrafanaGraph.vue'
   import {RunnerInfo} from '../lib/runner-utils'
   import ChooseRunner from './ChooseRunner.vue'
+  import StoryStatistics from './StoryStatistics.vue'
+  import bus from '../lib/bus'
 
   export default Vue.extend({
     data() {
@@ -117,7 +110,8 @@
     components: {
       StoryGraph,
       GrafanaGraph,
-      ChooseRunner
+      ChooseRunner,
+      StoryStatistics
     },
 
     created() {
@@ -148,6 +142,7 @@
         request.updateStory(this.storyName, newStoryInfo)
           .then(() => {
             this.storyInfo = StoryUtils.copyStoryInfo(newStoryInfo)
+            bus.$emit('notify', 'The story has been updated!')
           })
       },
 
@@ -159,10 +154,11 @@
       },
       onAssignRunner(runnerInfo: RunnerInfo): void {
         if (confirm(`Are you sure to assign story "${this.storyName}" to runner "${runnerInfo.name}"?`)) {
-          this.onCloseChooseRunner()
           request.assignRunner(this.storyName, runnerInfo.name)
             .then(() => {
               this.runners.push(runnerInfo)
+              this.onCloseChooseRunner()
+              bus.$emit('notify', `The story has been assigned to runner "${runnerInfo.name}"!`)
             })
         }
       },
@@ -180,6 +176,7 @@
               if (index !== -1) {
                 this.runners.splice(index, 1)
               }
+              bus.$emit('notify', `The story has been unassigned from runner "${runnerInfo.name}"!`)
             })
         }
       }

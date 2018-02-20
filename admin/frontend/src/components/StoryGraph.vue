@@ -8,8 +8,8 @@
         <div class="column" :class="fatColumnClass">
           <a class="box"
              @click="onEditTask('Source', 'source', storyInfo.source)">
-            <h5 class="title is-5">{{ storyInfo.source.type }} <span
-              class="tag is-success">source</span></h5>
+            <h5 class="title is-5">Source <span
+              class="tag is-success">{{ storyInfo.source.type }}</span></h5>
             <div class="content">
               <pre class="settings">{{ storyInfo.source.settings | jsonPretty }}</pre>
             </div>
@@ -22,8 +22,8 @@
              @click="onEditTask('Transform ' + (index + 1), 'transform', trans)">
 
             <h5 class="title is-5">
-              {{ trans.type }}
-              <span class="tag is-light">transform</span>
+              Transform {{ index + 1 }}
+              <span class="tag is-light">{{ trans.type }}</span>
               <a class="icon" @click.stop="onRemoveTask('transform', index)"><i
                 class="fas fa-trash-alt"></i></a>
             </h5>
@@ -37,8 +37,8 @@
         <div class="column" :class="fatColumnClass">
           <a class="box"
              @click="onEditTask('Sink', 'sink', storyInfo.sink)">
-            <h5 class="title is-5">{{ storyInfo.sink.type }} <span
-              class="tag is-primary">sink</span>
+            <h5 class="title is-5">Sink <span
+              class="tag is-primary">{{ storyInfo.sink.type }}</span>
             </h5>
             <div class="content">
               <pre class="settings">{{ storyInfo.sink.settings | jsonPretty }}</pre>
@@ -56,8 +56,8 @@
           <a class="box"
              @click="onEditTask('Fallback', 'fallback', storyInfo.fallback)">
             <h5 class="title is-5">
-              {{ storyInfo.fallback.type }}
-              <span class="tag is-warning">fallback</span>
+              Fallback
+              <span class="tag is-warning">{{ storyInfo.fallback.type }}</span>
               <a class="icon" @click.stop="onRemoveTask('fallback')"><i
                 class="fas fa-trash-alt"></i></a>
             </h5>
@@ -103,20 +103,7 @@
                    @save="onTaskEditorSave"/>
     </transition>
 
-    <div class="modal" :class="{ 'is-active': confirmation.show }">
-      <div class="modal-background"></div>
-      <div class="modal-card">
-        <header class="modal-card-head">
-          <p class="modal-card-title">{{ confirmation.title }}</p>
-          <button class="delete" @click.prevent="onNotConfirm()" aria-label="close"></button>
-        </header>
-        <section class="modal-card-body" v-html="confirmation.message"></section>
-        <footer class="modal-card-foot">
-          <button class="button is-info" @click.prevent="onConfirm()">Yes</button>
-          <button class="button" @click.prevent="onNotConfirm()">No</button>
-        </footer>
-      </div>
-    </div>
+    <confirmation-box v-if="confirmation.show" v-bind="confirmation" @confirm="onConfirm" @cancel="onNotConfirm"></confirmation-box>
 
   </div>
 </template>
@@ -125,6 +112,7 @@
   import Vue from "vue"
   import {StoryTask, StoryUtils, TaskEditAction, TaskEditType} from '../lib/story-utils';
   import TaskEditor from "./TaskEditor.vue"
+  import ConfirmationBox from './ConfirmationBox.vue'
 
   export default Vue.extend({
     props: ['info'],
@@ -157,6 +145,7 @@
 
     components: {
       TaskEditor,
+      ConfirmationBox
     },
 
     filters: {

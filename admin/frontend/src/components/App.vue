@@ -19,6 +19,9 @@
               <router-link :to="{ name: 'stories' }" class="navbar-item" exact-active-class="is-active">
                 Stories
               </router-link>
+              <router-link :to="{ name: 'newstory' }" class="navbar-item" exact-active-class="is-active">
+                New Story
+              </router-link>
               <router-link :to="{ name: 'runners' }" class="navbar-item" exact-active-class="is-active">
                 Runners
               </router-link>

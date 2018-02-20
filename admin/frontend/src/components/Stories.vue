@@ -3,8 +3,11 @@
   <div class="container">
 
     <div style="margin-bottom: 1rem;">
-      <div class="field">
-        <router-link class="button is-info" :to="{ name: 'newstory' }">Create New Story</router-link>
+      <div class="is-clearfix">
+        <div class="is-pulled-right">
+          <router-link class="button is-info" :to="{ name: 'newstory' }">Create a New Story
+          </router-link>
+        </div>
       </div>
     </div>
 
@@ -41,7 +44,7 @@
 <script lang="ts">
   import Vue from "vue"
   import request from "../lib/request"
-  import {StoryInfo, StoryUtils} from '../lib/story-utils';
+  import {StoryInfo} from '../lib/story-utils';
 
   interface StorySummary {
     name: string,

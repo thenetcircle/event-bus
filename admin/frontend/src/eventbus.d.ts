@@ -5,3 +5,4 @@ declare module "*.vue" {
 declare const APP_NAME: string
 declare const URL_PREFIX: string
 declare const IS_OFFLINE: boolean
+declare const GRAFANA_URL: string

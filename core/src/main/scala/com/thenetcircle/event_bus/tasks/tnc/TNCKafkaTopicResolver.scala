@@ -132,7 +132,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
       return event
     }
     if (event.metadata.name.isEmpty) {
-      logger.debug(s"event ${event.uuid} has not name, will be send to default topic $defaultTopic.")
+      logger.debug(s"event ${event.uuid} has no name, will be send to default topic $defaultTopic.")
       return event.withGroup(defaultTopic)
     }
 

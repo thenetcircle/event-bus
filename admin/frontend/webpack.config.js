@@ -61,7 +61,8 @@ module.exports = {
     new webpack.DefinePlugin({
       'APP_NAME': JSON.stringify(process.env.EB_APPNAME || 'app'),
       'URL_PREFIX': JSON.stringify(process.env.EB_URLPREFIX || ''),
-      'IS_OFFLINE': JSON.stringify(process.env.EB_ISOFFLINE || false)
+      'IS_OFFLINE': JSON.stringify(process.env.EB_ISOFFLINE || false),
+      'GRAFANA_URL': JSON.stringify(process.env.EB_GRAFANAURL || '')
     }),
     new HtmlWebpackPlugin({
       template: path.resolve(__dirname, './index.html'),

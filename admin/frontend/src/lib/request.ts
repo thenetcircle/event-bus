@@ -33,6 +33,10 @@ interface Request {
   assignRunner(storyName: string, runnerName: string): Thenable<void>
 
   dismissRunner(storyName: string, runnerName: string): Thenable<void>
+
+  getTopics(): Thenable<string>
+
+  updateTopics(topics: string): Thenable<void>
 }
 
 class RequestImpl implements Request {
@@ -127,6 +131,14 @@ class RequestImpl implements Request {
 
   getRunner(runnerName: string): Thenable<RunnerInfo> {
     return Promise.resolve({} as RunnerInfo)
+  }
+
+  getTopics(): Thenable<string> {
+    return Promise.resolve('{}')
+  }
+
+  updateTopics(topics: string): Thenable<void> {
+    return Promise.resolve()
   }
 
   private static errorHandler(error: any): void {
@@ -229,6 +241,17 @@ class OfflineRequest implements Request {
     }]
   ]
 
+  testTopics: string = `[{
+    "topic": "test-topic-01", 
+    "patterns": ["user\\\\..*", "message\\\\..*"]
+  }, {
+    "topic": "test-topic-02", 
+    "patterns": ["feature\\\\..*", "click\\\\..*"]
+  }, {
+    "topic": "test-default-topic", 
+    "patterns": [".*"]
+  }]`
+
   getStories(): Thenable<[string, StoryInfo][]> {
     return Promise.resolve(this.testStories)
   }
@@ -291,6 +314,15 @@ class OfflineRequest implements Request {
       if (runnerName == info.name) result = info
     })
     return Promise.resolve(result);
+  }
+
+  getTopics(): Thenable<string> {
+    return Promise.resolve(this.testTopics)
+  }
+
+  updateTopics(topics: string): Thenable<void> {
+    this.testTopics = topics
+    return Promise.resolve()
   }
 }
 
