@@ -3,7 +3,7 @@
   <div class="container">
     <div class="is-clearfix" style="margin-bottom: 1rem">
       <div class="is-pulled-right">
-        <a class="button is-info" @click="onSave">Save Changes</a>
+        <a class="button is-info" @click="onSave">Update</a>
         <a class="button" @click="onReset">Reset To Default</a>
       </div>
     </div>
@@ -80,7 +80,7 @@
         this.confirmation = {
           ...this.confirmation, ...{
             show: true,
-            title: 'Are you sure to save the topics?',
+            title: 'Are you sure to update the topics?',
             message: `<article class="content"><pre>${message}</pre></article>`
           }
         }
@@ -89,7 +89,7 @@
       onConfirm(): void {
         request.updateTopics(JSON.stringify(this.editor.getValue()))
           .then(() => {
-            bus.$emit('notify', 'Topics are updated!')
+            bus.$emit('notify', 'The topics are updated!')
             this.onNotConfirm()
           })
       },

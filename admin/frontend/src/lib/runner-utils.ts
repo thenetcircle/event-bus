@@ -11,3 +11,15 @@ export interface RunnerInfo {
   stories: string[]
   version: string
 }
+
+export class RunnerUtils {
+  static buildRunnerInfoFromData(runnerName: string, data: any): RunnerInfo {
+    return {
+      name: runnerName,
+      status: data["status"],
+      server: data["server"],
+      stories: Object.keys(data["stories"]),
+      version: data["version"] || ""
+    }
+  }
+}

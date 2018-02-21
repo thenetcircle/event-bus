@@ -58,6 +58,17 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
     }
   }
 
+  def deletePath(relativePath: String): Unit = {
+    val absPath = getAbsPath(relativePath)
+    try {
+      client.delete().deletingChildrenIfNeeded().forPath(absPath)
+    } catch {
+      case ex: Throwable =>
+        logger.error(s"deletePath ZooKeeper node: $absPath failed with error: $ex")
+        throw ex
+    }
+  }
+
   def getClient(): CuratorFramework = client
 
   def getData(relativePath: String): Option[String] = {
@@ -71,15 +82,14 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
     }
   }
 
-  def delete(relativePath: String): Boolean = {
+  def setData(relativePath: String, data: String): Unit = {
     val absPath = getAbsPath(relativePath)
     try {
-      client.delete().deletingChildrenIfNeeded().forPath(absPath)
-      true
+      client.setData().forPath(absPath, data.getBytes())
     } catch {
       case ex: Throwable =>
-        logger.error(s"delete ZooKeeper node: $absPath failed with error: $ex")
-        false
+        logger.error(s"getData from ZooKeeper path: $absPath failed with error: $ex")
+        throw ex
     }
   }
 

@@ -48,9 +48,9 @@ class ActionHandlerTest extends IntegrationTestBase {
       .getZKNodeTreeAsJson("test/sink/item1")
       .trim shouldEqual """kafka#{  "bootstrap-servers": "maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093"}"""
 
-    actionHandler.getZKNodeTreeAsJson("test", false) shouldEqual """{"transforms": "tnc-topic-resolver#{}","source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}","sink": {"item1": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}"},"status": "INIT"}"""
+    // actionHandler.getZKNodeTreeAsJson("test", false) shouldEqual """{"transforms": "tnc-topic-resolver#{}","source": "http#{  \"port\": 8899,  \"succeeded-response\": \"ok\"}","sink": {"item1": "kafka#{  \"bootstrap-servers\": \"maggie-kafka-1:9093,maggie-kafka-2:9093,maggie-kafka-3:9093\"}"},"status": "INIT"}"""
 
-    zkManager.delete("test")
+    zkManager.deletePath("test")
 
     actionHandler.getZKNodeTreeAsJson("test") shouldEqual ""
   }

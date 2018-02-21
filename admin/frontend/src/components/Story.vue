@@ -154,7 +154,7 @@
       },
       onAssignRunner(runnerInfo: RunnerInfo): void {
         if (confirm(`Are you sure to assign story "${this.storyName}" to runner "${runnerInfo.name}"?`)) {
-          request.assignRunner(this.storyName, runnerInfo.name)
+          request.assignStory(runnerInfo.name, this.storyName)
             .then(() => {
               this.runners.push(runnerInfo)
               this.onCloseChooseRunner()
@@ -164,7 +164,7 @@
       },
       onDismissRunner(runnerInfo: RunnerInfo): void {
         if (confirm(`Are you sure to dismiss story "${this.storyName}" from runner "${runnerInfo.name}"?`)) {
-          request.dismissRunner(this.storyName, runnerInfo.name)
+          request.unassignStory(runnerInfo.name, this.storyName)
             .then(() => {
               let index = -1
               this.runners.forEach((info, _index) => {

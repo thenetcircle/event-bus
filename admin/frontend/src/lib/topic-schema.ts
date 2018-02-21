@@ -1,10 +1,10 @@
 export default {
   "type": "array",
-  "title": "Topic List",
+  "title": "Topic & Events Mapping",
   "uniqueItems": true,
   "items": {
     "type": "object",
-    "title": "Entry",
+    "title": "Mapping",
     "properties": {
       "topic": {
         "type": "string",

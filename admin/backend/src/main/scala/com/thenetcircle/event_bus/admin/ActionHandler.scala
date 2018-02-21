@@ -22,8 +22,22 @@ import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.typesafe.config.{ConfigFactory, ConfigObject}
 import com.typesafe.scalalogging.StrictLogging
+import spray.json.DefaultJsonProtocol
 
 import scala.collection.JavaConverters._
+
+case class StoryInfo(
+    name: String,
+    source: Option[String],
+    sink: Option[String],
+    status: Option[String],
+    transforms: Option[String],
+    fallback: Option[String]
+)
+
+object StoryInfoJsonSupport extends DefaultJsonProtocol {
+  implicit val StoryInfoFormats = jsonFormat6(StoryInfo)
+}
 
 class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
     extends StrictLogging {
@@ -104,5 +118,100 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
     val root = ConfigFactory.parseString(json).root()
     update(path, root)
   }
+
+  def createResponse(code: Int, errorMessage: String = ""): String = {
+    val message = errorMessage.replaceAll("""\\""", """\\\\""").replaceAll("\"", "\\\\\"")
+    s"""{"code": "$code", "message": "$message"}"""
+  }
+
+  def wrapPath(path: Option[String]): String =
+    if (path.isEmpty || path.get.isEmpty)
+      appContext.getAppEnv()
+    else
+      s"${appContext.getAppEnv()}/${path.get}"
+
+  // -------- Actions
+
+  def getZKTree(path: Option[String]): String =
+    getZKNodeTreeAsJson(wrapPath(path))
+
+  def updateZKTree(path: Option[String], json: String): String =
+    try {
+      updateZKNodeTreeByJson(wrapPath(path), json)
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
+  def getStories(): String =
+    getZKNodeTreeAsJson(wrapPath(Some("stories")))
+
+  def getStory(storyName: String): String =
+    getZKNodeTreeAsJson(wrapPath(Some(s"stories/$storyName")))
+
+  def createStory(storyInfo: StoryInfo): String =
+    try {
+      if (storyInfo.source.isEmpty || storyInfo.sink.isEmpty) {
+        throw new IllegalArgumentException("Source and Sink settings are required for creating Story.")
+      }
+
+      val storyPath = wrapPath(Some(s"stories/${storyInfo.name}"))
+      zkManager.ensurePath(s"$storyPath/status", storyInfo.status.getOrElse("INIT"))
+      zkManager.ensurePath(s"$storyPath/source", storyInfo.source.get)
+      zkManager.ensurePath(s"$storyPath/sink", storyInfo.sink.get)
+      storyInfo.transforms.foreach(d => zkManager.ensurePath(s"$storyPath/transforms", d))
+      storyInfo.fallback.foreach(d => zkManager.ensurePath(s"$storyPath/fallback", d))
+
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
+  def updateStory(storyInfo: StoryInfo): String =
+    try {
+      val storyPath = wrapPath(Some(s"stories/${storyInfo.name}"))
+
+      storyInfo.source.foreach(d => zkManager.setData(s"$storyPath/source", d))
+      storyInfo.sink.foreach(d => zkManager.setData(s"$storyPath/sink", d))
+      storyInfo.transforms.foreach(d => zkManager.setData(s"$storyPath/transforms", d))
+      storyInfo.fallback.foreach(d => zkManager.setData(s"$storyPath/fallback", d))
+
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
+  def getRunners(): String =
+    getZKNodeTreeAsJson(wrapPath(Some("runners")))
+
+  def getRunner(runnerName: String): String =
+    getZKNodeTreeAsJson(wrapPath(Some(s"runners/$runnerName")))
+
+  def assignStory(runnerName: String, storyName: String): String =
+    try {
+      zkManager.ensurePath(wrapPath(Some(s"runners/$runnerName/stories/$storyName")))
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
+  def unassignStory(runnerName: String, storyName: String): String =
+    try {
+      zkManager.deletePath(wrapPath(Some(s"runners/$runnerName/stories/$storyName")))
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
+  def getTopics(): String =
+    getZKNodeTreeAsJson(wrapPath(Some("topics")))
+
+  def updateTopics(topics: String): String =
+    try {
+      zkManager.setData(wrapPath(Some("topics")), topics)
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
 
 }

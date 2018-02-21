@@ -2,17 +2,17 @@ import axios from "axios"
 import bus from "../lib/bus"
 import {StoryInfo, StoryStatus, StoryUtils} from "./story-utils";
 import {polyfill, Promise, Thenable} from "es6-promise";
-import {RunnerInfo, RunnerStatus} from "./runner-utils";
+import {RunnerInfo, RunnerStatus, RunnerUtils} from "./runner-utils";
 
 // ES6 Promise Polyfill
 polyfill()
 
 type StorableStoryInfo = {
-  status: string;
-  source: string;
-  sink: string;
-  transforms?: string;
+  source?: string
+  sink?: string
+  transforms?: string
   fallback?: string
+  status?: string
 }
 
 interface Request {
@@ -30,9 +30,9 @@ interface Request {
 
   getRunner(runnerName: string): Thenable<RunnerInfo>
 
-  assignRunner(storyName: string, runnerName: string): Thenable<void>
+  assignStory(runnerName: string, storyName: string): Thenable<void>
 
-  dismissRunner(storyName: string, runnerName: string): Thenable<void>
+  unassignStory(runnerName: string, storyName: string): Thenable<void>
 
   getTopics(): Thenable<string>
 
@@ -82,55 +82,74 @@ class RequestImpl implements Request {
   createStory(storyName: string, storyInfo: StoryInfo): Thenable<any> {
     bus.$emit('loading')
 
-    return axios.post(`${URL_PREFIX}/api/create_story`, {
+    return axios.post(`${URL_PREFIX}/api/story/create`, {
       'name': storyName,
-      'info': RequestImpl.createStorableStoryInfo(storyInfo)
+      ...RequestImpl.createStorableStoryInfo(storyInfo)
     })
-      .then(response => {
-        let data = response.data
-        if (data.code != '0') {
-          throw new Error(data.message)
-        }
-        bus.$emit('loaded')
-      })
+      .then(RequestImpl.respHandler)
       .catch(RequestImpl.errorHandler)
   }
 
   updateStory(storyName: string, storyInfo: StoryInfo): Thenable<void> {
     bus.$emit('loading')
 
-    return axios.post(`${URL_PREFIX}/api/update_story`, {
+    return axios.post(`${URL_PREFIX}/api/story/update`, {
       'name': storyName,
-      'info': RequestImpl.createStorableStoryInfo(storyInfo)
+      ...RequestImpl.createStorableStoryInfo(storyInfo)
     })
+      .then(RequestImpl.respHandler)
+      .catch(RequestImpl.errorHandler)
+  }
+
+  getRunners(): Thenable<any> {
+    bus.$emit('loading')
+
+    return axios.get(`${URL_PREFIX}/api/runners`)
       .then(response => {
         let data = response.data
-        if (data.code != '0') {
-          throw new Error(data.message)
+        let result: RunnerInfo[] = []
+        if (data) {
+          for (let key in data) {
+            if (data.hasOwnProperty(key)) {
+              result.push(RunnerUtils.buildRunnerInfoFromData(key, data[key]))
+            }
+          }
         }
         bus.$emit('loaded')
+        return result
+      })
+      .catch(RequestImpl.errorHandler);
+  }
+
+  getStoryRunners(storyName: string): Thenable<RunnerInfo[]> {
+    return this.getRunners()
+      .then((runners: RunnerInfo[]) => {
+        return runners.filter(info => info.stories.indexOf(storyName) !== -1)
+      })
+  }
+
+  getRunner(runnerName: string): Thenable<any> {
+    bus.$emit('loading')
+
+    return axios.get(`${URL_PREFIX}/api/runner/` + runnerName)
+      .then(response => {
+        let data = response.data
+        let result = {} as RunnerInfo
+        if (data) {
+          result = RunnerUtils.buildRunnerInfoFromData(runnerName, data)
+        }
+        bus.$emit('loaded')
+        return result
       })
       .catch(RequestImpl.errorHandler)
   }
 
-  getRunners(): Thenable<RunnerInfo[]> {
-    return Promise.resolve([{} as RunnerInfo]);
-  }
-
-  getStoryRunners(storyName: string): Thenable<RunnerInfo[]> {
-    return Promise.resolve([{} as RunnerInfo]);
-  }
-
-  assignRunner(storyName: string, runnerName: string): Thenable<void> {
+  assignStory(runnerName: string, storyName: string): Thenable<void> {
     return Promise.resolve();
   }
 
-  dismissRunner(storyName: string, runnerName: string): Thenable<void> {
+  unassignStory(runnerName: string, storyName: string): Thenable<void> {
     return Promise.resolve();
-  }
-
-  getRunner(runnerName: string): Thenable<RunnerInfo> {
-    return Promise.resolve({} as RunnerInfo)
   }
 
   getTopics(): Thenable<string> {
@@ -139,6 +158,14 @@ class RequestImpl implements Request {
 
   updateTopics(topics: string): Thenable<void> {
     return Promise.resolve()
+  }
+
+  private static respHandler(response: any): void {
+    let data = response.data
+    if (data.code != '0') {
+      throw new Error(data.message)
+    }
+    bus.$emit('loaded')
   }
 
   private static errorHandler(error: any): void {
@@ -188,29 +215,37 @@ class OfflineRequest implements Request {
 
   testStories: [string, StoryInfo][] = [
     ['http-to-kafka-with-fallback', {
-      source: {type: 'http', settings: `{
+      source: {
+        type: 'http', settings: `{
   "interface": "0.0.0.0",
   "port": 8000
-}`},
-      sink: {type: 'kafka', settings: `{
+}`
+      },
+      sink: {
+        type: 'kafka', settings: `{
   "bootstrap-servers": "kafka-server-01:9092,kafka-server-02:9092",
   "default-topic": "event-default",
   "use-event-group-as-topic": true,
   "parallelism": 100
-}`},
+}`
+      },
       status: StoryStatus.INIT,
-      transforms: [{type: 'tnc-topic-resolver', settings: `{
+      transforms: [{
+        type: 'tnc-topic-resolver', settings: `{
   "default-topic": "event-{app_name}-default",
   "use-cache": false
-}`}],
-      fallback: {type: 'cassandra', settings: `{
+}`
+      }],
+      fallback: {
+        type: 'cassandra', settings: `{
   "contact-points": [
     "cassandra-server-01",
     "cassandra-server-02"
   ],
   "port": 9042,
   "parallelism": 3
-}`}
+}`
+      }
     }],
 
     ['kafka-to-http-without-fallback', {
@@ -226,7 +261,8 @@ class OfflineRequest implements Request {
   "max-connections": 1024
 }`
       },
-      sink: {type: 'http', settings: `{
+      sink: {
+        type: 'http', settings: `{
   "default-request": {
     "method": "POST",
     "uri": "http://www.testurl.com"
@@ -235,7 +271,8 @@ class OfflineRequest implements Request {
   "max-backoff": "30 s",
   "max-retrytime": "12 h",
   "concurrent-retries": 1
-}`},
+}`
+      },
       status: StoryStatus.INIT,
       transforms: []
     }]
@@ -289,7 +326,7 @@ class OfflineRequest implements Request {
     return Promise.resolve(result)
   }
 
-  assignRunner(storyName: string, runnerName: string): Thenable<void> {
+  assignStory(runnerName: string, storyName: string): Thenable<void> {
     this.testRunners.forEach((info) => {
       if (info.name == runnerName && info.stories.indexOf(storyName) === -1) {
         info.stories.push(storyName)
@@ -298,10 +335,10 @@ class OfflineRequest implements Request {
     return Promise.resolve();
   }
 
-  dismissRunner(storyName: string, runnerName: string): Thenable<void> {
+  unassignStory(runnerName: string, storyName: string): Thenable<void> {
     this.testRunners.forEach((info) => {
       let index = info.stories.indexOf(storyName)
-      if (info.name == runnerName &&  index !== -1) {
+      if (info.name == runnerName && index !== -1) {
         info.stories.splice(index, 1)
       }
     })

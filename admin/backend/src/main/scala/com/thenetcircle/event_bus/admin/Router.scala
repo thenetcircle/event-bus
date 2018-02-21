@@ -17,27 +17,18 @@
 
 package com.thenetcircle.event_bus.admin
 
-import akka.http.scaladsl.server.Directives.{complete, get, path, pathSingleSlash, _}
+import akka.http.scaladsl.server.Directives.{complete, get, path, _}
 import akka.http.scaladsl.server.Route
 import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.scalalogging.StrictLogging
 
 class Router()(implicit appContext: AppContext) extends StrictLogging {
 
-  val staticDir = appContext.getSystemConfig().getString("app.admin.static_dir")
+  val staticDir: String = appContext.getSystemConfig().getString("app.admin.static_dir")
 
   logger.debug(s"static directory $staticDir")
 
-  def createResponse(code: Int, errorMessage: String = ""): String = {
-    val message = errorMessage.replaceAll("""\\""", """\\\\""").replaceAll("\"", "\\\\\"")
-    s"""{"code": "$code", "message": "$message"}"""
-  }
-
-  def wrapPath(path: Option[String]): String =
-    if (path.isEmpty || path.get.isEmpty)
-      appContext.getAppEnv()
-    else
-      s"${appContext.getAppEnv()}/${path.get}"
+  import StoryInfoJsonSupport._
 
   def getRoute(actionHandler: ActionHandler): Route =
     // format: off
@@ -45,31 +36,63 @@ class Router()(implicit appContext: AppContext) extends StrictLogging {
       path("internal" / "zktree") {
         get {
           parameter("path".?) { path =>
-            complete(actionHandler.getZKNodeTreeAsJson(wrapPath(path)))
+            complete(actionHandler.getZKTree(path))
           }
         } ~
         post {
           parameter("path".?) { path =>
             entity(as[String]) { json =>
-              try {
-                actionHandler.updateZKNodeTreeByJson(wrapPath(path), json)
-                complete(createResponse(0))
-              } catch {
-                case ex: Throwable => complete(createResponse(1, ex.getMessage))
-              }
+              complete(actionHandler.updateZKTree(path, json))
             }
           }
         }
       } ~
-      path("stories") {
-        complete(actionHandler.getZKNodeTreeAsJson(wrapPath(Some("stories"))))
+      get {
+        path("stories") {
+          complete(actionHandler.getStories())
+        } ~
+        path("story" / Segment) { storyName =>
+          complete(actionHandler.getStory(storyName))
+        } ~
+        path("runners") {
+          complete(actionHandler.getRunners())
+        } ~
+        path("runner" / Segment) { runnerName =>
+          complete(actionHandler.getRunner(runnerName))
+        } ~
+        path("topics") {
+          complete(actionHandler.getTopics())
+        }
       } ~
-      path("story" / Segment) { storyName =>
-        complete(actionHandler.getZKNodeTreeAsJson(wrapPath(Some(s"stories/$storyName"))))
+      post {
+        path("story" / "create") {
+          entity(as[StoryInfo]) { storyInfo =>
+            complete(actionHandler.createStory(storyInfo))
+          }
+        } ~
+        path("story" / "update") {
+          entity(as[StoryInfo]) { storyInfo =>
+            complete(actionHandler.updateStory(storyInfo))
+          }
+        } ~
+        path("runner" / "assign") {
+          parameters('runnerName, 'storyName) { (runnerName, storyName) =>
+            complete(actionHandler.assignStory(runnerName, storyName))
+          }
+        } ~
+        path("runner" / "unassign") {
+          parameters('runnerName, 'storyName) { (runnerName, storyName) =>
+            complete(actionHandler.unassignStory(runnerName, storyName))
+          }
+        } ~
+        path("topics") {
+          entity(as[String]) { topics =>
+            complete(actionHandler.updateTopics(topics))
+          }
+        }
       }
     } ~
     getFromDirectory(staticDir) ~
-    // (pathPrefix("story") | pathEndOrSingleSlash)
     get {
       getFromFile(s"$staticDir/index.html")
     }

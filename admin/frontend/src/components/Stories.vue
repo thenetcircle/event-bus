@@ -2,15 +2,6 @@
 
   <div class="container">
 
-    <div style="margin-bottom: 1rem;">
-      <div class="is-clearfix">
-        <div class="is-pulled-right">
-          <router-link class="button is-info" :to="{ name: 'newstory' }">Create a New Story
-          </router-link>
-        </div>
-      </div>
-    </div>
-
     <div class="columns is-multiline">
 
       <div class="column is-12" v-for="story in stories">

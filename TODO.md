@@ -29,3 +29,5 @@
 - dont send syncplus and so on events to community side
 - upgrade document
 - remove version from application.conf
+- test if zookeeper fully done / partly done, is the system still working?
+- prevent the case update multiple zookeeper nodes at once (like create story, update story)
