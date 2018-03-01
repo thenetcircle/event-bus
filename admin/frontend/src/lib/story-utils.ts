@@ -78,11 +78,11 @@ export class StoryUtils {
     if (name.length <= 0) {
       return 'story name can not be empty'
     }
-    if (/^[a-z]+(?:[\_\-][a-z]+)*$/i.test(name)) {
+    if (/^[a-z0-9]+(?:[\_\-][a-z0-9]+)*$/i.test(name)) {
       return true
     }
     else {
-      return 'story name could only includes letters and _, -'
+      return 'story name could only includes letters, number, and _, -'
     }
   }
 

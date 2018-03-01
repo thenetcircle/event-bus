@@ -17,18 +17,25 @@
 
 package com.thenetcircle.event_bus.admin
 
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.server.Directives.{complete, get, path, _}
 import akka.http.scaladsl.server.Route
+import akka.stream.Materializer
 import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.scalalogging.StrictLogging
+import spray.json.DefaultJsonProtocol
 
-class Router()(implicit appContext: AppContext) extends StrictLogging {
+class Router()(implicit appContext: AppContext, materializer: Materializer)
+    extends SprayJsonSupport
+    with StrictLogging {
 
   val staticDir: String = appContext.getSystemConfig().getString("app.admin.static_dir")
 
   logger.debug(s"static directory $staticDir")
 
-  import StoryInfoJsonSupport._
+  import DefaultJsonProtocol._
+  implicit val storyInfoFormats   = jsonFormat6(StoryInfo)
+  implicit val runnerStoryFormats = jsonFormat2(RunnerStory)
 
   def getRoute(actionHandler: ActionHandler): Route =
     // format: off
@@ -76,13 +83,13 @@ class Router()(implicit appContext: AppContext) extends StrictLogging {
           }
         } ~
         path("runner" / "assign") {
-          parameters('runnerName, 'storyName) { (runnerName, storyName) =>
-            complete(actionHandler.assignStory(runnerName, storyName))
+          entity(as[RunnerStory]) { mapping =>
+            complete(actionHandler.assignStory(mapping.runnerName, mapping.storyName))
           }
         } ~
         path("runner" / "unassign") {
-          parameters('runnerName, 'storyName) { (runnerName, storyName) =>
-            complete(actionHandler.unassignStory(runnerName, storyName))
+          entity(as[RunnerStory]) { mapping =>
+            complete(actionHandler.unassignStory(mapping.runnerName, mapping.storyName))
           }
         } ~
         path("topics") {

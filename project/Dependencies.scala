@@ -13,6 +13,7 @@ object Dependencies {
   val akkaStreamTestkit   = "com.typesafe.akka"          %% "akka-stream-testkit"           % akkaVersion % Test
   val akkaHttp            = "com.typesafe.akka"          %% "akka-http"                     % akkaHttpVersion
   val akkaHttpTestkit     = "com.typesafe.akka"          %% "akka-http-testkit"             % akkaHttpVersion % Test
+  val akkaHttpSprayJson   = "com.typesafe.akka"          %% "akka-http-spray-json"          % akkaHttpVersion
   val akkaStreamKafka     = "com.typesafe.akka"          %% "akka-stream-kafka"             % "0.18"
   val akkaStreamCassandra = "com.lightbend.akka"         %% "akka-stream-alpakka-cassandra" % "0.16"
   val scalaLogging        = "com.typesafe.scala-logging" %% "scala-logging"                 % "3.7.2"
@@ -20,7 +21,7 @@ object Dependencies {
   val curator   = "org.apache.curator"   % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, needs to exclude original one
   val zookeeper = "org.apache.zookeeper" % "zookeeper"       % zookeeperVersion exclude ("org.slf4j", "slf4j-log4j12")
 
-  val sprayJson = "io.spray"       %% "spray-json"     % "1.3.3"
+  // val sprayJson = "io.spray"       %% "spray-json"     % "1.3.3"
   val logback   = "ch.qos.logback" % "logback-classic" % "1.2.3"
   val scalaTest = "org.scalatest"  %% "scalatest"      % "3.0.1" % Test
 
@@ -51,11 +52,11 @@ object Dependencies {
     akkaStreamTestkit,
     akkaHttp,
     akkaHttpTestkit,
+    akkaHttpSprayJson,
     akkaStreamKafka,
     akkaStreamCassandra,
     curator,
     zookeeper,
-    sprayJson,
     ficus,
     kamonCore,
     // kamonAkka,

@@ -42,7 +42,6 @@ interface Request {
 class RequestImpl implements Request {
 
   getStories(): Thenable<any> {
-
     bus.$emit('loading')
 
     return axios.get(`${URL_PREFIX}/api/stories`)
@@ -63,7 +62,6 @@ class RequestImpl implements Request {
   }
 
   getStory(storyName: string): Thenable<any> {
-
     bus.$emit('loading')
 
     return axios.get(`${URL_PREFIX}/api/story/` + storyName)
@@ -145,19 +143,44 @@ class RequestImpl implements Request {
   }
 
   assignStory(runnerName: string, storyName: string): Thenable<void> {
-    return Promise.resolve();
+    bus.$emit('loading')
+
+    return axios.post(`${URL_PREFIX}/api/runner/assign`, {
+      'runnerName': runnerName,
+      'storyName': storyName
+    })
+      .then(RequestImpl.respHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
   unassignStory(runnerName: string, storyName: string): Thenable<void> {
-    return Promise.resolve();
+    bus.$emit('loading')
+
+    return axios.post(`${URL_PREFIX}/api/runner/unassign`, {
+      'runnerName': runnerName,
+      'storyName': storyName
+    })
+      .then(RequestImpl.respHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
-  getTopics(): Thenable<string> {
-    return Promise.resolve('{}')
+  getTopics(): Thenable<any> {
+    bus.$emit('loading')
+
+    return axios.get(`${URL_PREFIX}/api/topics`)
+      .then(response => {
+        bus.$emit('loaded')
+        return response.data ? JSON.stringify(response.data) : '{}'
+      })
+      .catch(RequestImpl.errorHandler);
   }
 
   updateTopics(topics: string): Thenable<void> {
-    return Promise.resolve()
+    bus.$emit('loading')
+
+    return axios.post(`${URL_PREFIX}/api/topics`, topics)
+      .then(RequestImpl.respHandler)
+      .catch(RequestImpl.errorHandler)
   }
 
   private static respHandler(response: any): void {

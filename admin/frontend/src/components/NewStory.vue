@@ -12,7 +12,7 @@
     </div>
 
     <div class="field">
-      <label class="label">Story Graph:</label>
+      <label class="label">Story Workflow:</label>
     </div>
 
     <story-graph :info="storyInfo"

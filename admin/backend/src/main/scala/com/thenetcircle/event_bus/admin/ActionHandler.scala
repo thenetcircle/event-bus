@@ -22,7 +22,6 @@ import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.typesafe.config.{ConfigFactory, ConfigObject}
 import com.typesafe.scalalogging.StrictLogging
-import spray.json.DefaultJsonProtocol
 
 import scala.collection.JavaConverters._
 
@@ -35,9 +34,10 @@ case class StoryInfo(
     fallback: Option[String]
 )
 
-object StoryInfoJsonSupport extends DefaultJsonProtocol {
-  implicit val StoryInfoFormats = jsonFormat6(StoryInfo)
-}
+case class RunnerStory(
+    runnerName: String,
+    storyName: String
+)
 
 class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
     extends StrictLogging {
@@ -47,7 +47,7 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
       val block = _getZKNodeTreeAsJson(path)
       if (block == "") "{}" else block
     } catch {
-      case _ => "{}"
+      case _: Throwable => "{}"
     }
 
   def _getZKNodeTreeAsJson(path: String, indent: Boolean = true, depth: Int = 1): String = {
@@ -170,11 +170,15 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
   def updateStory(storyInfo: StoryInfo): String =
     try {
       val storyPath = wrapPath(Some(s"stories/${storyInfo.name}"))
+      val updatePath = (path: String, data: String) => {
+        zkManager.ensurePath(path)
+        zkManager.setData(path, data)
+      }
 
-      storyInfo.source.foreach(d => zkManager.setData(s"$storyPath/source", d))
-      storyInfo.sink.foreach(d => zkManager.setData(s"$storyPath/sink", d))
-      storyInfo.transforms.foreach(d => zkManager.setData(s"$storyPath/transforms", d))
-      storyInfo.fallback.foreach(d => zkManager.setData(s"$storyPath/fallback", d))
+      storyInfo.source.foreach(d => updatePath(s"$storyPath/source", d))
+      storyInfo.sink.foreach(d => updatePath(s"$storyPath/sink", d))
+      storyInfo.transforms.foreach(d => updatePath(s"$storyPath/transforms", d))
+      storyInfo.fallback.foreach(d => updatePath(s"$storyPath/fallback", d))
 
       createResponse(0)
     } catch {

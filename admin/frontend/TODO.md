@@ -7,3 +7,5 @@
 - update story status(on runner side)
 - update topics
 - validate json
+- create transfroms failed
+- create from scruch
