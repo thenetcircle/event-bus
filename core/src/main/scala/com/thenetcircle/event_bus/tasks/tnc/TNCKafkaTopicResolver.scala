@@ -27,23 +27,29 @@ import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache}
-import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
-import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
+import org.apache.curator.framework.recipes.cache.NodeCache
+import spray.json._
 
-import scala.collection.JavaConverters._
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
+
+case class TopicInfo(topic: String, patterns: List[String])
+
+object TopicInfoProtocol extends DefaultJsonProtocol {
+  implicit val topicInfoFormat = jsonFormat2(TopicInfo)
+}
 
 class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String, val useCache: Boolean = false)
     extends TransformTask
     with StrictLogging {
 
+  import TopicInfoProtocol._
+
   private var inited: Boolean                           = false
   private var defaultTopic: String                      = _defaultTopic
   private var index: Map[String, String]                = Map.empty
   private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
-  private var zkWatcher: Option[PathChildrenCache]      = None
+  private var zkWatcher: Option[NodeCache]              = None
 
   def init()(
       implicit runningContext: TaskRunningContext
@@ -64,38 +70,31 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
   }
 
   val zkInited = new AtomicBoolean(false)
+
   private def updateAndWatchIndex()(
       implicit runningContext: TaskRunningContext
   ): Unit = {
     zkManager.ensurePath("topics")
     zkWatcher = Some(
-      zkManager.watchChildren("topics", startMode = StartMode.POST_INITIALIZED_EVENT) { (_event, _watcher) =>
-        if (_event.getType == INITIALIZED) {
-          zkInited.compareAndSet(false, true)
-          val _index = createIndexFromZKData(_event.getInitialData.asScala.toList)
-          updateIndex(_index)
-        } else if (zkInited.get() == true &&
-                   (_event.getType == CHILD_ADDED || _event.getType == CHILD_UPDATED || _event.getType == CHILD_REMOVED)) {
-          val _index = createIndexFromZKData(_watcher.getCurrentData.asScala.toList)
-          updateIndex(_index)
+      zkManager.watchData("topics") {
+        _ foreach { data =>
+          val topicInfo = data.parseJson.convertTo[List[TopicInfo]]
+          val index: Map[String, String] = topicInfo
+            .flatMap(info => {
+              val _topic = replaceSubstitutes(info.topic)
+              info.patterns.map(_ -> _topic)
+            })
+            .toMap
+          updateIndex(index)
         }
       }
     )
   }
 
-  val delimiter = """|||"""
-  def createIndexFromZKData(data: List[ChildData])(
-      implicit runningContext: TaskRunningContext
-  ): Map[String, String] =
-    data
-      .flatMap(child => {
-        val topicName   = Util.getLastPartOfPath(child.getPath)
-        val patternList = Util.makeUTF8String(child.getData).split(Regex.quote(delimiter))
-        patternList.map(pat => pat -> replaceSubstitutes(topicName))
-      })
-      .toMap
+  def getIndex(): Map[String, String] = synchronized {
+    index
+  }
 
-  def getIndex(): Map[String, String] = synchronized { index }
   def updateIndex(_index: Map[String, String]): Unit = synchronized {
     logger.info("updating topic mapping " + _index)
     index = _index

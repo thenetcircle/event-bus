@@ -21,7 +21,7 @@ import com.thenetcircle.event_bus.context.AppContext
 import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
-import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent, PathChildrenCacheListener}
+import org.apache.curator.framework.recipes.cache._
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.ExponentialBackoffRetry
 
@@ -133,6 +133,22 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
           else ""}"
         )
         callback(event, watcher)
+      }
+    })
+
+    appContext.addShutdownHook(watcher.close())
+
+    watcher
+  }
+
+  def watchData(relativePath: String)(callback: (Option[String]) => Unit): NodeCache = {
+    val watcher = new NodeCache(client, getAbsPath(relativePath))
+
+    watcher.getListenable.addListener(new NodeCacheListener {
+      override def nodeChanged(): Unit = {
+        val data   = watcher.getCurrentData.getData
+        val result = if (data == null) None else Some(Util.makeUTF8String(data))
+        callback(result)
       }
     })
 
