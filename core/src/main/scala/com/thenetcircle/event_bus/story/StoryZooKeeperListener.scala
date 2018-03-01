@@ -30,6 +30,7 @@ import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache,
 import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 object StoryZooKeeperListener {
   def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
@@ -106,13 +107,12 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
         optionStory.foreach(s => storyRunner ! StoryRunner.Run(s))
 
       } else if (inited.get() == true &&
-                 (_event.getType == INITIALIZED ||
-                 _event.getType == CHILD_UPDATED ||
+                 (_event.getType == CHILD_UPDATED ||
                  _event.getType == CHILD_ADDED ||
                  _event.getType == CHILD_REMOVED)) {
 
         val storyOption = createStory(storyName, _watcher.getCurrentData.asScala.toList)
-        storyOption.foreach(s => storyRunner ! StoryRunner.Rerun(s))
+        storyOption.foreach(s => storyRunner ! StoryRunner.ScheduleRerun(3.seconds, s))
 
       }
     }

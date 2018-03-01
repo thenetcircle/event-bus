@@ -27,8 +27,8 @@ import scala.collection.JavaConverters._
 
 case class StoryInfo(
     name: String,
-    source: Option[String],
-    sink: Option[String],
+    source: String,
+    sink: String,
     status: Option[String],
     transforms: Option[String],
     fallback: Option[String]
@@ -157,8 +157,8 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
 
       val storyPath = wrapPath(Some(s"stories/${storyInfo.name}"))
       zkManager.ensurePath(s"$storyPath/status", storyInfo.status.getOrElse("INIT"))
-      zkManager.ensurePath(s"$storyPath/source", storyInfo.source.get)
-      zkManager.ensurePath(s"$storyPath/sink", storyInfo.sink.get)
+      zkManager.ensurePath(s"$storyPath/source", storyInfo.source)
+      zkManager.ensurePath(s"$storyPath/sink", storyInfo.sink)
       storyInfo.transforms.foreach(d => zkManager.ensurePath(s"$storyPath/transforms", d))
       storyInfo.fallback.foreach(d => zkManager.ensurePath(s"$storyPath/fallback", d))
 
@@ -170,15 +170,29 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
   def updateStory(storyInfo: StoryInfo): String =
     try {
       val storyPath = wrapPath(Some(s"stories/${storyInfo.name}"))
-      val updatePath = (path: String, data: String) => {
+      val ensureAndUpdate = (path: String, data: String) => {
         zkManager.ensurePath(path)
         zkManager.setData(path, data)
       }
 
-      storyInfo.source.foreach(d => updatePath(s"$storyPath/source", d))
-      storyInfo.sink.foreach(d => updatePath(s"$storyPath/sink", d))
-      storyInfo.transforms.foreach(d => updatePath(s"$storyPath/transforms", d))
-      storyInfo.fallback.foreach(d => updatePath(s"$storyPath/fallback", d))
+      zkManager.setData(s"$storyPath/source", storyInfo.source)
+      zkManager.setData(s"$storyPath/sink", storyInfo.sink)
+
+      if (storyInfo.transforms.isDefined) {
+        ensureAndUpdate(s"$storyPath/transforms", storyInfo.transforms.get)
+      } else {
+        try {
+          zkManager.deletePath(s"$storyPath/transforms")
+        } catch { case _: Throwable => }
+      }
+
+      if (storyInfo.fallback.isDefined) {
+        ensureAndUpdate(s"$storyPath/fallback", storyInfo.fallback.get)
+      } else {
+        try {
+          zkManager.deletePath(s"$storyPath/fallback")
+        } catch { case _: Throwable => }
+      }
 
       createResponse(0)
     } catch {
