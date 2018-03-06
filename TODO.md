@@ -7,30 +7,29 @@
 - ~~create BuilderEnvironment~~
 - ~~create Config runner and Zookeeper runner~~
 - ~~add rfc date parser and change published field format~~
-- Admin Interface
+- ~~Admin Interface~~
 - ~~Improve Cassandra table structure~~
 - ~~Kafa Batch Commit~~
 - ~~Integrate kamon~~
 - ~~Integrate Sentry~~
 - ~~logback config~~
-- run specific deployment task (there are start_task, force_handlers)
+- ~~run specific deployment task (there are start_task, force_handlers)~~
 - deployment rollback
 - ~~support json inside topic mapping of zk~~
 - ~~support variables inside the mapped patterns~~
 - ~~update story status and update that which runners running it~~
 - ~~http sink retry according to the response content~~  to be test
-- test cassandra
+- add fields of cassandra for retry and status
+- test cassandra fallback
 - ~~update uuid for no uuid events~~ to be test
 - ~~update event version to be v2~~
-- add fields of cassandra for retry and status
 - ~~allow event to send to different endpoint~~ to be test
 - kafka consumer offset update
 - update story status and register runner on story
 - dont send syncplus and so on events to community side
 - upgrade document
-- remove version from application.conf
+- ~~remove version from application.conf~~
 - test if zookeeper fully done / partly done, is the system still working?
-- prevent the case update multiple zookeeper nodes at once (like create story, update story)
+- ~~prevent the case update multiple zookeeper nodes at once (like create story, update story)~~
 - add admin frontend to ansible scripts
-- test cassandra fallback
 - release 2.1.0 with admin build

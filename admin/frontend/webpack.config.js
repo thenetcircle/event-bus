@@ -26,6 +26,13 @@ module.exports = {
         }
       },
       {
+        test: /vue-spinner\/src\/.*\.vue$/,
+        loader: 'vue-loader',
+        query: {
+          presets: ['es2015']
+        }
+      },
+      {
         test: /\.tsx?$/,
         loader: 'ts-loader',
         exclude: /node_modules/,

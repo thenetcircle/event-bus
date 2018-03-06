@@ -245,10 +245,16 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
       .withFallback(buildingContext.getSystemConfig().getConfig("task.kafka-source"))
 
     val subscribedTopics: Either[Set[String], String] = {
-      if (config.hasPath("topics"))
-        Left(config.as[Set[String]]("topics"))
-      else
+      var topics = Set.empty[String]
+      if (config.hasPath("topics")) {
+        topics = config.as[Set[String]]("topics")
+      }
+
+      if (topics.nonEmpty) {
+        Left(topics)
+      } else {
         Right(config.as[String]("topic-pattern"))
+      }
     }
 
     val settings =

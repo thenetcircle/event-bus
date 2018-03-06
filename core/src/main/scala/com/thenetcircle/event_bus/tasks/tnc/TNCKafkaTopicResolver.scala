@@ -30,6 +30,7 @@ import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.NodeCache
 import spray.json._
 
+import scala.collection.mutable
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
@@ -45,11 +46,11 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
   import TopicInfoProtocol._
 
-  private var inited: Boolean                           = false
-  private var defaultTopic: String                      = _defaultTopic
-  private var index: Map[String, String]                = Map.empty
-  private val cached: ConcurrentHashMap[String, String] = new ConcurrentHashMap()
-  private var zkWatcher: Option[NodeCache]              = None
+  private var inited: Boolean                              = false
+  private var defaultTopic: String                         = _defaultTopic
+  private var index: mutable.LinkedHashMap[String, String] = mutable.LinkedHashMap.empty
+  private val cached: ConcurrentHashMap[String, String]    = new ConcurrentHashMap()
+  private var zkWatcher: Option[NodeCache]                 = None
 
   def init()(
       implicit runningContext: TaskRunningContext
@@ -79,23 +80,25 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
       zkManager.watchData("topics") {
         _ foreach { data =>
           val topicInfo = data.parseJson.convertTo[List[TopicInfo]]
-          val index: Map[String, String] = topicInfo
-            .flatMap(info => {
+          val index     = mutable.LinkedHashMap.empty[String, String]
+          topicInfo
+            .foreach(info => {
               val _topic = replaceSubstitutes(info.topic)
-              info.patterns.map(_ -> _topic)
+              info.patterns.foreach(pat => {
+                index += (pat -> _topic)
+              })
             })
-            .toMap
           updateIndex(index)
         }
       }
     )
   }
 
-  def getIndex(): Map[String, String] = synchronized {
+  def getIndex(): mutable.LinkedHashMap[String, String] = synchronized {
     index
   }
 
-  def updateIndex(_index: Map[String, String]): Unit = synchronized {
+  def updateIndex(_index: mutable.LinkedHashMap[String, String]): Unit = synchronized {
     logger.info("updating topic mapping " + _index)
     index = _index
     if (useCache) cached.clear()
@@ -155,7 +158,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
     logger.info(s"shutting down TNCKafkaTopicResolver of story ${runningContext.getStoryName()}.")
-    index = Map.empty
+    index = mutable.LinkedHashMap.empty
     cached.clear()
     zkWatcher.foreach(_.close())
   }

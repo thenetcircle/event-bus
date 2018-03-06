@@ -142,12 +142,18 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
   }
 
   def watchData(relativePath: String)(callback: (Option[String]) => Unit): NodeCache = {
-    val watcher = new NodeCache(client, getAbsPath(relativePath))
+    val zkPath = getAbsPath(relativePath)
+    logger.debug(s"going to watch zookeeper node $zkPath")
+    val watcher = new NodeCache(client, zkPath)
+    watcher.start()
 
     watcher.getListenable.addListener(new NodeCacheListener {
       override def nodeChanged(): Unit = {
         val data   = watcher.getCurrentData.getData
         val result = if (data == null) None else Some(Util.makeUTF8String(data))
+        logger.debug(
+          s"watched zookeeper node $zkPath got updated, new data: $result"
+        )
         callback(result)
       }
     })
