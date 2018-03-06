@@ -79,16 +79,18 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
     zkWatcher = Some(
       zkManager.watchData("topics") {
         _ foreach { data =>
-          val topicInfo = data.parseJson.convertTo[List[TopicInfo]]
-          val index     = mutable.LinkedHashMap.empty[String, String]
-          topicInfo
-            .foreach(info => {
-              val _topic = replaceSubstitutes(info.topic)
-              info.patterns.foreach(pat => {
-                index += (pat -> _topic)
+          if (data.nonEmpty) {
+            val topicInfo = data.parseJson.convertTo[List[TopicInfo]]
+            val index     = mutable.LinkedHashMap.empty[String, String]
+            topicInfo
+              .foreach(info => {
+                val _topic = replaceSubstitutes(info.topic)
+                info.patterns.foreach(pat => {
+                  index += (pat -> _topic)
+                })
               })
-            })
-          updateIndex(index)
+            updateIndex(index)
+          }
         }
       }
     )
