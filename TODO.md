@@ -14,7 +14,7 @@
 - ~~Integrate Sentry~~
 - ~~logback config~~
 - ~~run specific deployment task (there are start_task, force_handlers)~~
-- deployment rollback
+- ~~deployment rollback~~
 - ~~support json inside topic mapping of zk~~
 - ~~support variables inside the mapped patterns~~
 - ~~update story status and update that which runners running it~~
@@ -29,8 +29,7 @@
 - dont send syncplus and so on events to community side
 - upgrade document
 - ~~remove version from application.conf~~
-- test if zookeeper fully done / partly done, is the system still working?
+- test that if zookeeper fully down / partly down, how system working?
 - ~~prevent the case update multiple zookeeper nodes at once (like create story, update story)~~
 - ~~add admin frontend to ansible scripts~~
 - release 2.1.0 with admin build
--

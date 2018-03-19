@@ -17,9 +17,11 @@
 
 package com.thenetcircle.event_bus.story
 
+import java.net.UnknownHostException
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.{ActorRef, ActorSystem}
+import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
 import com.typesafe.scalalogging.StrictLogging
@@ -57,13 +59,28 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
 
   private val watchingStores = mutable.Map.empty[String, ZKWatcher]
 
-  zkManager.ensurePath(s"runners/$runnerName")
+  val runnerPath = s"runners/$runnerName"
+
+  zkManager.ensurePath(runnerPath)
   zkManager.ensurePath("stories")
 
   def getStoryRootPath(storyName: String): String = s"stories/$storyName"
-  val assignedStoriesPath                         = s"runners/$runnerName/stories"
+  val assignedStoriesPath                         = s"$runnerPath/stories"
+
+  def registerRunner(): Unit = {
+    zkManager.ensurePath(s"$runnerPath/server")
+    try {
+      zkManager.setData(s"$runnerPath/server", java.net.InetAddress.getLocalHost.getHostName)
+    } catch {
+      case ex: UnknownHostException => zkManager.setData(s"$runnerPath/server", "unknown")
+    }
+    zkManager.ensurePath(s"$runnerPath/version")
+    zkManager.setData(s"$runnerPath/version", BuildInfo.version)
+  }
 
   def start(): Unit = {
+    registerRunner()
+
     val assigningWatcher =
       zkManager.watchChildren(assignedStoriesPath, fetchData = false) { (_event, _watcher) =>
         _event.getType match {

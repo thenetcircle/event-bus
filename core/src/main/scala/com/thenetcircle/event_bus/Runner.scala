@@ -40,10 +40,15 @@ class Runner extends AbstractApp {
     val storyRunner: ActorRef =
       system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
     appContext.addShutdownHook {
-      Await.ready(
-        gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()),
-        3.seconds
-      )
+      try {
+        Await.ready(
+          gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()),
+          3.seconds
+        )
+      } catch {
+        case ex: Throwable =>
+          logger.error(s"shutdown StoryRunner with error $ex")
+      }
     }
 
     val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
