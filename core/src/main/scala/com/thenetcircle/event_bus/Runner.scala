@@ -47,13 +47,12 @@ class Runner extends AbstractApp {
         )
       } catch {
         case ex: Throwable =>
-          logger.error(s"shutdown StoryRunner with error $ex")
       }
     }
 
     val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
-    StoryZooKeeperListener(runnerName, storyRunner, storyBuilder).start()
+    StoryZooKeeperListener(runnerName, storyRunner, storyBuilder).waitAndStart()
 
   }
 }

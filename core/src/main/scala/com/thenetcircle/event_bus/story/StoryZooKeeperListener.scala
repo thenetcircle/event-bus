@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.story
 
-import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.actor.{ActorRef, ActorSystem}
@@ -28,11 +28,13 @@ import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache, PathChildrenCacheEvent}
+import org.apache.curator.framework.recipes.leader.LeaderLatch
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.util.control.NonFatal
 import scala.concurrent.duration._
+import scala.util.Random
+import scala.util.control.NonFatal
 
 object StoryZooKeeperListener {
   def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
@@ -65,23 +67,64 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
   zkManager.ensurePath("stories")
 
   def getStoryRootPath(storyName: String): String = s"stories/$storyName"
-  val assignedStoriesPath                         = s"$runnerPath/stories"
 
-  def registerRunner(): Unit = {
-    zkManager.ensurePath(s"$runnerPath/server")
-    try {
-      zkManager.setData(s"$runnerPath/server", java.net.InetAddress.getLocalHost.getHostName)
-    } catch {
-      case ex: UnknownHostException => zkManager.setData(s"$runnerPath/server", "unknown")
+  val assignedStoriesPath = s"$runnerPath/stories"
+
+  def waitAndStart(): Unit = {
+    val latchPath = s"$runnerPath/latch"
+    val latch     = new LeaderLatch(zkManager.getClient(), zkManager.getAbsPath(latchPath))
+    latch.start()
+    appContext.addShutdownHook {
+      try { latch.close() } catch { case _: Throwable => }
     }
-    zkManager.ensurePath(s"$runnerPath/version")
-    zkManager.setData(s"$runnerPath/version", BuildInfo.version)
+
+    try {
+      logger.info(s"Runner $runnerName is going to get the leadership.")
+      var isWaiting    = true
+      val loggerRandom = Random
+      while (isWaiting) {
+        if (latch.hasLeadership) {
+          logger.info(s"Runner $runnerName has got the leadership.")
+          updateRunnerInfo()
+          start()
+          isWaiting = false
+        } else {
+          if (loggerRandom.nextInt(10) > 8) {
+            logger.info(s"Runner $runnerName is still waiting for leadership.")
+          }
+          Thread.sleep(2000)
+        }
+      }
+    } catch {
+      case ex: Throwable =>
+        logger.warn(s"Runner $runnerName is not waiting for leadership anymore because of the exception $ex.")
+    }
+  }
+
+  def updateRunnerInfo(): Unit = {
+    zkManager.ensurePath(s"$runnerPath/info")
+
+    try {
+      val runnerHost = try {
+        java.net.InetAddress.getLocalHost.getHostName
+      } catch {
+        case _: Throwable => "unknown"
+      }
+      val runnerInfo =
+        s"""
+           |{
+           |  "host": "$runnerHost",
+           |  "version": "${BuildInfo.version}"
+           |}
+         """.stripMargin
+      zkManager.setData(s"$runnerPath/info", runnerInfo)
+    } catch {
+      case _: Throwable =>
+    }
   }
 
   def start(): Unit = {
-    registerRunner()
-
-    val assigningWatcher =
+    val jobWatcher =
       zkManager.watchChildren(assignedStoriesPath, fetchData = false) { (_event, _watcher) =>
         _event.getType match {
 
@@ -110,7 +153,7 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
 
     appContext.addShutdownHook {
       watchingStores.foreach(_._2.close())
-      assigningWatcher.close()
+      jobWatcher.close()
     }
   }
 
