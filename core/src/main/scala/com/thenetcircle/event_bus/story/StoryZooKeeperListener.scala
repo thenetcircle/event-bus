@@ -89,7 +89,7 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
           start()
           isWaiting = false
         } else {
-          if (loggerRandom.nextInt(10) > 8) {
+          if (loggerRandom.nextInt(100) > 95) {
             logger.info(s"Runner $runnerName is still waiting for leadership.")
           }
           Thread.sleep(2000)

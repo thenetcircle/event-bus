@@ -6,8 +6,8 @@
       <td>{{ info.status }}</td>
     </tr>
     <tr>
-      <th>Server:</th>
-      <td>{{ info.server }}</td>
+      <th>Host:</th>
+      <td>{{ info.host }}</td>
     </tr>
     <tr>
       <th>Assigned Stories:</th>
@@ -16,6 +16,10 @@
     <tr>
       <th>Version:</th>
       <td>{{ info.version }}</td>
+    </tr>
+    <tr>
+      <th>Instances:</th>
+      <td>{{ info.instances.join(', ') }}</td>
     </tr>
     </tbody>
   </table>

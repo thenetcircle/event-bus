@@ -223,16 +223,18 @@ class OfflineRequest implements Request {
     {
       name: 'default-runner',
       status: RunnerStatus.RUNNING,
-      server: 'test-server-01',
+      host: 'test-server-01',
       stories: ['http-to-kafka-with-fallback'],
-      version: '2.1.0'
+      version: '2.1.0',
+      instances: ['_c_db771980-fe76-4b1c-bfac-e463fee0e930-latch-0000000024']
     },
     {
       name: 'extra-runner',
       status: RunnerStatus.RUNNING,
-      server: 'test-server-02',
+      host: 'test-server-02',
       stories: ['kafka-to-http-without-fallback'],
-      version: '2.1.0'
+      version: '2.1.0',
+      instances: ['_c_db771980-fe76-4b1c-bfac-e463fee0e930-latch-0000000024']
     }
   ]
 

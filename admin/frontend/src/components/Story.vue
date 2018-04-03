@@ -62,7 +62,7 @@
               item.name }}
             </router-link>
           </td>
-          <td>{{ item.server }}</td>
+          <td>{{ item.host }}</td>
           <td>{{ item.version }}</td>
           <td><a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a></td>
         </tr>

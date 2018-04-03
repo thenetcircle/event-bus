@@ -27,7 +27,9 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
     val doneFuture = story.run()
     // fix the case if this actor is dead already, the Shutdown commend will send to dead-letter
     val selfPath = self.path
-    doneFuture.onComplete(_ => context.actorSelection(selfPath) ! Shutdown)
+    doneFuture.onComplete(
+      _ => try { context.actorSelection(selfPath) ! Shutdown } catch { case ex: Throwable => }
+    )
   }
 
   override def postStop(): Unit = {

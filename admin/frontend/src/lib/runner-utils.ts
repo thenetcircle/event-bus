@@ -1,5 +1,4 @@
 export enum RunnerStatus {
-  IDLE = 'IDLE',
   RUNNING = 'RUNNING',
   STOPPED = 'STOPPED'
 }
@@ -7,19 +6,24 @@ export enum RunnerStatus {
 export interface RunnerInfo {
   name: string
   status: RunnerStatus
-  server: string
+  host: string
   stories: string[]
   version: string
+  instances: string[]
 }
 
 export class RunnerUtils {
   static buildRunnerInfoFromData(runnerName: string, data: any): RunnerInfo {
+    let status = typeof(data['latch']) == 'object' ? RunnerStatus.RUNNING : RunnerStatus.STOPPED
+    let runnerInfo = JSON.parse(data['info'])
+
     return {
       name: runnerName,
-      status: data["status"],
-      server: data["server"],
+      status: status,
+      host: runnerInfo["host"],
       stories: Object.keys(data["stories"]),
-      version: data["version"] || ""
+      version: runnerInfo["version"] || "",
+      instances: typeof(data['latch']) == 'object' ? Object.keys(data['latch']) : []
     }
   }
 }
