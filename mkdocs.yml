@@ -8,5 +8,5 @@ pages:
   - Components: components.md
   - Data Format: data_format.md
   - Deployment: deployment.md
-  - Admin: admin.md
+  - Admin Interface: admin_interface.md
   - Monitoring: monitoring.md
