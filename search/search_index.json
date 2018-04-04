@@ -2,12 +2,12 @@
     "docs": [
         {
             "location": "/",
-            "text": "EventBus is built for distributing unified events/messages(as a language everyone can understand) from multiple different sources to different targets. With abilities of messages persistence, tracing and manipulating.\n\n\n\n\nFeatures\n\n\n\n\nSupplies multiple different sources and targets.\n\n\nBased on AkkaStreams, Whole flow supports back-pressure, and various stream operations.\n\n\nEach components are decoupled, can run into independent processes.\n\n\nFully tested (unit test, integration test, stress test).\n\n\nWhole system is configurable.\n\n\nProviders tracing and monitoring.\n\n\nProviders manager interface.\n\n\nFault-tolerant\n\n\n\n\nContributing\n\n\nFeedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.",
-            "title": "Home"
+            "text": "EventBus is a messages/events delivering application, It is designed to be a message/event hub to transfer data from different sources to different sinks.\nIt is using internally for unified data collection(collect data from different sources with specific data format to our data warehouse) and async events delivering among services.\n\n\nIt comes with some implemented sources(http, kafka, redis, etc...), sinks(http, kafka, etc...), fallbacks(see the document) and a extendable structure. Also a admin interface to easily manage the relationship between them.\n\n\n\n\nFeatures\n\n\n\n\nSupplies multiple different sources and sinks.\n\n\nSupplies failure demotion(fallback) strategy and recovering ability.\n\n\nBased on AkkaStreams, Offers excellent performance and back-pressure ability.\n\n\nStateless, Easier for deployment, high availability and load balance.\n\n\nComes with a simple admin interface for managing and watching whole cluster.\n\n\n\n\nContributing\n\n\nFeedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.",
+            "title": "Welcome"
         },
         {
             "location": "/#features",
-            "text": "Supplies multiple different sources and targets.  Based on AkkaStreams, Whole flow supports back-pressure, and various stream operations.  Each components are decoupled, can run into independent processes.  Fully tested (unit test, integration test, stress test).  Whole system is configurable.  Providers tracing and monitoring.  Providers manager interface.  Fault-tolerant",
+            "text": "Supplies multiple different sources and sinks.  Supplies failure demotion(fallback) strategy and recovering ability.  Based on AkkaStreams, Offers excellent performance and back-pressure ability.  Stateless, Easier for deployment, high availability and load balance.  Comes with a simple admin interface for managing and watching whole cluster.",
             "title": "Features"
         },
         {

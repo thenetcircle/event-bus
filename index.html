@@ -96,7 +96,7 @@
                 EventBus
               </span>
               <span class="md-header-nav__topic">
-                Home
+                Welcome
               </span>
             
           
@@ -174,11 +174,11 @@
     
     
       <label class="md-nav__link md-nav__link--active" for="toc">
-        Home
+        Welcome
       </label>
     
-    <a href="." title="Home" class="md-nav__link md-nav__link--active">
-      Home
+    <a href="." title="Welcome" class="md-nav__link md-nav__link--active">
+      Welcome
     </a>
     
       
@@ -335,20 +335,19 @@
               
                 
                 
-                  <h1>Home</h1>
+                  <h1>Welcome</h1>
                 
-                <p>EventBus is built for distributing unified events/messages(as a language everyone can understand) from multiple different sources to different targets. With abilities of messages persistence, tracing and manipulating.</p>
-<p><a href="assets/workflow.png" target="_blank"><img alt="EventBus Workflow" src="./assets/workflow_small.png" /></a></p>
+                <p>EventBus is a messages/events delivering application, It is designed to be a message/event hub to transfer data from different sources to different sinks.
+It is using internally for unified data collection(collect data from different sources with specific data format to our data warehouse) and async events delivering among services.</p>
+<p>It comes with some implemented sources(http, kafka, redis, etc...), sinks(http, kafka, etc...), fallbacks(see the document) and a extendable structure. Also a admin interface to easily manage the relationship between them.</p>
+<p><a href="assets/workflow2.png" target="_blank"><img alt="EventBus Workflow" src="./assets/workflow_small.png" /></a></p>
 <h2 id="features">Features</h2>
 <ul>
-<li>Supplies multiple different sources and targets.</li>
-<li>Based on AkkaStreams, Whole flow supports back-pressure, and various stream operations.</li>
-<li>Each components are decoupled, can run into independent processes.</li>
-<li>Fully tested (unit test, integration test, stress test).</li>
-<li>Whole system is configurable.</li>
-<li>Providers tracing and monitoring.</li>
-<li>Providers manager interface.</li>
-<li>Fault-tolerant</li>
+<li>Supplies multiple different sources and sinks.</li>
+<li>Supplies failure demotion(fallback) strategy and recovering ability.</li>
+<li>Based on AkkaStreams, Offers excellent performance and back-pressure ability.</li>
+<li>Stateless, Easier for deployment, high availability and load balance.</li>
+<li>Comes with a simple admin interface for managing and watching whole cluster.</li>
 </ul>
 <h2 id="contributing">Contributing</h2>
 <p>Feedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.</p>
