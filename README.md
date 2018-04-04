@@ -11,6 +11,8 @@ It comes with some implemented sources(http, kafka, redis, etc...), sinks(http, 
 For more details can visit the [Documention](https://thenetcircle.github.io/event-bus/).
 For admin demo can visit [Here](https://thenetcircle.github.io/event-bus/admin/).
 
+![EventBus Workflow](https://thenetcircle.github.io/event-bus/assets/event-bus-workflow.png)
+
 ## Features
 
 - Supplies multiple different sources and sinks.

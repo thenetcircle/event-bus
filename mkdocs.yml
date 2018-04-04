@@ -4,7 +4,9 @@ pages:
   - Welcome: index.md
   - Installation: installation.md
   - QuickStart: quickstart.md
+  - Concepts: concepts.md
   - Components: components.md
-  - Unified Event: unified_event.md
-  - Configuration: configuration.md
+  - Data Format: data_format.md
   - Deployment: deployment.md
+  - Admin: admin.md
+  - Monitoring: monitoring.md
