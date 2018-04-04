@@ -66,89 +66,49 @@
             "title": "Launch EventBus"
         },
         {
-            "location": "/components/",
-            "text": "Transporter\n\n\nReceiver\n\n\nHTTP Receiver\n\n\nPipeline\n\n\nKafka Pipeline\n\n\nDispatcher\n\n\nEmitter\n\n\nHTTP Emitter\n\n\nFallback\n\n\nTracer\n\n\nManager",
-            "title": "Components"
+            "location": "/concepts/",
+            "text": "Story\n\n\nSource\n\n\nSink\n\n\nTransform\n\n\nFallback",
+            "title": "Concepts"
         },
         {
-            "location": "/components/#transporter",
+            "location": "/concepts/#story",
             "text": "",
-            "title": "Transporter"
+            "title": "Story"
         },
         {
-            "location": "/components/#receiver",
+            "location": "/concepts/#source",
             "text": "",
-            "title": "Receiver"
+            "title": "Source"
         },
         {
-            "location": "/components/#http-receiver",
+            "location": "/concepts/#sink",
             "text": "",
-            "title": "HTTP Receiver"
+            "title": "Sink"
         },
         {
-            "location": "/components/#pipeline",
+            "location": "/concepts/#transform",
             "text": "",
-            "title": "Pipeline"
+            "title": "Transform"
         },
         {
-            "location": "/components/#kafka-pipeline",
-            "text": "",
-            "title": "Kafka Pipeline"
-        },
-        {
-            "location": "/components/#dispatcher",
-            "text": "",
-            "title": "Dispatcher"
-        },
-        {
-            "location": "/components/#emitter",
-            "text": "",
-            "title": "Emitter"
-        },
-        {
-            "location": "/components/#http-emitter",
-            "text": "",
-            "title": "HTTP Emitter"
-        },
-        {
-            "location": "/components/#fallback",
+            "location": "/concepts/#fallback",
             "text": "",
             "title": "Fallback"
         },
         {
-            "location": "/components/#tracer",
+            "location": "/components/",
             "text": "",
-            "title": "Tracer"
+            "title": "Components"
         },
         {
-            "location": "/components/#manager",
-            "text": "",
-            "title": "Manager"
-        },
-        {
-            "location": "/unified_event/",
+            "location": "/data_format/",
             "text": "ActivityStreams",
-            "title": "Unified Event"
+            "title": "Data Format"
         },
         {
-            "location": "/unified_event/#activitystreams",
+            "location": "/data_format/#activitystreams",
             "text": "",
             "title": "ActivityStreams"
-        },
-        {
-            "location": "/configuration/",
-            "text": "Default Configuration\n\n\n# Default Settings Of EventBus\nevent-bus {\n  pipeline {\n    kafka {\n      pipeline {\n        akka.kafka.producer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Producer\"\n          }\n        }\n        akka.kafka.consumer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Consumer\"\n          }\n        }\n      }\n      inlet {\n        #close-timeout = 60s\n        #parallelism = 10\n      }\n      outlet {\n        #group-id = TestGroup\n        extract-parallelism = 3\n        #topics = []\n        #topicPattern = event-*\n        #poll-interval = 50ms\n        #poll-timeout = 50ms\n        #stop-timeout = 30s\n        #close-timeout = 20s\n        #commit-timeout = 15s\n        #wakeup-timeout = 3s\n        #max-wakeups = 10\n      }\n      committer {\n        commit-parallelism = 3\n        commit-batch-max = 20\n      }\n    }\n  }\n\n  transporter {\n    #name = TestTransporter\n    #receivers = [\n    #  {\n    #    type = http\n    #    name = TestReceiver1\n    #    interface = 127.0.0.1\n    #    port = 8080\n    #  }\n    #]\n    #pipeline {\n    #  name = DefaultKafkaPipeline\n    #  inlet-settings {}\n    #}\n    transport-parallelism = 1\n    commit-parallelism = 10\n    #akka.stream.materializer {}\n  }\n\n  receiver {\n    http {\n      #name = TestHttpReceiver\n      #interface = localhost\n      #port = 8080\n      priority = normal\n      // TODO: adjust these default values when doing stress testing\n      max-connections = 1000\n      pre-connection-parallelism = 10\n      event-format = default\n      # akka.http.server {} // override \"akka.http.server\" default settings\n    }\n  }\n\n  dispatcher {\n    #akka.stream.materializer {}\n  }\n\n  emitter {\n    http {\n      max-retry-times = 10\n      request {\n        port = 80\n        method = POST\n        uri = /\n      }\n      #expected-response-data = OK\n      akka.http.host-connection-pool {\n        #max-connections = 4\n        max-retries = 0\n        #max-open-requests = 32\n        #pipelining-limit = 1\n        #idle-timeout = 30 s\n      }\n    }\n  }\n}\n\n\n\n\nRuntime Configuration",
-            "title": "Configuration"
-        },
-        {
-            "location": "/configuration/#default-configuration",
-            "text": "# Default Settings Of EventBus\nevent-bus {\n  pipeline {\n    kafka {\n      pipeline {\n        akka.kafka.producer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Producer\"\n          }\n        }\n        akka.kafka.consumer {\n          #use-dispatcher = \"akka.kafka.default-dispatcher\"\n          kafka-clients {\n            client.id = \"EventBus-Consumer\"\n          }\n        }\n      }\n      inlet {\n        #close-timeout = 60s\n        #parallelism = 10\n      }\n      outlet {\n        #group-id = TestGroup\n        extract-parallelism = 3\n        #topics = []\n        #topicPattern = event-*\n        #poll-interval = 50ms\n        #poll-timeout = 50ms\n        #stop-timeout = 30s\n        #close-timeout = 20s\n        #commit-timeout = 15s\n        #wakeup-timeout = 3s\n        #max-wakeups = 10\n      }\n      committer {\n        commit-parallelism = 3\n        commit-batch-max = 20\n      }\n    }\n  }\n\n  transporter {\n    #name = TestTransporter\n    #receivers = [\n    #  {\n    #    type = http\n    #    name = TestReceiver1\n    #    interface = 127.0.0.1\n    #    port = 8080\n    #  }\n    #]\n    #pipeline {\n    #  name = DefaultKafkaPipeline\n    #  inlet-settings {}\n    #}\n    transport-parallelism = 1\n    commit-parallelism = 10\n    #akka.stream.materializer {}\n  }\n\n  receiver {\n    http {\n      #name = TestHttpReceiver\n      #interface = localhost\n      #port = 8080\n      priority = normal\n      // TODO: adjust these default values when doing stress testing\n      max-connections = 1000\n      pre-connection-parallelism = 10\n      event-format = default\n      # akka.http.server {} // override \"akka.http.server\" default settings\n    }\n  }\n\n  dispatcher {\n    #akka.stream.materializer {}\n  }\n\n  emitter {\n    http {\n      max-retry-times = 10\n      request {\n        port = 80\n        method = POST\n        uri = /\n      }\n      #expected-response-data = OK\n      akka.http.host-connection-pool {\n        #max-connections = 4\n        max-retries = 0\n        #max-open-requests = 32\n        #pipelining-limit = 1\n        #idle-timeout = 30 s\n      }\n    }\n  }\n}",
-            "title": "Default Configuration"
-        },
-        {
-            "location": "/configuration/#runtime-configuration",
-            "text": "",
-            "title": "Runtime Configuration"
         },
         {
             "location": "/deployment/",
@@ -179,6 +139,21 @@
             "location": "/deployment/#manually",
             "text": "",
             "title": "Manually"
+        },
+        {
+            "location": "/admin/",
+            "text": "ActivityStreams",
+            "title": "Admin"
+        },
+        {
+            "location": "/admin/#activitystreams",
+            "text": "",
+            "title": "ActivityStreams"
+        },
+        {
+            "location": "/monitoring/",
+            "text": "",
+            "title": "Monitoring"
         }
     ]
 }

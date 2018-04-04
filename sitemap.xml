@@ -27,6 +27,14 @@
 
     
     <url>
+     <loc>/concepts/</loc>
+     <lastmod>2018-04-04</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
      <loc>/components/</loc>
      <lastmod>2018-04-04</lastmod>
      <changefreq>daily</changefreq>
@@ -35,15 +43,7 @@
 
     
     <url>
-     <loc>/unified_event/</loc>
-     <lastmod>2018-04-04</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>/configuration/</loc>
+     <loc>/data_format/</loc>
      <lastmod>2018-04-04</lastmod>
      <changefreq>daily</changefreq>
     </url>
@@ -52,6 +52,22 @@
     
     <url>
      <loc>/deployment/</loc>
+     <lastmod>2018-04-04</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/admin/</loc>
+     <lastmod>2018-04-04</lastmod>
+     <changefreq>daily</changefreq>
+    </url>
+    
+
+    
+    <url>
+     <loc>/monitoring/</loc>
      <lastmod>2018-04-04</lastmod>
      <changefreq>daily</changefreq>
     </url>

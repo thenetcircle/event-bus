@@ -36,7 +36,7 @@
     
     
       
-        <title>Deployment - EventBus</title>
+        <title>Concepts - EventBus</title>
       
     
     
@@ -70,7 +70,7 @@
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="search" autocomplete="off">
     <label class="md-overlay" data-md-component="overlay" for="drawer"></label>
     
-      <a href="#ansible" tabindex="1" class="md-skip">
+      <a href="#story" tabindex="1" class="md-skip">
         Skip to content
       </a>
     
@@ -96,7 +96,7 @@
                 EventBus
               </span>
               <span class="md-header-nav__topic">
-                Deployment
+                Concepts
               </span>
             
           
@@ -201,11 +201,73 @@
       
       
 
+  
 
-  <li class="md-nav__item">
-    <a href="../concepts/" title="Concepts" class="md-nav__link">
+
+  <li class="md-nav__item md-nav__item--active">
+    
+    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
+    
+    
+      <label class="md-nav__link md-nav__link--active" for="toc">
+        Concepts
+      </label>
+    
+    <a href="./" title="Concepts" class="md-nav__link md-nav__link--active">
       Concepts
     </a>
+    
+      
+<nav class="md-nav md-nav--secondary">
+  
+  
+  
+    <label class="md-nav__title" for="toc">Table of contents</label>
+    <ul class="md-nav__list" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#story" title="Story" class="md-nav__link">
+    Story
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#source" title="Source" class="md-nav__link">
+    Source
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sink" title="Sink" class="md-nav__link">
+    Sink
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transform" title="Transform" class="md-nav__link">
+    Transform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback" title="Fallback" class="md-nav__link">
+    Fallback
+  </a>
+  
+</li>
+      
+      
+      
+      
+      
+    </ul>
+  
+</nav>
+    
   </li>
 
     
@@ -237,79 +299,11 @@
       
       
 
-  
 
-
-  <li class="md-nav__item md-nav__item--active">
-    
-    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="toc">
-    
-    
-      <label class="md-nav__link md-nav__link--active" for="toc">
-        Deployment
-      </label>
-    
-    <a href="./" title="Deployment" class="md-nav__link md-nav__link--active">
+  <li class="md-nav__item">
+    <a href="../deployment/" title="Deployment" class="md-nav__link">
       Deployment
     </a>
-    
-      
-<nav class="md-nav md-nav--secondary">
-  
-  
-  
-    <label class="md-nav__title" for="toc">Table of contents</label>
-    <ul class="md-nav__list" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#ansible" title="Ansible" class="md-nav__link">
-    Ansible
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#change-configuration" title="Change Configuration" class="md-nav__link">
-    Change Configuration
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploy-to-specific-servers" title="Deploy to specific servers" class="md-nav__link">
-    Deploy to specific servers
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker" title="Docker" class="md-nav__link">
-    Docker
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#manually" title="Manually" class="md-nav__link">
-    Manually
-  </a>
-  
-</li>
-      
-      
-      
-      
-      
-    </ul>
-  
-</nav>
-    
   </li>
 
     
@@ -356,42 +350,36 @@
     <ul class="md-nav__list" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#ansible" title="Ansible" class="md-nav__link">
-    Ansible
-  </a>
-  
-    <nav class="md-nav">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#change-configuration" title="Change Configuration" class="md-nav__link">
-    Change Configuration
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploy-to-specific-servers" title="Deploy to specific servers" class="md-nav__link">
-    Deploy to specific servers
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#docker" title="Docker" class="md-nav__link">
-    Docker
+  <a href="#story" title="Story" class="md-nav__link">
+    Story
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#manually" title="Manually" class="md-nav__link">
-    Manually
+  <a href="#source" title="Source" class="md-nav__link">
+    Source
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sink" title="Sink" class="md-nav__link">
+    Sink
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#transform" title="Transform" class="md-nav__link">
+    Transform
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fallback" title="Fallback" class="md-nav__link">
+    Fallback
   </a>
   
 </li>
@@ -413,16 +401,14 @@
               
                 
                 
-                  <h1>Deployment</h1>
+                  <h1>Concepts</h1>
                 
-                <h2 id="ansible">Ansible</h2>
-<h3 id="change-configuration">Change Configuration</h3>
-<h3 id="deploy-to-specific-servers">Deploy to specific servers</h3>
-<pre><code class="sh">ansible-playbook -i ansible/lab ansible/site.yml -e &quot;service_name=stresstest&quot;
-</code></pre>
-
-<h2 id="docker">Docker</h2>
-<h2 id="manually">Manually</h2>
+                <p><a href="assets/event-bus-workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/event-bus-workflow.png" /></a></p>
+<h2 id="story">Story</h2>
+<h2 id="source">Source</h2>
+<h2 id="sink">Sink</h2>
+<h2 id="transform">Transform</h2>
+<h2 id="fallback">Fallback</h2>
                 
                   
                 
@@ -443,7 +429,7 @@
     <div class="md-footer-nav">
       <nav class="md-footer-nav__inner md-grid">
         
-          <a href="../data_format/" title="Data Format" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
+          <a href="../quickstart/" title="QuickStart" class="md-flex md-footer-nav__link md-footer-nav__link--prev" rel="prev">
             <div class="md-flex__cell md-flex__cell--shrink">
               <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
             </div>
@@ -452,19 +438,19 @@
                 <span class="md-footer-nav__direction">
                   Previous
                 </span>
-                Data Format
+                QuickStart
               </span>
             </div>
           </a>
         
         
-          <a href="../admin/" title="Admin" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
+          <a href="../components/" title="Components" class="md-flex md-footer-nav__link md-footer-nav__link--next" rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
               <span class="md-flex__ellipsis">
                 <span class="md-footer-nav__direction">
                   Next
                 </span>
-                Admin
+                Components
               </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink">
