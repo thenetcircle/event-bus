@@ -1,7 +1,7 @@
 site_name: EventBus
 theme: material
 pages:
-  - Home: index.md
+  - Welcome: index.md
   - Installation: installation.md
   - QuickStart: quickstart.md
   - Components: components.md
