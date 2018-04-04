@@ -4,7 +4,7 @@ It is using internally for unified data collection(collect data from different s
 It comes with some implemented sources(http, kafka, redis, etc...), sinks(http, kafka, etc...), fallbacks(see the document) and a extendable structure. Also a admin interface to easily manage the relationship between them.
 
 
-<a href="assets/workflow2.png" target="_blank">![EventBus Workflow](assets/workflow_small.png)</a>
+<a href="assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
 
 
 ## Features
