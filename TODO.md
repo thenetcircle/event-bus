@@ -33,3 +33,6 @@
 - ~~prevent the case update multiple zookeeper nodes at once (like create story, update story)~~
 - ~~add admin frontend to ansible scripts~~
 - release 2.1.0 with admin build
+- stop watching story changes, trigger it by a explicit action.
+- add ability for that one runner run multiple times of same story
+- optimize topic editor

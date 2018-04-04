@@ -45,7 +45,7 @@ class ActivityStreamsExtractorTest extends TestBase {
       """.stripMargin
 
     assertThrows[EventExtractingException] {
-      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
     }
   }
 
@@ -56,7 +56,7 @@ class ActivityStreamsExtractorTest extends TestBase {
         |}
       """.stripMargin
 
-    val event = Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+    val event = Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
     event.getExtra("verb") shouldEqual Some("login")
   }
 
@@ -68,7 +68,7 @@ class ActivityStreamsExtractorTest extends TestBase {
       """.stripMargin
 
     val testevent =
-      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
 
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
     testevent.metadata.name shouldEqual Some("user.login")
@@ -89,7 +89,7 @@ class ActivityStreamsExtractorTest extends TestBase {
       """.stripMargin
 
     val testevent =
-      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
 
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
     testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
@@ -163,7 +163,7 @@ class ActivityStreamsExtractorTest extends TestBase {
       """.stripMargin
 
     val testevent =
-      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 500.millisecond)
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
 
     testevent.uuid shouldEqual "ED-providerId-message.send-actorId-59e704843e9cb"
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
@@ -192,7 +192,7 @@ class ActivityStreamsExtractorTest extends TestBase {
       """.stripMargin
 
     val testevent =
-      Await.result(unknownFormatExtractor.extract(testdata.getBytes), 500.millisecond)
+      Await.result(unknownFormatExtractor.extract(testdata.getBytes), 3.seconds)
 
     testevent.body shouldEqual EventBody(testdata, DataFormat.UNKNOWN)
   }
