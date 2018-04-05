@@ -8,7 +8,7 @@ It is using internally for unified data collection(collect data from different s
 
 It comes with some implemented sources(http, kafka, redis, etc...), sinks(http, kafka, etc...), fallbacks(see the document) and a extendable structure. Also a admin interface to easily manage the relationship between them.
 
-For more details can visit the [Documention](https://thenetcircle.github.io/event-bus/), And [here](https://thenetcircle.github.io/event-bus/admin/) is a Demo of Admin Interface.
+For more details can visit the [documention](https://thenetcircle.github.io/event-bus/), And [here](https://thenetcircle.github.io/event-bus/admin/) is a demo of the admin interface.
 
 ![EventBus Workflow](https://thenetcircle.github.io/event-bus/assets/event-bus-workflow.png)
 

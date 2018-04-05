@@ -13,7 +13,7 @@ import Topics from "./components/Topics.vue"
 Vue.use(VueRouter);
 
 const router = new VueRouter({
-  mode: 'history',
+  mode: IS_OFFLINE ? 'hash' : 'history',
   routes: [
     {path: `${URL_PREFIX}/`, component: Home, name: 'home'},
     {path: `${URL_PREFIX}/runners`, component: Runners, name: 'runners'},
