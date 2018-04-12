@@ -38,7 +38,6 @@ object StoryRunner {
     Props(classOf[StoryRunner], runnerName, appContext, system)
 
   case class Run(story: Story)
-  case class ScheduleRerun(delay: FiniteDuration, newStory: Story)
   case class Rerun(newStory: Story)
   case class Shutdown(storyNameOption: Option[String] = None)
 }
@@ -87,11 +86,6 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       context.watch(storyActor)
 
       runningStories += (storyActor -> storyName)
-
-    case ScheduleRerun(delay, newStory) =>
-      val storyName = newStory.storyName
-      log.debug(s"scheduling to restart story $storyName in $delay")
-      timers.startSingleTimer(s"schedule-rerun-$storyName", Rerun(newStory), delay)
 
     case Rerun(newStory) =>
       val storyName = newStory.storyName

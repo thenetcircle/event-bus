@@ -17,22 +17,15 @@
 
 package com.thenetcircle.event_bus.story
 
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
-
 import akka.actor.{ActorRef, ActorSystem}
 import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
 import com.typesafe.scalalogging.StrictLogging
-import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
-import org.apache.curator.framework.recipes.cache.{ChildData, PathChildrenCache, PathChildrenCacheEvent}
+import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 import org.apache.curator.framework.recipes.leader.LeaderLatch
 
-import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.concurrent.duration._
 import scala.util.Random
 import scala.util.control.NonFatal
 
@@ -59,8 +52,6 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
   type ZKEvent   = PathChildrenCacheEvent
   type ZKWatcher = PathChildrenCache
 
-  private val watchingStores = mutable.Map.empty[String, ZKWatcher]
-
   val runnerPath = s"runners/$runnerName"
 
   zkManager.ensurePath(runnerPath)
@@ -75,7 +66,11 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
     val latch     = new LeaderLatch(zkManager.getClient(), zkManager.getAbsPath(latchPath))
     latch.start()
     appContext.addShutdownHook {
-      try { latch.close() } catch { case _: Throwable => }
+      try {
+        latch.close()
+      } catch {
+        case _: Throwable =>
+      }
     }
 
     try {
@@ -130,34 +125,53 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
 
           // new story has been assigned to this runner
           case CHILD_ADDED =>
-            val storyName = Util.getLastPartOfPath(_event.getData.getPath)
-            logger.info(s"new story $storyName is assigned to runner $runnerName")
-            val storyWatcher = watchStory(storyName)
-            watchingStores += (storyName -> storyWatcher)
+            val storyName     = Util.getLastPartOfPath(_event.getData.getPath)
+            var runningAmount = getStoryRunningAmount(_event.getData.getData)
+            logger.info(s"new story $storyName is assigned to runner $runnerName to run $runningAmount times")
+
+            // Run the story
+            getStoryData(storyName).foreach(data => {
+              // todo run multi instances
+              createStory(storyName, data).foreach(story => {
+                storyRunner ! StoryRunner.Run(story)
+              })
+            })
+
+          case CHILD_UPDATED =>
+            val storyName     = Util.getLastPartOfPath(_event.getData.getPath)
+            var runningAmount = getStoryRunningAmount(_event.getData.getData)
+            logger.info(s"story $storyName is updated with amount $runningAmount")
+
+          // storyRunner ! StoryRunner.Rerun(Some(storyName))
 
           // story has been removed from this runner
           case CHILD_REMOVED =>
             val storyName = Util.getLastPartOfPath(_event.getData.getPath)
             logger.info(s"story $storyName is removed from runner $runnerName")
             storyRunner ! StoryRunner.Shutdown(Some(storyName))
-            watchingStores
-              .get(storyName)
-              .foreach(w => {
-                w.close()
-                watchingStores.remove(storyName)
-              })
 
           case _ =>
         }
       }
 
     appContext.addShutdownHook {
-      watchingStores.foreach(_._2.close())
       jobWatcher.close()
     }
   }
 
-  def watchStory(storyName: String): ZKWatcher = {
+  def getStoryRunningAmount(data: Array[Byte]): Int = {
+    var amount =
+      if (data == null) 1 else Util.makeUTF8String(data).toInt
+    if (amount <= 1 || amount >= 100) {
+      amount = 1
+    }
+    amount
+  }
+
+  def getStoryData(storyName: String): Option[Map[String, String]] =
+    zkManager.getChildrenData(getStoryRootPath(storyName))
+
+  /*def watchStory(storyName: String): ZKWatcher = {
     val inited: AtomicBoolean = new AtomicBoolean(false)
     zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) { (_event, _watcher) =>
       if (_event.getType == INITIALIZED) {
@@ -176,11 +190,11 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
 
       }
     }
-  }
+  }*/
 
-  def createStory(storyName: String, data: List[ChildData]): Option[Story] =
+  def createStory(storyName: String, storyData: Map[String, String]): Option[Story] =
     try {
-      val storyInfo = createStoryInfo(storyName, data)
+      val storyInfo = createStoryInfo(storyName, storyData)
       logger.info(s"story $storyName was inited or updated according to ZooKeeper data, info: $storyInfo")
       val story = storyBuilder.buildStory(storyInfo)
       Some(story)
@@ -190,12 +204,7 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
         None
     }
 
-  def createStoryInfo(storyName: String, data: List[ChildData]): StoryInfo = {
-    val storyData = mutable.Map.empty[String, String]
-    data.foreach(child => {
-      storyData += (Util.getLastPartOfPath(child.getPath) -> Util.makeUTF8String(child.getData))
-    })
-
+  def createStoryInfo(storyName: String, storyData: Map[String, String]): StoryInfo =
     StoryInfo(
       storyName,
       storyData.getOrElse("status", "INIT"),
@@ -205,5 +214,4 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
       storyData.get("transforms"),
       storyData.get("fallback")
     )
-  }
 }
