@@ -38,7 +38,6 @@ object StoryRunner {
     Props(classOf[StoryRunner], runnerName, appContext, system)
 
   case class Run(story: Story)
-  case class Rerun(newStory: Story)
   case class Shutdown(storyNameOption: Option[String] = None)
 }
 
@@ -55,7 +54,6 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
     TaskRunningContextFactory(system, appContext)
 
   val runningStories: mutable.Map[ActorRef, String] = mutable.Map.empty
-  var increasingId: Int                             = 0
 
   // Supervision strategy
   val loggerSupervistionDecider: PartialFunction[Throwable, Throwable] = {
@@ -75,23 +73,12 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       val runningContext =
         runningContextFactory.createNewRunningContext(runnerName, self, story.settings)
 
-      val actorName = if (runningStories.exists(_._2 == storyName)) {
-        increasingId += 1
-        s"story-$storyName#$increasingId"
-      } else {
-        s"story-$storyName"
-      }
+      val actorName = s"story:$storyName:${java.util.UUID.randomUUID().toString}"
       val storyActor =
         context.actorOf(StoryActor.props(story, self)(runningContext), actorName)
       context.watch(storyActor)
 
       runningStories += (storyActor -> storyName)
-
-    case Rerun(newStory) =>
-      val storyName = newStory.storyName
-      log.warning(s"restarting story $storyName")
-      self ! Shutdown(Some(storyName))
-      timers.startSingleTimer(s"rerun-$storyName", Run(newStory), 3.seconds)
 
     case Shutdown(storyNameOption) =>
       storyNameOption match {

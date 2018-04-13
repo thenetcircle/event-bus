@@ -38,7 +38,7 @@ class Runner extends AbstractApp {
     // Initialize StoryRunner
     val runnerName: String = config.getString("app.runner-name")
     val storyRunner: ActorRef =
-      system.actorOf(StoryRunner.props(runnerName), "runner-" + runnerName)
+      system.actorOf(StoryRunner.props(runnerName), "runner:" + runnerName)
     appContext.addShutdownHook {
       try {
         Await.ready(

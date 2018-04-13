@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.story
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
@@ -28,6 +28,7 @@ import org.apache.curator.framework.recipes.leader.LeaderLatch
 
 import scala.util.Random
 import scala.util.control.NonFatal
+import scala.concurrent.duration._
 
 object StoryZooKeeperListener {
   def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
@@ -119,36 +120,39 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
   }
 
   def start(): Unit = {
+    var storyScheduler: Option[Cancellable] = None
     val jobWatcher =
-      zkManager.watchChildren(assignedStoriesPath, fetchData = false) { (_event, _watcher) =>
+      zkManager.watchChildren(assignedStoriesPath) { (_event, _watcher) =>
         _event.getType match {
 
           // new story has been assigned to this runner
           case CHILD_ADDED =>
-            val storyName     = Util.getLastPartOfPath(_event.getData.getPath)
-            var runningAmount = getStoryRunningAmount(_event.getData.getData)
-            logger.info(s"new story $storyName is assigned to runner $runnerName to run $runningAmount times")
+            val storyName = Util.getLastPartOfPath(_event.getData.getPath)
+            val amount    = getStoryRunningAmount(_event.getData.getData)
+            logger.info(s"new story $storyName is assigned to runner $runnerName to run $amount times")
 
             // Run the story
-            getStoryData(storyName).foreach(data => {
-              // todo run multi instances
-              createStory(storyName, data).foreach(story => {
-                storyRunner ! StoryRunner.Run(story)
-              })
-            })
+            runStory(storyName, amount)
 
           case CHILD_UPDATED =>
-            val storyName     = Util.getLastPartOfPath(_event.getData.getPath)
-            var runningAmount = getStoryRunningAmount(_event.getData.getData)
-            logger.info(s"story $storyName is updated with amount $runningAmount")
+            val storyName = Util.getLastPartOfPath(_event.getData.getPath)
+            val amount    = getStoryRunningAmount(_event.getData.getData)
+            logger.info(s"story $storyName is updated with amount $amount")
 
-          // storyRunner ! StoryRunner.Rerun(Some(storyName))
+            shutdownStory(storyName)
+
+            storyScheduler.foreach(_.cancel())
+            storyScheduler = Option(
+              system.scheduler.scheduleOnce(3.seconds) {
+                runStory(storyName, amount)
+              }(system.dispatcher)
+            )
 
           // story has been removed from this runner
           case CHILD_REMOVED =>
             val storyName = Util.getLastPartOfPath(_event.getData.getPath)
             logger.info(s"story $storyName is removed from runner $runnerName")
-            storyRunner ! StoryRunner.Shutdown(Some(storyName))
+            shutdownStory(storyName)
 
           case _ =>
         }
@@ -161,46 +165,38 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
 
   def getStoryRunningAmount(data: Array[Byte]): Int = {
     var amount =
-      if (data == null) 1 else Util.makeUTF8String(data).toInt
+      try { Util.makeUTF8String(data).toInt } catch { case _: Throwable => 1 }
     if (amount <= 1 || amount >= 100) {
       amount = 1
     }
     amount
   }
 
-  def getStoryData(storyName: String): Option[Map[String, String]] =
-    zkManager.getChildrenData(getStoryRootPath(storyName))
+  def runStory(storyName: String, amount: Int): Unit = {
+    logger.info(s"going to run story $storyName $amount times")
+    zkManager
+      .getChildrenData(getStoryRootPath(storyName))
+      .foreach(data => {
+        for (i <- 1 to amount) {
+          createStory(storyName, data).foreach(story => {
+            storyRunner ! StoryRunner.Run(story)
+          })
+        }
+      })
+  }
 
-  /*def watchStory(storyName: String): ZKWatcher = {
-    val inited: AtomicBoolean = new AtomicBoolean(false)
-    zkManager.watchChildren(getStoryRootPath(storyName), StartMode.POST_INITIALIZED_EVENT) { (_event, _watcher) =>
-      if (_event.getType == INITIALIZED) {
-
-        inited.compareAndSet(false, true)
-        val optionStory = createStory(storyName, _event.getInitialData.asScala.toList)
-        optionStory.foreach(s => storyRunner ! StoryRunner.Run(s))
-
-      } else if (inited.get() == true &&
-                 (_event.getType == CHILD_UPDATED ||
-                 _event.getType == CHILD_ADDED ||
-                 _event.getType == CHILD_REMOVED)) {
-
-        val storyOption = createStory(storyName, _watcher.getCurrentData.asScala.toList)
-        storyOption.foreach(s => storyRunner ! StoryRunner.ScheduleRerun(3.seconds, s))
-
-      }
-    }
-  }*/
+  def shutdownStory(storyName: String): Unit =
+    storyRunner ! StoryRunner.Shutdown(Some(storyName))
 
   def createStory(storyName: String, storyData: Map[String, String]): Option[Story] =
     try {
       val storyInfo = createStoryInfo(storyName, storyData)
-      logger.info(s"story $storyName was inited or updated according to ZooKeeper data, info: $storyInfo")
+      logger.info(s"creating new story $storyName with data: $storyInfo")
       val story = storyBuilder.buildStory(storyInfo)
       Some(story)
     } catch {
       case NonFatal(ex) =>
-        logger.error(s"fetching or building story $storyName failed according to the changes on ZooKeeper, error $ex")
+        logger.error(s"creating story $storyName failed with error $ex")
         None
     }
 
