@@ -27,14 +27,14 @@
       </ul>
     </div>
 
-    <div v-show="isOverview">
+    <div v-if="isOverview">
 
       <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"
                    @save="onSaveStory"></story-graph>
 
     </div>
 
-    <div v-show="isRunners">
+    <div v-if="isRunners">
 
       <div class="level">
         <div class="level-left">
@@ -74,7 +74,7 @@
 
     </div>
 
-    <div v-show="isFallback"></div>
+    <div v-if="isFallback"></div>
 
     <div v-if="isMonitoring">
       <story-statistics :storyname="storyName"></story-statistics>
@@ -96,12 +96,19 @@
   import StoryStatistics from './StoryStatistics.vue'
   import bus from '../lib/bus'
 
+  let tabRouteMapping: { [key:string]: string } = {
+    'overview': 'story',
+    'fallback': 'story-fallback',
+    'monitoring': 'story-statistics',
+    'runners': 'story-runners'
+  }
+
   export default Vue.extend({
     data() {
       return {
         storyName: this.$route.params.storyName,
         storyInfo: {} as StoryInfo,
-        currTab: 'overview',
+        // currTab: 'overview',
         runners: <RunnerInfo[]>[],
         chooseRunner: false
       }
@@ -135,7 +142,9 @@
       },
 
       changeTab(tab: string) {
-        this.currTab = tab
+        let routeName = tabRouteMapping[tab]
+        this.$router.push({ name: routeName, params: { storyName: this.storyName } })
+        // this.currTab = tab
       },
 
       onSaveStory(newStoryInfo: StoryInfo) {
@@ -183,6 +192,13 @@
     },
 
     computed: {
+      currTab(): string {
+        for (let key in tabRouteMapping) {
+          if (tabRouteMapping[key] == this.$route.name)
+            return key;
+        }
+        return "overview";
+      },
       isOverview(): boolean {
         return this.currTab == 'overview'
       },

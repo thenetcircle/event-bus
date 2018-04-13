@@ -63,7 +63,7 @@
 
         request.createStory(this.storyName, newStoryInfo)
           .then(() => {
-            this.$router.push('stories', () => {
+            this.$router.push({ name: 'story-runners', params: { storyName: this.storyName } }, () => {
               bus.$emit('notify', `new story ${this.storyName} has been created.`)
             })
           })
