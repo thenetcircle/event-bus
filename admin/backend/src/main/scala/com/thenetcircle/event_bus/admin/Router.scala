@@ -35,7 +35,7 @@ class Router()(implicit appContext: AppContext, materializer: Materializer)
 
   import DefaultJsonProtocol._
   implicit val storyInfoFormats   = jsonFormat6(StoryInfo)
-  implicit val runnerStoryFormats = jsonFormat2(RunnerStory)
+  implicit val runnerStoryFormats = jsonFormat3(RunnerStory)
 
   def getRoute(actionHandler: ActionHandler): Route =
     // format: off
@@ -84,7 +84,7 @@ class Router()(implicit appContext: AppContext, materializer: Materializer)
         } ~
         path("runner" / "assign") {
           entity(as[RunnerStory]) { mapping =>
-            complete(actionHandler.assignStory(mapping.runnerName, mapping.storyName))
+            complete(actionHandler.assignStory(mapping.runnerName, mapping.storyName, mapping.amount))
           }
         } ~
         path("runner" / "unassign") {

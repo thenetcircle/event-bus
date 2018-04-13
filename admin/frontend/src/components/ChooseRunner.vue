@@ -4,7 +4,7 @@
     <div class="modal-background"></div>
     <div class="modal-card">
       <header class="modal-card-head">
-        <p class="modal-card-title">Choose a runner</p>
+        <p class="modal-card-title">Assign this story to run on...</p>
         <button class="delete" @click.prevent="close()" aria-label="close"></button>
       </header>
       <section class="modal-card-body">

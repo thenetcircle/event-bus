@@ -58,6 +58,15 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
     }
   }
 
+  def createOrUpdatePath(relativePath: String, data: String = ""): Unit = {
+    val absPath = getAbsPath(relativePath)
+    if (client.checkExists().forPath(absPath) == null) {
+      client.create().creatingParentsIfNeeded().forPath(absPath, data.getBytes())
+    } else {
+      client.setData().forPath(absPath, data.getBytes())
+    }
+  }
+
   def deletePath(relativePath: String): Unit = {
     val absPath = getAbsPath(relativePath)
     try {

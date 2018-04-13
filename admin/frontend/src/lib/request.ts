@@ -30,7 +30,7 @@ interface Request {
 
   getRunner(runnerName: string): Thenable<RunnerInfo>
 
-  assignStory(runnerName: string, storyName: string): Thenable<void>
+  assignStory(runnerName: string, storyName: string, amount: number): Thenable<void>
 
   unassignStory(runnerName: string, storyName: string): Thenable<void>
 
@@ -122,7 +122,7 @@ class RequestImpl implements Request {
   getStoryRunners(storyName: string): Thenable<RunnerInfo[]> {
     return this.getRunners()
       .then((runners: RunnerInfo[]) => {
-        return runners.filter(info => info.stories.indexOf(storyName) !== -1)
+        return runners.filter(info => storyName in info.stories)
       })
   }
 
@@ -142,12 +142,13 @@ class RequestImpl implements Request {
       .catch(RequestImpl.errorHandler)
   }
 
-  assignStory(runnerName: string, storyName: string): Thenable<void> {
+  assignStory(runnerName: string, storyName: string, amount: number): Thenable<void> {
     bus.$emit('loading')
 
     return axios.post(`${URL_PREFIX}/api/runner/assign`, {
       'runnerName': runnerName,
-      'storyName': storyName
+      'storyName': storyName,
+      'amount': amount
     })
       .then(RequestImpl.respHandler)
       .catch(RequestImpl.errorHandler)
@@ -224,7 +225,7 @@ class OfflineRequest implements Request {
       name: 'default-runner',
       status: RunnerStatus.RUNNING,
       host: 'test-server-01',
-      stories: ['http-to-kafka-with-fallback'],
+      stories: { 'http-to-kafka-with-fallback': '1' },
       version: '2.1.0',
       instances: ['_c_db771980-fe76-4b1c-bfac-e463fee0e930-latch-0000000024']
     },
@@ -232,7 +233,7 @@ class OfflineRequest implements Request {
       name: 'extra-runner',
       status: RunnerStatus.RUNNING,
       host: 'test-server-02',
-      stories: ['kafka-to-http-without-fallback'],
+      stories: { 'kafka-to-http-without-fallback': '1' },
       version: '2.1.0',
       instances: ['_c_db771980-fe76-4b1c-bfac-e463fee0e930-latch-0000000024']
     }
@@ -346,15 +347,15 @@ class OfflineRequest implements Request {
 
   getStoryRunners(storyName: string): Thenable<RunnerInfo[]> {
     let result: RunnerInfo[] = this.testRunners.filter((info) => {
-      return info.stories.indexOf(storyName) !== -1
+      return storyName in info.stories
     })
     return Promise.resolve(result)
   }
 
-  assignStory(runnerName: string, storyName: string): Thenable<void> {
+  assignStory(runnerName: string, storyName: string, amount: number): Thenable<void> {
     this.testRunners.forEach((info) => {
-      if (info.name == runnerName && info.stories.indexOf(storyName) === -1) {
-        info.stories.push(storyName)
+      if (info.name == runnerName) {
+        info.stories[storyName] = amount + ''
       }
     })
     return Promise.resolve();
@@ -362,9 +363,8 @@ class OfflineRequest implements Request {
 
   unassignStory(runnerName: string, storyName: string): Thenable<void> {
     this.testRunners.forEach((info) => {
-      let index = info.stories.indexOf(storyName)
-      if (info.name == runnerName && index !== -1) {
-        info.stories.splice(index, 1)
+      if (info.name == runnerName && storyName in info.stories) {
+        delete info.stories[storyName]
       }
     })
     return Promise.resolve();

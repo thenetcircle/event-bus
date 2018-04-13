@@ -16,10 +16,10 @@
               <th>Status:</th>
               <td>{{ story.info.status }}</td>
             </tr>
-            <tr>
+            <!--<tr>
               <th>Runners:</th>
               <td>default-runner</td>
-            </tr>
+            </tr>-->
             </tbody>
           </table>
 

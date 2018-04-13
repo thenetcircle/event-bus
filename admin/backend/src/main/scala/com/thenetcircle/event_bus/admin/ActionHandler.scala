@@ -36,7 +36,8 @@ case class StoryInfo(
 
 case class RunnerStory(
     runnerName: String,
-    storyName: String
+    storyName: String,
+    amount: Option[Int]
 )
 
 class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
@@ -205,9 +206,12 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
   def getRunner(runnerName: String): String =
     getZKNodeTreeAsJson(wrapPath(Some(s"runners/$runnerName")))
 
-  def assignStory(runnerName: String, storyName: String): String =
+  def assignStory(runnerName: String, storyName: String, amount: Option[Int]): String =
     try {
-      zkManager.ensurePath(wrapPath(Some(s"runners/$runnerName/stories/$storyName")))
+      zkManager.createOrUpdatePath(
+        wrapPath(Some(s"runners/$runnerName/stories/$storyName")),
+        amount.getOrElse(1).toString
+      )
       createResponse(0)
     } catch {
       case ex: Throwable => createResponse(1, ex.getMessage)

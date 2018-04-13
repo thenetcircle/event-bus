@@ -52,6 +52,7 @@
           <th>Name</th>
           <th>Server</th>
           <th>Version</th>
+          <th>Amount</th>
           <th>Action</th>
         </tr>
         </thead>
@@ -64,6 +65,7 @@
           </td>
           <td>{{ item.host }}</td>
           <td>{{ item.version }}</td>
+          <td>{{ item.stories[storyName] }}</td>
           <td><a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a></td>
         </tr>
         </tbody>
@@ -162,8 +164,13 @@
         this.chooseRunner = false
       },
       onAssignRunner(runnerInfo: RunnerInfo): void {
-        if (confirm(`Are you sure to assign story "${this.storyName}" to runner "${runnerInfo.name}"?`)) {
-          request.assignStory(runnerInfo.name, this.storyName)
+        let typpedAmount = prompt(`How many instances you want the runner "${runnerInfo.name}" to run?`, '1')
+        // confirm(`Are you sure to assign story "${this.storyName}" to runner "${runnerInfo.name}"?`)
+        if (typpedAmount != null && typpedAmount != "") {
+          let amount = parseInt(typpedAmount)
+          if (isNaN(amount) || amount <= 1) amount = 1
+          runnerInfo.stories[this.storyName] = amount + ''
+          request.assignStory(runnerInfo.name, this.storyName, amount)
             .then(() => {
               this.runners.push(runnerInfo)
               this.onCloseChooseRunner()

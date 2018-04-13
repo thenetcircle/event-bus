@@ -11,7 +11,7 @@
     </tr>
     <tr>
       <th>Assigned Stories:</th>
-      <td>{{ info.stories.join(', ') }}</td>
+      <td>{{ Object.keys(info.stories).join(', ') }}</td>
     </tr>
     <tr>
       <th>Version:</th>
