@@ -225,6 +225,19 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
       case ex: Throwable => createResponse(1, ex.getMessage)
     }
 
+  def rerunStory(runnerName: String, storyName: String): String =
+    try {
+      val path = wrapPath(Some(s"runners/$runnerName/stories/$storyName"))
+      zkManager
+        .getData(path)
+        .foreach(amount => {
+          zkManager.setData(path, amount)
+        })
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
   def getTopics(): String =
     getZKNodeTreeAsJson(wrapPath(Some("topics")))
 

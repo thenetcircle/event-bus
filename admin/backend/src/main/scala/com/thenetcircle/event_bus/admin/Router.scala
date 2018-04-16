@@ -92,6 +92,11 @@ class Router()(implicit appContext: AppContext, materializer: Materializer)
             complete(actionHandler.unassignStory(mapping.runnerName, mapping.storyName))
           }
         } ~
+        path("runner" / "rerun") {
+          entity(as[RunnerStory]) { mapping =>
+            complete(actionHandler.rerunStory(mapping.runnerName, mapping.storyName))
+          }
+        } ~
         path("topics") {
           entity(as[String]) { topics =>
             complete(actionHandler.updateTopics(topics))

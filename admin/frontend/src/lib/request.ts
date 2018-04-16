@@ -34,6 +34,8 @@ interface Request {
 
   unassignStory(runnerName: string, storyName: string): Thenable<void>
 
+  rerunStory(runnerName: string, storyName: string): Thenable<void>
+
   getTopics(): Thenable<string>
 
   updateTopics(topics: string): Thenable<void>
@@ -158,6 +160,17 @@ class RequestImpl implements Request {
     bus.$emit('loading')
 
     return axios.post(`${URL_PREFIX}/api/runner/unassign`, {
+      'runnerName': runnerName,
+      'storyName': storyName
+    })
+      .then(RequestImpl.respHandler)
+      .catch(RequestImpl.errorHandler)
+  }
+
+  rerunStory(runnerName: string, storyName: string): Thenable<void> {
+    bus.$emit('loading')
+
+    return axios.post(`${URL_PREFIX}/api/runner/rerun`, {
       'runnerName': runnerName,
       'storyName': storyName
     })
@@ -367,6 +380,10 @@ class OfflineRequest implements Request {
         delete info.stories[storyName]
       }
     })
+    return Promise.resolve();
+  }
+
+  rerunStory(runnerName: string, storyName: string): Thenable<void> {
     return Promise.resolve();
   }
 

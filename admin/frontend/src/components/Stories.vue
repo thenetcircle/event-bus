@@ -12,14 +12,21 @@
 
           <table class="table is-narrow">
             <tbody>
-            <tr>
+            <!--<tr>
               <th>Status:</th>
               <td>{{ story.info.status }}</td>
-            </tr>
-            <!--<tr>
-              <th>Runners:</th>
-              <td>default-runner</td>
             </tr>-->
+            <tr>
+              <th>Runners:</th>
+              <td>
+                <div v-if="story.runners.length">
+                  <div v-for="runner in story.runners">
+                    <b>{{ runner.name }}</b> (host: {{ runner.host }}, status: {{ runner.status }})
+                  </div>
+                </div>
+                <div v-else>Not assign to a runner yet</div>
+              </td>
+            </tr>
             </tbody>
           </table>
 
@@ -36,11 +43,13 @@
   import Vue from "vue"
   import request from "../lib/request"
   import {StoryInfo} from '../lib/story-utils';
+  import {RunnerInfo} from "../lib/runner-utils";
 
   interface StorySummary {
     name: string,
     summary: string,
-    info: StoryInfo
+    info: StoryInfo,
+    runners: RunnerInfo[]
   }
 
   export default Vue.extend({
@@ -81,10 +90,13 @@
                 summary.push(`<span class="tag is-warning">${storyInfo.fallback.type} Fallback</span>`)
               }
 
-              stories.push({
-                name: storyName,
-                summary: summary.join(' -> '),
-                info: storyInfo
+              request.getStoryRunners(storyName).then(runners => {
+                stories.push({
+                  name: storyName,
+                  summary: summary.join(' -> '),
+                  info: storyInfo,
+                  runners: runners
+                })
               })
 
             })

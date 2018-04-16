@@ -6,12 +6,12 @@
         <div class="level-item">
           <p class="title is-2 is-spaced story-name">{{ storyName }}</p>
         </div>
-        <div class="level-item">
+        <!--<div class="level-item">
           <div class="tags has-addons">
             <span class="tag is-dark">Status:</span>
             <span class="tag is-info">{{ storyInfo.status }}</span>
           </div>
-        </div>
+        </div>-->
       </div>
     </div>
 
@@ -66,7 +66,10 @@
           <td>{{ item.host }}</td>
           <td>{{ item.version }}</td>
           <td>{{ item.stories[storyName] }}</td>
-          <td><a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a></td>
+          <td>
+            <a class="button is-primary" @click="onRerun(item)">Rerun</a>
+            <a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a>
+          </td>
         </tr>
         </tbody>
       </table>
@@ -193,6 +196,14 @@
                 this.runners.splice(index, 1)
               }
               bus.$emit('notify', `The story has been unassigned from runner "${runnerInfo.name}"!`)
+            })
+        }
+      },
+      onRerun(runnerInfo: RunnerInfo): void {
+        if (confirm(`Are you sure to rerun story "${this.storyName}" on runner "${runnerInfo.name}"?`)) {
+          request.rerunStory(runnerInfo.name, this.storyName)
+            .then(() => {
+              bus.$emit('notify', `The story has been rerun on runner "${runnerInfo.name}"!`)
             })
         }
       }
