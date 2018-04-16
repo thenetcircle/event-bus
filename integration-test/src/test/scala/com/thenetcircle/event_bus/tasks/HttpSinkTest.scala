@@ -10,8 +10,7 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
-import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender.UnexpectedResponseException
-import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSinkSettings}
+import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSinkSettings, UnexpectedResponseException}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

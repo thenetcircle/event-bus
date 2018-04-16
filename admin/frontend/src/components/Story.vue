@@ -22,7 +22,7 @@
         <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')">
           <a>Statistics</a></li>
         <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"
-            v-if="storyInfo.fallback !== undefined"><a>Failed Events</a>
+            v-if="storyInfo.fallback !== undefined && 0"><a>Failed Events</a>
         </li>
       </ul>
     </div>

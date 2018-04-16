@@ -42,6 +42,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.{Failure, Random, Success, Try}
 
+class UnexpectedResponseException(info: String) extends RuntimeException(info)
+
 case class HttpSinkSettings(
     defaultRequest: HttpRequest,
     minBackoff: FiniteDuration = 1.second,
@@ -148,8 +150,6 @@ object HttpSink {
           case _                 ⇒ maxBackoff
         }
     }
-
-    class UnexpectedResponseException(info: String) extends RuntimeException(info)
   }
 
   class RetrySender(httpSinkSettings: HttpSinkSettings)(implicit runningContext: TaskRunningContext)
