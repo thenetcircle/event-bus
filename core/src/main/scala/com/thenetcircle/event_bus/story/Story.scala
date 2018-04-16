@@ -54,7 +54,7 @@ class Story(
   private var runningFuture: Option[Future[Done]] = None
   def run()(implicit runningContext: TaskRunningContext): Future[Done] = runningFuture getOrElse {
     try {
-      val sourceHandler = wrapTask(Flow[Payload], s"story-$storyName-source", skipPreCheck = true)
+      val sourceHandler = wrapTask(Flow[Payload], s"story:$storyName:source", skipPreCheck = true)
 
       var transformId = 0
       val transformsHandler =
@@ -66,7 +66,7 @@ class Story(
                 .via(
                   wrapTask(
                     Flow[Payload].map(_._2).via(_transform.prepare()),
-                    s"story-$storyName-transform-$transformId"
+                    s"story:$storyName:transform:$transformId"
                   )
                 )
             }
@@ -74,7 +74,7 @@ class Story(
           .getOrElse(Flow[Payload])
 
       val sinkHandler =
-        wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story-$storyName-sink")
+        wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story:$storyName:sink")
 
       val monitorFlow = Flow[Payload]
         .map(payload => {

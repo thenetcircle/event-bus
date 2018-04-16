@@ -141,9 +141,13 @@ object StoryMonitor {
     val completion: Counter     = counter("completion")
     val termination: Counter    = counter("termination")
 
-    def exception(ex: Throwable) = counter("exceptions." + ex.getClass.getSimpleName)
+    def exception(ex: Throwable) = try { counter("exceptions." + ex.getClass.getSimpleName) } catch {
+      case _: Throwable => counter("exceptions.unknown")
+    }
 
-    def error(ex: Throwable) = counter("errors." + ex.getClass.getSimpleName)
+    def error(ex: Throwable) = try { counter("errors." + ex.getClass.getSimpleName) } catch {
+      case _: Throwable => counter("exceptions.unknown")
+    }
   }
 
   object StoryMetrics extends EntityRecorderFactory[StoryMetrics] {

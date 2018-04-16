@@ -51,17 +51,17 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
         .withPort(settings.port)
         .build()
     )
-    sessionOption = clusterOption.map(_.connect(keyspace))
-    sessionOption.foreach(s => { statementOption = Some(getPreparedStatement(s)) })
+    // sessionOption = clusterOption.map(_.connect(keyspace))
+    sessionOption = clusterOption.map(_.connect())
+    sessionOption.foreach(_session => {
 
-    val _session = sessionOption.get
-    // create tables if not exists
-    _session.execute(
-      s"""CREATE KEYSPACE IF NOT EXISTS $keyspace
+      // create tables if not exists
+      _session.execute(
+        s"""CREATE KEYSPACE IF NOT EXISTS $keyspace
           | WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '2'}  and durable_writes = true;""".stripMargin
-    )
+      )
 
-    _session.execute(s"""CREATE TABLE IF NOT EXISTS $keyspace.fallback(
+      _session.execute(s"""CREATE TABLE IF NOT EXISTS $keyspace.fallback(
                          | uuid text,
                          | story_name text,
                          | event_name text,
@@ -76,16 +76,23 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
                          | PRIMARY KEY (uuid, story_name, created_at, group, event_name)
                          |);""".stripMargin)
 
-    _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspace.fallback_by_story_name AS
+      _session.execute(s"""CREATE MATERIALIZED VIEW IF NOT EXISTS $keyspace.fallback_by_story_name AS
                          | SELECT * FROM fallback WHERE uuid IS NOT NULL AND story_name IS NOT NULL AND created_at IS NOT NULL AND event_name IS NOT NULl AND group IS NOT NULL
                          | PRIMARY KEY (story_name, created_at, event_name, group, uuid)""".stripMargin)
+
+      statementOption = Some(getPreparedStatement(keyspace, _session))
+
+    })
+
+    // val _session = sessionOption.get
+
   }
 
   override def prepareForTask(taskName: String)(
       implicit runningContext: TaskRunningContext
   ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = {
 
-    val keyspace = s"event-bus-${runningContext.getAppContext().getAppName()}"
+    var keyspace = s"eventbus_${runningContext.getAppContext().getAppName()}".replaceAll("-", "_")
 
     implicit val system: ActorSystem                = runningContext.getActorSystem()
     implicit val materializer: Materializer         = runningContext.getMaterializer()
@@ -119,13 +126,13 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
       }
   }
 
-  def getPreparedStatement(session: Session): PreparedStatement = {
+  def getPreparedStatement(keyspace: String, session: Session): PreparedStatement = {
     logger.debug(s"preparing cassandra statement")
     session.prepare(s"""
-                       |INSERT INTO fallback
-                       |(uuid, story_name, event_name, created_at, fallback_time, failed_task_name, group, provider_id, body, format, cause, extra)
+                       |INSERT INTO $keyspace.fallback
+                       |(uuid, story_name, event_name, created_at, fallback_time, failed_task_name, group, body, format, cause, extra)
                        |VALUES
-                       |(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       |(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                        |""".stripMargin)
   }
 
@@ -137,6 +144,8 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
         if (status.isInstanceOf[ToFB]) status.asInstanceOf[ToFB].cause.map(_.toString).getOrElse("")
         else ""
       logger.debug(s"binding cassandra statement")
+
+      import scala.collection.JavaConverters._
       statement.bind(
         event.uuid,
         runningContext.getStoryName(),
@@ -148,7 +157,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
         event.body.data,
         event.body.format.toString,
         cause,
-        event.metadata.extra
+        event.metadata.extra.asJava
       )
   }
 
