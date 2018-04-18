@@ -70,8 +70,8 @@ export class StoryUtils {
     return copied
   }
 
-  static jsonPretty(json: string): string {
-    return JSON.stringify(JSON.parse(json), undefined, 2);
+  static jsonPretty(json: string, space: number = 2): string {
+    return JSON.stringify(JSON.parse(json), undefined, space);
   }
 
   static checkStoryName(name: string): true | string {

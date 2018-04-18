@@ -8,7 +8,9 @@
       </div>
     </div>
 
-    <div class="box" id="topics_box"></div>
+    <div class="box" id="topics_box">
+      <textarea class="textarea" rows="25" v-model="topics"></textarea>
+    </div>
 
     <confirmation-box v-if="confirmation.show" v-bind="confirmation" @confirm="onConfirm"
                       @cancel="onNotConfirm"></confirmation-box>
@@ -52,8 +54,10 @@
     methods: {
       fetchData(): void {
         request.getTopics().then(topics => {
-          this.topics = topics
-          this.renderJSONEditor()
+          if (topics) {
+            this.topics = StoryUtils.jsonPretty(topics, 4)
+          }
+          // this.renderJSONEditor()
         })
       },
 
@@ -76,18 +80,26 @@
       },
 
       onSave(): void {
-        let message = StoryUtils.jsonPretty(JSON.stringify(this.editor.getValue()));
-        this.confirmation = {
-          ...this.confirmation, ...{
-            show: true,
-            title: 'Are you sure to update the topics?',
-            message: `<article class="content"><pre>${message}</pre></article>`
+        try {
+          let message = StoryUtils.jsonPretty(this.topics);
+
+          this.confirmation = {
+            ...this.confirmation, ...{
+              show: true,
+              title: 'Are you sure to update the topics?',
+              message: `<article class="content"><pre>${message}</pre></article>`
+            }
           }
+        }
+        catch(e) {
+          alert('Save topics failed! Reason: ' + e.message)
         }
       },
 
       onConfirm(): void {
-        request.updateTopics(JSON.stringify(this.editor.getValue()))
+        let topics = JSON.stringify(JSON.parse(this.topics))
+
+        request.updateTopics(topics)
           .then(() => {
             bus.$emit('notify', 'The topics are updated!')
             this.onNotConfirm()
