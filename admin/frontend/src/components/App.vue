@@ -33,7 +33,7 @@
               </a>
             </div>
 
-            <bounce-loader :loading="isLoading" color="#FFFFFF"></bounce-loader>
+            <vue-loading v-show="isLoading" type="bars" color="#ffffff" :size="{ width: '50px', height: '50px' }"></vue-loading>
 
           </div>
         </nav>
@@ -57,7 +57,7 @@
 <script lang="ts">
   import Vue from "vue"
   import bus from "../lib/bus"
-  import BounceLoader from 'vue-spinner/src/BounceLoader.vue'
+  import vueLoading from 'vue-loading-template'
 
   export default Vue.extend({
     data() {
@@ -90,7 +90,7 @@
     },
 
     components: {
-      BounceLoader
+      vueLoading
     },
 
     methods: {
