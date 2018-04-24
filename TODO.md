@@ -20,7 +20,7 @@
 - ~~update story status and update that which runners running it~~
 - ~~http sink retry according to the response content~~  to be test
 - add fields of cassandra for retry and status
-- test cassandra fallback
+- ~~test cassandra fallback~~
 - ~~update uuid for no uuid events~~ to be test
 - ~~update event version to be v2~~
 - ~~allow event to send to different endpoint~~ to be test
@@ -32,7 +32,7 @@
 - test that if zookeeper fully down / partly down, how system working?
 - ~~prevent the case update multiple zookeeper nodes at once (like create story, update story)~~
 - ~~add admin frontend to ansible scripts~~
-- release 2.1.0 with admin build
-- stop watching story changes, trigger it by a explicit action.
-- add ability for that one runner run multiple times of same story
-- optimize topic editor
+- ~~release 2.1.0 with admin build~~
+- ~~stop watching story changes, trigger it by a explicit action.~~
+- ~~add ability for that one runner run multiple times of same story~~
+- ~~optimize topic editor~~
