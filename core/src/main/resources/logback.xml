@@ -32,6 +32,8 @@
 	</appender>
 
 	<logger name="org.apache.kafka" level="INFO" />
+	<logger name="org.apache.zookeeper" level="INFO" />
+	<logger name="com.datastax.driver.core.Connection" level="INFO" />
 
 	<root level="${EB_LOGLEVEL:-DEBUG}">
 		<appender-ref ref="${EB_LOGREF:-STDOUT}" />
