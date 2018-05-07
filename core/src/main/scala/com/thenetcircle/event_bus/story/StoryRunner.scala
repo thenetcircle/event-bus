@@ -62,7 +62,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
       ex
   }
   override def supervisorStrategy: SupervisorStrategy =
-    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1.minute)(
+    OneForOneStrategy(maxNrOfRetries = 5, withinTimeRange = 10.seconds)(
       loggerSupervistionDecider andThen SupervisorStrategy.defaultDecider
     )
 

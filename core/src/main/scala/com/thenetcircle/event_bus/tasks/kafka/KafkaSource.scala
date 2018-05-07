@@ -63,7 +63,15 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
       case (_key, _value) => _consumerSettings = _consumerSettings.withProperty(_key, _value)
     }
 
-    settings.useDispatcher.foreach(dp => _consumerSettings = _consumerSettings.withDispatcher(dp))
+    settings.useDispatcher.foreach(v => _consumerSettings = _consumerSettings.withDispatcher(v))
+    settings.pollInterval.foreach(v => _consumerSettings = _consumerSettings.withPollInterval(v))
+    settings.pollTimeout.foreach(v => _consumerSettings = _consumerSettings.withPollTimeout(v))
+    settings.stopTimeout.foreach(v => _consumerSettings = _consumerSettings.withStopTimeout(v))
+    settings.closeTimeout.foreach(v => _consumerSettings = _consumerSettings.withCloseTimeout(v))
+    settings.commitTimeout.foreach(v => _consumerSettings = _consumerSettings.withCommitTimeout(v))
+    settings.commitTimeWarning.foreach(v => _consumerSettings = _consumerSettings.withCommitWarning(v))
+    settings.wakeupTimeout.foreach(v => _consumerSettings = _consumerSettings.withWakeupTimeout(v))
+    settings.maxWakeups.foreach(v => _consumerSettings = _consumerSettings.withMaxWakeups(v))
 
     val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
 
@@ -76,7 +84,6 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     _consumerSettings
       .withBootstrapServers(settings.bootstrapServers)
       .withGroupId(groupId)
-      .withCommitTimeout(settings.commitTimeout)
 
     // comment this to prevent the issue javax.management.InstanceAlreadyExistsException: kafka.consumer:type=...
     // .withProperty("client.id", clientId)
@@ -176,7 +183,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                 }
                 // TODO some test
                 .recover {
-                  case NonFatal(ex) => Failure(ex)
+                  case NonFatal(ex) =>
+                    logger.info(
+                      s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
+                        s"Not it's recovered to be a Failure()"
+                    )
+                    Failure(ex)
                 }
                 .collect { case Success(co) => co }
                 // TODO add "max" to settings
@@ -224,15 +236,21 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
   }
 }
 
-// TODO: change the consumer offset
 case class KafkaSourceSettings(
     bootstrapServers: String,
     groupId: Option[String],
     subscribedTopics: Either[Set[String], String],
     maxConcurrentPartitions: Int = 100,
-    commitTimeout: FiniteDuration = 15.seconds,
+    properties: Map[String, String] = Map.empty,
     useDispatcher: Option[String] = None,
-    properties: Map[String, String] = Map.empty
+    pollInterval: Option[FiniteDuration] = None,
+    pollTimeout: Option[FiniteDuration] = None,
+    stopTimeout: Option[FiniteDuration] = None,
+    closeTimeout: Option[FiniteDuration] = None,
+    commitTimeout: Option[FiniteDuration] = None,
+    commitTimeWarning: Option[FiniteDuration] = None,
+    wakeupTimeout: Option[FiniteDuration] = None,
+    maxWakeups: Option[Int] = None
 )
 
 class KafkaSourceBuilder() extends SourceTaskBuilder {
@@ -263,9 +281,16 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
         config.as[Option[String]]("group-id"),
         subscribedTopics,
         config.as[Int]("max-concurrent-partitions"),
-        config.as[FiniteDuration]("commit-timeout"),
+        config.as[Map[String, String]]("properties"),
         config.as[Option[String]]("use-dispatcher"),
-        config.as[Map[String, String]]("properties")
+        config.as[Option[FiniteDuration]]("poll-interval"),
+        config.as[Option[FiniteDuration]]("poll-timeout"),
+        config.as[Option[FiniteDuration]]("stop-timeout"),
+        config.as[Option[FiniteDuration]]("close-timeout"),
+        config.as[Option[FiniteDuration]]("commit-timeout"),
+        config.as[Option[FiniteDuration]]("commit-time-warning"),
+        config.as[Option[FiniteDuration]]("wakeup-timeout"),
+        config.as[Option[Int]]("max-wakeups")
       )
 
     new KafkaSource(settings)

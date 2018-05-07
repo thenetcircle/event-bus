@@ -4,12 +4,14 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 
 import scala.concurrent.ExecutionContext
+import scala.util.{Failure, Success}
 
 object StoryActor {
   def props(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext): Props =
     Props(classOf[StoryActor], story, runner, runningContext)
 
   case object Shutdown
+  case class Restart(ex: Throwable)
 }
 
 class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)
@@ -27,9 +29,24 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
     val doneFuture = story.run()
     // fix the case if this actor is dead already, the Shutdown commend will send to dead-letter
     val selfPath = self.path
-    doneFuture.onComplete(
-      _ => try { context.actorSelection(selfPath) ! Shutdown } catch { case ex: Throwable => }
-    )
+
+    doneFuture.onComplete {
+      case Success(_) =>
+        log.warning(s"story $storyName is done, clean up now.")
+        try {
+          context.actorSelection(selfPath) ! Shutdown
+        } catch {
+          case ex: Throwable =>
+        }
+
+      case Failure(ex) =>
+        log.warning(s"story $storyName is failed with error $ex, clean up now.")
+        try {
+          context.actorSelection(selfPath) ! Restart(ex)
+        } catch {
+          case ex: Throwable =>
+        }
+    }
   }
 
   override def postStop(): Unit = {
@@ -39,7 +56,11 @@ class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRu
 
   override def receive: Receive = {
     case Shutdown =>
-      log.debug(s"shutting down the actor of story $storyName")
+      log.info(s"shutting down the actor of story $storyName")
       context.stop(self)
+
+    case Restart(ex) =>
+      log.info(s"restarting the actor of story $storyName")
+      throw ex
   }
 }

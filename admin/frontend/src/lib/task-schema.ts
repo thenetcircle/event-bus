@@ -95,18 +95,41 @@ const sourceSchema: any = {
         "default": 100,
         "required": true
       },
-      "commit-timeout": {
-        "type": "string",
-        "default": "15 s"
-      },
       "use-dispatcher": {
         "type": "string",
         "default": "akka.kafka.default-dispatcher"
       },
-      "max-connections": {
+      "poll-interval": {
+        "type": "string",
+        "default": "50ms"
+      },
+      "poll-timeout": {
+        "type": "string",
+        "default": "50ms"
+      },
+      "stop-timeout": {
+        "type": "string",
+        "default": "30s"
+      },
+      "close-timeout": {
+        "type": "string",
+        "default": "20s"
+      },
+      "commit-timeout": {
+        "type": "string",
+        "default": "15s"
+      },
+      "commit-time-warning": {
+        "type": "string",
+        "default": "1s"
+      },
+      "wakeup-timeout": {
+        "type": "string",
+        "default": "3s"
+      },
+      "max-wakeups": {
         "type": "integer",
-        "default": 1024,
-        "required": true
+        "default": 10
       },
       "properties": {
         "type": "object",

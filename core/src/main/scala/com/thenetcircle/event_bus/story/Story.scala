@@ -111,6 +111,7 @@ class Story(
   def shutdown()(implicit runningContext: TaskRunningContext): Unit =
     try {
       logger.info(s"stopping story $storyName")
+      runningFuture = None
       sourceTask.shutdown()
       transformTasks.foreach(_.foreach(_.shutdown()))
       fallbackTask.foreach(_.shutdown())
