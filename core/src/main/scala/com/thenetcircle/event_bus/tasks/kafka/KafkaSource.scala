@@ -191,9 +191,9 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                     Failure(ex)
                 }
                 .collect { case Success(co) => co }
-                // TODO add "max" to settings
-                .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) =>
-                  batch.updated(elem)
+                .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
+                  (batch, elem) =>
+                    batch.updated(elem)
                 }
                 // TODO update parallelism and test order
                 .mapAsyncUnordered(1)(_.commitScaladsl())
@@ -241,6 +241,7 @@ case class KafkaSourceSettings(
     groupId: Option[String],
     subscribedTopics: Either[Set[String], String],
     maxConcurrentPartitions: Int = 100,
+    commitMaxBatches: Int = 20,
     properties: Map[String, String] = Map.empty,
     useDispatcher: Option[String] = None,
     pollInterval: Option[FiniteDuration] = None,
@@ -281,6 +282,7 @@ class KafkaSourceBuilder() extends SourceTaskBuilder {
         config.as[Option[String]]("group-id"),
         subscribedTopics,
         config.as[Int]("max-concurrent-partitions"),
+        config.as[Int]("commit-max-batches"),
         config.as[Map[String, String]]("properties"),
         config.as[Option[String]]("use-dispatcher"),
         config.as[Option[FiniteDuration]]("poll-interval"),

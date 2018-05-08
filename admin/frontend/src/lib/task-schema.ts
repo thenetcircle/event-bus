@@ -95,6 +95,11 @@ const sourceSchema: any = {
         "default": 100,
         "required": true
       },
+      "commit-max-batches": {
+        "type": "integer",
+        "default": 20,
+        "required": true
+      },
       "use-dispatcher": {
         "type": "string",
         "default": "akka.kafka.default-dispatcher"

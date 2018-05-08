@@ -89,17 +89,23 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       if (settings.useEventGroupAsTopic) event.metadata.group.getOrElse(settings.defaultTopic)
       else settings.defaultTopic
 
-    val timestamp: Long      = event.createdAt.getTime
+    // val timestamp: Long      = event.createdAt.getTime
     val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event
 
     new ProducerRecord[ProducerKey, ProducerValue](
       topic,
+      key,
+      value
+    )
+
+    /*new ProducerRecord[ProducerKey, ProducerValue](
+      topic,
       null,
       timestamp.asInstanceOf[java.lang.Long],
       key,
       value
-    )
+    )*/
   }
 
   var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
