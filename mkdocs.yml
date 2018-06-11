@@ -1,12 +1,9 @@
 site_name: EventBus
-theme: material
+theme: rtd-dropdown
 pages:
-  - Welcome: index.md
-  - Installation: installation.md
-  - QuickStart: quickstart.md
-  - Concepts: concepts.md
-  - Components: components.md
-  - Data Format: data_format.md
-  - Deployment: deployment.md
-  - Admin Interface: admin_interface.md
-  - Monitoring: monitoring.md
+  - Home: index.md
+  - Get Started: get_started.md
+  - Structure: structure.md
+  - Operation And Maintenance: operation_and_maintenance.md
+  - Event Format: event_format.md
+  - Change Logs: change_logs.md
