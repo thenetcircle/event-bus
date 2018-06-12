@@ -9,7 +9,7 @@ Let's say we are a technique company, and we have some isolate systems:
 
 **The workflow will be like this:**
 
-<a href="assets/systems_workflow.png" target="_blank">![EventBus Workflow](assets/systems_workflow.png)</a>
+<a href="../assets/systems_workflow.png" target="_blank">![EventBus Workflow](assets/systems_workflow.png)</a>
 
 **Then let's list some requirements:**
 
@@ -42,35 +42,92 @@ Let's go to satisfy these requirements by EventBus.
 
 ## Install Zookeepr
 
+[Zookeeper Getting Started](https://zookeeper.apache.org/doc/current/zookeeperStarted.html#ch_GettingStarted)
+
 ## Install Kafka
+
+[Kafka Quick Start](https://kafka.apache.org/0110/documentation.html#quickstart)
 
 ## Install EventBus
 
 ### From Source
 
-- clone the code
 ```bash
-git clone https://github.com/thenetcircle/event-bus.git
+> git clone https://github.com/thenetcircle/event-bus.git
 ```
 
-## Setting up EventBus
+# Launch EventBus
 
-First of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called Receiver in EventBus) and targets(called Emitter). We need to point out which of them is using in this scenario.
-Let's create a configuration file to describe this, The configuration file is based on [Typesafe Config](https://github.com/typesafehub/config), similar as json.
-Let's create a file called application.conf, Put it on root of EventBus directory.
+## Setup
 
-## Launch EventBus
-After you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka...
-Then we can launch EventBus by the way if want, Let's using normal way here.
+After we installed and started all dependencies, We can setup EventBus by it's configuration.(Please check the [configuration section](structure))
 
-- package EventBus
+For example let's change the zookeeper address of application.conf to be:
+
+```json
+zookeeper {
+  servers = "localhost:2181"
+  rootpath = "/testnode"
+}
+```
+
+## Compile & Run
+
+EventBus includes two main components, Runner and Admin. Which are the two sub-projects in the source code as well (Runner is inside core).
+
+- Let's stage the project first
 ```sh
-sbt clean compile stage
+> cd ${the_root_path_of_event_bus}
+> sbt stage
 ```
 
-- launch with the configuration
+- Launch Runner
 ```sh
-./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf
+> # uses environment variables for some settings, you can also set them inside application.conf directly
+> EB_APPNAME=${application_name} EB_DEV=dev EB_RUNNERNAME=default-runner ./target/universal/stage/bin/runner
 ```
 
-Now EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.
+- Launch Admin
+```sh
+> # changes admin listen port to be 8080, default is 8990
+> EB_APPNAME=${application_name} EB_DEV=dev ./target/universal/stage/bin/admin -Dapp.admin.port=8080
+```
+
+Now open the url [http://localhost:8080](http://localhost:8080) you will see the homepage of admin interface.
+
+# Workflow
+
+## Workflow of EventBus
+
+EventBus internal includes a list of stories, The word "story" is a virtual concept. Which describes a scenario about transfer data from one point to another point.  
+For more details please check [Structure Section](structure)  
+
+A story includes **a Source**, **a Sink**, maybe **a couple of Transforms** and **a Fallback**  
+The internal structure of a story looks like this:
+<a href="../assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
+
+Data/Event come from the left side and eventually will reach right side, That's a end of the story.
+We could have some different stories running paralleln   
+For example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.
+
+<a href="../assets/two_stories.png" target="_blank">![EventBus Workflow](assets/two_stories.png)</a>
+
+There suppose to be some different **Souce**/**Sink**/**Transforms**/**Fallback** implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be **Redis Souce**, **JMS Sink**, etc...
+
+## Workflow of Our Current Scenario:
+
+Back to our current scenario, What the workflow looks like?   
+How the different systems working together with EventBus?
+
+<a href="../assets/systems_and_eventbus.png" target="_blank">![EventBus Workflow](assets/systems_and_eventbus.png)</a>
+
+1. Business send Events to EventBus by HTTP Request
+2. EventBus stores the requset to Kafka
+3. There are sereral EventBus stories which subscribing on Kafka topcis and send data to specific systems by HTTP requests. 
+
+# Create Stories
+
+Let's open [the Admin Interface (http://localhost:8080)](http://localhost:8080)  
+Click "New Story" button on the navagator.
+
+<a href="../assets/admin_create_story.png" target="_blank">![EventBus Workflow](assets/admin_create_story.png)</a>

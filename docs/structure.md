@@ -10,6 +10,8 @@
 |core/src/main/resources/logback.xml|Log config|
 |admin/backend/src/main/resources/application.conf|Admin config file|
 
+The configuration files (.conf) is based on [Typesafe Config](https://github.com/typesafehub/config), similar as json.
+
 ## Environment Variables
 
 |Variable Name|Description|Default Value|
