@@ -29,3 +29,4 @@ Following are some details of the defination:
 Feedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.
 
 ## Change Logs
+[Click to check Change Logs](change_logs)
