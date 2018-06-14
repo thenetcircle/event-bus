@@ -2,12 +2,17 @@
     "docs": [
         {
             "location": "/",
-            "text": "EventBus is a messages/events delivering application, It is designed to be a message/event hub to transfer data from different sources to different sinks.\nIt is using internally for unified data collection(collect data from different sources with specific data format to our data warehouse) and async events delivering among services.\n\n\nIt comes with some implemented sources(http, kafka, redis, etc...), sinks(http, kafka, etc...), fallbacks(see the document) and a extendable structure. Also a admin interface to easily manage the relationship between them.\n\n\n\n\nFeatures\n\n\n\n\nSupplies multiple different sources and sinks.\n\n\nSupplies failure demotion(fallback) strategy and recovering ability.\n\n\nBased on AkkaStreams, Offers excellent performance and back-pressure ability.\n\n\nStateless, Easier for deployment, high availability and load balance.\n\n\nComes with a simple admin interface for managing and watching whole cluster.\n\n\n\n\nContributing\n\n\nFeedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.",
-            "title": "Welcome"
+            "text": "What's EventBus\n\n\nDefination of EventBus:\n\n\n\n\nA realtime event bus / message bus.\n\n\nA central place to manage / trace / monitor events.\n\n\nA data collecting / distributing platform.\n\n\n\n\n\n\nFollowing are some details of the defination:\n\n\n\n\nFirst of all, EventBus intend to be a realtime system. It offers low latency, high throughput ways to transfer data from one side to another side.\n\n\nBesides to be a realtime system, It encourages unified format of events/messages (defualt using \nActivityStreams 1.0\n format), But not mandatory.\n\n\nAlong with the unified format, all isolated systems could understand what the event means (at least the semantic), a event could be shared between different systems. \n\n   for example: a user-info-update event, will be used by system-a, system-b, system-c, since they all understand the structure of the event\n\n\nAnother usage of us is for data collecting. \n\n   Since all events are go through here. We are collecting interested events on this central point to our data warehouse for data mining and meachine learning. And since the format are unified, ETL could be more easier.\n\n\n\n\nFeatures\n\n\n\n\nLow latency and High throughput.\n\n\nBased on \nReactive Streams\n, The whole workflow supports \nbackpressure\n and various stream operations. \n\n\nFailure tolerance.\n\n\nLogic can be easily composed by various \nSources\n, \nSinks\n, \nTransforms\n, \nFallbacks\n, And they are expendable. \n\n\nTracking and Monitoring supported.\n\n\n\n\nContributing\n\n\nFeedbacks and pull requests are welcome and appreciative. For major changes, please open an issue first to discuss what you would like to change.\n\n\nChange Logs\n\n\nClick to check Change Logs",
+            "title": "Home"
+        },
+        {
+            "location": "/#whats-eventbus",
+            "text": "Defination of EventBus:   A realtime event bus / message bus.  A central place to manage / trace / monitor events.  A data collecting / distributing platform.    Following are some details of the defination:   First of all, EventBus intend to be a realtime system. It offers low latency, high throughput ways to transfer data from one side to another side.  Besides to be a realtime system, It encourages unified format of events/messages (defualt using  ActivityStreams 1.0  format), But not mandatory.  Along with the unified format, all isolated systems could understand what the event means (at least the semantic), a event could be shared between different systems.  \n   for example: a user-info-update event, will be used by system-a, system-b, system-c, since they all understand the structure of the event  Another usage of us is for data collecting.  \n   Since all events are go through here. We are collecting interested events on this central point to our data warehouse for data mining and meachine learning. And since the format are unified, ETL could be more easier.",
+            "title": "What's EventBus"
         },
         {
             "location": "/#features",
-            "text": "Supplies multiple different sources and sinks.  Supplies failure demotion(fallback) strategy and recovering ability.  Based on AkkaStreams, Offers excellent performance and back-pressure ability.  Stateless, Easier for deployment, high availability and load balance.  Comes with a simple admin interface for managing and watching whole cluster.",
+            "text": "Low latency and High throughput.  Based on  Reactive Streams , The whole workflow supports  backpressure  and various stream operations.   Failure tolerance.  Logic can be easily composed by various  Sources ,  Sinks ,  Transforms ,  Fallbacks , And they are expendable.   Tracking and Monitoring supported.",
             "title": "Features"
         },
         {
@@ -16,144 +21,289 @@
             "title": "Contributing"
         },
         {
-            "location": "/installation/",
-            "text": "Requirements\n\n\n\n\nJava 1.8+ installed\n\n\nSbt\n\n\nKafka 0.10+\n\n\nAnsible (using for deployment)\n\n\n\n\nInstallation\n\n\nFrom Source\n\n\n\n\nclone the code\n\n\n\n\ngit clone https://github.com/thenetcircle/event-bus.git\n\n\n\n\n\n\nchange configs\n\n\npackage\n\n\n\n\nsbt stage\n\n\n\n\nSbt\n\n\nMaven",
+            "location": "/#change-logs",
+            "text": "Click to check Change Logs",
+            "title": "Change Logs"
+        },
+        {
+            "location": "/get_started/",
+            "text": "Start From A Real Scenario:\n\n\nLet's say we are a technique company, and we have some isolate systems:\n\n\n\n\nBusiness System (mainly serves the end clients with business logics)\n\n\nSearch System (providers search service to other systems)\n\n\nData Mining System (mining data, generating report and providers cleared data for other services)\n\n\nNotification System (notifies users for something happened)\n\n\n\n\nThe workflow will be like this:\n\n\n\n\nThen let's list some requirements:\n\n\n\n\nthe \"Business System\" needs a Queue to handler some heavy processes.\n  Dispatch the reuqest to a Queue, And handler the request on a backend process asynchronously\n\n\nIf something happened on the \"Business System\", Then tell other systems\n\n  For example: A user updated his profile \n\n  Then tell the \"Search System\" to updated related data as well\n\n  And tell the \"Data Mining System\" for this new event\n\n  Then tell the \"Notification System\" to notify the user for the changes by mail or other ways. \n\n\nthe \"Search System\" subscribes all search realtead \"Events\", And do actions according to the \"Event\"\n\n\nthe \"Data Mining System\" listening on all \"Events\" happenes on among all systems, And record the \"Events\" to data warehouse with some kind of unstandable format.\n\n\nthe \"Notification System\" listening on \"Notify Events\" and also emit \"Events\" like a user's email got bounced. \n\n\nEasily tracking the lifetime of a \"Event\"\n\n\n...\n\n\n\n\nThese requirements cover most of important ports of EventBus, A system distributes \"Event\"/\"Message\" among multiple systems with unified format.\nLet's go to satisfy these requirements by EventBus.\n\n\nInstallation\n\n\nRequirements\n\n\n\n\nJava 1.8+ installed\n\n\nSbt\n\n\nZookeeper\n\n\nKafka 0.10+ (only when use Kafka Source/Kafka Sink)\n\n\nCassandra (only when use Cassandra Fallback)\n\n\n\n\nInstall Zookeepr\n\n\nZookeeper Getting Started\n\n\nInstall Kafka\n\n\nKafka Quick Start\n\n\nInstall EventBus\n\n\nFrom Source\n\n\n> git clone https://github.com/thenetcircle/event-bus.git\n\n\n\n\nLaunch EventBus\n\n\nSetup\n\n\nAfter we installed and started all dependencies, We can setup EventBus by it's configuration.(Please check the \nconfiguration section\n)\n\n\nFor example let's change the zookeeper address of application.conf to be:\n\n\nzookeeper {\n  servers = \"localhost:2181\"\n  rootpath = \"/testnode\"\n}\n\n\n\n\nCompile & Run\n\n\nEventBus includes two main components, Runner and Admin. Which are the two sub-projects in the source code as well (Runner is inside core).\n\n\n\n\nLet's stage the project first\n\n\n\n\n> cd ${the_root_path_of_event_bus}\n> sbt stage\n\n\n\n\n\n\nLaunch Runner\n\n\n\n\n> # uses environment variables for some settings, you can also set them inside application.conf directly\n> EB_APPNAME=${application_name} EB_DEV=dev EB_RUNNERNAME=default-runner ./target/universal/stage/bin/runner\n\n\n\n\n\n\nLaunch Admin\n\n\n\n\n> # changes admin listen port to be 8080, default is 8990\n> EB_APPNAME=${application_name} EB_DEV=dev ./target/universal/stage/bin/admin -Dapp.admin.port=8080\n\n\n\n\nNow open the url \nhttp://localhost:8080\n you will see the homepage of admin interface.\n\n\nWorkflow\n\n\nWorkflow of EventBus\n\n\nEventBus internal includes a list of stories, The word \"story\" is a virtual concept. Which describes a scenario about transfer data from one point to another point.\n\nFor more details please check \nOverview Section\n  \n\n\nA story includes \na Source\n, \na Sink\n, maybe \na couple of Transforms\n and \na Fallback\n\nThe internal structure of a story looks like this:\n\n\n\nData/Event come from the left side and eventually will reach right side, That's a end of the story.\nWe could have some different stories running paralleln \n\nFor example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.\n\n\n\n\nThere suppose to be some different \nSouce\n/\nSink\n/\nTransforms\n/\nFallback\n implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be \nRedis Souce\n, \nJMS Sink\n, etc...\n\n\nWorkflow of Our Current Scenario:\n\n\nBack to our current scenario, What the workflow looks like? \n\nHow the different systems working together with EventBus?\n\n\n\n\n\n\nBusiness send Events to EventBus by HTTP Request\n\n\nEventBus stores the requset to Kafka\n\n\nThere are sereral EventBus stories which subscribing on Kafka topcis and send data to specific systems by HTTP requests. \n\n\n\n\nCreate Stories\n\n\nLet's open \nthe Admin Interface (http://localhost:8080)\n\nClick \"New Story\" button on the navagator.\n\n\n\n\nLike we mentioned before, We need a couple of stories to satisfy the workflow.\n\nWe need a first story which listening on a HTTP port and transferring data to Kafka, It should be like this:  \n\n\n\n\nAfter the story is created, We also should assign it to a \nRunner\n(run stories). For more details, please check \nOverview Section\n.\n\n\nOkay, Now the first story is created and running, We also need to create a couple of other stories to subscribe on specific Kafka topics and send data to specific systems by HTTP.\n\nIt should be like this(don't forget to assign it to a \nRunner\n):\n\n\n\n\nNow the configuration of EventBus is done, A HTTP request sent to the HTTP port listened by the story, will be directly send to Kafka. \n\nAnd other stories will fetch the request from Kafka, to send it to different systems.\n\n\nFallback\n\n\nTracking\n\n\nMonitoring\n\n\nGrafana\n\n\nWe use \nGrafana\n to present some metrics for monitoring the health of EventBus\n\n\n\n\nSentry\n\n\nAnd use \nSentry\n for Error Tracking",
+            "title": "Get Started"
+        },
+        {
+            "location": "/get_started/#start-from-a-real-scenario",
+            "text": "Let's say we are a technique company, and we have some isolate systems:   Business System (mainly serves the end clients with business logics)  Search System (providers search service to other systems)  Data Mining System (mining data, generating report and providers cleared data for other services)  Notification System (notifies users for something happened)   The workflow will be like this:   Then let's list some requirements:   the \"Business System\" needs a Queue to handler some heavy processes.\n  Dispatch the reuqest to a Queue, And handler the request on a backend process asynchronously  If something happened on the \"Business System\", Then tell other systems \n  For example: A user updated his profile  \n  Then tell the \"Search System\" to updated related data as well \n  And tell the \"Data Mining System\" for this new event \n  Then tell the \"Notification System\" to notify the user for the changes by mail or other ways.   the \"Search System\" subscribes all search realtead \"Events\", And do actions according to the \"Event\"  the \"Data Mining System\" listening on all \"Events\" happenes on among all systems, And record the \"Events\" to data warehouse with some kind of unstandable format.  the \"Notification System\" listening on \"Notify Events\" and also emit \"Events\" like a user's email got bounced.   Easily tracking the lifetime of a \"Event\"  ...   These requirements cover most of important ports of EventBus, A system distributes \"Event\"/\"Message\" among multiple systems with unified format.\nLet's go to satisfy these requirements by EventBus.",
+            "title": "Start From A Real Scenario:"
+        },
+        {
+            "location": "/get_started/#installation",
+            "text": "",
             "title": "Installation"
         },
         {
-            "location": "/installation/#requirements",
-            "text": "Java 1.8+ installed  Sbt  Kafka 0.10+  Ansible (using for deployment)",
+            "location": "/get_started/#requirements",
+            "text": "Java 1.8+ installed  Sbt  Zookeeper  Kafka 0.10+ (only when use Kafka Source/Kafka Sink)  Cassandra (only when use Cassandra Fallback)",
             "title": "Requirements"
         },
         {
-            "location": "/installation/#installation",
-            "text": "",
-            "title": "Installation"
+            "location": "/get_started/#install-zookeepr",
+            "text": "Zookeeper Getting Started",
+            "title": "Install Zookeepr"
         },
         {
-            "location": "/installation/#from-source",
-            "text": "clone the code   git clone https://github.com/thenetcircle/event-bus.git   change configs  package   sbt stage",
+            "location": "/get_started/#install-kafka",
+            "text": "Kafka Quick Start",
+            "title": "Install Kafka"
+        },
+        {
+            "location": "/get_started/#install-eventbus",
+            "text": "",
+            "title": "Install EventBus"
+        },
+        {
+            "location": "/get_started/#from-source",
+            "text": "> git clone https://github.com/thenetcircle/event-bus.git",
             "title": "From Source"
         },
         {
-            "location": "/installation/#sbt",
+            "location": "/get_started/#launch-eventbus",
             "text": "",
-            "title": "Sbt"
-        },
-        {
-            "location": "/installation/#maven",
-            "text": "",
-            "title": "Maven"
-        },
-        {
-            "location": "/quickstart/",
-            "text": "Background\n\n\nEventBus works like a postman to delivering stuff from source to target.\n\nLet's set up a scenario to describe how it works.  \n\n\nFor example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.     \n\n\nThe workflow will like this:\n\n\n\n\nSetting up EventBus\n\n\nFirst of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called Receiver in EventBus) and targets(called Emitter). We need to point out which of them is using in this scenario.\n\nLet's create a configuration file to describe this, The configuration file is based on \nTypesafe Config\n, similar as json.\nLet's create a file called application.conf, Put it on root of EventBus directory.\n\n\n# includes the original configuration\ninclude \"application\"\n\n# EventBus runtime configuration\nevent-bus.runtime {\n\n  # Creates a PipelinePool and declare what Pipelines it has.\n  pipeline-pool = [\n    {\n      name = TestPipeline\n      type = kafka\n\n      # Sets up the Pipeline specific settings\n      akka.kafka.producer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n      akka.kafka.consumer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n    }\n  ]\n\n  # Creates Transporters which will accept data from outside to Pipeline.\n  transporters = [{\n    name = TestTransporter\n\n    # Declares which EntryPoints this Transporter can support.\n    receivers = [\n      {\n        type = http\n        name = TestReceiver1\n\n        # Receiver specific parameters\n        interface = localhost\n        port = 8086\n      }\n    ]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n    }\n\n    # Transporter specific parameters.\n    transport-parallelism = 1\n    commit-parallelism = 10\n    akka.stream.materializer {}\n  }]\n\n  # Creates Dispatchers which will publish data from Pipeline to outside.\n  dispatchers = [{\n    name = StressTestDispatcher\n\n    # Declares which Emitters this Dispatcher can support.\n    emitters = [{\n      type = http\n      name = TestEmitter\n\n      # Emitter specific parameters\n      request {\n        host = localhost\n        port = 8087\n        uri = \"/\"\n      }\n      akka.http.host-connection-pool {\n        max-open-requests = 32\n      }\n    }]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n\n      # The options of using the Pipeline\n      outlet {\n        group-id = EventBus.TestDispatcher\n        topics = [\"default\"]\n      }\n    }\n  }]\n}\n\n\n\n\nLaunch EventBus\n\n\nAfter you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka...\n\nThen we can launch EventBus by the way if want, Let's using normal way here.\n\n\n\n\npackage EventBus\n\n\n\n\nsbt clean compile stage\n\n\n\n\n\n\nlaunch with the configuration\n\n\n\n\n./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf\n\n\n\n\nNow EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.",
-            "title": "QuickStart"
-        },
-        {
-            "location": "/quickstart/#background",
-            "text": "EventBus works like a postman to delivering stuff from source to target. \nLet's set up a scenario to describe how it works.    For example if we have a web application which writen by PHP, \nAnd we have some other backend services using different languages like Java, Nodejs, Python.\nAnd we want that if something happened on any of them, And the thing have to be aware by other services for perhaps some updates.       The workflow will like this:",
-            "title": "Background"
-        },
-        {
-            "location": "/quickstart/#setting-up-eventbus",
-            "text": "First of all we need to tell EventBus what to do, Since EventBus supports multiple different sources(called Receiver in EventBus) and targets(called Emitter). We need to point out which of them is using in this scenario. \nLet's create a configuration file to describe this, The configuration file is based on  Typesafe Config , similar as json.\nLet's create a file called application.conf, Put it on root of EventBus directory.  # includes the original configuration\ninclude \"application\"\n\n# EventBus runtime configuration\nevent-bus.runtime {\n\n  # Creates a PipelinePool and declare what Pipelines it has.\n  pipeline-pool = [\n    {\n      name = TestPipeline\n      type = kafka\n\n      # Sets up the Pipeline specific settings\n      akka.kafka.producer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n      akka.kafka.consumer {\n        kafka-clients {\n          bootstrap.servers = \"...\"\n        }\n      }\n    }\n  ]\n\n  # Creates Transporters which will accept data from outside to Pipeline.\n  transporters = [{\n    name = TestTransporter\n\n    # Declares which EntryPoints this Transporter can support.\n    receivers = [\n      {\n        type = http\n        name = TestReceiver1\n\n        # Receiver specific parameters\n        interface = localhost\n        port = 8086\n      }\n    ]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n    }\n\n    # Transporter specific parameters.\n    transport-parallelism = 1\n    commit-parallelism = 10\n    akka.stream.materializer {}\n  }]\n\n  # Creates Dispatchers which will publish data from Pipeline to outside.\n  dispatchers = [{\n    name = StressTestDispatcher\n\n    # Declares which Emitters this Dispatcher can support.\n    emitters = [{\n      type = http\n      name = TestEmitter\n\n      # Emitter specific parameters\n      request {\n        host = localhost\n        port = 8087\n        uri = \"/\"\n      }\n      akka.http.host-connection-pool {\n        max-open-requests = 32\n      }\n    }]\n\n    # Declares which Pipeline it using (from PipelinePool)\n    pipeline {\n      name = TestPipeline\n\n      # The options of using the Pipeline\n      outlet {\n        group-id = EventBus.TestDispatcher\n        topics = [\"default\"]\n      }\n    }\n  }]\n}",
-            "title": "Setting up EventBus"
-        },
-        {
-            "location": "/quickstart/#launch-eventbus",
-            "text": "After you set up the configuration, Please make sure the dependencies are also set up properly. Like: Kafka... \nThen we can launch EventBus by the way if want, Let's using normal way here.   package EventBus   sbt clean compile stage   launch with the configuration   ./target/universal/stage/bin/event-bus -Dconfig.file=./application.conf  Now EventBus should be listening on localhost port 8086 expecting for HTTP messages, And transporting messages to Kafka then delivering to localhost port 8087 by HTTP.",
             "title": "Launch EventBus"
         },
         {
-            "location": "/concepts/",
-            "text": "Story\n\n\nSource\n\n\nSink\n\n\nTransform\n\n\nFallback",
-            "title": "Concepts"
+            "location": "/get_started/#setup",
+            "text": "After we installed and started all dependencies, We can setup EventBus by it's configuration.(Please check the  configuration section )  For example let's change the zookeeper address of application.conf to be:  zookeeper {\n  servers = \"localhost:2181\"\n  rootpath = \"/testnode\"\n}",
+            "title": "Setup"
         },
         {
-            "location": "/concepts/#story",
+            "location": "/get_started/#compile-run",
+            "text": "EventBus includes two main components, Runner and Admin. Which are the two sub-projects in the source code as well (Runner is inside core).   Let's stage the project first   > cd ${the_root_path_of_event_bus}\n> sbt stage   Launch Runner   > # uses environment variables for some settings, you can also set them inside application.conf directly\n> EB_APPNAME=${application_name} EB_DEV=dev EB_RUNNERNAME=default-runner ./target/universal/stage/bin/runner   Launch Admin   > # changes admin listen port to be 8080, default is 8990\n> EB_APPNAME=${application_name} EB_DEV=dev ./target/universal/stage/bin/admin -Dapp.admin.port=8080  Now open the url  http://localhost:8080  you will see the homepage of admin interface.",
+            "title": "Compile &amp; Run"
+        },
+        {
+            "location": "/get_started/#workflow",
             "text": "",
-            "title": "Story"
+            "title": "Workflow"
         },
         {
-            "location": "/concepts/#source",
-            "text": "",
-            "title": "Source"
+            "location": "/get_started/#workflow-of-eventbus",
+            "text": "EventBus internal includes a list of stories, The word \"story\" is a virtual concept. Which describes a scenario about transfer data from one point to another point. \nFor more details please check  Overview Section     A story includes  a Source ,  a Sink , maybe  a couple of Transforms  and  a Fallback \nThe internal structure of a story looks like this:  Data/Event come from the left side and eventually will reach right side, That's a end of the story.\nWe could have some different stories running paralleln  \nFor example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.   There suppose to be some different  Souce / Sink / Transforms / Fallback  implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be  Redis Souce ,  JMS Sink , etc...",
+            "title": "Workflow of EventBus"
         },
         {
-            "location": "/concepts/#sink",
-            "text": "",
-            "title": "Sink"
+            "location": "/get_started/#workflow-of-our-current-scenario",
+            "text": "Back to our current scenario, What the workflow looks like?  \nHow the different systems working together with EventBus?    Business send Events to EventBus by HTTP Request  EventBus stores the requset to Kafka  There are sereral EventBus stories which subscribing on Kafka topcis and send data to specific systems by HTTP requests.",
+            "title": "Workflow of Our Current Scenario:"
         },
         {
-            "location": "/concepts/#transform",
-            "text": "",
-            "title": "Transform"
+            "location": "/get_started/#create-stories",
+            "text": "Let's open  the Admin Interface (http://localhost:8080) \nClick \"New Story\" button on the navagator.   Like we mentioned before, We need a couple of stories to satisfy the workflow. \nWe need a first story which listening on a HTTP port and transferring data to Kafka, It should be like this:     After the story is created, We also should assign it to a  Runner (run stories). For more details, please check  Overview Section .  Okay, Now the first story is created and running, We also need to create a couple of other stories to subscribe on specific Kafka topics and send data to specific systems by HTTP. \nIt should be like this(don't forget to assign it to a  Runner ):   Now the configuration of EventBus is done, A HTTP request sent to the HTTP port listened by the story, will be directly send to Kafka.  \nAnd other stories will fetch the request from Kafka, to send it to different systems.",
+            "title": "Create Stories"
         },
         {
-            "location": "/concepts/#fallback",
+            "location": "/get_started/#fallback",
             "text": "",
             "title": "Fallback"
         },
         {
-            "location": "/components/",
+            "location": "/get_started/#tracking",
             "text": "",
-            "title": "Components"
+            "title": "Tracking"
         },
         {
-            "location": "/data_format/",
-            "text": "ActivityStreams",
-            "title": "Data Format"
-        },
-        {
-            "location": "/data_format/#activitystreams",
+            "location": "/get_started/#monitoring",
             "text": "",
-            "title": "ActivityStreams"
+            "title": "Monitoring"
         },
         {
-            "location": "/deployment/",
-            "text": "Ansible\n\n\nChange Configuration\n\n\nDeploy to specific servers\n\n\nansible-playbook -i ansible/lab ansible/site.yml -e \"service_name=stresstest\"\n\n\n\n\nDocker\n\n\nManually",
-            "title": "Deployment"
+            "location": "/get_started/#grafana",
+            "text": "We use  Grafana  to present some metrics for monitoring the health of EventBus",
+            "title": "Grafana"
         },
         {
-            "location": "/deployment/#ansible",
+            "location": "/get_started/#sentry",
+            "text": "And use  Sentry  for Error Tracking",
+            "title": "Sentry"
+        },
+        {
+            "location": "/overview/",
+            "text": "Concepts & Structure\n\n\n\n\n\n\nRunner\n and \nAdmin\n  \n\n\n\n\nEventBus includes two main components, \nRunner\n and \nAdmin\n.\n\n\nRunner\n intends to be a real logic executor. And \nAdmin\n manages internal state.\n\n\nRunner\n located in the \"core\" folder of root path, \nAdmin\n located in \"admin\" folder. They are spearated to be two sub projects.  \n\n\nIn real user cases, We may deploy multiple \nRunner\ns and one \nAdmin\n for a project. \nRunner\ns are stateless, It can be deployed on one server or multiple different servers for different purposes, It will not do anything since the beginning, just running there waiting for jobs/stories coming.\n\n\n\n\nStory\n, \nSource\n, \nSink\n, \nTransform\n, \nFallback\n\n\n\n\nEventBus is enriched by \nStories\n, A \nStory\n is a basic runnable unit inside EventBus. After a \nStory\n be created, it should be assigned to a \nRunner\n or multiple \nRunners\n based on the situation.\n\n\nA \nStory\n includes one \nSource\n, one \nSink\n and maybe a couple of \nTransforms\n and one \nFallback\n.\n\nThe purpose of a \nStory\n is to transfer data from the \nSource\n to the \nSink\n, In the middle it may go through multiple \nTransforms\n for data processing. And if it failed on the way, It could be send to the \nFallback\n just in case we may process it again.\n\n\n\n\nConfiguration\n\n\nConfig Files\n\n\n\n\n\n\n\n\nFile Path\n\n\nDescription\n\n\n\n\n\n\n\n\n\n\ncore/src/main/resources/application.conf\n\n\nApplication config file\n\n\n\n\n\n\ncore/src/main/resources/reference.conf\n\n\nApplication default settings, Can be overrided by application.conf\n\n\n\n\n\n\ncore/src/main/resources/akka.conf\n\n\nAkka config\n\n\n\n\n\n\ncore/src/main/resources/logback.xml\n\n\nLog config\n\n\n\n\n\n\nadmin/backend/src/main/resources/application.conf\n\n\nAdmin config file\n\n\n\n\n\n\n\n\nThe configuration files (.conf) is based on \nTypesafe Config\n, similar as json.\n\n\nEnvironment Variables\n\n\n\n\n\n\n\n\nVariable Name\n\n\nDescription\n\n\nDefault Value\n\n\n\n\n\n\n\n\n\n\nEB_APPNAME\n\n\nApplication Name\n\n\n\n\n\n\n\n\nEB_ENV\n\n\nApplication Environment, One of following: dev/development, test, prod/production\n\n\ndev\n\n\n\n\n\n\nEB_RUNNERNAME\n\n\nRunner name (Only for runner)\n\n\n\n\n\n\n\n\nEB_LOGLEVEL\n\n\nLogging Level\n\n\nDEBUG\n\n\n\n\n\n\nEB_LOGREF\n\n\nSTDOUT, FILE\n\n\nSTDOUT\n\n\n\n\n\n\n\n\nInternal Tasks\n\n\nSources\n\n\nHttp Source\n\n\nListening on a HTTP port and accpects specific format of data as a Event.\n\n\n\n\nDefault Settings\n\n\n\n\n{\n  interface = \"0.0.0.0\"\n  port = 8000\n  format = ActivityStreams\n  succeeded-response = ok\n  # server settings will override the default settings of akka.http.server\n  server {\n    # max-connections = 1024\n    # ...\n  }\n}\n\n\n\n\nKafka Source\n\n\nSubscribe on some Kafka Topics, Fetch the data from Kafka as Events.\n\n\n\n\nDefault Settings\n\n\n\n\n{\n  # bootstrap-servers = \"\"\n  # group-id = \"\"\n  # Will use either \"topics\" or \"topic-pattern\"\n  # topics = []\n  # topic-pattern = event-* # supports wildcard if topics are defined will use that one \n\n  max-concurrent-partitions = 100\n  commit-max-batches = 20\n\n  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig\n  # can be defined in this configuration section.\n  properties {\n    # Disable auto-commit by default\n    \"enable.auto.commit\" = false\n  }\n}\n\n\n\n\nSinks\n\n\nHttp Sink\n\n\nSend Events to a HTTP Endpoint\n\n\n\n\nDefault Settings:\n\n\n\n\n{\n  # the default request could be overrided by info of the event\n  default-request {\n    method = POST\n    # uri = \"http://www.google.com\"\n  }\n  min-backoff = 1 s\n  max-backoff = 30 s\n  random-factor = 0.2\n  max-retrytime = 12 h\n  concurrent-retries = 1\n  # pool settings will override the default settings of akka.http.host-connection-pool\n  pool {\n    # max-connections = 4\n    # min-connections = 0\n    # max-open-requests = 32\n    # pipelining-limit = 1\n    # idle-timeout = 30 s\n    # ...\n  }\n}\n\n\n\n\nKafka Sink\n\n\nSend Events to Kafka\n\n\n\n\nDefault Settings:\n\n\n\n\n{\n  # bootstrap-servers = \"\"\n  default-topic = \"event-default\"\n  use-event-group-as-topic = true\n  # Tuning parameter of how many sends that can run in parallel.\n  parallelism = 100\n  # How long to wait for `KafkaProducer.close`\n  close-timeout = 60 s\n  # Fully qualified config path which holds the dispatcher configuration\n  # to be used by the producer stages. Some blocking may occur.\n  # When this value is empty the dispatcher configured for the stream\n  # will be used.\n  use-dispatcher = \"akka.kafka.default-dispatcher\"\n  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig\n  # can be defined in this configuration section.\n  properties {\n  }\n}\n\n\n\n\nTransforms\n\n\nTNC Topic Resolver\n\n\nResolve Kafka Topic based on a predefined topic list and the Event title.\n\n\n\n\nDefault Settings:\n\n\n\n\n{\n  contact-points = []\n  port = 9042\n  parallelism = 3\n}\n\n\n\n\nFallback\n\n\nCassandra Fallback\n\n\nStore failed events to Cassandra\n\n\n\n\nDefault Settings:\n\n\n\n\n{\n  contact-points = []\n  port = 9042\n  parallelism = 3\n}",
+            "title": "Overview"
+        },
+        {
+            "location": "/overview/#concepts-structure",
+            "text": "Runner  and  Admin      EventBus includes two main components,  Runner  and  Admin .  Runner  intends to be a real logic executor. And  Admin  manages internal state.  Runner  located in the \"core\" folder of root path,  Admin  located in \"admin\" folder. They are spearated to be two sub projects.    In real user cases, We may deploy multiple  Runner s and one  Admin  for a project.  Runner s are stateless, It can be deployed on one server or multiple different servers for different purposes, It will not do anything since the beginning, just running there waiting for jobs/stories coming.   Story ,  Source ,  Sink ,  Transform ,  Fallback   EventBus is enriched by  Stories , A  Story  is a basic runnable unit inside EventBus. After a  Story  be created, it should be assigned to a  Runner  or multiple  Runners  based on the situation.  A  Story  includes one  Source , one  Sink  and maybe a couple of  Transforms  and one  Fallback . \nThe purpose of a  Story  is to transfer data from the  Source  to the  Sink , In the middle it may go through multiple  Transforms  for data processing. And if it failed on the way, It could be send to the  Fallback  just in case we may process it again.",
+            "title": "Concepts &amp; Structure"
+        },
+        {
+            "location": "/overview/#configuration",
             "text": "",
-            "title": "Ansible"
+            "title": "Configuration"
         },
         {
-            "location": "/deployment/#change-configuration",
+            "location": "/overview/#config-files",
+            "text": "File Path  Description      core/src/main/resources/application.conf  Application config file    core/src/main/resources/reference.conf  Application default settings, Can be overrided by application.conf    core/src/main/resources/akka.conf  Akka config    core/src/main/resources/logback.xml  Log config    admin/backend/src/main/resources/application.conf  Admin config file     The configuration files (.conf) is based on  Typesafe Config , similar as json.",
+            "title": "Config Files"
+        },
+        {
+            "location": "/overview/#environment-variables",
+            "text": "Variable Name  Description  Default Value      EB_APPNAME  Application Name     EB_ENV  Application Environment, One of following: dev/development, test, prod/production  dev    EB_RUNNERNAME  Runner name (Only for runner)     EB_LOGLEVEL  Logging Level  DEBUG    EB_LOGREF  STDOUT, FILE  STDOUT",
+            "title": "Environment Variables"
+        },
+        {
+            "location": "/overview/#internal-tasks",
             "text": "",
-            "title": "Change Configuration"
+            "title": "Internal Tasks"
         },
         {
-            "location": "/deployment/#deploy-to-specific-servers",
-            "text": "ansible-playbook -i ansible/lab ansible/site.yml -e \"service_name=stresstest\"",
-            "title": "Deploy to specific servers"
-        },
-        {
-            "location": "/deployment/#docker",
+            "location": "/overview/#sources",
             "text": "",
-            "title": "Docker"
+            "title": "Sources"
         },
         {
-            "location": "/deployment/#manually",
+            "location": "/overview/#http-source",
+            "text": "Listening on a HTTP port and accpects specific format of data as a Event.   Default Settings   {\n  interface = \"0.0.0.0\"\n  port = 8000\n  format = ActivityStreams\n  succeeded-response = ok\n  # server settings will override the default settings of akka.http.server\n  server {\n    # max-connections = 1024\n    # ...\n  }\n}",
+            "title": "Http Source"
+        },
+        {
+            "location": "/overview/#kafka-source",
+            "text": "Subscribe on some Kafka Topics, Fetch the data from Kafka as Events.   Default Settings   {\n  # bootstrap-servers = \"\"\n  # group-id = \"\"\n  # Will use either \"topics\" or \"topic-pattern\"\n  # topics = []\n  # topic-pattern = event-* # supports wildcard if topics are defined will use that one \n\n  max-concurrent-partitions = 100\n  commit-max-batches = 20\n\n  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig\n  # can be defined in this configuration section.\n  properties {\n    # Disable auto-commit by default\n    \"enable.auto.commit\" = false\n  }\n}",
+            "title": "Kafka Source"
+        },
+        {
+            "location": "/overview/#sinks",
             "text": "",
-            "title": "Manually"
+            "title": "Sinks"
         },
         {
-            "location": "/admin_interface/",
-            "text": "ActivityStreams",
+            "location": "/overview/#http-sink",
+            "text": "Send Events to a HTTP Endpoint   Default Settings:   {\n  # the default request could be overrided by info of the event\n  default-request {\n    method = POST\n    # uri = \"http://www.google.com\"\n  }\n  min-backoff = 1 s\n  max-backoff = 30 s\n  random-factor = 0.2\n  max-retrytime = 12 h\n  concurrent-retries = 1\n  # pool settings will override the default settings of akka.http.host-connection-pool\n  pool {\n    # max-connections = 4\n    # min-connections = 0\n    # max-open-requests = 32\n    # pipelining-limit = 1\n    # idle-timeout = 30 s\n    # ...\n  }\n}",
+            "title": "Http Sink"
+        },
+        {
+            "location": "/overview/#kafka-sink",
+            "text": "Send Events to Kafka   Default Settings:   {\n  # bootstrap-servers = \"\"\n  default-topic = \"event-default\"\n  use-event-group-as-topic = true\n  # Tuning parameter of how many sends that can run in parallel.\n  parallelism = 100\n  # How long to wait for `KafkaProducer.close`\n  close-timeout = 60 s\n  # Fully qualified config path which holds the dispatcher configuration\n  # to be used by the producer stages. Some blocking may occur.\n  # When this value is empty the dispatcher configured for the stream\n  # will be used.\n  use-dispatcher = \"akka.kafka.default-dispatcher\"\n  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig\n  # can be defined in this configuration section.\n  properties {\n  }\n}",
+            "title": "Kafka Sink"
+        },
+        {
+            "location": "/overview/#transforms",
+            "text": "",
+            "title": "Transforms"
+        },
+        {
+            "location": "/overview/#tnc-topic-resolver",
+            "text": "Resolve Kafka Topic based on a predefined topic list and the Event title.   Default Settings:   {\n  contact-points = []\n  port = 9042\n  parallelism = 3\n}",
+            "title": "TNC Topic Resolver"
+        },
+        {
+            "location": "/overview/#fallback",
+            "text": "",
+            "title": "Fallback"
+        },
+        {
+            "location": "/overview/#cassandra-fallback",
+            "text": "Store failed events to Cassandra   Default Settings:   {\n  contact-points = []\n  port = 9042\n  parallelism = 3\n}",
+            "title": "Cassandra Fallback"
+        },
+        {
+            "location": "/operation_and_maintenance/",
+            "text": "Admin Interface\n\n\nAfter you launch Admin Module, You can visit the Admin Interface by the port you specified (by default it's http://localhost:8990)\n\nHere is a demo page of the Admin Interface: \nDemo\n)\n\n\nFollowing are some of the functions the Admin Interface providered:\n\n\n\n\nCreate New Story\n\n\n\n\n\n\n\n\nManage Story\n\n\n\n\n\n\nDeployment\n\n\nAnsible\n\n\nJust a example of the Ansible script we are using for runner deployment (admin deployment is spearated, but similar):\n\n\n\n\nsite.yml\n\n\n\n\n---\n- hosts: lab\n  gather_facts: false\n\n  tasks:\n    - name: make sure home dir\n      file:\n        path: \"{{ dest_dir }}\"\n        state: directory\n\n    - name: clone or update repository\n      git:\n        repo=https://github.com/thenetcircle/event-bus.git\n        dest={{ dest_dir }}\n        version={{ app_version }}\n      notify:\n        - recompile service\n        - restart service\n\n    - name: create service unit\n      become: true\n      template:\n        src: \"service.j2\"\n        dest: /lib/systemd/system/{{ service_name }}.service\n        mode: 0644\n      notify:\n        - reload service\n        - restart service\n\n    - name: start service\n      become: true\n      systemd:\n        name: \"{{ service_name }}\"\n        state: started\n\n  handlers:\n    - name: recompile service\n      command: /usr/bin/env sbt clean compile stage\n      args:\n        chdir: \"{{ dest_dir }}/\"\n\n    - name: reload service\n      become: true\n      systemd:\n        name: \"{{ service_name }}\"\n        daemon_reload: yes\n\n    - name: restart service\n      become: true\n      systemd:\n        name: \"{{ service_name }}\"\n        state: restarted\n\n\n\n\n\n\nservice.j2\n\n\n\n\n[Unit]\nDescription={{ service_name }} service\n\n[Service]\nType=simple\nWorkingDirectory={{ dest_dir }}\nEnvironment=\"JAVA_HOME={{ java_home }}\"\nExecStart={{ dest_dir }}/target/universal/stage/bin/runner \"-DEB_APPNAME={{ app_name }}\" \"-DEB_ENV={{ app_env }}\" \"-DEB_RUNNERNAME={{ name }}\" \"-Dapp.zookeeper.servers={{ zookeeper_servers }}\" \"-Dkamon.statsd.hostname={{ statsd_hostname }}\" \"-Dapp.monitor.sentry.dsn={{ sentry_dsn }}\" \"-DEB_LOGREF={{ log_ref }}\" \"-DEB_LOGLEVEL={{ log_level }}\" \"-DEB_LOGFILE={{ log_file }}\" \"-J-Xmx{{ max_heap_size }}\"\nRestart=always\nRestartSec=3\nStartLimitIntervalSec=60\nStartLimitBurst=5\nUser={{ daemon_user }}\nPermissionsStartOnly=true\n\n[Install]\nWantedBy=multi-user.target\n\n\n\n\nTracking\n\n\nMonitoring\n\n\nGrafana\n\n\nWe use \nGrafana\n to present some metrics for monitoring the health of EventBus\n\n\n\n\nSentry\n\n\nAnd use \nSentry\n for Error Tracking",
+            "title": "Operation And Maintenance"
+        },
+        {
+            "location": "/operation_and_maintenance/#admin-interface",
+            "text": "After you launch Admin Module, You can visit the Admin Interface by the port you specified (by default it's http://localhost:8990) \nHere is a demo page of the Admin Interface:  Demo )  Following are some of the functions the Admin Interface providered:   Create New Story     Manage Story",
             "title": "Admin Interface"
         },
         {
-            "location": "/admin_interface/#activitystreams",
+            "location": "/operation_and_maintenance/#deployment",
             "text": "",
+            "title": "Deployment"
+        },
+        {
+            "location": "/operation_and_maintenance/#ansible",
+            "text": "Just a example of the Ansible script we are using for runner deployment (admin deployment is spearated, but similar):   site.yml   ---\n- hosts: lab\n  gather_facts: false\n\n  tasks:\n    - name: make sure home dir\n      file:\n        path: \"{{ dest_dir }}\"\n        state: directory\n\n    - name: clone or update repository\n      git:\n        repo=https://github.com/thenetcircle/event-bus.git\n        dest={{ dest_dir }}\n        version={{ app_version }}\n      notify:\n        - recompile service\n        - restart service\n\n    - name: create service unit\n      become: true\n      template:\n        src: \"service.j2\"\n        dest: /lib/systemd/system/{{ service_name }}.service\n        mode: 0644\n      notify:\n        - reload service\n        - restart service\n\n    - name: start service\n      become: true\n      systemd:\n        name: \"{{ service_name }}\"\n        state: started\n\n  handlers:\n    - name: recompile service\n      command: /usr/bin/env sbt clean compile stage\n      args:\n        chdir: \"{{ dest_dir }}/\"\n\n    - name: reload service\n      become: true\n      systemd:\n        name: \"{{ service_name }}\"\n        daemon_reload: yes\n\n    - name: restart service\n      become: true\n      systemd:\n        name: \"{{ service_name }}\"\n        state: restarted   service.j2   [Unit]\nDescription={{ service_name }} service\n\n[Service]\nType=simple\nWorkingDirectory={{ dest_dir }}\nEnvironment=\"JAVA_HOME={{ java_home }}\"\nExecStart={{ dest_dir }}/target/universal/stage/bin/runner \"-DEB_APPNAME={{ app_name }}\" \"-DEB_ENV={{ app_env }}\" \"-DEB_RUNNERNAME={{ name }}\" \"-Dapp.zookeeper.servers={{ zookeeper_servers }}\" \"-Dkamon.statsd.hostname={{ statsd_hostname }}\" \"-Dapp.monitor.sentry.dsn={{ sentry_dsn }}\" \"-DEB_LOGREF={{ log_ref }}\" \"-DEB_LOGLEVEL={{ log_level }}\" \"-DEB_LOGFILE={{ log_file }}\" \"-J-Xmx{{ max_heap_size }}\"\nRestart=always\nRestartSec=3\nStartLimitIntervalSec=60\nStartLimitBurst=5\nUser={{ daemon_user }}\nPermissionsStartOnly=true\n\n[Install]\nWantedBy=multi-user.target",
+            "title": "Ansible"
+        },
+        {
+            "location": "/operation_and_maintenance/#tracking",
+            "text": "",
+            "title": "Tracking"
+        },
+        {
+            "location": "/operation_and_maintenance/#monitoring",
+            "text": "",
+            "title": "Monitoring"
+        },
+        {
+            "location": "/operation_and_maintenance/#grafana",
+            "text": "We use  Grafana  to present some metrics for monitoring the health of EventBus",
+            "title": "Grafana"
+        },
+        {
+            "location": "/operation_and_maintenance/#sentry",
+            "text": "And use  Sentry  for Error Tracking",
+            "title": "Sentry"
+        },
+        {
+            "location": "/event_format/",
+            "text": "ActivityStreams\n\n\nBy default, EventBus uses \nActivityStreams 1.0\n as event format.\n\nActivityStreams 1.0 specification defineds several concepts and fields of a activity. For more details check their \ndocumentation\n.\n\n\nSummary:\n\n- It includes two parts here: Activity and Object.\n\n- A event can be present as a Activity, And a Activity could include multiple Objects.\n\n\nConventions\n\n\nEventName:\n    \n\n\n\n\nUse only lowercase letters, numbers, dots (.) and underscores (_);\n\n\nPrefix names with a namespace followed by a dot (e.g. order., user.*);\n\n\nEnd names with a verb that indicates what action it is (e.g. user.login, payment.subscribe). \n\n\n\n\nStructure\n\n\nActivity\n\n\n\n  \n\n    \nProperty\n\n    \nValue\n\n    \nDescription\n\n    \nMandatory?\n\n    \nPHP Type\n\n  \n\n  \n\n    \nid\n\n    \nJSON [RFC4627] String\n\n    \nProvides a permanent, universally unique identifier for the activity in the form of an absolute IRI [RFC3987]. An activity SHOULD contain a single id property. If an activity does not contain an id property, consumers MAY use the value of the url property as a less-reliable, non-unique identifier.\n\n    \ny\n\n    \nstring\n\n  \n\n  \n\n    \ntitle\n\n    \nJSON [RFC4627] String\n\n    \nNatural-language title or headline for the activity encoded as a single JSON String containing HTML markup. An activity MAY contain a title property.\n\n    \ny\n\n    \nstring\n\n  \n\n  \n\n    \npublished\n\n    \n[RFC3339] date-time\n\n    \nThe date and time at which the activity was published. An activity MUST contain a published property.\n\n    \ny\n\n    \nstring\n\n  \n\n  \n\n    \nverb\n\n    \nJSON [RFC4627] String\n\n    \nIdentifies the action that the activity describes. An activity SHOULD contain a verb property whose value is a JSON String that is non-empty and matches either the \"isegment-nz-nc\" or the \"IRI\" production in [RFC3339]. Note that the use of a relative reference other than a simple name is not allowed. If the verb is not specified, or if the value is null, the verb is assumed to be \"post\".\n\n    \ny\n\n    \nstring\n\n  \n\n  \n\n    \nactor\n\n    \nObject\n\n    \nDescribes the entity that performed the activity. An activity MUST contain one actor property whose value is a single Object.\n\n    \nn\n\n    \nActivityObject\n\n  \n\n  \n\n    \nobject\n\n    \nObject\n\n    \nDescribes the primary object of the activity. For instance, in the activity, \"John saved a movie to his wishlist\", the object of the activity is \"movie\". An activity SHOULD contain an object property whose value is a single Object. If the object property is not contained, the primary object of the activity MAY be implied by context.\n\n    \nn\n\n    \nActivityObject\n\n  \n\n  \n\n    \ntarget\n\n    \nObject\n\n    \nDescribes the target of the activity. The precise meaning of the activity's target is dependent on the activities verb, but will often be the object the English preposition \"to\". For instance, in the activity, \"John saved a movie to his wishlist\", the target of the activity is \"wishlist\". The activity target MUST NOT be used to identity an indirect object that is not a target of the activity. An activity MAY contain a target property whose value is a single Object.\n\n    \nn\n\n    \nActivityObject\n\n  \n\n  \n\n    \nprovider\n\n    \nObject\n\n    \nDescribes the application that published the activity. Note that this is not necessarily the same entity that generated the activity. An activity MAY contain a provider property whose value is a single Object.\n\n    \nn\n\n    \nActivityObject\n\n  \n\n  \n\n    \ncontent\n\n    \nJSON [RFC4627] String\n\n    \nNatural-language description of the activity encoded as a single JSON String containing HTML markup. Visual elements such as thumbnail images MAY be included. An activity MAY contain a content property.\n\n    \nn\n\n    \nmixed\n\n  \n\n  \n\n    \ngenerator\n\n    \nObject\n\n    \nDescribes the application that generated the activity. An activity MAY contain a generator property whose value is a single Object.\n\n    \nn\n\n    \nActivityObject\n\n  \n\n\n\n\n\nObject\n\n\n\n  \n\n    \nProperty\n\n    \nValue\n\n    \nDescription\n\n    \nMandatory?\n\n    \nPHP Type\n\n  \n\n  \n\n    \nid\n\n    \nJSON [RFC4627] String\n\n    \nProvides a permanent, universally unique identifier for the object in the form of an absolute IRI [RFC3987]. An object SHOULD contain a single id property. If an object does not contain an id property, consumers MAY use the value of the url property as a less-reliable, non-unique identifier.\n\n    \nn\n\n    \nstring\n\n  \n\n  \n\n    \nobjectType\n\n    \nJSON [RFC4627] String\n\n    \nIdentifies the type of object. An object MAY contain an objectType property whose value is a JSON String that is non-empty and matches either the \"isegment-nz-nc\" or the \"IRI\" production in [RFC3987]. Note that the use of a relative reference other than a simple name is not allowed. If no objectType property is contained, the object has no specific type.\n\n    \nn\n\n    \nstring\n\n  \n\n  \n\n    \nattachments\n\n    \nJSON [RFC4627] Array of Objects \n\n    \nA collection of one or more additional, associated objects, similar to the concept of attached files in an email message. An object MAY have an attachments property whose value is a JSON Array of Objects.\n\n    \nn\n\n    \nActivityObject[]\n\n  \n\n  \n\n    \nsummary\n\n    \nJSON [RFC4627] String\n\n    \nNatural-language summarization of the object encoded as a single JSON String containing HTML markup. Visual elements such as thumbnail images MAY be included. An activity MAY contain a summary property.\n\n    \nn\n\n    \nmixed\n\n  \n\n  \n\n    \ncontent\n\n    \nJSON [RFC4627] String\n\n    \nNatural-language description of the object encoded as a single JSON String containing HTML markup. Visual elements such as thumbnail images MAY be included. An object MAY contain a content property.\n\n    \nn\n\n    \nmixed\n\n  \n\n  \n\n    \ndownstreamDuplicates\n\n    \nJSON [RFC4627] Array of Strings\n\n    \nA JSON Array of one or more absolute IRI's [RFC3987] identifying objects that duplicate this object's content. An object SHOULD contain a downstreamDuplicates property when there are known objects, possibly in a different system, that duplicate the content in this object. This MAY be used as a hint for consumers to use when resolving duplicates between objects received from different sources.\n\n    \nn\n\n    \nstring[]\n\n  \n\n  \n\n    \nupstreamDuplicates\n\n    \nJSON [RFC4627] Array of Strings\n\n    \nA JSON Array of one or more absolute IRI's [RFC3987] identifying objects that duplicate this object's content. An object SHOULD contain an upstreamDuplicates property when a publisher is knowingly duplicating with a new ID the content from another object. This MAY be used as a hint for consumers to use when resolving duplicates between objects received from different sources.\n\n    \nn\n\n    \nstring[]\n\n  \n\n  \n\n    \nauthor\n\n    \nObject\n\n    \nDescribes the entity that created or authored the object. An object MAY contain a single author property whose value is an Object of any type. Note that the author field identifies the entity that created the object and does not necessarily identify the entity that published the object. For instance, it may be the case that an object created by one person is posted and published to a system by an entirely different entity.\n\n    \nn\n\n    \nActivityObject\n\n  \n\n\n\n\n\nUser Cases (keep adding)\n\n\n\n\nCase1: benn logged in \n\n\n\n\nI will choose \"user.login\" as EventName, it following the conventions \"namespace.verb\"\n\n\n\n  \n\n    \ntitle\n\n    \nuser.login\n\n  \n\n  \n\n    \nverb\n\n    \nlogin\n\n  \n\n  \n\n    \nactor\n\n    \n{ objectType: \"user\", id: 123456 }\n\n  \n    \n  \n\n    \nid\n\n    \nGenerated Unique String\n\n  \n\n  \n\n    \npublished\n\n    \n2017-10-13T11:31:34+08:00\n\n  \n\n  \n\n    \nprovider\n\n    \n{ objectType: \"community\", id: \"Poppen\" }\n\n  \n\n  \n\n    \ngenerator\n\n    \n{ id: \"tnc-event-dispatcher\", content: { mode: \"async\", class: \"UserLoginEvent\" } }\n\n  \n\n\n\n\n\n\n\nCase2: benn visited fan's profile \n\n\n\n\n\n  \n\n    \ntitle\n\n    \nuser.visit\n\n  \n\n  \n\n    \nverb\n\n    \nvisit\n\n  \n\n  \n\n    \nactor\n\n    \n{ objectType: \"user\", id: 12345 }\n\n  \n\n  \n\n    \nobject\n\n    \n{ objectType: \"profile\", id: \"fan\" }\n\n  \n\n  \n\n    \nid\n\n    \nGenerated Unique String\n\n  \n\n  \n\n    \npublished\n\n    \n2017-10-13T11:31:34+08:00\n\n  \n\n  \n\n    \nprovider\n\n    \n{ objectType: \"community\", id: \"Poppen\" }\n\n  \n\n  \n\n    \ngenerator\n\n    \n{ id: \"tnc-event-dispatcher\", content: { mode: \"async\", class: \"UserLoginEvent\" } }\n\n  \n\n\n\n\n\n\n\nCase3: benn send a message \nto\n leo \n\n\n\n\n\n  \n\n    \ntitle\n\n    \nmessage.send\n\n  \n\n  \n\n    \nverb\n\n    \nsend\n\n  \n\n  \n\n    \nactor\n\n    \n{ objectType: \"user\", id: 12345 }\n\n  \n\n  \n\n    \nobject\n\n    \n{ objectType: \"message\", id: 112231 }\n\n  \n\n  \n\n      \ntarget\n\n      \n{ objectType: \"user\", id: 88929 }\n\n    \n\n  \n\n    \nid\n\n    \nGenerated Unique String\n\n  \n\n  \n\n    \npublished\n\n    \n2017-10-13T11:31:34+08:00\n\n  \n\n  \n\n    \nprovider\n\n    \n{ objectType: \"community\", id: \"Poppen\" }\n\n  \n\n  \n\n    \ngenerator\n\n    \n{ id: \"tnc-event-dispatcher\", content: { mode: \"async\", class: \"UserLoginEvent\" } }",
+            "title": "Event Format"
+        },
+        {
+            "location": "/event_format/#activitystreams",
+            "text": "By default, EventBus uses  ActivityStreams 1.0  as event format. \nActivityStreams 1.0 specification defineds several concepts and fields of a activity. For more details check their  documentation .  Summary: \n- It includes two parts here: Activity and Object. \n- A event can be present as a Activity, And a Activity could include multiple Objects.",
             "title": "ActivityStreams"
         },
         {
-            "location": "/monitoring/",
+            "location": "/event_format/#conventions",
+            "text": "EventName:        Use only lowercase letters, numbers, dots (.) and underscores (_);  Prefix names with a namespace followed by a dot (e.g. order., user.*);  End names with a verb that indicates what action it is (e.g. user.login, payment.subscribe).",
+            "title": "Conventions"
+        },
+        {
+            "location": "/event_format/#structure",
             "text": "",
-            "title": "Monitoring"
+            "title": "Structure"
+        },
+        {
+            "location": "/event_format/#activity",
+            "text": "Property \n     Value \n     Description \n     Mandatory? \n     PHP Type \n   \n   \n     id \n     JSON [RFC4627] String \n     Provides a permanent, universally unique identifier for the activity in the form of an absolute IRI [RFC3987]. An activity SHOULD contain a single id property. If an activity does not contain an id property, consumers MAY use the value of the url property as a less-reliable, non-unique identifier. \n     y \n     string \n   \n   \n     title \n     JSON [RFC4627] String \n     Natural-language title or headline for the activity encoded as a single JSON String containing HTML markup. An activity MAY contain a title property. \n     y \n     string \n   \n   \n     published \n     [RFC3339] date-time \n     The date and time at which the activity was published. An activity MUST contain a published property. \n     y \n     string \n   \n   \n     verb \n     JSON [RFC4627] String \n     Identifies the action that the activity describes. An activity SHOULD contain a verb property whose value is a JSON String that is non-empty and matches either the \"isegment-nz-nc\" or the \"IRI\" production in [RFC3339]. Note that the use of a relative reference other than a simple name is not allowed. If the verb is not specified, or if the value is null, the verb is assumed to be \"post\". \n     y \n     string \n   \n   \n     actor \n     Object \n     Describes the entity that performed the activity. An activity MUST contain one actor property whose value is a single Object. \n     n \n     ActivityObject \n   \n   \n     object \n     Object \n     Describes the primary object of the activity. For instance, in the activity, \"John saved a movie to his wishlist\", the object of the activity is \"movie\". An activity SHOULD contain an object property whose value is a single Object. If the object property is not contained, the primary object of the activity MAY be implied by context. \n     n \n     ActivityObject \n   \n   \n     target \n     Object \n     Describes the target of the activity. The precise meaning of the activity's target is dependent on the activities verb, but will often be the object the English preposition \"to\". For instance, in the activity, \"John saved a movie to his wishlist\", the target of the activity is \"wishlist\". The activity target MUST NOT be used to identity an indirect object that is not a target of the activity. An activity MAY contain a target property whose value is a single Object. \n     n \n     ActivityObject \n   \n   \n     provider \n     Object \n     Describes the application that published the activity. Note that this is not necessarily the same entity that generated the activity. An activity MAY contain a provider property whose value is a single Object. \n     n \n     ActivityObject \n   \n   \n     content \n     JSON [RFC4627] String \n     Natural-language description of the activity encoded as a single JSON String containing HTML markup. Visual elements such as thumbnail images MAY be included. An activity MAY contain a content property. \n     n \n     mixed \n   \n   \n     generator \n     Object \n     Describes the application that generated the activity. An activity MAY contain a generator property whose value is a single Object. \n     n \n     ActivityObject",
+            "title": "Activity"
+        },
+        {
+            "location": "/event_format/#object",
+            "text": "Property \n     Value \n     Description \n     Mandatory? \n     PHP Type \n   \n   \n     id \n     JSON [RFC4627] String \n     Provides a permanent, universally unique identifier for the object in the form of an absolute IRI [RFC3987]. An object SHOULD contain a single id property. If an object does not contain an id property, consumers MAY use the value of the url property as a less-reliable, non-unique identifier. \n     n \n     string \n   \n   \n     objectType \n     JSON [RFC4627] String \n     Identifies the type of object. An object MAY contain an objectType property whose value is a JSON String that is non-empty and matches either the \"isegment-nz-nc\" or the \"IRI\" production in [RFC3987]. Note that the use of a relative reference other than a simple name is not allowed. If no objectType property is contained, the object has no specific type. \n     n \n     string \n   \n   \n     attachments \n     JSON [RFC4627] Array of Objects  \n     A collection of one or more additional, associated objects, similar to the concept of attached files in an email message. An object MAY have an attachments property whose value is a JSON Array of Objects. \n     n \n     ActivityObject[] \n   \n   \n     summary \n     JSON [RFC4627] String \n     Natural-language summarization of the object encoded as a single JSON String containing HTML markup. Visual elements such as thumbnail images MAY be included. An activity MAY contain a summary property. \n     n \n     mixed \n   \n   \n     content \n     JSON [RFC4627] String \n     Natural-language description of the object encoded as a single JSON String containing HTML markup. Visual elements such as thumbnail images MAY be included. An object MAY contain a content property. \n     n \n     mixed \n   \n   \n     downstreamDuplicates \n     JSON [RFC4627] Array of Strings \n     A JSON Array of one or more absolute IRI's [RFC3987] identifying objects that duplicate this object's content. An object SHOULD contain a downstreamDuplicates property when there are known objects, possibly in a different system, that duplicate the content in this object. This MAY be used as a hint for consumers to use when resolving duplicates between objects received from different sources. \n     n \n     string[] \n   \n   \n     upstreamDuplicates \n     JSON [RFC4627] Array of Strings \n     A JSON Array of one or more absolute IRI's [RFC3987] identifying objects that duplicate this object's content. An object SHOULD contain an upstreamDuplicates property when a publisher is knowingly duplicating with a new ID the content from another object. This MAY be used as a hint for consumers to use when resolving duplicates between objects received from different sources. \n     n \n     string[] \n   \n   \n     author \n     Object \n     Describes the entity that created or authored the object. An object MAY contain a single author property whose value is an Object of any type. Note that the author field identifies the entity that created the object and does not necessarily identify the entity that published the object. For instance, it may be the case that an object created by one person is posted and published to a system by an entirely different entity. \n     n \n     ActivityObject",
+            "title": "Object"
+        },
+        {
+            "location": "/event_format/#user-cases-keep-adding",
+            "text": "Case1: benn logged in    I will choose \"user.login\" as EventName, it following the conventions \"namespace.verb\"  \n   \n     title \n     user.login \n   \n   \n     verb \n     login \n   \n   \n     actor \n     { objectType: \"user\", id: 123456 } \n       \n   \n     id \n     Generated Unique String \n   \n   \n     published \n     2017-10-13T11:31:34+08:00 \n   \n   \n     provider \n     { objectType: \"community\", id: \"Poppen\" } \n   \n   \n     generator \n     { id: \"tnc-event-dispatcher\", content: { mode: \"async\", class: \"UserLoginEvent\" } } \n      Case2: benn visited fan's profile    \n   \n     title \n     user.visit \n   \n   \n     verb \n     visit \n   \n   \n     actor \n     { objectType: \"user\", id: 12345 } \n   \n   \n     object \n     { objectType: \"profile\", id: \"fan\" } \n   \n   \n     id \n     Generated Unique String \n   \n   \n     published \n     2017-10-13T11:31:34+08:00 \n   \n   \n     provider \n     { objectType: \"community\", id: \"Poppen\" } \n   \n   \n     generator \n     { id: \"tnc-event-dispatcher\", content: { mode: \"async\", class: \"UserLoginEvent\" } } \n      Case3: benn send a message  to  leo    \n   \n     title \n     message.send \n   \n   \n     verb \n     send \n   \n   \n     actor \n     { objectType: \"user\", id: 12345 } \n   \n   \n     object \n     { objectType: \"message\", id: 112231 } \n   \n   \n       target \n       { objectType: \"user\", id: 88929 } \n     \n   \n     id \n     Generated Unique String \n   \n   \n     published \n     2017-10-13T11:31:34+08:00 \n   \n   \n     provider \n     { objectType: \"community\", id: \"Poppen\" } \n   \n   \n     generator \n     { id: \"tnc-event-dispatcher\", content: { mode: \"async\", class: \"UserLoginEvent\" } }",
+            "title": "User Cases (keep adding)"
+        },
+        {
+            "location": "/change_logs/",
+            "text": "2.0.5\n\n\n\n\nAdded commit-max-batches to KafkaSource settings to imporove it's parallesim\n\n\nOther bugfixs and improvements\n\n\n\n\n2.0.4\n\n\n\n\nBugfix of the Admin Interface\n\n\nFix issues of Cassandra Fallback\n\n\nRefactored StoryZookeeperListener\n\n\nSeveral other bugfixs and improvements\n\n\n\n\n2.0.3\n\n\n\n\nAdd admin interface\n\n\nBugfixs and Improvments\n\n\nAdd ability to HttpSink that determines the EndPoint by Event info\n\n\nAllows HttpSink acts based on the response of the EndPoint\n\n\nMonitor improvements\n\n\nAdd substitutes supports to KafkaSink\n\n\nUpgraded dependencies\n\n\n\n\n2.0.1\n\n\n\n\nFirst issue with fundamental functions and several tasks.",
+            "title": "Change Logs"
+        },
+        {
+            "location": "/change_logs/#205",
+            "text": "Added commit-max-batches to KafkaSource settings to imporove it's parallesim  Other bugfixs and improvements",
+            "title": "2.0.5"
+        },
+        {
+            "location": "/change_logs/#204",
+            "text": "Bugfix of the Admin Interface  Fix issues of Cassandra Fallback  Refactored StoryZookeeperListener  Several other bugfixs and improvements",
+            "title": "2.0.4"
+        },
+        {
+            "location": "/change_logs/#203",
+            "text": "Add admin interface  Bugfixs and Improvments  Add ability to HttpSink that determines the EndPoint by Event info  Allows HttpSink acts based on the response of the EndPoint  Monitor improvements  Add substitutes supports to KafkaSink  Upgraded dependencies",
+            "title": "2.0.3"
+        },
+        {
+            "location": "/change_logs/#201",
+            "text": "First issue with fundamental functions and several tasks.",
+            "title": "2.0.1"
         }
     ]
 }

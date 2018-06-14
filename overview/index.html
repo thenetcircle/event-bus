@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Overview - EventBus</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+  <link href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Overview";
+    var mkdocs_page_input_path = "overview.md";
+    var mkdocs_page_url = "/overview/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> EventBus</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+      
+
+
+  
+    
+
+
+<ul class="" href="/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/">Home</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/get_started/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/get_started/">Get Started</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="current" href="/overview/">
+  
+    
+    
+      <li class="current toctree-l1">
+        <a class="current" href="/overview/">Overview</a>
+        
+  
+  
+  
+  
+  <ul class="current subnav">
+    
+      
+
+  
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#concepts-structure" title="Overview">Concepts &amp; Structure</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class=" toctree-l2">
+    
+      <a href="#configuration" title="Overview"
+          class="">
+        Configuration
+      </a>
+    
+    <ul class=" subnav">
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#config-files" title="Overview">Config Files</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#environment-variables" title="Overview">Environment Variables</a>
+  </li>
+
+      
+    </ul>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class=" toctree-l2">
+    
+      <a href="#internal-tasks" title="Overview"
+          class="">
+        Internal Tasks
+      </a>
+    
+    <ul class=" subnav">
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#sources" title="Overview">Sources</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#sinks" title="Overview">Sinks</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#transforms" title="Overview">Transforms</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#fallback" title="Overview">Fallback</a>
+  </li>
+
+      
+    </ul>
+  </li>
+
+    
+  </ul>
+
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/operation_and_maintenance/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/operation_and_maintenance/">Operation And Maintenance</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/event_format/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/event_format/">Event Format</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/change_logs/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/change_logs/">Change Logs</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">EventBus</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Overview</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="concepts-structure">Concepts &amp; Structure</h1>
+<p><a href="../assets/structure_of_eventbus.png" target="_blank"><img alt="EventBus Structure" src="../assets/structure_of_eventbus.png" /></a></p>
+<ul>
+<li><strong>Runner</strong> and <strong>Admin</strong>  </li>
+</ul>
+<p>EventBus includes two main components, <strong>Runner</strong> and <strong>Admin</strong>.<br />
+<strong>Runner</strong> intends to be a real logic executor. And <strong>Admin</strong> manages internal state.<br />
+<strong>Runner</strong> located in the "core" folder of root path, <strong>Admin</strong> located in "admin" folder. They are spearated to be two sub projects.  </p>
+<p>In real user cases, We may deploy multiple <strong>Runner</strong>s and one <strong>Admin</strong> for a project. <strong>Runner</strong>s are stateless, It can be deployed on one server or multiple different servers for different purposes, It will not do anything since the beginning, just running there waiting for jobs/stories coming.</p>
+<ul>
+<li><strong>Story</strong>, <strong>Source</strong>, <strong>Sink</strong>, <strong>Transform</strong>, <strong>Fallback</strong></li>
+</ul>
+<p>EventBus is enriched by <strong>Stories</strong>, A <strong>Story</strong> is a basic runnable unit inside EventBus. After a <strong>Story</strong> be created, it should be assigned to a <strong>Runner</strong> or multiple <strong>Runners</strong> based on the situation.</p>
+<p>A <strong>Story</strong> includes one <strong>Source</strong>, one <strong>Sink</strong> and maybe a couple of <strong>Transforms</strong> and one <strong>Fallback</strong>.<br />
+The purpose of a <strong>Story</strong> is to transfer data from the <strong>Source</strong> to the <strong>Sink</strong>, In the middle it may go through multiple <strong>Transforms</strong> for data processing. And if it failed on the way, It could be send to the <strong>Fallback</strong> just in case we may process it again.</p>
+<p><a href="assets/event-bus-workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/event-bus-workflow.png" /></a></p>
+<h1 id="configuration">Configuration</h1>
+<h2 id="config-files">Config Files</h2>
+<table>
+<thead>
+<tr>
+<th>File Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>core/src/main/resources/application.conf</td>
+<td>Application config file</td>
+</tr>
+<tr>
+<td>core/src/main/resources/reference.conf</td>
+<td>Application default settings, Can be overrided by application.conf</td>
+</tr>
+<tr>
+<td>core/src/main/resources/akka.conf</td>
+<td>Akka config</td>
+</tr>
+<tr>
+<td>core/src/main/resources/logback.xml</td>
+<td>Log config</td>
+</tr>
+<tr>
+<td>admin/backend/src/main/resources/application.conf</td>
+<td>Admin config file</td>
+</tr>
+</tbody>
+</table>
+<p>The configuration files (.conf) is based on <a href="https://github.com/typesafehub/config">Typesafe Config</a>, similar as json.</p>
+<h2 id="environment-variables">Environment Variables</h2>
+<table>
+<thead>
+<tr>
+<th>Variable Name</th>
+<th>Description</th>
+<th>Default Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EB_APPNAME</td>
+<td>Application Name</td>
+<td></td>
+</tr>
+<tr>
+<td>EB_ENV</td>
+<td>Application Environment, One of following: dev/development, test, prod/production</td>
+<td>dev</td>
+</tr>
+<tr>
+<td>EB_RUNNERNAME</td>
+<td>Runner name (Only for runner)</td>
+<td></td>
+</tr>
+<tr>
+<td>EB_LOGLEVEL</td>
+<td>Logging Level</td>
+<td>DEBUG</td>
+</tr>
+<tr>
+<td>EB_LOGREF</td>
+<td>STDOUT, FILE</td>
+<td>STDOUT</td>
+</tr>
+</tbody>
+</table>
+<h1 id="internal-tasks">Internal Tasks</h1>
+<h2 id="sources">Sources</h2>
+<h3 id="http-source">Http Source</h3>
+<p>Listening on a HTTP port and accpects specific format of data as a Event.</p>
+<ul>
+<li>Default Settings</li>
+</ul>
+<pre><code class="json">{
+  interface = &quot;0.0.0.0&quot;
+  port = 8000
+  format = ActivityStreams
+  succeeded-response = ok
+  # server settings will override the default settings of akka.http.server
+  server {
+    # max-connections = 1024
+    # ...
+  }
+}
+</code></pre>
+
+<h3 id="kafka-source">Kafka Source</h3>
+<p>Subscribe on some Kafka Topics, Fetch the data from Kafka as Events.</p>
+<ul>
+<li>Default Settings</li>
+</ul>
+<pre><code class="json">{
+  # bootstrap-servers = &quot;&quot;
+  # group-id = &quot;&quot;
+  # Will use either &quot;topics&quot; or &quot;topic-pattern&quot;
+  # topics = []
+  # topic-pattern = event-* # supports wildcard if topics are defined will use that one 
+
+  max-concurrent-partitions = 100
+  commit-max-batches = 20
+
+  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
+  # can be defined in this configuration section.
+  properties {
+    # Disable auto-commit by default
+    &quot;enable.auto.commit&quot; = false
+  }
+}
+</code></pre>
+
+<h2 id="sinks">Sinks</h2>
+<h3 id="http-sink">Http Sink</h3>
+<p>Send Events to a HTTP Endpoint</p>
+<ul>
+<li>Default Settings:</li>
+</ul>
+<pre><code class="json">{
+  # the default request could be overrided by info of the event
+  default-request {
+    method = POST
+    # uri = &quot;http://www.google.com&quot;
+  }
+  min-backoff = 1 s
+  max-backoff = 30 s
+  random-factor = 0.2
+  max-retrytime = 12 h
+  concurrent-retries = 1
+  # pool settings will override the default settings of akka.http.host-connection-pool
+  pool {
+    # max-connections = 4
+    # min-connections = 0
+    # max-open-requests = 32
+    # pipelining-limit = 1
+    # idle-timeout = 30 s
+    # ...
+  }
+}
+</code></pre>
+
+<h3 id="kafka-sink">Kafka Sink</h3>
+<p>Send Events to Kafka</p>
+<ul>
+<li>Default Settings:</li>
+</ul>
+<pre><code class="json">{
+  # bootstrap-servers = &quot;&quot;
+  default-topic = &quot;event-default&quot;
+  use-event-group-as-topic = true
+  # Tuning parameter of how many sends that can run in parallel.
+  parallelism = 100
+  # How long to wait for `KafkaProducer.close`
+  close-timeout = 60 s
+  # Fully qualified config path which holds the dispatcher configuration
+  # to be used by the producer stages. Some blocking may occur.
+  # When this value is empty the dispatcher configured for the stream
+  # will be used.
+  use-dispatcher = &quot;akka.kafka.default-dispatcher&quot;
+  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
+  # can be defined in this configuration section.
+  properties {
+  }
+}
+</code></pre>
+
+<h2 id="transforms">Transforms</h2>
+<h3 id="tnc-topic-resolver">TNC Topic Resolver</h3>
+<p>Resolve Kafka Topic based on a predefined topic list and the Event title.</p>
+<ul>
+<li>Default Settings:</li>
+</ul>
+<pre><code class="json">{
+  contact-points = []
+  port = 9042
+  parallelism = 3
+}
+</code></pre>
+
+<h2 id="fallback">Fallback</h2>
+<h3 id="cassandra-fallback">Cassandra Fallback</h3>
+<p>Store failed events to Cassandra</p>
+<ul>
+<li>Default Settings:</li>
+</ul>
+<pre><code class="json">{
+  contact-points = []
+  port = 9042
+  parallelism = 3
+}
+</code></pre>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../operation_and_maintenance/" class="btn btn-neutral float-right" title="Operation And Maintenance">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../get_started/" class="btn btn-neutral" title="Get Started"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href="../get_started/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../operation_and_maintenance/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>

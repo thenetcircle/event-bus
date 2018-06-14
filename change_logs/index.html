@@ -7,18 +7,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   
-  <link rel="shortcut icon" href="/img/favicon.ico">
-  <title>EventBus</title>
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Change Logs - EventBus</title>
   <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
   <link href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
 
-  <link rel="stylesheet" href="/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="/css/theme_extra.css" type="text/css" />
-  <link rel="stylesheet" href="/css/highlight.css">
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
   
-  <script src="/js/jquery-2.1.1.min.js"></script>
-  <script src="/js/modernizr-2.8.3.min.js"></script>
-  <script type="text/javascript" src="/js/highlight.pack.js"></script> 
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Change Logs";
+    var mkdocs_page_input_path = "change_logs.md";
+    var mkdocs_page_url = "/change_logs/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
   
 </head>
 
@@ -29,9 +36,9 @@
     
     <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
       <div class="wy-side-nav-search">
-        <a href="/" class="icon icon-home"> EventBus</a>
+        <a href=".." class="icon icon-home"> EventBus</a>
         <div role="search">
-  <form id ="rtd-search-form" class="wy-form" action="/search.html" method="get">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
   </form>
 </div>
@@ -160,12 +167,67 @@
     
 
 
-<ul class="" href="/change_logs/">
+<ul class="current" href="/change_logs/">
   
     
     
-      <li class=" toctree-l1">
-        <a class="" href="/change_logs/">Change Logs</a>
+      <li class="current toctree-l1">
+        <a class="current" href="/change_logs/">Change Logs</a>
+        
+  
+  
+  
+  
+  
+  <ul class="current subnav">
+    
+      
+
+  
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#205" title="Change Logs">2.0.5</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#204" title="Change Logs">2.0.4</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#203" title="Change Logs">2.0.3</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#201" title="Change Logs">2.0.1</a>
+  </li>
+
+    
+  </ul>
+
       </li>
 </ul>
 
@@ -187,7 +249,7 @@
       
       <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
         <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-        <a href="/">EventBus</a>
+        <a href="..">EventBus</a>
       </nav>
 
       
@@ -195,9 +257,11 @@
         <div class="rst-content">
           <div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
-    <li><a href="/">Docs</a> &raquo;</li>
+    <li><a href="..">Docs</a> &raquo;</li>
     
+      
     
+    <li>Change Logs</li>
     <li class="wy-breadcrumbs-aside">
       
     </li>
@@ -207,15 +271,43 @@
           <div role="main">
             <div class="section">
               
-
-  <h1 id="404-page-not-found">404</h1>
-
-  <p><strong>Page not found</strong></p>
-
-
+                <h1 id="205">2.0.5</h1>
+<ul>
+<li>Added commit-max-batches to KafkaSource settings to imporove it's parallesim</li>
+<li>Other bugfixs and improvements</li>
+</ul>
+<h1 id="204">2.0.4</h1>
+<ul>
+<li>Bugfix of the Admin Interface</li>
+<li>Fix issues of Cassandra Fallback</li>
+<li>Refactored StoryZookeeperListener</li>
+<li>Several other bugfixs and improvements</li>
+</ul>
+<h1 id="203">2.0.3</h1>
+<ul>
+<li>Add admin interface</li>
+<li>Bugfixs and Improvments</li>
+<li>Add ability to HttpSink that determines the EndPoint by Event info</li>
+<li>Allows HttpSink acts based on the response of the EndPoint</li>
+<li>Monitor improvements</li>
+<li>Add substitutes supports to KafkaSink</li>
+<li>Upgraded dependencies</li>
+</ul>
+<h1 id="201">2.0.1</h1>
+<ul>
+<li>First issue with fundamental functions and several tasks.</li>
+</ul>
+              
             </div>
           </div>
           <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../event_format/" class="btn btn-neutral" title="Event Format"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
   
 
   <hr/>
@@ -239,13 +331,15 @@
     <span class="rst-current-version" data-toggle="rst-current-version">
       
       
+        <span><a href="../event_format/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
       
     </span>
 </div>
-    <script>var base_url = '';</script>
-    <script src="/js/theme.js"></script>
-      <script src="/search/require.js"></script>
-      <script src="/search/search.js"></script>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
 
 </body>
 </html>

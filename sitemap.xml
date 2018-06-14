@@ -1,76 +1,33 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-    
     <url>
      <loc>/</loc>
-     <lastmod>2018-04-05</lastmod>
+     <lastmod>2018-06-14</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
     <url>
-     <loc>/installation/</loc>
-     <lastmod>2018-04-05</lastmod>
+     <loc>/get_started/</loc>
+     <lastmod>2018-06-14</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
     <url>
-     <loc>/quickstart/</loc>
-     <lastmod>2018-04-05</lastmod>
+     <loc>/overview/</loc>
+     <lastmod>2018-06-14</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
     <url>
-     <loc>/concepts/</loc>
-     <lastmod>2018-04-05</lastmod>
+     <loc>/operation_and_maintenance/</loc>
+     <lastmod>2018-06-14</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
     <url>
-     <loc>/components/</loc>
-     <lastmod>2018-04-05</lastmod>
+     <loc>/event_format/</loc>
+     <lastmod>2018-06-14</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
     <url>
-     <loc>/data_format/</loc>
-     <lastmod>2018-04-05</lastmod>
+     <loc>/change_logs/</loc>
+     <lastmod>2018-06-14</lastmod>
      <changefreq>daily</changefreq>
     </url>
-    
-
-    
-    <url>
-     <loc>/deployment/</loc>
-     <lastmod>2018-04-05</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>/admin_interface/</loc>
-     <lastmod>2018-04-05</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
-    
-    <url>
-     <loc>/monitoring/</loc>
-     <lastmod>2018-04-05</lastmod>
-     <changefreq>daily</changefreq>
-    </url>
-    
-
 </urlset>

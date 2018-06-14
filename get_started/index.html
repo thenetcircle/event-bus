@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Get Started - EventBus</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+  <link href='https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="../css/highlight.css">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Get Started";
+    var mkdocs_page_input_path = "get_started.md";
+    var mkdocs_page_url = "/get_started/";
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js"></script>
+  <script src="../js/modernizr-2.8.3.min.js"></script>
+  <script type="text/javascript" src="../js/highlight.pack.js"></script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> EventBus</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+      
+
+
+  
+    
+
+
+<ul class="" href="/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/">Home</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="current" href="/get_started/">
+  
+    
+    
+      <li class="current toctree-l1">
+        <a class="current" href="/get_started/">Get Started</a>
+        
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <ul class="current subnav">
+    
+      
+
+  
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#start-from-a-real-scenario" title="Get Started">Start From A Real Scenario:</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class=" toctree-l2">
+    
+      <a href="#installation" title="Get Started"
+          class="">
+        Installation
+      </a>
+    
+    <ul class=" subnav">
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#requirements" title="Get Started">Requirements</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#install-zookeepr" title="Get Started">Install Zookeepr</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#install-kafka" title="Get Started">Install Kafka</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#install-eventbus" title="Get Started">Install EventBus</a>
+  </li>
+
+      
+    </ul>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class=" toctree-l2">
+    
+      <a href="#launch-eventbus" title="Get Started"
+          class="">
+        Launch EventBus
+      </a>
+    
+    <ul class=" subnav">
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#setup" title="Get Started">Setup</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#compile-run" title="Get Started">Compile &amp; Run</a>
+  </li>
+
+      
+    </ul>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class=" toctree-l2">
+    
+      <a href="#workflow" title="Get Started"
+          class="">
+        Workflow
+      </a>
+    
+    <ul class=" subnav">
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#workflow-of-eventbus" title="Get Started">Workflow of EventBus</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#workflow-of-our-current-scenario" title="Get Started">Workflow of Our Current Scenario:</a>
+  </li>
+
+      
+    </ul>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#create-stories" title="Get Started">Create Stories</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#fallback" title="Get Started">Fallback</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#tracking" title="Get Started">Tracking</a>
+  </li>
+
+    
+      
+
+  
+  
+
+
+  <li class=" toctree-l2">
+    
+      <a href="#monitoring" title="Get Started"
+          class="">
+        Monitoring
+      </a>
+    
+    <ul class=" subnav">
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#grafana" title="Get Started">Grafana</a>
+  </li>
+
+      
+        
+
+  
+  
+
+
+  <li class="toctree-l2 toc-item">
+    <a href="#sentry" title="Get Started">Sentry</a>
+  </li>
+
+      
+    </ul>
+  </li>
+
+    
+  </ul>
+
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/overview/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/overview/">Overview</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/operation_and_maintenance/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/operation_and_maintenance/">Operation And Maintenance</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/event_format/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/event_format/">Event Format</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+
+  
+    
+
+
+<ul class="" href="/change_logs/">
+  
+    
+    
+      <li class=" toctree-l1">
+        <a class="" href="/change_logs/">Change Logs</a>
+      </li>
+</ul>
+
+<!--
+ | This is a hacky way to pass setting from the template generator to the
+ | javascript that drives the dropdown functionality
+-->
+<div style="width: 1px; height: 1px; visibility: none;">
+
+</div>
+
+
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">EventBus</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Get Started</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="start-from-a-real-scenario">Start From A Real Scenario:</h1>
+<p>Let's say we are a technique company, and we have some isolate systems:</p>
+<ol>
+<li>Business System (mainly serves the end clients with business logics)</li>
+<li>Search System (providers search service to other systems)</li>
+<li>Data Mining System (mining data, generating report and providers cleared data for other services)</li>
+<li>Notification System (notifies users for something happened)</li>
+</ol>
+<p><strong>The workflow will be like this:</strong></p>
+<p><a href="../assets/systems_workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/systems_workflow.png" /></a></p>
+<p><strong>Then let's list some requirements:</strong></p>
+<ul>
+<li>the "Business System" needs a Queue to handler some heavy processes.
+  Dispatch the reuqest to a Queue, And handler the request on a backend process asynchronously</li>
+<li>If something happened on the "Business System", Then tell other systems<br />
+  For example: A user updated his profile <br />
+  Then tell the "Search System" to updated related data as well<br />
+  And tell the "Data Mining System" for this new event<br />
+  Then tell the "Notification System" to notify the user for the changes by mail or other ways. </li>
+<li>the "Search System" subscribes all search realtead "Events", And do actions according to the "Event"</li>
+<li>the "Data Mining System" listening on all "Events" happenes on among all systems, And record the "Events" to data warehouse with some kind of unstandable format.</li>
+<li>the "Notification System" listening on "Notify Events" and also emit "Events" like a user's email got bounced. </li>
+<li>Easily tracking the lifetime of a "Event"</li>
+<li>...</li>
+</ul>
+<p>These requirements cover most of important ports of EventBus, A system distributes "Event"/"Message" among multiple systems with unified format.
+Let's go to satisfy these requirements by EventBus.</p>
+<h1 id="installation">Installation</h1>
+<h2 id="requirements">Requirements</h2>
+<ul>
+<li>Java 1.8+ installed</li>
+<li>Sbt</li>
+<li>Zookeeper</li>
+<li>Kafka 0.10+ (only when use Kafka Source/Kafka Sink)</li>
+<li>Cassandra (only when use Cassandra Fallback)</li>
+</ul>
+<h2 id="install-zookeepr">Install Zookeepr</h2>
+<p><a href="https://zookeeper.apache.org/doc/current/zookeeperStarted.html#ch_GettingStarted">Zookeeper Getting Started</a></p>
+<h2 id="install-kafka">Install Kafka</h2>
+<p><a href="https://kafka.apache.org/0110/documentation.html#quickstart">Kafka Quick Start</a></p>
+<h2 id="install-eventbus">Install EventBus</h2>
+<h3 id="from-source">From Source</h3>
+<pre><code class="bash">&gt; git clone https://github.com/thenetcircle/event-bus.git
+</code></pre>
+
+<h1 id="launch-eventbus">Launch EventBus</h1>
+<h2 id="setup">Setup</h2>
+<p>After we installed and started all dependencies, We can setup EventBus by it's configuration.(Please check the <a href="../overview/#configuration">configuration section</a>)</p>
+<p>For example let's change the zookeeper address of application.conf to be:</p>
+<pre><code class="json">zookeeper {
+  servers = &quot;localhost:2181&quot;
+  rootpath = &quot;/testnode&quot;
+}
+</code></pre>
+
+<h2 id="compile-run">Compile &amp; Run</h2>
+<p>EventBus includes two main components, Runner and Admin. Which are the two sub-projects in the source code as well (Runner is inside core).</p>
+<ul>
+<li>Let's stage the project first</li>
+</ul>
+<pre><code class="sh">&gt; cd ${the_root_path_of_event_bus}
+&gt; sbt stage
+</code></pre>
+
+<ul>
+<li>Launch Runner</li>
+</ul>
+<pre><code class="sh">&gt; # uses environment variables for some settings, you can also set them inside application.conf directly
+&gt; EB_APPNAME=${application_name} EB_DEV=dev EB_RUNNERNAME=default-runner ./target/universal/stage/bin/runner
+</code></pre>
+
+<ul>
+<li>Launch Admin</li>
+</ul>
+<pre><code class="sh">&gt; # changes admin listen port to be 8080, default is 8990
+&gt; EB_APPNAME=${application_name} EB_DEV=dev ./target/universal/stage/bin/admin -Dapp.admin.port=8080
+</code></pre>
+
+<p>Now open the url <a href="http://localhost:8080">http://localhost:8080</a> you will see the homepage of admin interface.</p>
+<h1 id="workflow">Workflow</h1>
+<h2 id="workflow-of-eventbus">Workflow of EventBus</h2>
+<p>EventBus internal includes a list of stories, The word "story" is a virtual concept. Which describes a scenario about transfer data from one point to another point.<br />
+For more details please check <a href="../overview">Overview Section</a>  </p>
+<p>A story includes <strong>a Source</strong>, <strong>a Sink</strong>, maybe <strong>a couple of Transforms</strong> and <strong>a Fallback</strong><br />
+The internal structure of a story looks like this:
+<a href="../assets/event-bus-workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/event-bus-workflow.png" /></a></p>
+<p>Data/Event come from the left side and eventually will reach right side, That's a end of the story.
+We could have some different stories running paralleln <br />
+For example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.</p>
+<p><a href="../assets/two_stories.png" target="_blank"><img alt="Two Stories" src="../assets/two_stories.png" /></a></p>
+<p>There suppose to be some different <strong>Souce</strong>/<strong>Sink</strong>/<strong>Transforms</strong>/<strong>Fallback</strong> implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be <strong>Redis Souce</strong>, <strong>JMS Sink</strong>, etc...</p>
+<h2 id="workflow-of-our-current-scenario">Workflow of Our Current Scenario:</h2>
+<p>Back to our current scenario, What the workflow looks like? <br />
+How the different systems working together with EventBus?</p>
+<p><a href="../assets/systems_and_eventbus.png" target="_blank"><img alt="Systems and EventBus" src="../assets/systems_and_eventbus.png" /></a></p>
+<ol>
+<li>Business send Events to EventBus by HTTP Request</li>
+<li>EventBus stores the requset to Kafka</li>
+<li>There are sereral EventBus stories which subscribing on Kafka topcis and send data to specific systems by HTTP requests. </li>
+</ol>
+<h1 id="create-stories">Create Stories</h1>
+<p>Let's open <a href="http://localhost:8080">the Admin Interface (http://localhost:8080)</a><br />
+Click "New Story" button on the navagator.</p>
+<p><a href="../assets/admin_create_story.png" target="_blank"><img alt="Create Story" src="../assets/admin_create_story.png" /></a></p>
+<p>Like we mentioned before, We need a couple of stories to satisfy the workflow.<br />
+We need a first story which listening on a HTTP port and transferring data to Kafka, It should be like this:  </p>
+<p><a href="../assets/admin_story_http_to_kafka.png" target="_blank"><img alt="Http To Kafka" src="../assets/admin_story_http_to_kafka.png" /></a></p>
+<p>After the story is created, We also should assign it to a <strong>Runner</strong>(run stories). For more details, please check <a href="../overview">Overview Section</a>.</p>
+<p>Okay, Now the first story is created and running, We also need to create a couple of other stories to subscribe on specific Kafka topics and send data to specific systems by HTTP.<br />
+It should be like this(don't forget to assign it to a <strong>Runner</strong>):</p>
+<p><a href="../assets/admin_story_kafka_to_data_mining.png" target="_blank"><img alt="Kafka to DataMining" src="../assets/admin_story_kafka_to_data_mining.png" /></a></p>
+<p>Now the configuration of EventBus is done, A HTTP request sent to the HTTP port listened by the story, will be directly send to Kafka. <br />
+And other stories will fetch the request from Kafka, to send it to different systems.</p>
+<h1 id="fallback">Fallback</h1>
+<h1 id="tracking">Tracking</h1>
+<h1 id="monitoring">Monitoring</h1>
+<h2 id="grafana">Grafana</h2>
+<p>We use <a href="https://grafana.com">Grafana</a> to present some metrics for monitoring the health of EventBus</p>
+<p><a href="../assets/grafana01.png" target="_blank"><img alt="Grafana" src="../assets/grafana01.png" /></a></p>
+<h2 id="sentry">Sentry</h2>
+<p>And use <a href="https://sentry.io">Sentry</a> for Error Tracking</p>
+<p><a href="../assets/sentry01.png" target="_blank"><img alt="Sentry" src="../assets/sentry01.png" /></a></p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../overview/" class="btn btn-neutral float-right" title="Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href=".." class="btn btn-neutral" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href=".." style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../overview/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/require.js"></script>
+      <script src="../search/search.js"></script>
+
+</body>
+</html>
