@@ -60,7 +60,7 @@ Let's go to satisfy these requirements by EventBus.
 
 ## Setup
 
-After we installed and started all dependencies, We can setup EventBus by it's configuration.(Please check the [configuration section](structure))
+After we installed and started all dependencies, We can setup EventBus by it's configuration.(Please check the [configuration section](./overview/#configuration))
 
 For example let's change the zookeeper address of application.conf to be:
 
@@ -100,7 +100,7 @@ Now open the url [http://localhost:8080](http://localhost:8080) you will see the
 ## Workflow of EventBus
 
 EventBus internal includes a list of stories, The word "story" is a virtual concept. Which describes a scenario about transfer data from one point to another point.  
-For more details please check [Structure Section](structure)  
+For more details please check [Overview Section](overview)  
 
 A story includes **a Source**, **a Sink**, maybe **a couple of Transforms** and **a Fallback**  
 The internal structure of a story looks like this:
@@ -110,7 +110,7 @@ Data/Event come from the left side and eventually will reach right side, That's 
 We could have some different stories running paralleln   
 For example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.
 
-<a href="../assets/two_stories.png" target="_blank">![EventBus Workflow](assets/two_stories.png)</a>
+<a href="../assets/two_stories.png" target="_blank">![Two Stories](assets/two_stories.png)</a>
 
 There suppose to be some different **Souce**/**Sink**/**Transforms**/**Fallback** implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be **Redis Souce**, **JMS Sink**, etc...
 
@@ -119,7 +119,7 @@ There suppose to be some different **Souce**/**Sink**/**Transforms**/**Fallback*
 Back to our current scenario, What the workflow looks like?   
 How the different systems working together with EventBus?
 
-<a href="../assets/systems_and_eventbus.png" target="_blank">![EventBus Workflow](assets/systems_and_eventbus.png)</a>
+<a href="../assets/systems_and_eventbus.png" target="_blank">![Systems and EventBus](assets/systems_and_eventbus.png)</a>
 
 1. Business send Events to EventBus by HTTP Request
 2. EventBus stores the requset to Kafka
@@ -130,4 +130,37 @@ How the different systems working together with EventBus?
 Let's open [the Admin Interface (http://localhost:8080)](http://localhost:8080)  
 Click "New Story" button on the navagator.
 
-<a href="../assets/admin_create_story.png" target="_blank">![EventBus Workflow](assets/admin_create_story.png)</a>
+<a href="../assets/admin_create_story.png" target="_blank">![Create Story](assets/admin_create_story.png)</a>
+
+Like we mentioned before, We need a couple of stories to satisfy the workflow.  
+We need a first story which listening on a HTTP port and transferring data to Kafka, It should be like this:  
+
+<a href="../assets/admin_story_http_to_kafka.png" target="_blank">![Http To Kafka](assets/admin_story_http_to_kafka.png)</a>
+
+After the story is created, We also should assign it to a **Runner**(run stories). For more details, please check [Overview Section](overview).
+
+Okay, Now the first story is created and running, We also need to create a couple of other stories to subscribe on specific Kafka topics and send data to specific systems by HTTP.  
+It should be like this(don't forget to assign it to a **Runner**):
+
+<a href="../assets/admin_story_kafka_to_data_mining.png" target="_blank">![Kafka to DataMining](assets/admin_story_kafka_to_data_mining.png)</a>
+
+Now the configuration of EventBus is done, A HTTP request sent to the HTTP port listened by the story, will be directly send to Kafka.   
+And other stories will fetch the request from Kafka, to send it to different systems.
+
+# Fallback 
+
+# Tracking
+
+# Monitoring
+
+## Grafana 
+
+We use [Grafana](https://grafana.com) to present some metrics for monitoring the health of EventBus
+
+<a href="../assets/grafana01.png" target="_blank">![Grafana](assets/grafana01.png)</a>
+
+## Sentry
+
+And use [Sentry](https://sentry.io) for Error Tracking
+
+<a href="../assets/sentry01.png" target="_blank">![Sentry](assets/sentry01.png)</a>

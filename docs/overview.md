@@ -1,6 +1,28 @@
+# Concepts & Structure
+
+<a href="../assets/structure_of_eventbus.png" target="_blank">![EventBus Structure](assets/structure_of_eventbus.png)</a>
+
+- **Runner** and **Admin**  
+
+EventBus includes two main components, **Runner** and **Admin**.  
+**Runner** intends to be a real logic executor. And **Admin** manages internal state.  
+**Runner** located in the "core" folder of root path, **Admin** located in "admin" folder. They are spearated to be two sub projects.  
+
+In real user cases, We may deploy multiple **Runner**s and one **Admin** for a project. **Runner**s are stateless, It can be deployed on one server or multiple different servers for different purposes, It will not do anything since the beginning, just running there waiting for jobs/stories coming.
+
+- **Story**, **Source**, **Sink**, **Transform**, **Fallback**
+
+EventBus is enriched by **Stories**, A **Story** is a basic runnable unit inside EventBus. After a **Story** be created, it should be assigned to a **Runner** or multiple **Runners** based on the situation.
+
+A **Story** includes one **Source**, one **Sink** and maybe a couple of **Transforms** and one **Fallback**.  
+The purpose of a **Story** is to transfer data from the **Source** to the **Sink**, In the middle it may go through multiple **Transforms** for data processing. And if it failed on the way, It could be send to the **Fallback** just in case we may process it again.
+
+<a href="assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
+
+
 # Configuration
 
-## Config Files:
+## Config Files
 
 |File Path|Description|
 |---------|-----------|
@@ -22,11 +44,15 @@ The configuration files (.conf) is based on [Typesafe Config](https://github.com
 |EB_LOGLEVEL|Logging Level|DEBUG|
 |EB_LOGREF|STDOUT, FILE| STDOUT |
 
-## Default Task Settings
+# Internal Tasks
 
-### Sources
+## Sources
 
-#### Http Source
+### Http Source
+
+Listening on a HTTP port and accpects specific format of data as a Event.
+
+- Default Settings
 
 ```json
 {
@@ -42,7 +68,11 @@ The configuration files (.conf) is based on [Typesafe Config](https://github.com
 }
 ```
 
-#### Kafka Source
+### Kafka Source
+
+Subscribe on some Kafka Topics, Fetch the data from Kafka as Events.
+
+- Default Settings
 
 ```json
 {
@@ -65,9 +95,13 @@ The configuration files (.conf) is based on [Typesafe Config](https://github.com
 ```
 
 
-### Sinks
+## Sinks
 
-#### Http Sink
+### Http Sink
+
+Send Events to a HTTP Endpoint
+
+- Default Settings:
 
 ```json
 {
@@ -93,7 +127,11 @@ The configuration files (.conf) is based on [Typesafe Config](https://github.com
 }
 ```
 
-#### Kafka Sink
+### Kafka Sink
+
+Send Events to Kafka
+
+- Default Settings:
 
 ```json
 {
@@ -116,9 +154,13 @@ The configuration files (.conf) is based on [Typesafe Config](https://github.com
 }
 ```
 
-### Fallback
+## Transforms
 
-#### Cassandra Fallback
+### TNC Topic Resolver
+
+Resolve Kafka Topic based on a predefined topic list and the Event title.
+
+- Default Settings:
 
 ```json
 {
@@ -128,9 +170,13 @@ The configuration files (.conf) is based on [Typesafe Config](https://github.com
 }
 ```
 
-### Transforms
+## Fallback
 
-#### TNC Topic Resolver
+### Cassandra Fallback
+
+Store failed events to Cassandra
+
+- Default Settings:
 
 ```json
 {

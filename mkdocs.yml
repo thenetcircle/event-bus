@@ -3,7 +3,7 @@ theme: rtd-dropdown
 pages:
   - Home: index.md
   - Get Started: get_started.md
-  - Structure: structure.md
+  - Overview: overview.md
   - Operation And Maintenance: operation_and_maintenance.md
   - Event Format: event_format.md
   - Change Logs: change_logs.md
