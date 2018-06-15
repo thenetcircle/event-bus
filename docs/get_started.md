@@ -9,7 +9,7 @@ Let's say we are a technique company, and we have some isolate systems:
 
 **The workflow will be like this:**
 
-<a href="../assets/systems_workflow.png" target="_blank">![EventBus Workflow](assets/systems_workflow.png)</a>
+<a href="../event-bus/assets/systems_workflow.png" target="_blank">![EventBus Workflow](assets/systems_workflow.png)</a>
 
 **Then let's list some requirements:**
 
@@ -104,13 +104,13 @@ For more details please check [Overview Section](overview)
 
 A story includes **a Source**, **a Sink**, maybe **a couple of Transforms** and **a Fallback**  
 The internal structure of a story looks like this:
-<a href="../assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
+<a href="../event-bus/assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
 
 Data/Event come from the left side and eventually will reach right side, That's a end of the story.
 We could have some different stories running paralleln   
 For example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.
 
-<a href="../assets/two_stories.png" target="_blank">![Two Stories](assets/two_stories.png)</a>
+<a href="../event-bus/event-bus/assets/two_stories.png" target="_blank">![Two Stories](assets/two_stories.png)</a>
 
 There suppose to be some different **Souce**/**Sink**/**Transforms**/**Fallback** implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be **Redis Souce**, **JMS Sink**, etc...
 
@@ -119,7 +119,7 @@ There suppose to be some different **Souce**/**Sink**/**Transforms**/**Fallback*
 Back to our current scenario, What the workflow looks like?   
 How the different systems working together with EventBus?
 
-<a href="../assets/systems_and_eventbus.png" target="_blank">![Systems and EventBus](assets/systems_and_eventbus.png)</a>
+<a href="../event-bus/assets/systems_and_eventbus.png" target="_blank">![Systems and EventBus](assets/systems_and_eventbus.png)</a>
 
 1. Business send Events to EventBus by HTTP Request
 2. EventBus stores the requset to Kafka
@@ -130,19 +130,19 @@ How the different systems working together with EventBus?
 Let's open [the Admin Interface (http://localhost:8080)](http://localhost:8080)  
 Click "New Story" button on the navagator.
 
-<a href="../assets/admin_create_story.png" target="_blank">![Create Story](assets/admin_create_story.png)</a>
+<a href="../event-bus/assets/admin_create_story.png" target="_blank">![Create Story](assets/admin_create_story.png)</a>
 
 Like we mentioned before, We need a couple of stories to satisfy the workflow.  
 We need a first story which listening on a HTTP port and transferring data to Kafka, It should be like this:  
 
-<a href="../assets/admin_story_http_to_kafka.png" target="_blank">![Http To Kafka](assets/admin_story_http_to_kafka.png)</a>
+<a href="../event-bus/assets/admin_story_http_to_kafka.png" target="_blank">![Http To Kafka](assets/admin_story_http_to_kafka.png)</a>
 
 After the story is created, We also should assign it to a **Runner**(run stories). For more details, please check [Overview Section](overview).
 
 Okay, Now the first story is created and running, We also need to create a couple of other stories to subscribe on specific Kafka topics and send data to specific systems by HTTP.  
 It should be like this(don't forget to assign it to a **Runner**):
 
-<a href="../assets/admin_story_kafka_to_data_mining.png" target="_blank">![Kafka to DataMining](assets/admin_story_kafka_to_data_mining.png)</a>
+<a href="../event-bus/assets/admin_story_kafka_to_data_mining.png" target="_blank">![Kafka to DataMining](assets/admin_story_kafka_to_data_mining.png)</a>
 
 Now the configuration of EventBus is done, A HTTP request sent to the HTTP port listened by the story, will be directly send to Kafka.   
 And other stories will fetch the request from Kafka, to send it to different systems.
@@ -157,10 +157,10 @@ And other stories will fetch the request from Kafka, to send it to different sys
 
 We use [Grafana](https://grafana.com) to present some metrics for monitoring the health of EventBus
 
-<a href="../assets/grafana01.png" target="_blank">![Grafana](assets/grafana01.png)</a>
+<a href="../event-bus/assets/grafana01.png" target="_blank">![Grafana](assets/grafana01.png)</a>
 
 ## Sentry
 
 And use [Sentry](https://sentry.io) for Error Tracking
 
-<a href="../assets/sentry01.png" target="_blank">![Sentry](assets/sentry01.png)</a>
+<a href="../event-bus/assets/sentry01.png" target="_blank">![Sentry](assets/sentry01.png)</a>

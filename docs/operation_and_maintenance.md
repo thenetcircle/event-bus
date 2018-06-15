@@ -7,11 +7,11 @@ Following are some of the functions the Admin Interface providered:
 
 - Create New Story
 
-<a href="../assets/admin_create_story.png" target="_blank">![Create Story](assets/admin_create_story.png)</a>
+<a href="../event-bus/assets/admin_create_story.png" target="_blank">![Create Story](assets/admin_create_story.png)</a>
 
 - Manage Story
 
-<a href="../assets/admin_manage_story.png" target="_blank">![Create Story](assets/admin_manage_story.png)</a>
+<a href="../event-bus/assets/admin_manage_story.png" target="_blank">![Create Story](assets/admin_manage_story.png)</a>
 
 # Deployment
 
@@ -106,10 +106,10 @@ WantedBy=multi-user.target
 
 We use [Grafana](https://grafana.com) to present some metrics for monitoring the health of EventBus
 
-<a href="../assets/grafana01.png" target="_blank">![Grafana](assets/grafana01.png)</a>
+<a href="../event-bus/assets/grafana01.png" target="_blank">![Grafana](assets/grafana01.png)</a>
 
 ## Sentry
 
 And use [Sentry](https://sentry.io) for Error Tracking
 
-<a href="../assets/sentry01.png" target="_blank">![Sentry](assets/sentry01.png)</a>
+<a href="../event-bus/assets/sentry01.png" target="_blank">![Sentry](assets/sentry01.png)</a>

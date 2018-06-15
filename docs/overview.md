@@ -1,6 +1,6 @@
 # Concepts & Structure
 
-<a href="../assets/structure_of_eventbus.png" target="_blank">![EventBus Structure](assets/structure_of_eventbus.png)</a>
+<a href="../event-bus/assets/structure_of_eventbus.png" target="_blank">![EventBus Structure](assets/structure_of_eventbus.png)</a>
 
 - **Runner** and **Admin**  
 
@@ -17,7 +17,7 @@ EventBus is enriched by **Stories**, A **Story** is a basic runnable unit inside
 A **Story** includes one **Source**, one **Sink** and maybe a couple of **Transforms** and one **Fallback**.  
 The purpose of a **Story** is to transfer data from the **Source** to the **Sink**, In the middle it may go through multiple **Transforms** for data processing. And if it failed on the way, It could be send to the **Fallback** just in case we may process it again.
 
-<a href="assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
+<a href="../event-bus/assets/event-bus-workflow.png" target="_blank">![EventBus Workflow](assets/event-bus-workflow.png)</a>
 
 
 # Configuration
