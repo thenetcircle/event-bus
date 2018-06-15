@@ -6,7 +6,7 @@ Defination of EventBus:
 2. A central place to manage / trace / monitor events.
 3. A data collecting / distributing platform.
 
-<a href="../assets/systems_and_eventbus2.png" target="_blank">![EventBus Workflow](assets/systems_and_eventbus2.png)</a>
+<a href="assets/systems_and_eventbus2.png" target="_blank">![EventBus Workflow](assets/systems_and_eventbus2.png)</a>
 
 Following are some details of the defination:
 

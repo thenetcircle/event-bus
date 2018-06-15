@@ -10,7 +10,7 @@ Defination of EventBus:
 2. A central place to manage / trace / monitor events.
 3. A data collecting / distributing platform.
 
-<a href="../assets/systems_and_eventbus2.png" target="_blank">![EventBus Workflow](assets/systems_and_eventbus2.png)</a>
+<a href="https://thenetcircle.github.io/event-bus/assets/systems_and_eventbus2.png" target="_blank">![EventBus Workflow](https://thenetcircle.github.io/event-bus/assets/systems_and_eventbus2.png)</a>
 
 Following are some details of the defination:
 
@@ -21,7 +21,7 @@ Following are some details of the defination:
 - Another usage of us is for data collecting.   
    Since all events are go through here. We are collecting interested events on this central point to our data warehouse for data mining and meachine learning. And since the format are unified, ETL could be more easier.
    
-For more details can visit the [Documention](https://thenetcircle.github.io/event-bus/), And a [Demo](https://thenetcircle.github.io/event-bus/admin/) of the Admin Interface.
+For more details can visit the [Documention](https://thenetcircle.github.io/event-bus/), And a [Demo](https://thenetcircle.github.io/event-bus/admin/#/event-bus/admin) of the Admin Interface.
 
 ## Features
 
