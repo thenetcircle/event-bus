@@ -2,9 +2,7 @@
 
 [![Build Status](https://travis-ci.org/thenetcircle/event-bus.svg?branch=master)](https://travis-ci.org/thenetcircle/event-bus)
 
-## What's EventBus
-
-Defination of EventBus:
+The definition of EventBus:
 
 1. A realtime event bus / message bus.
 2. A central place to manage / trace / monitor events.
@@ -12,7 +10,7 @@ Defination of EventBus:
 
 <a href="https://thenetcircle.github.io/event-bus/assets/systems_and_eventbus2.png" target="_blank">![EventBus Workflow](https://thenetcircle.github.io/event-bus/assets/systems_and_eventbus2.png)</a>
 
-Following are some details of the defination:
+Following are some details of the definition:
 
 - First of all, EventBus intend to be a realtime system. It offers low latency, high throughput ways to transfer data from one side to another side.
 - Besides to be a realtime system, It encourages unified format of events/messages (defualt using [ActivityStreams 1.0](http://activitystrea.ms/specs/json/1.0/) format), But not mandatory.
