@@ -1,5 +1,6 @@
 site_name: EventBus
 theme: rtd-dropdown
+repo_url: https://github.com/thenetcircle/event-bus
 pages:
   - Home: index.md
   - Get Started: get_started.md
