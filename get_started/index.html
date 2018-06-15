@@ -473,7 +473,7 @@
 <li>Notification System (notifies users for something happened)</li>
 </ol>
 <p><strong>The workflow will be like this:</strong></p>
-<p><a href="../assets/systems_workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/systems_workflow.png" /></a></p>
+<p><a href="../event-bus/assets/systems_workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/systems_workflow.png" /></a></p>
 <p><strong>Then let's list some requirements:</strong></p>
 <ul>
 <li>the "Business System" needs a Queue to handler some heavy processes.
@@ -549,16 +549,16 @@ Let's go to satisfy these requirements by EventBus.</p>
 For more details please check <a href="../overview">Overview Section</a>  </p>
 <p>A story includes <strong>a Source</strong>, <strong>a Sink</strong>, maybe <strong>a couple of Transforms</strong> and <strong>a Fallback</strong><br />
 The internal structure of a story looks like this:
-<a href="../assets/event-bus-workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/event-bus-workflow.png" /></a></p>
+<a href="../event-bus/assets/event-bus-workflow.png" target="_blank"><img alt="EventBus Workflow" src="../assets/event-bus-workflow.png" /></a></p>
 <p>Data/Event come from the left side and eventually will reach right side, That's a end of the story.
 We could have some different stories running paralleln <br />
 For example: one story listening on a HTTP port and deliveries data to Kafka, And another one listening on Kafka Topics deliveries data to a HTTP EndPoint.</p>
-<p><a href="../assets/two_stories.png" target="_blank"><img alt="Two Stories" src="../assets/two_stories.png" /></a></p>
+<p><a href="../event-bus/event-bus/assets/two_stories.png" target="_blank"><img alt="Two Stories" src="../assets/two_stories.png" /></a></p>
 <p>There suppose to be some different <strong>Souce</strong>/<strong>Sink</strong>/<strong>Transforms</strong>/<strong>Fallback</strong> implementations (For now only implemented Http Souce/Sink, Kafka Souce/Sink, Cassandra Fallback), In the future could be <strong>Redis Souce</strong>, <strong>JMS Sink</strong>, etc...</p>
 <h2 id="workflow-of-our-current-scenario">Workflow of Our Current Scenario:</h2>
 <p>Back to our current scenario, What the workflow looks like? <br />
 How the different systems working together with EventBus?</p>
-<p><a href="../assets/systems_and_eventbus.png" target="_blank"><img alt="Systems and EventBus" src="../assets/systems_and_eventbus.png" /></a></p>
+<p><a href="../event-bus/assets/systems_and_eventbus.png" target="_blank"><img alt="Systems and EventBus" src="../assets/systems_and_eventbus.png" /></a></p>
 <ol>
 <li>Business send Events to EventBus by HTTP Request</li>
 <li>EventBus stores the requset to Kafka</li>
@@ -567,14 +567,14 @@ How the different systems working together with EventBus?</p>
 <h1 id="create-stories">Create Stories</h1>
 <p>Let's open <a href="http://localhost:8080">the Admin Interface (http://localhost:8080)</a><br />
 Click "New Story" button on the navagator.</p>
-<p><a href="../assets/admin_create_story.png" target="_blank"><img alt="Create Story" src="../assets/admin_create_story.png" /></a></p>
+<p><a href="../event-bus/assets/admin_create_story.png" target="_blank"><img alt="Create Story" src="../assets/admin_create_story.png" /></a></p>
 <p>Like we mentioned before, We need a couple of stories to satisfy the workflow.<br />
 We need a first story which listening on a HTTP port and transferring data to Kafka, It should be like this:  </p>
-<p><a href="../assets/admin_story_http_to_kafka.png" target="_blank"><img alt="Http To Kafka" src="../assets/admin_story_http_to_kafka.png" /></a></p>
+<p><a href="../event-bus/assets/admin_story_http_to_kafka.png" target="_blank"><img alt="Http To Kafka" src="../assets/admin_story_http_to_kafka.png" /></a></p>
 <p>After the story is created, We also should assign it to a <strong>Runner</strong>(run stories). For more details, please check <a href="../overview">Overview Section</a>.</p>
 <p>Okay, Now the first story is created and running, We also need to create a couple of other stories to subscribe on specific Kafka topics and send data to specific systems by HTTP.<br />
 It should be like this(don't forget to assign it to a <strong>Runner</strong>):</p>
-<p><a href="../assets/admin_story_kafka_to_data_mining.png" target="_blank"><img alt="Kafka to DataMining" src="../assets/admin_story_kafka_to_data_mining.png" /></a></p>
+<p><a href="../event-bus/assets/admin_story_kafka_to_data_mining.png" target="_blank"><img alt="Kafka to DataMining" src="../assets/admin_story_kafka_to_data_mining.png" /></a></p>
 <p>Now the configuration of EventBus is done, A HTTP request sent to the HTTP port listened by the story, will be directly send to Kafka. <br />
 And other stories will fetch the request from Kafka, to send it to different systems.</p>
 <h1 id="fallback">Fallback</h1>
@@ -582,10 +582,10 @@ And other stories will fetch the request from Kafka, to send it to different sys
 <h1 id="monitoring">Monitoring</h1>
 <h2 id="grafana">Grafana</h2>
 <p>We use <a href="https://grafana.com">Grafana</a> to present some metrics for monitoring the health of EventBus</p>
-<p><a href="../assets/grafana01.png" target="_blank"><img alt="Grafana" src="../assets/grafana01.png" /></a></p>
+<p><a href="../event-bus/assets/grafana01.png" target="_blank"><img alt="Grafana" src="../assets/grafana01.png" /></a></p>
 <h2 id="sentry">Sentry</h2>
 <p>And use <a href="https://sentry.io">Sentry</a> for Error Tracking</p>
-<p><a href="../assets/sentry01.png" target="_blank"><img alt="Sentry" src="../assets/sentry01.png" /></a></p>
+<p><a href="../event-bus/assets/sentry01.png" target="_blank"><img alt="Sentry" src="../assets/sentry01.png" /></a></p>
               
             </div>
           </div>
