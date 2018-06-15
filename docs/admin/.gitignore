@@ -1,1 +1,3 @@
-bundle.js.map
+*
+!assets
+!assets/*
