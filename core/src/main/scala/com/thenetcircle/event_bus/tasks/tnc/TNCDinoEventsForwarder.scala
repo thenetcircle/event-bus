@@ -31,7 +31,7 @@ class TNCDinoEventsForwarder() extends TransformTask with StrictLogging {
   def appendTitleField(event: Event): Event = {
     val verbOption = event.getExtra("verb")
     if (verbOption.isDefined) {
-      val shortGroup = event.metadata.group.map(g => g.split("-").last + ".").getOrElse("")
+      val shortGroup = event.metadata.group.map(g => g.split("-").last + ".").getOrElse("wio.")
       val newTitle   = "dino." + shortGroup + verbOption.get
       val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
 
