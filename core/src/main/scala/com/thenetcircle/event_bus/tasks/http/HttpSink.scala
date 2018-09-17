@@ -93,21 +93,22 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
         import akka.pattern.ask
         implicit val askTimeout: Timeout = Timeout(retryTimeout)
 
-        val endPoint: String = settings.defaultRequest.getUri().toString
+        val endPoint: String   = settings.defaultRequest.getUri().toString
+        val eventBrief: String = Util.getBriefOfEvent(event)
 
         (senderActor ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
           .mapTo[Try[HttpResponse]]
           .map[(EventStatus, Event)] {
             case Success(resp) =>
-              logger.debug(s"sending event ${event.uuid} to $endPoint succeeded.")
+              logger.info(s"sending event [$eventBrief] to [$endPoint] succeeded.")
               (Norm, event)
             case Failure(ex) =>
-              logger.warn(s"sending event ${event.uuid} to $endPoint failed with error $ex")
+              logger.warn(s"sending event [$eventBrief] to [$endPoint] failed with error $ex")
               (ToFB(Some(ex)), event)
           }
           .recover {
             case ex: AskTimeoutException =>
-              logger.warn(s"sending event ${event.uuid} to $endPoint timeout, exceed $retryTimeout")
+              logger.warn(s"sending event [$eventBrief] to [$endPoint] timeout, exceed [$retryTimeout]")
               (Fail(ex), event)
           }
       }

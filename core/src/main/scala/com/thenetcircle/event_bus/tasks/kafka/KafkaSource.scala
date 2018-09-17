@@ -109,7 +109,13 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
         if (uuidOption.isDefined) {
           eve = eve.withUUID(uuidOption.get)
         }
-        logger.debug(s"extracted a new event from kakfa topic $kafkaTopic, event: $eve")
+
+        val eventBrief = Util.getBriefOfEvent(eve)
+        val kafkaBrief =
+          s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
+            .offset()}, key: ${message.record.key().rawData}"
+        logger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
+
         (Norm, eve)
       })
       .recover {

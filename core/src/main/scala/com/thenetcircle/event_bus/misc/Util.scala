@@ -17,6 +17,7 @@
 
 package com.thenetcircle.event_bus.misc
 
+import com.thenetcircle.event_bus.interfaces.Event
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
 object Util {
@@ -35,5 +36,8 @@ object Util {
     }
 
   def makeUTF8String(bytes: Array[Byte]): String = new String(bytes, "UTF-8")
+
+  def getBriefOfEvent(event: Event): String =
+    s"uuid: ${event.uuid}, name: ${event.metadata.name}, group: ${event.metadata.group}, createdAt: ${event.createdAt}"
 
 }

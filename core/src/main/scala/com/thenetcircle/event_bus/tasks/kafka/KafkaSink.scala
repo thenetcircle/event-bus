@@ -130,9 +130,12 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       .map(createMessage)
       .via(Producer.flow(kafkaSettings, _kafkaProducer))
       .map(result => {
-        logger.debug(
-          s"sending event to kafka succeeded with metadata: ${result.metadata.toString}, key: ${result.message.record.key().rawData}"
-        )
+        val eventBrief = Util.getBriefOfEvent(result.message.passThrough)
+        val kafkaBrief =
+          s"topic: ${result.metadata.topic()}, partition: ${result.metadata.partition()}, offset: ${result.metadata
+            .offset()}, key: ${result.message.record.key().rawData}"
+        logger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
+
         (Norm, result.message.passThrough)
       })
   }
