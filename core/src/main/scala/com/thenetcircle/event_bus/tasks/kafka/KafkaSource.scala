@@ -77,7 +77,9 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     val groupId =
       settings.groupId.getOrElse(
-        "event-bus_consumer_" + runningContext.getAppContext().getAppName() + "_" + runningContext.getStoryName()
+        "event-bus_consumer_" + runningContext.getAppContext().getAppName() +
+          "_" + runningContext.getAppContext().getAppEnv() +
+          "_" + runningContext.getStoryName()
       )
 
     _consumerSettings
