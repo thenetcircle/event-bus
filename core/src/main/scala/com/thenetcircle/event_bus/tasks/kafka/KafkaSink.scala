@@ -133,7 +133,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
         val eventBrief = Util.getBriefOfEvent(result.message.passThrough)
         val kafkaBrief =
           s"topic: ${result.metadata.topic()}, partition: ${result.metadata.partition()}, offset: ${result.metadata
-            .offset()}, key: ${result.message.record.key().rawData}"
+            .offset()}, key: ${Option(result.message.record.key()).map(_.rawData).getOrElse("")}"
         logger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
 
         (Norm, result.message.passThrough)

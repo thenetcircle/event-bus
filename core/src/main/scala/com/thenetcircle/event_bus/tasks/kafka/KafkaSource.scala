@@ -114,7 +114,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
         val eventBrief = Util.getBriefOfEvent(eve)
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
-            .offset()}, key: ${message.record.key().rawData}"
+            .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
         logger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
 
         (Norm, eve)
