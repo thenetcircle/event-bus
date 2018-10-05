@@ -14,7 +14,7 @@ object Dependencies {
   val akkaHttp            = "com.typesafe.akka"          %% "akka-http"                     % akkaHttpVersion
   val akkaHttpTestkit     = "com.typesafe.akka"          %% "akka-http-testkit"             % akkaHttpVersion % Test
   val akkaHttpSprayJson   = "com.typesafe.akka"          %% "akka-http-spray-json"          % akkaHttpVersion
-  val akkaStreamKafka     = "com.typesafe.akka"          %% "akka-stream-kafka"             % "0.18"
+  val akkaStreamKafka     = "com.typesafe.akka"          %% "akka-stream-kafka"             % "0.22"
   val akkaStreamCassandra = "com.lightbend.akka"         %% "akka-stream-alpakka-cassandra" % "0.16"
   val scalaLogging        = "com.typesafe.scala-logging" %% "scala-logging"                 % "3.7.2"
 
