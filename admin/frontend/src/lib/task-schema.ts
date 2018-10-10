@@ -298,6 +298,16 @@ const sinkSchema: any = {
         "title": "Kafka Producer Properties",
         "properties": {
         }
+      },
+      "use-async-buffer": {
+        "type": "boolean",
+        "default": false,
+        "required": true
+      },
+      "async-buffer-size": {
+        "type": "integer",
+        "default": 10000,
+        "required": true
       }
     }
   }

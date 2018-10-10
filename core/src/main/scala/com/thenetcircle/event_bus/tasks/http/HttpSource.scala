@@ -29,9 +29,9 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SourceTask, SourceTaskBuilder}
+import com.thenetcircle.event_bus.misc.Util
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
