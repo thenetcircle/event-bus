@@ -21,16 +21,16 @@ import java.util
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
 import akka.NotUsed
-import akka.kafka.ProducerMessage.Message
+import akka.kafka.ProducerMessage.{Envelope, Message, Result}
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
+import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
-import akka.stream._
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
-import com.thenetcircle.event_bus.misc.Util
+import com.thenetcircle.event_bus.misc.{MissedEventHandler, Util}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
 import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
@@ -81,9 +81,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
     // .withProperty("client.id", clientId)
   }
 
-  def createMessage(event: Event)(
+  def createEnvelope(event: Event)(
       implicit runningContext: TaskRunningContext
-  ): Message[ProducerKey, ProducerValue, Event] = {
+  ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
     logger.debug(s"new kafka record $record is created")
     Message(record, event)
@@ -129,25 +129,25 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       kafkaProducer.get
     })
 
-    // TODO issue when send to new topics, check here https://github.com/akka/reactive-kafka/issues/163
-
     // Note that the flow might be materialized multiple times,
     // like from HttpSource(multiple connections), KafkaSource(multiple topicPartitions)
-    // TODO pretect that the stream crashed by sending failure
-    // TODO use Producer.flexiFlow
-    // TODO optimize logging
+    // DONE issue when send to new topics, check here https://github.com/akka/reactive-kafka/issues/163
+    // DONE protects that the stream crashed by sending failure
+    // DONE use Producer.flexiFlow
+    // DONE optimize logging
     val producingFlow = Flow[Event]
-      .map(createMessage)
-      .via(Producer.flow(kafkaSettings, _kafkaProducer))
-      .map(result => {
-        val eventBrief = Util.getBriefOfEvent(result.message.passThrough)
-        val kafkaBrief =
-          s"topic: ${result.metadata.topic()}, partition: ${result.metadata.partition()}, offset: ${result.metadata
-            .offset()}, key: ${Option(result.message.record.key()).map(_.rawData).getOrElse("")}"
-        logger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
+      .map(createEnvelope)
+      .via(Producer.flexiFlow(kafkaSettings, _kafkaProducer))
+      .map {
+        case Result(metadata, message) =>
+          val eventBrief = Util.getBriefOfEvent(message.passThrough)
+          val kafkaBrief =
+            s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
+              .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
+          logger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
 
-        (Norm, result.message.passThrough)
-      })
+          (Norm, message.passThrough)
+      }
 
     if (settings.useAsyncBuffer) {
       logger.debug("wrapping async buffer")
@@ -167,17 +167,22 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
 
 object KafkaSink {
 
-  def wrapAsyncBuffer(bufferSize: Int, producingFlow: Flow[Event, _, _]): Flow[Event, (EventStatus, Event), NotUsed] =
+  def wrapAsyncBuffer(bufferSize: Int, producingFlow: Flow[Event, _, _]): Flow[Event, (EventStatus, Event), NotUsed] = {
+    val producingSink: Sink[Event, _] = producingFlow
+      .withAttributes(ActorAttributes.supervisionStrategy(Supervision.resumingDecider))
+      .to(Sink.ignore)
+
     Flow
       .fromGraph(
         GraphDSL
           .create() { implicit builder =>
             import GraphDSL.Implicits._
             val buffer = builder.add(new AsyncBuffer(bufferSize))
-            buffer.out1 ~> producingFlow ~> Sink.ignore
+            buffer.out1 ~> producingSink
             FlowShape(buffer.in, buffer.out0)
           }
       )
+  }
 
   class AsyncBuffer(bufferSize: Int) extends GraphStage[FanOutShape2[Event, (EventStatus, Event), Event]] {
 
@@ -190,10 +195,12 @@ object KafkaSink {
     override def createLogic(
         inheritedAttributes: Attributes
     ): GraphStageLogic = new GraphStageLogic(shape) with InHandler with StageLogging {
-      private val bufferImpl: util.Queue[Event] = new LinkedBlockingQueue(bufferSize)
+      private val buffer: util.Queue[Event] = new LinkedBlockingQueue(bufferSize)
 
-      private def handleMissedEvent(event: Event): Unit =
-        log.warning(s"[MISSED] ${event.body.data}")
+      private def flushBuffer(): Unit =
+        while (!buffer.isEmpty) {
+          MissedEventHandler.handle(buffer.poll())
+        }
 
       override def onPush(): Unit = {
         val event = grab(in)
@@ -202,29 +209,20 @@ object KafkaSink {
           push(out0, (Norm, event))
         }
 
-        // If out1 is available, then it has been pulled but no dequeued element has been delivered.
-        // It means the buffer at this moment is definitely empty,
-        // so we just push the current element to out, then pull.
-        if (isAvailable(out1)) {
+        if (buffer.isEmpty && isAvailable(out1)) {
           push(out1, event)
         } else {
-          if (!bufferImpl.offer(event)) {
-            // buffer is full, record log
+          if (!buffer.offer(event)) { // if the buffer is full
             log.warning("A event [" + Util.getBriefOfEvent(event) + "] is dropped since the AsyncBuffer is full.")
-            handleMissedEvent(event)
+            MissedEventHandler.handle(event)
           }
         }
-
-        pull(in)
       }
 
       override def onUpstreamFinish(): Unit =
-        if (bufferImpl.isEmpty) completeStage()
+        if (buffer.isEmpty) completeStage()
 
-      override def postStop(): Unit =
-        while (!bufferImpl.isEmpty) {
-          handleMissedEvent(bufferImpl.poll())
-        }
+      override def postStop(): Unit = flushBuffer()
 
       setHandler(in, this)
 
@@ -233,10 +231,14 @@ object KafkaSink {
         out0,
         new OutHandler {
           override def onPull(): Unit =
-            if (!hasBeenPulled(in)) pull(in)
+            if (isClosed(in)) {
+              if (buffer.isEmpty) completeStage()
+            } else if (!hasBeenPulled(in)) {
+              pull(in)
+            }
 
           override def onDownstreamFinish(): Unit =
-            if (bufferImpl.isEmpty) completeStage()
+            if (buffer.isEmpty) completeStage()
         }
       )
 
@@ -245,12 +247,13 @@ object KafkaSink {
         out1,
         new OutHandler {
           override def onPull(): Unit = {
-            if (!bufferImpl.isEmpty) push(out1, bufferImpl.poll())
-            if (isClosed(in)) {
-              if (bufferImpl.isEmpty) completeStage()
-            } else if (!hasBeenPulled(in)) {
-              pull(in)
-            }
+            if (!buffer.isEmpty) push(out1, buffer.poll())
+            if (isClosed(in) && buffer.isEmpty) completeStage()
+          }
+
+          override def onDownstreamFinish(): Unit = {
+            flushBuffer()
+            super.onDownstreamFinish()
           }
         }
       )

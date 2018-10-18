@@ -12,3 +12,4 @@ target/
 /native/
 /integration-test/native/
 hs_err_*.log
+.ensime*

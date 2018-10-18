@@ -37,7 +37,8 @@ class KafkaSinkBuilderTest extends TestBase {
         |  "use-dispatcher": "test-dispatcher",
         |  "properties": {
         |    "batch.size": 1024,
-        |    "connections.max.idle.ms": 100
+        |    "connections.max.idle.ms": 100,
+        |    "max.in.flight.requests.per.connection": 10
         |  }
         |}""".stripMargin)
 
@@ -49,6 +50,13 @@ class KafkaSinkBuilderTest extends TestBase {
     settings.closeTimeout shouldEqual 100.seconds
     settings.parallelism shouldEqual 50
     settings.useDispatcher.get shouldEqual "test-dispatcher"
+
+    settings.useAsyncBuffer shouldEqual true
+    settings.asyncBufferSize shouldEqual 100
+    producerSettings.properties("acks") shouldEqual "all"
+    producerSettings.properties("retries") shouldEqual "30"
+    producerSettings.properties("max.in.flight.requests.per.connection") shouldEqual "10"
+    producerSettings.properties("enable.idempotence") shouldEqual "true"
 
     producerSettings.properties("batch.size") shouldEqual "1024"
     producerSettings.properties("connections.max.idle.ms") shouldEqual "100"

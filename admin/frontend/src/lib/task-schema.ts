@@ -296,17 +296,38 @@ const sinkSchema: any = {
       "properties": {
         "type": "object",
         "title": "Kafka Producer Properties",
+        "required": true,
         "properties": {
+          "acks": {
+            "type": "string",
+            "default": "all",
+            "required": true
+          },
+          "retries": {
+            "type": "integer",
+            "default": 30,
+            "required": true
+          },
+          "max.in.flight.requests.per.connection": {
+            "type": "integer",
+            "default": 5,
+            "required": true
+          },
+          "enable.idempotence": {
+            "type": "boolean",
+            "default": true,
+            "required": true
+          }
         }
       },
       "use-async-buffer": {
         "type": "boolean",
-        "default": false,
+        "default": true,
         "required": true
       },
       "async-buffer-size": {
         "type": "integer",
-        "default": 10000,
+        "default": 100,
         "required": true
       }
     }
