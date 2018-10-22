@@ -25,20 +25,82 @@ class TNCKafkaTopicResolverTest extends IntegrationTestBase {
   behavior of "TNCKafkaTopicResolver"
 
   val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
+  resolver.init()
 
   it should "solve topic correctly" in {
 
-    /*val testEvent1 = createTestEvent("message.send")
-    resolver.resolveEvent(testEvent1).metadata.group shouldEqual Some("event-message")
+    // ------ test resolving by event name
+    resolver
+      .resolveEvent(
+        createTestEvent("""{ "title": "unknown" }""")
+      )
+      .metadata
+      .topic shouldEqual Some("event-default")
 
-    val testEvent2 = createTestEvent("profile.kick")
-    resolver.resolveEvent(testEvent2).metadata.group shouldEqual Some("event-user")
+    resolver
+      .resolveEvent(
+        createTestEvent(
+          """{ "title": "membership.test" }"""
+        )
+      )
+      .metadata
+      .topic shouldEqual Some(
+      "event-membership"
+    )
 
-    val testEvent3 = createTestEvent("user.visit.profile")
-    resolver.resolveEvent(testEvent3).metadata.group shouldEqual Some("event-user")
+    resolver
+      .resolveEvent(
+        createTestEvent(
+          """{ "title": "user.test" }"""
+        )
+      )
+      .metadata
+      .topic shouldEqual Some(
+      "event-user"
+    )
 
-    val testEvent4 = createTestEvent("payment.buy")
-    resolver.resolveEvent(testEvent4).metadata.group shouldEqual Some("event-default")*/
+    // ------ test resolving by event channel
+    resolver
+      .resolveEvent(
+        createTestEvent(
+          """{
+            |"title": "user.test",
+            |"generator": {
+            |  "content": "{\"channel\":\"mychannel\"}",
+            |  "id": "tnc-event-dispatcher"
+            |}}""".stripMargin
+        )
+      )
+      .metadata
+      .topic shouldEqual Some("event-user")
+
+    resolver
+      .resolveEvent(
+        createTestEvent(
+          """{
+            |"title": "user.test",
+            |"generator": {
+            |  "content": "{\"channel\":\"mem.normal\"}",
+            |  "id": "tnc-event-dispatcher"
+            |}}""".stripMargin
+        )
+      )
+      .metadata
+      .topic shouldEqual Some("event-membership")
+
+    resolver
+      .resolveEvent(
+        createTestEvent(
+          """{
+            |"title": "user.test",
+            |"generator": {
+            |  "content": "{\"channel\":\"dino\"}",
+            |  "id": "tnc-event-dispatcher"
+            |}}""".stripMargin
+        )
+      )
+      .metadata
+      .topic shouldEqual Some("event-wio")
 
     /*val executionStart: Long = currentTime
 

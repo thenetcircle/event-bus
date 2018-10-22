@@ -38,10 +38,10 @@ case class EventImpl(
     copy(passThrough = Some(_passThrough))
   }
 
-  override def withGroup(_group: String): EventImpl =
-    copy(metadata = metadata.copy(group = Some(_group)))
-  override def withNoGroup(): EventImpl =
-    copy(metadata = metadata.copy(group = None))
+  override def withTopic(_topic: String): EventImpl =
+    copy(metadata = metadata.copy(topic = Some(_topic)))
+  override def withNoTopic(): EventImpl =
+    copy(metadata = metadata.copy(topic = None))
 
   override def withName(_name: String): EventImpl =
     copy(metadata = metadata.copy(name = Some(_name)))

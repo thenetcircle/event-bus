@@ -17,9 +17,6 @@
 
 package com.thenetcircle.event_bus.tasks.tnc
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
-
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
@@ -30,27 +27,28 @@ import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.recipes.cache.NodeCache
 import spray.json._
 
-import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-case class TopicInfo(topic: String, patterns: List[String])
+case class TopicInfo(topic: String, patterns: Option[List[String]], channels: Option[List[String]])
 
 object TopicInfoProtocol extends DefaultJsonProtocol {
-  implicit val topicInfoFormat = jsonFormat2(TopicInfo)
+  implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String, val useCache: Boolean = false)
+class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String)
     extends TransformTask
     with StrictLogging {
 
   import TopicInfoProtocol._
 
-  private var inited: Boolean                              = false
-  private var defaultTopic: String                         = _defaultTopic
-  private var index: mutable.LinkedHashMap[String, String] = mutable.LinkedHashMap.empty
-  private val cached: ConcurrentHashMap[String, String]    = new ConcurrentHashMap()
-  private var zkWatcher: Option[NodeCache]                 = None
+  private var inited: Boolean              = false
+  private var defaultTopic: String         = _defaultTopic
+  private var zkWatcher: Option[NodeCache] = None
+
+  private var nameIndex: Map[String, String]    = Map.empty
+  private var channelIndex: Map[String, String] = Map.empty
 
   def init()(
       implicit runningContext: TaskRunningContext
@@ -70,41 +68,46 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
     topic
   }
 
-  val zkInited = new AtomicBoolean(false)
-
   private def updateAndWatchIndex()(
       implicit runningContext: TaskRunningContext
   ): Unit = {
     zkManager.ensurePath("topics")
     zkWatcher = Some(
       zkManager.watchData("topics") {
-        _ foreach { data =>
-          if (data.nonEmpty) {
-            val topicInfo = data.parseJson.convertTo[List[TopicInfo]]
-            val index     = mutable.LinkedHashMap.empty[String, String]
-            topicInfo
-              .foreach(info => {
-                val _topic = replaceSubstitutes(info.topic)
-                info.patterns.foreach(pat => {
-                  index += (pat -> _topic)
+        _ foreach {
+          data =>
+            if (data.nonEmpty) {
+              val topicInfo        = data.parseJson.convertTo[List[TopicInfo]]
+              val nameIndexList    = ArrayBuffer.empty[(String, String)]
+              val channelIndexList = ArrayBuffer.empty[(String, String)]
+
+              topicInfo
+                .foreach(info => {
+                  val _topic = replaceSubstitutes(info.topic)
+                  info.patterns.foreach(_.foreach(s => {
+                    nameIndexList += (s -> _topic)
+                  }))
+                  info.channels.foreach(_.foreach(s => {
+                    channelIndexList += (s -> _topic)
+                  }))
                 })
-              })
-            updateIndex(index)
-          }
+
+              updateIndex(nameIndexList.toMap, channelIndexList.toMap)
+            }
         }
       }
     )
   }
 
-  def getIndex(): mutable.LinkedHashMap[String, String] = synchronized {
-    index
+  def updateIndex(_nameIndex: Map[String, String], _channelIndex: Map[String, String]): Unit = {
+    logger.info("updating topic mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex)
+    nameIndex = _nameIndex
+    channelIndex = _channelIndex
   }
 
-  def updateIndex(_index: mutable.LinkedHashMap[String, String]): Unit = synchronized {
-    logger.info("updating topic mapping " + _index)
-    index = _index
-    if (useCache) cached.clear()
-  }
+  def getNameIndex(): Map[String, String] = nameIndex
+
+  def getChannelIndex(): Map[String, String] = channelIndex
 
   override def prepare()(
       implicit runningContext: TaskRunningContext
@@ -121,47 +124,49 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
     })
   }
 
-  def getTopicFromIndex(eventName: String): Option[String] =
-    getIndex()
-      .find {
-        case (pattern, _) =>
-          eventName matches pattern
-      }
-      .map(_._2)
+  def getTopicFromIndex(event: Event): Option[String] = {
+    var result: Option[String] = None
 
-  // TODO: performance test
+    if (event.metadata.channel.isDefined) {
+      result = getChannelIndex()
+        .find {
+          case (pattern, _) =>
+            event.metadata.channel.get matches pattern
+        }
+        .map(_._2)
+    }
+    if (result.isEmpty && event.metadata.name.isDefined) {
+      result = getNameIndex()
+        .find {
+          case (pattern, _) =>
+            event.metadata.name.get matches pattern
+        }
+        .map(_._2)
+    }
+
+    result
+  }
+
   def resolveEvent(event: Event): Event = {
-    if (event.metadata.group.isDefined) {
-      logger.debug(s"event ${event.uuid} has group ${event.metadata.group.get} already, will not be resolving again.")
+    if (event.metadata.topic.isDefined) {
+      logger.info(s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it.")
       return event
     }
-    if (event.metadata.name.isEmpty) {
-      logger.debug(s"event ${event.uuid} has no name, will be send to default topic $defaultTopic.")
-      return event.withGroup(defaultTopic)
+    if (event.metadata.name.isEmpty && event.metadata.channel.isEmpty) {
+      logger.debug(s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic.")
+      return event.withTopic(defaultTopic)
     }
 
-    val eventName = event.metadata.name.get
-    var topic     = ""
-    if (useCache) {
-      val cachedTopic = cached.get(eventName)
-      if (cachedTopic != null) {
-        topic = cachedTopic
-      } else {
-        topic = getTopicFromIndex(eventName).getOrElse(defaultTopic)
-        cached.put(eventName, topic)
-      }
-    } else {
-      topic = getTopicFromIndex(eventName).getOrElse(defaultTopic)
-    }
+    val newTopic = getTopicFromIndex(event).getOrElse(defaultTopic)
+    logger.debug(s"event ${event.uuid} has been resolved to new topic $newTopic")
 
-    logger.debug(s"event ${event.uuid} has been resolved to new topic $topic")
-    return event.withGroup(topic)
+    event.withTopic(newTopic)
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
     logger.info(s"shutting down TNCKafkaTopicResolver of story ${runningContext.getStoryName()}.")
-    index = mutable.LinkedHashMap.empty
-    cached.clear()
+    nameIndex = Map.empty
+    channelIndex = Map.empty
     zkWatcher.foreach(_.close())
   }
 }
@@ -182,8 +187,7 @@ class TNCKafkaTopicResolverBuilder() extends TransformTaskBuilder {
 
     new TNCKafkaTopicResolver(
       zkMangerOption.get,
-      config.getString("default-topic"),
-      config.getBoolean("use-cache")
+      config.getString("default-topic")
     )
   }
 

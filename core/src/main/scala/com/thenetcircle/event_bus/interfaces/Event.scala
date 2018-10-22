@@ -30,8 +30,8 @@ trait Event {
 
   def withPassThrough[T](_passThrough: T): Event
   def getPassThrough[T]: Option[T] = passThrough.map(_.asInstanceOf[T])
-  def withGroup(_group: String): Event
-  def withNoGroup(): Event
+  def withTopic(_topic: String): Event
+  def withNoTopic(): Event
   def withName(_name: String): Event
   def withUUID(_uuid: String): Event
   def withBody(_body: EventBody): Event
@@ -43,7 +43,8 @@ trait Event {
 
 case class EventMetaData(
     name: Option[String] = None,
-    group: Option[String] = None,
+    channel: Option[String] = None,
+    topic: Option[String] = None,
     extra: Map[String, String] = Map.empty
 )
 

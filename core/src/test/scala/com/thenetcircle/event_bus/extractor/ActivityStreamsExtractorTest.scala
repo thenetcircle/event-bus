@@ -103,17 +103,11 @@ class ActivityStreamsExtractorTest extends TestBase {
     var testdata = s"""
          |{
          |  "version": "1.0",
-         |  "content": {
-         |    "a": "testa",
-         |    "b": "testb"
-         |  },
+         |  "content": "{\\"a\\": \\"testa\\", \\"b\\": \\"testb\\"}",
          |  "actor": {
          |    "id": "actorId",
          |    "objectType": "actorType",
-         |    "content": {
-         |      "a": 1,
-         |      "b": 2
-         |    },
+         |    "content": "{\\"a\\": 1, \\"b\\": 2}",
          |    "attachments": [
          |      {
          |        "id": "attachmentId1",
@@ -153,11 +147,7 @@ class ActivityStreamsExtractorTest extends TestBase {
          |  "generator": {
          |    "id": "tnc-event-dispatcher",
          |    "objectType": "library",
-         |    "content": {
-         |      "mode": "async",
-         |      "class": "TNC\\\\EventDispatcher\\\\Interfaces\\\\Event\\\\TransportableEvent"
-         |    },
-         |    "url": "http://www.callback.com"
+         |    "content": "{\\"mode\\":\\"async\\",\\"class\\":\\"dfEvent_Profile_Visit\\"}"
          |  }
          |}
       """.stripMargin
@@ -169,6 +159,7 @@ class ActivityStreamsExtractorTest extends TestBase {
     testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
     testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX").parse(time)
     testevent.metadata.name shouldEqual Some("message.send")
+    testevent.metadata.channel shouldEqual None
     testevent.getExtra("verb") shouldEqual Some("send")
     testevent.getExtra("providerId") shouldEqual Some("providerId")
     testevent.getExtra("providerType") shouldEqual Some("providerType")
@@ -180,7 +171,6 @@ class ActivityStreamsExtractorTest extends TestBase {
     testevent.getExtra("targetType") shouldEqual Some("targetType")
     testevent.getExtra("generatorId") shouldEqual Some("tnc-event-dispatcher")
     testevent.getExtra("generatorType") shouldEqual Some("library")
-    testevent.getExtra("generatorUrl") shouldEqual Some("http://www.callback.com")
 
   }
 
@@ -195,6 +185,54 @@ class ActivityStreamsExtractorTest extends TestBase {
       Await.result(unknownFormatExtractor.extract(testdata.getBytes), 3.seconds)
 
     testevent.body shouldEqual EventBody(testdata, DataFormat.UNKNOWN)
+  }
+
+  it should "support channel field and millisecond" in {
+    val time     = "2018-09-11T23:52:27.111+02:00"
+    var testdata = s"""
+         |{
+         |  "actor": {
+         |    "content": "{\\"hasMembership\\":\\"0\\",\\"membership\\":1}",
+         |    "id": "7707608",
+         |    "objectType": "user"
+         |  },
+         |  "generator": {
+         |    "content": "{\\"mode\\":\\"async\\",\\"class\\":\\"dfEvent_Profile_Visit\\",\\"channel\\":\\"mychannel\\"}",
+         |    "id": "tnc-event-dispatcher",
+         |    "objectType": "library"
+         |  },
+         |  "id": "ED-poppen-profile.visit-7707608-5b98391b4890f",
+         |  "object": {
+         |    "content": "{\\"hasMembership\\":\\"0\\",\\"membership\\":1}",
+         |    "id": "7690320",
+         |    "objectType": "user"
+         |  },
+         |  "provider": {
+         |    "attachments": [
+         |      {
+         |        "content": "{\\"session_user_id\\":7707608,\\"ip\\":\\"2a02:810a:86c0:5f73:e1b3:1d7b:577f:c471\\",\\"user-agent\\":\\"Mozilla\\\\/5.0 (Linux; Android 8.0.0; SAMSUNG SM-G950F Build\\\\/R16NW) AppleWebKit\\\\/537.36 (KHTML, like Gecko) SamsungBrowser\\\\/7.4 Chrome\\\\/59.0.3071.125 Mobile Safari\\\\/537.36\\",\\"referer\\":\\"https:\\\\/\\\\/www.poppen.de\\\\/p\\\\/harzp%c3%a4rchen_1234\\"}",
+         |        "objectType": "context"
+         |      }
+         |    ],
+         |    "id": "poppen",
+         |    "objectType": "community"
+         |  },
+         |  "published": "$time",
+         |  "title": "profile.visit",
+         |  "verb": "visit",
+         |  "version": "2.0"
+         |}
+      """.stripMargin
+
+    val testevent =
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
+
+    testevent.uuid shouldEqual "ED-poppen-profile.visit-7707608-5b98391b4890f"
+    testevent.body shouldEqual EventBody(testdata, DataFormat.ACTIVITYSTREAMS)
+    testevent.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").parse(time)
+    testevent.metadata.name shouldEqual Some("profile.visit")
+    testevent.metadata.channel shouldEqual Some("mychannel")
+
   }
 
 }

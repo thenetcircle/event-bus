@@ -41,13 +41,12 @@ import scala.concurrent.duration._
 case class KafkaSinkSettings(
     bootstrapServers: String,
     defaultTopic: String = "event-default",
-    useEventGroupAsTopic: Boolean = true,
     parallelism: Int = 100,
     closeTimeout: FiniteDuration = 60.seconds,
     useDispatcher: Option[String] = None,
     properties: Map[String, String] = Map.empty,
-    useAsyncBuffer: Boolean = false,
-    asyncBufferSize: Int = 10000
+    useAsyncBuffer: Boolean = true,
+    asyncBufferSize: Int = 100
 )
 
 class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
@@ -92,19 +91,10 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   def createProducerRecord(event: Event)(
       implicit runningContext: TaskRunningContext
   ): ProducerRecord[ProducerKey, ProducerValue] = {
-    var topic: String =
-      if (settings.useEventGroupAsTopic) event.metadata.group.getOrElse(settings.defaultTopic)
-      else settings.defaultTopic
-
-    // val timestamp: Long      = event.createdAt.getTime
+    var topic: String        = event.metadata.topic.getOrElse(settings.defaultTopic)
     val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event
-
-    new ProducerRecord[ProducerKey, ProducerValue](
-      topic,
-      key,
-      value
-    )
+    // val timestamp: Long      = event.createdAt.getTime
 
     /*new ProducerRecord[ProducerKey, ProducerValue](
       topic,
@@ -113,6 +103,12 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       key,
       value
     )*/
+
+    new ProducerRecord[ProducerKey, ProducerValue](
+      topic,
+      key,
+      value
+    )
   }
 
   var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
@@ -275,7 +271,6 @@ class KafkaSinkBuilder() extends SinkTaskBuilder {
       KafkaSinkSettings(
         config.as[String]("bootstrap-servers"),
         config.as[String]("default-topic"),
-        config.as[Boolean]("use-event-group-as-topic"),
         config.as[Int]("parallelism"),
         config.as[FiniteDuration]("close-timeout"),
         config.as[Option[String]]("use-dispatcher"),

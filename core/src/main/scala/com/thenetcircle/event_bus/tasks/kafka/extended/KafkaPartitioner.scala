@@ -36,11 +36,8 @@ class KafkaPartitioner extends Partitioner {
     val partitions: util.List[PartitionInfo] = cluster.partitionsForTopic(topic)
     val numPartitions: Int                   = partitions.size
 
-    val event = value.asInstanceOf[Event]
-    /*val keyBytes = event.metadata.actor
-      .getOrElse(Random.nextString(6))
-      .getBytes("UTF-8")*/
-    val keyBytes = event.uuid.getBytes("UTF-8")
+    val event    = value.asInstanceOf[Event]
+    val keyBytes = event.metadata.channel.getOrElse(event.uuid).getBytes("UTF-8")
 
     Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions
   }

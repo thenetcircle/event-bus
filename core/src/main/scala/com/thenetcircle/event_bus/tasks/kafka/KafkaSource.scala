@@ -106,7 +106,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
     eventExtractor
       .extract(messageValue, Some(message.committableOffset))
       .map[(EventStatus, Event)](event => {
-        var eve = event.withGroup(kafkaTopic)
+        var eve = event.withTopic(kafkaTopic)
         if (uuidOption.isDefined) {
           eve = eve.withUUID(uuidOption.get)
         }

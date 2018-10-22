@@ -47,6 +47,15 @@ class TopicInfoExtractionTest extends TestBase {
         |    ]
         |  },
         |  {
+        |    "topic": "test-topic-03",
+        |    "channels": [
+        |      "chan01\\..*"
+        |    ],
+        |    "patterns": [
+        |      "test\\..*"
+        |    ]
+        |  },
+        |  {
         |    "topic": "test-default-topic",
         |    "patterns": [
         |      ".*"
@@ -57,8 +66,10 @@ class TopicInfoExtractionTest extends TestBase {
 
     val topicInfoList = data.parseJson.convertTo[List[TopicInfo]]
 
-    topicInfoList.length shouldEqual 3
-    topicInfoList(2) shouldEqual TopicInfo("test-default-topic", List(".*"))
+    topicInfoList.length shouldEqual 4
+    topicInfoList(1) shouldEqual TopicInfo("test-topic-02", Some(List("feature\\..*", "click\\..*")), None)
+    topicInfoList(2) shouldEqual TopicInfo("test-topic-03", Some(List("test\\..*")), Some(List("chan01\\..*")))
+    topicInfoList(3) shouldEqual TopicInfo("test-default-topic", Some(List(".*")), None)
 
   }
 }

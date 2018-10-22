@@ -153,7 +153,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
         event.createdAt,
         new Date(),
         failedTaskName,
-        event.metadata.group.getOrElse(""),
+        event.metadata.topic.getOrElse(""),
         event.body.data,
         event.body.format.toString,
         cause,

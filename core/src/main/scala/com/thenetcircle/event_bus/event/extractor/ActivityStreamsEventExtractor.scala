@@ -29,35 +29,48 @@ import spray.json._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
+import scala.util.parsing.json.JSON
 
 case class Activity(
     title: Option[String],
     id: Option[String],
     published: Option[String],
     verb: Option[String],
-    actor: Option[ActivityObject],
-    `object`: Option[ActivityObject],
-    target: Option[ActivityObject],
-    provider: Option[ActivityObject],
+    actor: Option[GeneralObject],
+    `object`: Option[GeneralObject],
+    target: Option[GeneralObject],
+    provider: Option[GeneralObject],
     // content: Option[Any],
-    generator: Option[ActivityObject]
+    generator: Option[GeneratorObject]
 )
 
-case class ActivityObject(
+sealed trait ActivityObject {
+  def id: Option[String]
+  def objectType: Option[String]
+}
+
+case class GeneralObject(
     id: Option[String],
     objectType: Option[String],
-    url: Option[String]
+    // url: Option[String]
     // attachments: Option[List[ActivityObject]],
     // content: Option[Any],
     // summary: Option[Any],
     // downstreamDuplicates: Option[List[String]],
     // upstreamDuplicates: Option[List[String]],
     // author: Option[ActivityObject]
-)
+) extends ActivityObject
+
+case class GeneratorObject(
+    id: Option[String],
+    objectType: Option[String],
+    content: Option[String]
+) extends ActivityObject
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
-  implicit val activityObjectFormat = jsonFormat3(ActivityObject)
-  implicit val activityFormat       = jsonFormat9(Activity)
+  implicit val generalObjectFormat   = jsonFormat2(GeneralObject)
+  implicit val generatorObjectFormat = jsonFormat3(GeneratorObject)
+  implicit val activityFormat        = jsonFormat9(Activity)
 }
 
 class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsProtocol {
@@ -83,7 +96,6 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
         objOption.foreach(o => {
           o.id.foreach(s => extra = extra + (s"${prefix}Id"           -> s))
           o.objectType.foreach(s => extra = extra + (s"${prefix}Type" -> s))
-          o.url.foreach(s => extra = extra + (s"${prefix}Url"         -> s))
         })
       }
 
@@ -95,9 +107,17 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
       setExtraFromActivityObject(activity.`object`, "object")
       setExtraFromActivityObject(activity.generator, "generator")
 
+      val channel: Option[String] = activity.generator
+        .filter(_.id.contains("tnc-event-dispatcher"))
+        .flatMap(_.content)
+        .flatMap(JSON.parseFull)
+        .flatMap {
+          case m: Map[String, Any] => m.get("channel").map(_.asInstanceOf[String])
+        }
       val metaData = EventMetaData(
         name = activity.title,
-        group = None,
+        channel = channel,
+        topic = None,
         extra = extra
       )
 

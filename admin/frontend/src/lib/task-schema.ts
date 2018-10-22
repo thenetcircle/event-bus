@@ -19,11 +19,13 @@ const sourceSchema: any = {
         "type": "string",
         "enum": [
           "ActivityStreams"
-        ]
+        ],
+        "required": true
       },
       "succeeded-response": {
         "type": "string",
-        "default": "ok"
+        "default": "ok",
+        "required": true
       },
       "server": {
         "type": "object",
@@ -31,12 +33,14 @@ const sourceSchema: any = {
         "properties": {
           "max-connections": {
             "type": "integer",
-            "default": 1024
+            "default": 1024,
+            "required": true
           },
           "request-timeout": {
             "type": "string",
             "default": "10 s",
-            "description": "possible units: (s)econd, (m)inute, (h)ours"
+            "description": "possible units: (s)econd, (m)inute, (h)ours",
+            "required": true
           },
           "idle-timeout": {
             "type": "string",
@@ -53,7 +57,8 @@ const sourceSchema: any = {
             "default": "1 min",
             "description": "possible units: (s)econd, (m)inute, (h)ours"
           }
-        }
+        },
+        "required": true
       }
     }
   },
@@ -86,7 +91,7 @@ const sourceSchema: any = {
       "topic-pattern": {
         "type": "string",
         "title": "Subscribed Topic Pattern",
-        "description": "supports regex pattern, if topics is set, will use it instead",
+        "description": "supports regex pattern, if \"Subscribed Topics\" is set, will use it instead",
         "default": "",
         "required": true
       },
@@ -106,7 +111,8 @@ const sourceSchema: any = {
       },
       "poll-interval": {
         "type": "string",
-        "default": "50ms"
+        "default": "50ms",
+        "required": true
       },
       "poll-timeout": {
         "type": "string",
@@ -130,11 +136,13 @@ const sourceSchema: any = {
       },
       "wakeup-timeout": {
         "type": "string",
-        "default": "3s"
+        "default": "3s",
+        "required": true
       },
       "max-wakeups": {
         "type": "integer",
-        "default": 10
+        "default": 10,
+        "required": true
       },
       "properties": {
         "type": "object",
@@ -145,7 +153,8 @@ const sourceSchema: any = {
             "title": "Enable auto commit?",
             "default": false
           }*/
-        }
+        },
+        "required": true
       }
     }
   }
@@ -162,20 +171,7 @@ const transformSchema: any = {
         "description": "supports substitutes: {app_name}, {app_env}, {story_name}",
         "default": "event-{app_name}-default",
         "required": true
-      },
-      "use-cache": {
-        "type": "boolean",
-        "title": "Use Cache",
-        "descript": "If cache the events topics",
-        "default": false,
-        "required": true
       }
-    }
-  },
-  'tnc-dino-forwarder': {
-    "title": "TNC Dino Forwarder",
-    "type": "object",
-    "properties": {
     }
   }
 }
@@ -193,11 +189,13 @@ const sinkSchema: any = {
             "type": "string",
             "enum": [
               "POST", "GET"
-            ]
+            ],
+            "required": true
           },
           "uri": {
             "type": "string",
-            "description": "when event does not include url info, use this default one"
+            "description": "when event does not include url info, use this default one",
+            "required": true
           }
         },
         "required": true
@@ -273,11 +271,6 @@ const sinkSchema: any = {
       "default-topic": {
         "type": "string",
         "default": "event-default",
-        "required": true
-      },
-      "use-event-group-as-topic": {
-        "type": "boolean",
-        "default": true,
         "required": true
       },
       "parallelism": {
