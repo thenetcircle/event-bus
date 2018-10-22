@@ -51,7 +51,7 @@ sealed trait ActivityObject {
 
 case class GeneralObject(
     id: Option[String],
-    objectType: Option[String],
+    objectType: Option[String]
     // url: Option[String]
     // attachments: Option[List[ActivityObject]],
     // content: Option[Any],
