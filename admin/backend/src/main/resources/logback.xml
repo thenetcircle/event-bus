@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration>
+<configuration scan="true">
 
 	<property name="EB_LOGPREFIX" value="${EB_LOGDIR:-./log}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}" />
 
