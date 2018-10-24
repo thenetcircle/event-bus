@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.context.AppContext
-import com.typesafe.scalalogging.StrictLogging
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache._
@@ -28,7 +27,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 import scala.collection.JavaConverters._
 
 class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(implicit appContext: AppContext)
-    extends StrictLogging {
+    extends Logging {
 
   val appRootPath: String =
     appContext.getSystemConfig().getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"

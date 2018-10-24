@@ -20,15 +20,14 @@ package com.thenetcircle.event_bus.story
 import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
-import com.typesafe.scalalogging.StrictLogging
+import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 import org.apache.curator.framework.recipes.leader.LeaderLatch
 
+import scala.concurrent.duration._
 import scala.util.Random
 import scala.util.control.NonFatal
-import scala.concurrent.duration._
 
 object StoryZooKeeperListener {
   def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
@@ -41,7 +40,7 @@ object StoryZooKeeperListener {
 class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
     implicit appContext: AppContext,
     system: ActorSystem
-) extends StrictLogging {
+) extends Logging {
 
   require(
     appContext.getZooKeeperManager().isDefined,

@@ -30,9 +30,8 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
-import com.thenetcircle.event_bus.misc.{MissedEventHandler, Util}
+import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
-import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.KafkaException
@@ -51,7 +50,7 @@ case class KafkaSinkSettings(
     asyncBufferSize: Int = 100
 )
 
-class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLogging {
+class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -86,7 +85,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    logger.debug(s"new kafka record $record is created")
+    taskLogger.debug(s"new kafka record $record is created")
     Message(record, event)
   }
 
@@ -142,7 +141,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
           val kafkaBrief =
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-          logger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
+          taskLogger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
 
           (Norm, message.passThrough)
       }
@@ -163,7 +162,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with StrictLog
   }
 }
 
-object KafkaSink {
+object KafkaSink extends Logging {
 
   def wrapAsyncBuffer(bufferSize: Int, producingFlow: Flow[Event, _, _]): Flow[Event, (EventStatus, Event), NotUsed] = {
     val decider: Supervision.Decider = {
@@ -198,12 +197,12 @@ object KafkaSink {
 
     override def createLogic(
         inheritedAttributes: Attributes
-    ): GraphStageLogic = new GraphStageLogic(shape) with InHandler with StageLogging {
+    ): GraphStageLogic = new GraphStageLogic(shape) with InHandler {
       private val buffer: util.Queue[Event] = new LinkedBlockingQueue(bufferSize)
 
       private def flushBuffer(): Unit =
         while (!buffer.isEmpty) {
-          MissedEventHandler.handle(buffer.poll())
+          Logging.missedLogger.warn(buffer.poll().body.data)
         }
 
       override def onPush(): Unit = {
@@ -217,8 +216,10 @@ object KafkaSink {
           push(out1, event)
         } else {
           if (!buffer.offer(event)) { // if the buffer is full
-            log.warning("A event [" + Util.getBriefOfEvent(event) + "] is dropped since the AsyncBuffer is full.")
-            MissedEventHandler.handle(event)
+            taskLogger.warn(
+              "A event [" + Util.getBriefOfEvent(event) + "] is dropped since the AsyncBuffer is full."
+            )
+            Logging.missedLogger.warn(event.body.data)
           }
         }
       }

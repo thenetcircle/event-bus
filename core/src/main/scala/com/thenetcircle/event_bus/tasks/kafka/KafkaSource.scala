@@ -26,20 +26,19 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
 import com.thenetcircle.event_bus.interfaces._
+import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
-import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
-class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with StrictLogging {
+class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Logging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -115,14 +114,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-        logger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
+        taskLogger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
 
         (Norm, eve)
       })
       .recover {
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
-          logger.warn(
+          taskLogger.warn(
             s"The event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
           )
           (
@@ -148,7 +147,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    logger.info(s"going to subscribe kafka topics: $kafkaSubscription")
+    taskLogger.info(s"going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer
@@ -157,7 +156,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
         .mapAsyncUnordered(settings.maxConcurrentPartitions) {
           case (topicPartition, source) =>
             try {
-              logger.info(
+              taskLogger.info(
                 s"A new topicPartition $topicPartition was assigned to runner ${runningContext.getStoryRunnerName()}."
               )
 
@@ -168,30 +167,30 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                   case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        logger.debug(s"The event ${event.uuid} is adding to the kafka batch committer")
+                        taskLogger.debug(s"The event ${event.uuid} is adding to the kafka batch committer")
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
                           s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
-                        logger.error(errorMessage)
+                        taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
                   case (ToFB(exOp), event) =>
-                    logger.error(
+                    taskLogger.error(
                       s"Event ${event.uuid} reaches the end with ToFB status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     throw new RuntimeException("Non handled ToFB status")
                   case (Fail(ex), event) =>
-                    logger.error(s"Event ${event.uuid} reaches the end with error $ex")
+                    taskLogger.error(s"Event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     throw ex
                 }
                 // TODO some test
                 .recover {
                   case NonFatal(ex) =>
-                    logger.info(
+                    taskLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
                         s"Not it's recovered to be a Failure()"
                     )
@@ -207,7 +206,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
-                  logger
+                  taskLogger
                     .info(
                       s"The substream listening on topicPartition $topicPartition was completed."
                     )
@@ -215,14 +214,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Str
                 })
                 .recover { // recover after run, to recover the stream running status
                   case NonFatal(ex) =>
-                    logger.error(
+                    taskLogger.error(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
                     )
                     Done
                 }
             } catch {
               case NonFatal(ex) ⇒
-                logger.error(
+                taskLogger.error(
                   s"Could not materialize topic $topicPartition listening stream with error: $ex"
                 )
                 throw ex

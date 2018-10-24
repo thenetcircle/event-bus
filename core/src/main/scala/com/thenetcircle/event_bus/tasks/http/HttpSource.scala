@@ -31,9 +31,8 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SourceTask, SourceTaskBuilder}
-import com.thenetcircle.event_bus.misc.Util
+import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
@@ -48,7 +47,7 @@ case class HttpSourceSettings(
     serverSettings: Option[ServerSettings] = None
 )
 
-class HttpSource(val settings: HttpSourceSettings) extends SourceTask with StrictLogging {
+class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Logging {
 
   def createResponse(result: (EventStatus, Event)): HttpResponse =
     result match {
@@ -82,13 +81,13 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            logger.info("received a new event: " + Util.getBriefOfEvent(event))
-            logger.debug(s"event content: $event")
+            taskLogger.info("received a new event: " + Util.getBriefOfEvent(event))
+            taskLogger.debug(s"event content: $event")
             (Norm, event)
           })
           .recover {
             case ex: EventExtractingException =>
-              logger.warn(s"extract event from a http request failed with error $ex")
+              taskLogger.warn(s"extract event from a http request failed with error $ex")
               (Fail(ex), EventImpl.createFromFailure(ex))
           }
       })
@@ -141,7 +140,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Stric
   }
 }
 
-class HttpSourceBuilder() extends SourceTaskBuilder with StrictLogging {
+class HttpSourceBuilder() extends SourceTaskBuilder with Logging {
 
   override def build(
       configString: String

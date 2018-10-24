@@ -24,9 +24,9 @@ import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, Task
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
+import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
 import com.typesafe.config.ConfigFactory
-import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 
 import scala.concurrent.ExecutionContext
@@ -38,7 +38,7 @@ abstract class TestBase(_appContext: AppContext)
     with FlatSpecLike
     with Matchers
     with BeforeAndAfterAll
-    with StrictLogging {
+    with Logging {
 
   implicit val defaultTimeOut: FiniteDuration = 3.seconds
   lazy implicit val appContext: AppContext    = _appContext

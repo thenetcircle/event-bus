@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <shutdownHook/>
+    <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook" />
 
-	<!-- appenders -->
-	<appender name="ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>${EB_LOGFILE:-./log/default}.log</file>
+	<property name="EB_LOGPREFIX" value="${EB_LOGDIR:-./log}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}.${EB_RUNNERNAME:-default-runner}" />
+
+	<!-- system appender -->
+	<appender name="SYSTEM" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${EB_LOGPREFIX}.system.log</file>
 		<append>true</append>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${EB_LOGFILE:-./log/default}.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<fileNamePattern>${EB_LOGPREFIX}.system.%d{yyyy-MM-dd}.log</fileNamePattern>
 			<maxHistory>30</maxHistory>
 			<totalSizeCap>3GB</totalSizeCap>
 		</rollingPolicy>
@@ -17,28 +19,38 @@
 		</encoder>
 	</appender>
 
-	<appender name="ASYNC_ROLLING" class="ch.qos.logback.classic.AsyncAppender">
-		<appender-ref ref="ROLLING" />
+	<appender name="ASYNC_SYSTEM" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="SYSTEM" />
 	</appender>
 
-	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+	<!-- task appender -->
+	<appender name="TASK" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${EB_LOGPREFIX}.task.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${EB_LOGPREFIX}.task.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>30</maxHistory>
+			<totalSizeCap>3GB</totalSizeCap>
+		</rollingPolicy>
 		<encoder>
 			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
 		</encoder>
 	</appender>
 
-	<appender name="SENTRY" class="io.sentry.logback.SentryAppender">
-		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-			<level>WARN</level>
-		</filter>
+	<appender name="ASYNC_TASK" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="TASK" />
 	</appender>
 
-	<appender name="MISSED" class="ch.qos.logback.core.FileAppender">
-		<file>${EB_MISSED_EVENTS_FILE:-./log/missed_events}</file>
+	<!-- missed appender -->
+	<appender name="MISSED" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${EB_LOGPREFIX}.missed.log</file>
 		<append>true</append>
 		<immediateFlush>true</immediateFlush>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${EB_LOGPREFIX}.missed.%d{yyyy-MM-dd_HH}.log</fileNamePattern>
+		</rollingPolicy>
 		<encoder>
-		  <pattern>%msg%n</pattern>
+			<pattern>%msg%n</pattern>
 		</encoder>
 	</appender>
 
@@ -51,10 +63,23 @@
 		<neverBlock>true</neverBlock>
 	</appender>
 
+	<!-- other appender -->
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>WARN</level>
+		</filter>
+	</appender>
+
 
 	<!-- loggers -->
 	<root level="${EB_LOGLEVEL:-DEBUG}">
-		<appender-ref ref="${EB_LOGREF:-CONSOLE}" />
+		<appender-ref ref="${EB_LOGREF:-ASYNC_SYSTEM}" />
 		<appender-ref ref="SENTRY" />
 	</root>
 
@@ -62,8 +87,13 @@
 	<logger name="org.apache.zookeeper" level="INFO" />
 	<logger name="com.datastax.driver.core.Connection" level="INFO" />
 
-	<logger name="com.thenetcircle.event_bus.misc.MissedEventHandler" additivity="false">
-		<appender-ref ref="ASYNC_MISSED" />
+	<logger name="com.thenetcircle.event_bus.misc.Logging.task" level="${EB_LOGLEVEL:-DEBUG}" additivity="false">
+		<appender-ref ref="${EB_LOGREF:-ASYNC_TASK}" />
+		<appender-ref ref="SENTRY" />
+	</logger>
+
+	<logger name="com.thenetcircle.event_bus.misc.Logging.missed" level="DEBUG" additivity="false">
+		<appender-ref ref="MISSED" />
 	</logger>
 
 </configuration>

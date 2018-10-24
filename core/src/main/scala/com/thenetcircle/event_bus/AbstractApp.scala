@@ -19,13 +19,13 @@ package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
 import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.misc.Logging
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-trait AbstractApp extends StrictLogging {
+trait AbstractApp extends Logging {
 
   logger.info("Application is initializing.")
 

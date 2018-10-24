@@ -23,13 +23,12 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, _}
-import com.thenetcircle.event_bus.misc.MonitoringHelp
+import com.thenetcircle.event_bus.misc.{Logging, MonitoringHelp}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
-import com.typesafe.scalalogging.StrictLogging
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success}
 
 case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
 
@@ -39,7 +38,7 @@ class Story(
     val sinkTask: SinkTask,
     val transformTasks: Option[List[TransformTask]] = None,
     val fallbackTask: Option[FallbackTask] = None
-) extends StrictLogging
+) extends Logging
     with MonitoringHelp {
 
   type Payload = (EventStatus, Event) // middle result type

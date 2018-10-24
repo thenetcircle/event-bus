@@ -28,8 +28,7 @@ import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFut
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, FallbackTask, FallbackTaskBuilder}
-import com.thenetcircle.event_bus.misc.Util
-import com.typesafe.scalalogging.StrictLogging
+import com.thenetcircle.event_bus.misc.{Logging, Util}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -37,7 +36,7 @@ import scala.util.control.NonFatal
 
 case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraFallback(val settings: CassandraSettings) extends FallbackTask with StrictLogging {
+class CassandraFallback(val settings: CassandraSettings) extends FallbackTask with Logging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -115,12 +114,16 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
               .map[(EventStatus, Event)](result => (InFB, event))
               .recover {
                 case NonFatal(ex) =>
-                  logger.warn(s"sending to cassandra[1] fallback was failed with error $ex")
+                  taskLogger.warn(
+                    s"sending to cassandra[1] fallback was failed with error $ex"
+                  )
                   (Fail(ex), event)
               }
           } catch {
             case NonFatal(ex) =>
-              logger.debug(s"sending to cassandra[2] fallback failed with error $ex")
+              taskLogger.debug(
+                s"sending to cassandra[2] fallback failed with error $ex"
+              )
               Future.successful((Fail(ex), event))
           }
       }

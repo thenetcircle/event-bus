@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+	<property name="EB_LOGPREFIX" value="${EB_LOGDIR:-./log}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}" />
+
+	<!-- system appender -->
+	<appender name="ADMIN" class="ch.qos.logback.core.FileAppender">
+		<file>${EB_LOGPREFIX}.admin.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<!-- loggers -->
+	<root level="${EB_LOGLEVEL:-DEBUG}">
+		<appender-ref ref="${EB_LOGREF:-ADMIN}" />
+	</root>
+
+	<logger name="org.apache.zookeeper" level="INFO" />
+
+</configuration>

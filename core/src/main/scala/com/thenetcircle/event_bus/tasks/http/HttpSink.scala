@@ -30,12 +30,11 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender
 import com.typesafe.config.Config
-import com.typesafe.scalalogging.StrictLogging
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.ExecutionContext
@@ -54,7 +53,7 @@ case class HttpSinkSettings(
     poolSettings: Option[ConnectionPoolSettings] = None
 )
 
-class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLogging {
+class HttpSink(val settings: HttpSinkSettings) extends SinkTask with Logging {
 
   def createRequest(event: Event): HttpRequest = {
     var _request = settings.defaultRequest.withEntity(HttpEntity(event.body.data))
@@ -100,15 +99,19 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
           .mapTo[Try[HttpResponse]]
           .map[(EventStatus, Event)] {
             case Success(resp) =>
-              logger.info(s"sending event [$eventBrief] to [$endPoint] succeeded.")
+              taskLogger.info(s"sending event [$eventBrief] to [$endPoint] succeeded.")
               (Norm, event)
             case Failure(ex) =>
-              logger.warn(s"sending event [$eventBrief] to [$endPoint] failed with error $ex")
+              taskLogger.warn(
+                s"sending event [$eventBrief] to [$endPoint] failed with error $ex"
+              )
               (ToFB(Some(ex)), event)
           }
           .recover {
             case ex: AskTimeoutException =>
-              logger.warn(s"sending event [$eventBrief] to [$endPoint] timeout, exceed [$retryTimeout]")
+              taskLogger.warn(
+                s"sending event [$eventBrief] to [$endPoint] timeout, exceed [$retryTimeout]"
+              )
               (Fail(ex), event)
           }
       }
@@ -124,7 +127,7 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with StrictLoggi
   }
 }
 
-object HttpSink {
+object HttpSink extends Logging {
 
   val RESPONSE_OK                  = "ok"
   val RESPONSE_EXPONENTIAL_BACKOFF = "exponential_backoff"
@@ -170,7 +173,7 @@ object HttpSink {
       )
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
-      log.debug(s"replying response to http-sink")
+      taskLogger.debug(s"replying response to http-sink")
       receiver ! result
     }
 
@@ -195,9 +198,13 @@ object HttpSink {
           case Success(resp) => self.tell(CheckResp(resp, req), receiver)
           case Failure(ex) =>
             if (retryTimes == 1)
-              log.warning(s"sending request to $requestUrl failed with error $ex, going to retry now.")
+              taskLogger.warn(
+                s"sending request to $requestUrl failed with error $ex, going to retry now."
+              )
             else
-              log.info(s"resending request to $requestUrl failed with error $ex, retry-times is $retryTimes")
+              taskLogger.info(
+                s"resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
+              )
 
             self.tell(Retry(req), receiver)
         }
@@ -209,11 +216,15 @@ object HttpSink {
             .byteStringUnmarshaller(entity)
             .map { _body =>
               val body = _body.utf8String
-              log.debug(s"get response from upstream with status code ${status.value} and body $body")
+              taskLogger.info(
+                s"get response from upstream with status code ${status.value} and body $body"
+              )
               if (body == RESPONSE_OK) {
                 replyToReceiver(Success(resp), receiver)
               } else if (body == RESPONSE_EXPONENTIAL_BACKOFF) {
-                log.debug(s"going to retry now since got retry signal from the endpoint")
+                taskLogger.info(
+                  s"going to retry now since got retry signal from the endpoint"
+                )
                 self.tell(Retry(req), receiver)
               } else {
                 // the response body was not expected
@@ -225,7 +236,7 @@ object HttpSink {
             }
         } else {
           val errorMsg = s"get response from upstream with non-200 [$status] status code"
-          log.debug(errorMsg)
+          taskLogger.debug(errorMsg)
           resp.discardEntityBytes()
           replyToReceiver(Failure(new UnexpectedResponseException(errorMsg)), receiver)
         }
@@ -236,7 +247,7 @@ object HttpSink {
   }
 }
 
-class HttpSinkBuilder() extends SinkTaskBuilder with StrictLogging {
+class HttpSinkBuilder() extends SinkTaskBuilder with Logging {
 
   override def build(
       configString: String

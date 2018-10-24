@@ -22,8 +22,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
-import com.thenetcircle.event_bus.misc.{Util, ZooKeeperManager}
-import com.typesafe.scalalogging.StrictLogging
+import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
 import org.apache.curator.framework.recipes.cache.NodeCache
 import spray.json._
 
@@ -37,9 +36,7 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String)
-    extends TransformTask
-    with StrictLogging {
+class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String) extends TransformTask with Logging {
 
   import TopicInfoProtocol._
 
@@ -118,7 +115,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
         case Success(newEvent) =>
           (Norm, newEvent)
         case Failure(ex) =>
-          logger.error(s"resolve kafka topic failed with error $ex")
+          taskLogger.error(s"resolve kafka topic failed with error $ex")
           (Fail(ex), event)
       }
     })
@@ -149,16 +146,16 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
   def resolveEvent(event: Event): Event = {
     if (event.metadata.topic.isDefined) {
-      logger.info(s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it.")
+      taskLogger.info(s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it.")
       return event
     }
     if (event.metadata.name.isEmpty && event.metadata.channel.isEmpty) {
-      logger.debug(s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic.")
+      taskLogger.info(s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic.")
       return event.withTopic(defaultTopic)
     }
 
     val newTopic = getTopicFromIndex(event).getOrElse(defaultTopic)
-    logger.debug(s"event ${event.uuid} has been resolved to new topic $newTopic")
+    taskLogger.info(s"event ${event.uuid} has been resolved to new topic $newTopic")
 
     event.withTopic(newTopic)
   }

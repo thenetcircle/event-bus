@@ -22,11 +22,11 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
-import com.typesafe.scalalogging.StrictLogging
+import com.thenetcircle.event_bus.misc.Logging
 
 import scala.util.matching.Regex
 
-class TNCDinoEventsForwarder() extends TransformTask with StrictLogging {
+class TNCDinoEventsForwarder() extends TransformTask with Logging {
 
   def appendTitleField(event: Event): Event = {
     val verbOption = event.getExtra("verb")
@@ -35,7 +35,7 @@ class TNCDinoEventsForwarder() extends TransformTask with StrictLogging {
       val newTitle   = "dino." + shortGroup + verbOption.get
       val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
 
-      logger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
+      taskLogger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
       event.withNoTopic().withName(newTitle).withBody(newBody)
     } else {
       event

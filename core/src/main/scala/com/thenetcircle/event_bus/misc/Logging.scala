@@ -17,12 +17,21 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.thenetcircle.event_bus.interfaces.Event
-import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.scalalogging.{LazyLogging, Logger}
+import org.slf4j.LoggerFactory
 
-object MissedEventHandler extends StrictLogging {
+trait Logging extends LazyLogging {
 
-  def handle(event: Event): Unit =
-    logger.warn(event.body.data)
+  protected lazy val taskLogger: Logger =
+    Logger(LoggerFactory.getLogger(Logging.taskLoggerPrefix + "." + getClass.getName.split('.').last))
+
+}
+
+object Logging {
+
+  val missedLogger: Logger =
+    Logger(LoggerFactory.getLogger(s"com.thenetcircle.event_bus.misc.Logging.missed"))
+
+  val taskLoggerPrefix = s"com.thenetcircle.event_bus.misc.Logging.task"
 
 }
