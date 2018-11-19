@@ -11,8 +11,8 @@
 		<append>true</append>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>${EB_LOGPREFIX}.system.%d{yyyy-MM-dd}.log</fileNamePattern>
-			<maxHistory>30</maxHistory>
-			<totalSizeCap>3GB</totalSizeCap>
+			<maxHistory>15</maxHistory>
+			<totalSizeCap>2GB</totalSizeCap>
 		</rollingPolicy>
 		<encoder>
 			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
@@ -29,8 +29,8 @@
 		<append>true</append>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 			<fileNamePattern>${EB_LOGPREFIX}.task.%d{yyyy-MM-dd}.log</fileNamePattern>
-			<maxHistory>30</maxHistory>
-			<totalSizeCap>3GB</totalSizeCap>
+			<maxHistory>15</maxHistory>
+			<totalSizeCap>2GB</totalSizeCap>
 		</rollingPolicy>
 		<encoder>
 			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
