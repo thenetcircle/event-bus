@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.tasks.tnc
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
 import org.apache.curator.framework.recipes.cache.NodeCache
@@ -80,7 +80,8 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
               topicInfo
                 .foreach(info => {
-                  val _topic = replaceSubstitutes(info.topic)
+                  // val _topic = replaceSubstitutes(info.topic)
+                  val _topic = info.topic
                   info.patterns.foreach(_.foreach(s => {
                     nameIndexList += (s -> _topic)
                   }))
@@ -113,10 +114,10 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
     Flow[Event].map(event => {
       Try(resolveEvent(event)) match {
         case Success(newEvent) =>
-          (Norm, newEvent)
+          (NORM, newEvent)
         case Failure(ex) =>
           taskLogger.error(s"resolve kafka topic failed with error $ex")
-          (Fail(ex), event)
+          (FAIL(ex), event)
       }
     })
   }

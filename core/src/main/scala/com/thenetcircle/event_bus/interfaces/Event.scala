@@ -45,7 +45,8 @@ case class EventMetaData(
     name: Option[String] = None,
     channel: Option[String] = None,
     topic: Option[String] = None,
-    extra: Map[String, String] = Map.empty
+    extra: Map[String, String] = Map.empty,
+    transportMode: Option[EventTransportMode] = None
 )
 
 case class EventBody(data: String, format: DataFormat)

@@ -17,15 +17,18 @@
 
 package com.thenetcircle.event_bus.interfaces
 
-sealed trait EventStatus
+sealed trait EventTransportMode
 
-object EventStatus {
-  sealed trait SuccStatus extends EventStatus
-  sealed trait FailStatus extends EventStatus
+object EventTransportMode {
+  case object SYNC_PLUS           extends EventTransportMode
+  case object ASYNC               extends EventTransportMode
+  case object BOTH                extends EventTransportMode
+  case class OTHERS(mode: String) extends EventTransportMode
 
-  case object NORM                                 extends SuccStatus
-  case object INFB                                 extends SuccStatus
-  case object SKIP                                 extends SuccStatus
-  case class TOFB(cause: Option[Throwable] = None) extends FailStatus
-  case class FAIL(cause: Throwable)                extends FailStatus
+  def getFromString(mode: String): EventTransportMode = mode.toUpperCase match {
+    case "SYNC_PLUS" => SYNC_PLUS
+    case "ASYNC"     => ASYNC
+    case "BOTH"      => BOTH
+    case _           => OTHERS(mode)
+  }
 }

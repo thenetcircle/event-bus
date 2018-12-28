@@ -26,7 +26,7 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
 import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
@@ -116,7 +116,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
         taskLogger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
 
-        (Norm, eve)
+        (NORM, eve)
       })
       .recover {
         case ex: EventExtractingException =>
@@ -125,7 +125,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
             s"The event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
           )
           (
-            ToFB(Some(ex)),
+            TOFB(Some(ex)),
             EventImpl
               .createFromFailure(
                 ex,
@@ -176,13 +176,13 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                         taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
-                  case (ToFB(exOp), event) =>
+                  case (TOFB(exOp), event) =>
                     taskLogger.error(
-                      s"Event ${event.uuid} reaches the end with ToFB status" +
+                      s"Event ${event.uuid} reaches the end with TOFB status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
-                    throw new RuntimeException("Non handled ToFB status")
-                  case (Fail(ex), event) =>
+                    throw new RuntimeException("Non handled TOFB status")
+                  case (FAIL(ex), event) =>
                     taskLogger.error(s"Event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     throw ex
@@ -192,7 +192,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                   case NonFatal(ex) =>
                     taskLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
-                        s"Not it's recovered to be a Failure()"
+                        s"Now it's recovered to be a Failure()"
                     )
                     Failure(ex)
                 }

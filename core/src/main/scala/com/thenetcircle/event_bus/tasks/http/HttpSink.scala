@@ -30,7 +30,7 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM, TOFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender
@@ -100,19 +100,19 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with Logging {
           .map[(EventStatus, Event)] {
             case Success(resp) =>
               taskLogger.info(s"sending event [$eventBrief] to [$endPoint] succeeded.")
-              (Norm, event)
+              (NORM, event)
             case Failure(ex) =>
               taskLogger.warn(
                 s"sending event [$eventBrief] to [$endPoint] failed with error $ex"
               )
-              (ToFB(Some(ex)), event)
+              (TOFB(Some(ex)), event)
           }
           .recover {
             case ex: AskTimeoutException =>
               taskLogger.warn(
                 s"sending event [$eventBrief] to [$endPoint] timeout, exceed [$retryTimeout]"
               )
-              (Fail(ex), event)
+              (FAIL(ex), event)
           }
       }
 

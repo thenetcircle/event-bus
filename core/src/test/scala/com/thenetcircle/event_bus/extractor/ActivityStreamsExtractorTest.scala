@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor._
-import com.thenetcircle.event_bus.interfaces.EventBody
+import com.thenetcircle.event_bus.interfaces.{EventBody, EventTransportMode}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -233,6 +233,78 @@ class ActivityStreamsExtractorTest extends TestBase {
     testevent.metadata.name shouldEqual Some("profile.visit")
     testevent.metadata.channel shouldEqual Some("mychannel")
 
+  }
+
+  it should "support transport mode field" in {
+    val time = "2018-09-11T23:52:27.111+02:00"
+
+    val testdata1 = s"""
+         |{
+         |  "generator": {
+         |    "content": "{\\"mode\\":\\"async\\",\\"class\\":\\"dfEvent_Profile_Visit\\",\\"channel\\":\\"mychannel\\"}",
+         |    "id": "tnc-event-dispatcher"
+         |  },
+         |  "id": "ED-poppen-profile.visit-7707608-5b98391b4890f",
+         |  "published": "$time",
+         |  "title": "mode.test"
+         |}
+      """.stripMargin
+    val testevent1 =
+      Await.result(activityStreamsExtractor.extract(testdata1.getBytes), 3.seconds)
+    testevent1.uuid shouldEqual "ED-poppen-profile.visit-7707608-5b98391b4890f"
+    testevent1.body shouldEqual EventBody(testdata1, DataFormat.ACTIVITYSTREAMS)
+    testevent1.createdAt shouldEqual new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX").parse(time)
+    testevent1.metadata.name shouldEqual Some("mode.test")
+    testevent1.metadata.channel shouldEqual Some("mychannel")
+    testevent1.metadata.transportMode shouldEqual Some(EventTransportMode.ASYNC)
+
+    val testdata2 = s"""
+         |{
+         |  "generator": {
+         |    "content": "{\\"mode\\":\\"sync\\",\\"class\\":\\"dfEvent_Profile_Visit\\",\\"channel\\":\\"mychannel\\"}",
+         |    "id": "tnc-event-dispatcher"
+         |  }
+         |}
+      """.stripMargin
+    val testevent2 =
+      Await.result(activityStreamsExtractor.extract(testdata2.getBytes), 3.seconds)
+    testevent2.metadata.transportMode shouldEqual Some(EventTransportMode.OTHERS("sync"))
+
+    val testdata3 = s"""
+         |{
+         |  "generator": {
+         |    "content": "{\\"mode\\":\\"sync_plus\\",\\"class\\":\\"dfEvent_Profile_Visit\\",\\"channel\\":\\"mychannel\\"}",
+         |    "id": "tnc-event-dispatcher"
+         |  }
+         |}
+      """.stripMargin
+    val testevent3 =
+      Await.result(activityStreamsExtractor.extract(testdata3.getBytes), 3.seconds)
+    testevent3.metadata.transportMode shouldEqual Some(EventTransportMode.SYNC_PLUS)
+
+    val testdata4 = s"""
+         |{
+         |  "generator": {
+         |    "content": "{\\"mode\\":\\"both\\",\\"class\\":\\"dfEvent_Profile_Visit\\",\\"channel\\":\\"mychannel\\"}",
+         |    "id": "tnc-event-dispatcher"
+         |  }
+         |}
+      """.stripMargin
+    val testevent4 =
+      Await.result(activityStreamsExtractor.extract(testdata4.getBytes), 3.seconds)
+    testevent4.metadata.transportMode shouldEqual Some(EventTransportMode.BOTH)
+
+    val testdata5 = s"""
+         |{
+         |  "generator": {
+         |    "content": "{\\"class\\":\\"dfEvent_Profile_Visit\\",\\"channel\\":\\"mychannel\\"}",
+         |    "id": "tnc-event-dispatcher"
+         |  }
+         |}
+      """.stripMargin
+    val testevent5 =
+      Await.result(activityStreamsExtractor.extract(testdata5.getBytes), 3.seconds)
+    testevent5.metadata.transportMode shouldEqual None
   }
 
 }

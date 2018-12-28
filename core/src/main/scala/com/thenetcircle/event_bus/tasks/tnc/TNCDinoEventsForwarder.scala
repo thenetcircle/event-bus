@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.tasks.tnc
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
+import com.thenetcircle.event_bus.interfaces.EventStatus.NORM
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.Logging
 
@@ -45,7 +45,7 @@ class TNCDinoEventsForwarder() extends TransformTask with Logging {
   override def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] =
-    Flow[Event].map(e => Norm -> appendTitleField(e))
+    Flow[Event].map(e => NORM -> appendTitleField(e))
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 

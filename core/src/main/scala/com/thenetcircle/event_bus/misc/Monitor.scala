@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.misc
 import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.event.extractor.EventExtractingException
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus._
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
 import kamon.Kamon
 import kamon.metric.instrument.{Counter, InstrumentFactory}
@@ -97,19 +97,20 @@ class StoryMonitor(storyName: String) {
 
   def onProcessed(status: EventStatus, event: Event): StoryMonitor = {
     status match {
-      case Norm => entity.foreach(_.normEvent.increment())
-      case ToFB(exOp) =>
+      case NORM => entity.foreach(_.normEvent.increment())
+      case TOFB(exOp) =>
         entity.foreach(e => {
           e.toFBEvent.increment()
           exOp.foreach(e.exception(_).increment())
         })
-      case InFB => entity.foreach(_.inFBEvent.increment())
-      case Fail(ex: EventExtractingException) =>
+      case INFB => entity.foreach(_.inFBEvent.increment())
+      case SKIP => entity.foreach(_.skipEvent.increment())
+      case FAIL(ex: EventExtractingException) =>
         entity.foreach(e => {
           e.badFormatEvent.increment()
           e.exception(ex).increment()
         })
-      case Fail(ex) =>
+      case FAIL(ex) =>
         entity.foreach(e => {
           e.failEvent.increment()
           e.exception(ex).increment()
@@ -137,6 +138,7 @@ object StoryMonitor {
     val toFBEvent: Counter      = counter("processed.tofallback")
     val inFBEvent: Counter      = counter("processed.infallback")
     val failEvent: Counter      = counter("processed.failure")
+    val skipEvent: Counter      = counter("processed.skip")
     val badFormatEvent: Counter = counter("processed.badformat")
     val completion: Counter     = counter("completion")
     val termination: Counter    = counter("termination")

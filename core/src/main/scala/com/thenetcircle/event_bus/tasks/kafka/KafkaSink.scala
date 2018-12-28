@@ -28,7 +28,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
+import com.thenetcircle.event_bus.interfaces.EventStatus.NORM
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
@@ -143,7 +143,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
           taskLogger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
 
-          (Norm, message.passThrough)
+          (NORM, message.passThrough)
       }
 
     if (settings.useAsyncBuffer) {
@@ -209,7 +209,7 @@ object KafkaSink extends Logging {
         val event = grab(in)
 
         if (isAvailable(out0)) {
-          push(out0, (Norm, event))
+          push(out0, (NORM, event))
         }
 
         if (buffer.isEmpty && isAvailable(out1)) {

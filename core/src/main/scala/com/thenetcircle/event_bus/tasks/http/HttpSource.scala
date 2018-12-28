@@ -29,7 +29,7 @@ import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningConte
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, SuccStatus, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.typesafe.config.Config
@@ -53,17 +53,17 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Loggi
     result match {
       case (_: SuccStatus, _) =>
         HttpResponse(entity = HttpEntity(settings.succeededResponse))
-      case (ToFB(optionEx), _) =>
+      case (TOFB(optionEx), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
           entity = HttpEntity(optionEx.map(_.getMessage).getOrElse("Unhandled ToFallBack Status"))
         )
-      case (Fail(ex: EventExtractingException), _) =>
+      case (FAIL(ex: EventExtractingException), _) =>
         HttpResponse(
           status = StatusCodes.BadRequest,
           entity = HttpEntity(ex.getMessage)
         )
-      case (Fail(ex), _) =>
+      case (FAIL(ex), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
           entity = HttpEntity(ex.getMessage)
@@ -83,12 +83,12 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Loggi
           .map[(EventStatus, Event)](event => {
             taskLogger.info("received a new event: " + Util.getBriefOfEvent(event))
             taskLogger.debug(s"event content: $event")
-            (Norm, event)
+            (NORM, event)
           })
           .recover {
             case ex: EventExtractingException =>
               taskLogger.warn(s"extract event from a http request failed with error $ex")
-              (Fail(ex), EventImpl.createFromFailure(ex))
+              (FAIL(ex), EventImpl.createFromFailure(ex))
           }
       })
   }

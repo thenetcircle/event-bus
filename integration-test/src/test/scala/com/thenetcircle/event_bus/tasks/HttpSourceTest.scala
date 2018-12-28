@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
 import com.thenetcircle.event_bus.tasks.http.{HttpSource, HttpSourceSettings}
 import org.scalatest.BeforeAndAfter
@@ -70,7 +70,7 @@ class HttpSourceTest extends IntegrationTestBase with BeforeAndAfter {
       Flow[(EventStatus, Event)]
         .map {
           case (_, event) =>
-            (Fail(new RuntimeException("failed")), event)
+            (FAIL(new RuntimeException("failed")), event)
         }
 
     // TODO check here
@@ -92,7 +92,7 @@ class HttpSourceTest extends IntegrationTestBase with BeforeAndAfter {
             if (event.uuid == "a")
               throw new RuntimeException("processing failed")
             else
-              (Norm, event)
+              (NORM, event)
         }
 
     val (status, body) = request(testHandler, "{\"id\":\"a\"}", 55664)

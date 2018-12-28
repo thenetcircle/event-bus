@@ -26,7 +26,7 @@ import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, InFB, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, FallbackTask, FallbackTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import net.ceedubs.ficus.Ficus._
@@ -111,20 +111,20 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
             session
               .executeAsync(statementBinder(input, statementOption.get))
               .asScala()
-              .map[(EventStatus, Event)](result => (InFB, event))
+              .map[(EventStatus, Event)](result => (INFB, event))
               .recover {
                 case NonFatal(ex) =>
                   taskLogger.warn(
                     s"sending to cassandra[1] fallback was failed with error $ex"
                   )
-                  (Fail(ex), event)
+                  (FAIL(ex), event)
               }
           } catch {
             case NonFatal(ex) =>
               taskLogger.debug(
                 s"sending to cassandra[2] fallback failed with error $ex"
               )
-              Future.successful((Fail(ex), event))
+              Future.successful((FAIL(ex), event))
           }
       }
   }
@@ -144,7 +144,7 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
   ): ((EventStatus, Event), PreparedStatement) => BoundStatement = {
     case ((status, event), statement) =>
       val cause =
-        if (status.isInstanceOf[ToFB]) status.asInstanceOf[ToFB].cause.map(_.toString).getOrElse("")
+        if (status.isInstanceOf[TOFB]) status.asInstanceOf[TOFB].cause.map(_.toString).getOrElse("")
         else ""
       logger.debug(s"binding cassandra statement")
 

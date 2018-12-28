@@ -4,7 +4,7 @@ import java.util.Properties
 
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.interfaces.EventStatus.Norm
+import com.thenetcircle.event_bus.interfaces.EventStatus.NORM
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer}
 import com.thenetcircle.event_bus.tasks.kafka._
@@ -53,7 +53,7 @@ class KafkaSourceTest extends IntegrationTestBase with BeforeAndAfter {
     val testFlow = Flow[(EventStatus, Event)].map {
       case (_, event) =>
         receivedEvents.synchronized(receivedEvents += event)
-        (Norm, event)
+        (NORM, event)
     }
     kafkaSource.runWith(testFlow)
 

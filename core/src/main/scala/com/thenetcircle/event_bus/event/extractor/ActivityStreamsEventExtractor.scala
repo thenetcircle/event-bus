@@ -23,7 +23,7 @@ import java.util.Date
 
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
+import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData, EventTransportMode}
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -61,11 +61,8 @@ case class GeneralObject(
     // author: Option[ActivityObject]
 ) extends ActivityObject
 
-case class GeneratorObject(
-    id: Option[String],
-    objectType: Option[String],
-    content: Option[String]
-) extends ActivityObject
+case class GeneratorObject(id: Option[String], objectType: Option[String], content: Option[String])
+    extends ActivityObject
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val generalObjectFormat   = jsonFormat2(GeneralObject)
@@ -92,12 +89,13 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
       val activity = data.parseJson.convertTo[Activity]
 
       var extra: Map[String, String] = Map.empty
-      val setExtraFromActivityObject = (objOption: Option[ActivityObject], prefix: String) => {
-        objOption.foreach(o => {
-          o.id.foreach(s => extra = extra + (s"${prefix}Id"           -> s))
-          o.objectType.foreach(s => extra = extra + (s"${prefix}Type" -> s))
-        })
-      }
+      val setExtraFromActivityObject =
+        (objOption: Option[ActivityObject], prefix: String) => {
+          objOption.foreach(o => {
+            o.id.foreach(s => extra = extra + (s"${prefix}Id"           -> s))
+            o.objectType.foreach(s => extra = extra + (s"${prefix}Type" -> s))
+          })
+        }
 
       // TODO performance test for parse how many fields
       activity.verb.foreach(s => extra = extra + ("verb" -> s))
@@ -107,18 +105,24 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
       setExtraFromActivityObject(activity.`object`, "object")
       setExtraFromActivityObject(activity.generator, "generator")
 
-      val channel: Option[String] = activity.generator
+      val generatorContent: Option[Map[String, Any]] = activity.generator
         .filter(_.id.contains("tnc-event-dispatcher"))
         .flatMap(_.content)
         .flatMap(JSON.parseFull)
-        .flatMap {
-          case m: Map[String, Any] => m.get("channel").map(_.asInstanceOf[String])
-        }
+        .map { case m: Map[String, Any] => m }
+      val channel: Option[String] = generatorContent.flatMap(
+        _map => _map.get("channel").map(_.asInstanceOf[String])
+      )
+      val transportMode: Option[EventTransportMode] = generatorContent.flatMap(
+        _map => _map.get("mode").map(_.asInstanceOf[String]).map(EventTransportMode.getFromString)
+      )
+
       val metaData = EventMetaData(
         name = activity.title,
         channel = channel,
         topic = None,
-        extra = extra
+        extra = extra,
+        transportMode = transportMode
       )
 
       var createdAt: Option[Date] = None
@@ -142,7 +146,9 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
       if (activity.id.isDefined) {
         uuid = activity.id.get
       } else {
-        uuid = "EB-" + activity.title.map(_ + "-").getOrElse("") + java.util.UUID.randomUUID().toString
+        uuid = "EB-" + activity.title
+          .map(_ + "-")
+          .getOrElse("") + java.util.UUID.randomUUID().toString
         body.replaceFirst(Regex.quote("{"), s"""{"id": "$uuid",""")
       }
 

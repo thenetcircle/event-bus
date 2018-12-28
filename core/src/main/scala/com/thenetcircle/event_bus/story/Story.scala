@@ -21,7 +21,7 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.interfaces.{Event, _}
 import com.thenetcircle.event_bus.misc.{Logging, MonitoringHelp}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
@@ -132,22 +132,22 @@ class Story(
           .create() { implicit builder =>
             import GraphDSL.Implicits._
 
-            // SkipPreCheck goes to 0, Norm goes to 0, Others goes to 1
+            // SkipPreCheck goes to 0, NORM goes to 0, Others goes to 1
             val preCheck =
               builder.add(new Partition[Payload](2, input => {
                 if (skipPreCheck) 0
                 else {
                   input match {
-                    case (Norm, _) => 0
+                    case (NORM, _) => 0
                     case (_, _)    => 1
                   }
                 }
               }))
 
-            // ToFB goes to 1, Others goes to 0
+            // TOFB goes to 1, Others goes to 0
             val postCheck =
               builder.add(Partition[Payload](2, {
-                case (_: ToFB, _) => 1
+                case (_: TOFB, _) => 1
                 case (_, _)       => 0
               }))
 
@@ -172,11 +172,11 @@ class Story(
             // ---------------  workflow graph start ----------------
             
 
-            // Norm goes to taskHandler >>>
+            // NORM goes to taskHandler >>>
             preCheck.out(0)   ~>   taskHandler   ~>   postCheck
-                                                      // non-ToFB goes to next task
+                                                      // non-TOFB goes to next task
                                                       postCheck.out(0)            ~>              output.in(0)
-                                                      // ToFB goes to fallback  >>>
+                                                      // TOFB goes to fallback  >>>
                                                       postCheck.out(1) ~>      fallback      ~>   output.in(1)
 
             // Other status will skip this task >>>

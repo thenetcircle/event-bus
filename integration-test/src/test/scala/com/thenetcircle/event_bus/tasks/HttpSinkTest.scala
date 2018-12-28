@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Flow, Keep}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.interfaces.EventStatus.{Fail, Norm, ToFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM, TOFB}
 import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
 import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSinkSettings, UnexpectedResponseException}
 
@@ -36,7 +36,7 @@ class HttpSinkTest extends IntegrationTestBase {
       .run()
   }
 
-  it should "get a Fail event when send to unreachable endpoint" in {
+  it should "get a FAIL event when send to unreachable endpoint" in {
 
     val (source, sink) = sendToUri("http://www.unreachableendpoint.com")
 
@@ -47,13 +47,13 @@ class HttpSinkTest extends IntegrationTestBase {
     sink.request(1)
     val (status, event) = sink.expectNext(10.seconds)
 
-    status shouldBe a[Fail]
-    status.asInstanceOf[Fail].cause shouldBe a[AskTimeoutException]
+    status shouldBe a[FAIL]
+    status.asInstanceOf[FAIL].cause shouldBe a[AskTimeoutException]
     event shouldEqual testEvent
 
   }
 
-  it should "get a ToFB event when send to reachable endpoint with unexpected response" in {
+  it should "get a TOFB event when send to reachable endpoint with unexpected response" in {
 
     val (source, sink) = sendToUri("http://www.baidu.com")
 
@@ -64,13 +64,13 @@ class HttpSinkTest extends IntegrationTestBase {
     sink.request(1)
     val (status, event) = sink.expectNext(10.seconds)
 
-    status shouldBe a[ToFB]
-    status.asInstanceOf[ToFB].cause.get shouldBe a[UnexpectedResponseException]
+    status shouldBe a[TOFB]
+    status.asInstanceOf[TOFB].cause.get shouldBe a[UnexpectedResponseException]
     event shouldEqual testEvent
 
   }
 
-  it should "get a Norm event when send to reachable endpoint with expected response" in {
+  it should "get a NORM event when send to reachable endpoint with expected response" in {
 
     val tempBind = Http().bindAndHandle(Flow[HttpRequest].map(_ => {
       HttpResponse(entity = HttpEntity("ok"))
@@ -85,7 +85,7 @@ class HttpSinkTest extends IntegrationTestBase {
     sink.request(1)
     val (status, event) = sink.expectNext(10.seconds)
 
-    status shouldBe a[Norm]
+    status shouldEqual NORM
     event shouldEqual testEvent
 
     Await.ready(tempBind.flatMap(_.unbind()), 3.seconds)
