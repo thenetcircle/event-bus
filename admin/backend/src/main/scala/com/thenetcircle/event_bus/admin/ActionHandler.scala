@@ -200,6 +200,19 @@ class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext
       case ex: Throwable => createResponse(1, ex.getMessage)
     }
 
+  def removeStory(storyName: String): String =
+    try {
+      if (storyName.isEmpty) {
+        throw new IllegalArgumentException("StoryName is required.")
+      }
+      val storyPath = wrapPath(Some(s"stories/$storyName"))
+      logger.info(s"deleting path $storyPath")
+      zkManager.deletePath(storyPath)
+      createResponse(0)
+    } catch {
+      case ex: Throwable => createResponse(1, ex.getMessage)
+    }
+
   def getRunners(): String =
     getZKNodeTreeAsJson(wrapPath(Some("runners")))
 

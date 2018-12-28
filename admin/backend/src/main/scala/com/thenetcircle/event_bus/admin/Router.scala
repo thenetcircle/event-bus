@@ -82,6 +82,11 @@ class Router()(implicit appContext: AppContext, materializer: Materializer)
             complete(actionHandler.updateStory(storyInfo))
           }
         } ~
+        path("story" / "remove") {
+          entity(as[String]) { storyName =>
+            complete(actionHandler.removeStory(storyName))
+          }
+        } ~
         path("runner" / "assign") {
           entity(as[RunnerStory]) { mapping =>
             complete(actionHandler.assignStory(mapping.runnerName, mapping.storyName, mapping.amount))
@@ -99,7 +104,8 @@ class Router()(implicit appContext: AppContext, materializer: Materializer)
         } ~
         path("topics") {
           entity(as[String]) { topics =>
-            complete(actionHandler.updateTopics(topics))
+            complete(actionHandler.createResponse(0))
+            // complete(actionHandler.updateTopics(topics))
           }
         }
       }

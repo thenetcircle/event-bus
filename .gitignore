@@ -13,3 +13,4 @@ target/
 /integration-test/native/
 hs_err_*.log
 .ensime*
+Makefile

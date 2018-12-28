@@ -25,9 +25,9 @@
               <router-link :to="{ name: 'runners' }" class="navbar-item" exact-active-class="is-active">
                 Runners
               </router-link>
-              <router-link :to="{ name: 'topics' }" class="navbar-item" exact-active-class="is-active">
-                Topics
-              </router-link>
+              <!--<router-link :to="{ name: 'topics' }" class="navbar-item" exact-active-class="is-active">-->
+                <!--Topics-->
+              <!--</router-link>-->
               <a href="https://thenetcircle.github.io/event-bus/" target="_blank" class="navbar-item">
                 Docs
               </a>

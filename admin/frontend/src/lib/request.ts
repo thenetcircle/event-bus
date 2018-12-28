@@ -39,6 +39,8 @@ interface Request {
   getTopics(): Thenable<string>
 
   updateTopics(topics: string): Thenable<void>
+
+  removeStory(storyName: string): Thenable<void>
 }
 
 class RequestImpl implements Request {
@@ -193,6 +195,14 @@ class RequestImpl implements Request {
     bus.$emit('loading')
 
     return axios.post(`${URL_PREFIX}/api/topics`, topics)
+      .then(RequestImpl.respHandler)
+      .catch(RequestImpl.errorHandler)
+  }
+
+  removeStory(storyName: string): Thenable<void> {
+    bus.$emit('loading')
+
+    return axios.post(`${URL_PREFIX}/api/story/remove`, storyName)
       .then(RequestImpl.respHandler)
       .catch(RequestImpl.errorHandler)
   }
@@ -402,6 +412,15 @@ class OfflineRequest implements Request {
   updateTopics(topics: string): Thenable<void> {
     this.testTopics = topics
     return Promise.resolve()
+  }
+
+  removeStory(storyName: string): Thenable<void> {
+    this.testStories.forEach((info, index) => {
+      if (info[0] == storyName) {
+        this.testStories.splice(index, 1)
+      }
+    })
+    return Promise.resolve();
   }
 }
 
