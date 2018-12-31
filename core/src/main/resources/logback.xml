@@ -24,11 +24,11 @@
 	</appender>
 
 	<!-- task appender -->
-	<appender name="TASK" class="ch.qos.logback.core.rolling.RollingFileAppender">
-		<file>${EB_LOGPREFIX}.task.log</file>
+	<appender name="PRODUCER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${EB_LOGPREFIX}.task.producer.log</file>
 		<append>true</append>
 		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-			<fileNamePattern>${EB_LOGPREFIX}.task.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<fileNamePattern>${EB_LOGPREFIX}.task.producer.%d{yyyy-MM-dd}.log</fileNamePattern>
 			<maxHistory>15</maxHistory>
 			<totalSizeCap>2GB</totalSizeCap>
 		</rollingPolicy>
@@ -37,8 +37,25 @@
 		</encoder>
 	</appender>
 
-	<appender name="ASYNC_TASK" class="ch.qos.logback.classic.AsyncAppender">
-		<appender-ref ref="TASK" />
+	<appender name="ASYNC_PRODUCER" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="PRODUCER" />
+	</appender>
+
+	<appender name="CONSUMER" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${EB_LOGPREFIX}.task.consumer.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${EB_LOGPREFIX}.task.consumer.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<maxHistory>15</maxHistory>
+			<totalSizeCap>2GB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="ASYNC_CONSUMER" class="ch.qos.logback.classic.AsyncAppender">
+		<appender-ref ref="CONSUMER" />
 	</appender>
 
 	<!-- missed appender -->
@@ -87,8 +104,12 @@
 	<logger name="org.apache.zookeeper" level="INFO" />
 	<logger name="com.datastax.driver.core.Connection" level="INFO" />
 
-	<logger name="com.thenetcircle.event_bus.misc.Logging.task" level="${EB_LOGLEVEL:-DEBUG}" additivity="false">
-		<appender-ref ref="${EB_LOGREF:-ASYNC_TASK}" />
+	<logger name="com.thenetcircle.event_bus.misc.Logging.task.producer" level="${EB_LOGLEVEL:-DEBUG}" additivity="false">
+		<appender-ref ref="${EB_LOGREF:-ASYNC_PRODUCER}" />
+		<appender-ref ref="SENTRY" />
+	</logger>
+	<logger name="com.thenetcircle.event_bus.misc.Logging.task.consumer" level="${EB_LOGLEVEL:-DEBUG}" additivity="false">
+		<appender-ref ref="${EB_LOGREF:-ASYNC_CONSUMER}" />
 		<appender-ref ref="SENTRY" />
 	</logger>
 

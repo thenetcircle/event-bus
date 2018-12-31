@@ -114,14 +114,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-        taskLogger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
+        consumerLogger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
 
         (NORM, eve)
       })
       .recover {
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
-          taskLogger.warn(
+          consumerLogger.warn(
             s"The event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
           )
           (
@@ -147,7 +147,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    taskLogger.info(s"going to subscribe kafka topics: $kafkaSubscription")
+    consumerLogger.info(s"going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer
@@ -156,7 +156,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
         .mapAsyncUnordered(settings.maxConcurrentPartitions) {
           case (topicPartition, source) =>
             try {
-              taskLogger.info(
+              consumerLogger.info(
                 s"A new topicPartition $topicPartition was assigned to runner ${runningContext.getStoryRunnerName()}."
               )
 
@@ -167,30 +167,30 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                   case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        taskLogger.debug(s"The event ${event.uuid} is adding to the kafka batch committer")
+                        consumerLogger.debug(s"The event ${event.uuid} is adding to the kafka batch committer")
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
                           s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
-                        taskLogger.error(errorMessage)
+                        consumerLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
                   case (TOFB(exOp), event) =>
-                    taskLogger.error(
+                    consumerLogger.error(
                       s"Event ${event.uuid} reaches the end with TOFB status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     throw new RuntimeException("Non handled TOFB status")
                   case (FAIL(ex), event) =>
-                    taskLogger.error(s"Event ${event.uuid} reaches the end with error $ex")
+                    consumerLogger.error(s"Event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     throw ex
                 }
                 // TODO some test
                 .recover {
                   case NonFatal(ex) =>
-                    taskLogger.info(
+                    consumerLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
                         s"Now it's recovered to be a Failure()"
                     )
@@ -206,7 +206,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
-                  taskLogger
+                  consumerLogger
                     .info(
                       s"The substream listening on topicPartition $topicPartition was completed."
                     )
@@ -214,14 +214,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                 })
                 .recover { // recover after run, to recover the stream running status
                   case NonFatal(ex) =>
-                    taskLogger.error(
+                    consumerLogger.error(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
                     )
                     Done
                 }
             } catch {
               case NonFatal(ex) ⇒
-                taskLogger.error(
+                consumerLogger.error(
                   s"Could not materialize topic $topicPartition listening stream with error: $ex"
                 )
                 throw ex

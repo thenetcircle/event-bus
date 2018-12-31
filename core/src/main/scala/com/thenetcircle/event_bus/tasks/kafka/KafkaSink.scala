@@ -85,7 +85,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    taskLogger.debug(s"new kafka record $record is created")
+    producerLogger.debug(s"new kafka record $record is created")
     Message(record, event)
   }
 
@@ -141,7 +141,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
           val kafkaBrief =
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-          taskLogger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
+          producerLogger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
 
           (NORM, message.passThrough)
       }
@@ -216,7 +216,7 @@ object KafkaSink extends Logging {
           push(out1, event)
         } else {
           if (!buffer.offer(event)) { // if the buffer is full
-            taskLogger.warn(
+            producerLogger.warn(
               "A event [" + Util.getBriefOfEvent(event) + "] is dropped since the AsyncBuffer is full."
             )
             Logging.missedLogger.warn(event.body.data)

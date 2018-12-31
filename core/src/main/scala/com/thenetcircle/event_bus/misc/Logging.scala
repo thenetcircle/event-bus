@@ -22,8 +22,11 @@ import org.slf4j.LoggerFactory
 
 trait Logging extends LazyLogging {
 
-  protected lazy val taskLogger: Logger =
-    Logger(LoggerFactory.getLogger(Logging.taskLoggerPrefix + "." + getClass.getName.split('.').last))
+  protected lazy val producerLogger: Logger =
+    Logger(LoggerFactory.getLogger(Logging.producerLoggerPrefix + "." + getClass.getName.split('.').last))
+
+  protected lazy val consumerLogger: Logger =
+    Logger(LoggerFactory.getLogger(Logging.consumerLoggerPrefix + "." + getClass.getName.split('.').last))
 
 }
 
@@ -33,5 +36,9 @@ object Logging {
     Logger(LoggerFactory.getLogger(s"com.thenetcircle.event_bus.misc.Logging.missed"))
 
   val taskLoggerPrefix = s"com.thenetcircle.event_bus.misc.Logging.task"
+
+  val producerLoggerPrefix = s"$taskLoggerPrefix.producer"
+
+  val consumerLoggerPrefix = s"$taskLoggerPrefix.consumer"
 
 }

@@ -81,13 +81,13 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Loggi
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            taskLogger.info("received a new event: " + Util.getBriefOfEvent(event))
-            taskLogger.debug(s"event content: $event")
+            producerLogger.info("received a new event: " + Util.getBriefOfEvent(event))
+            producerLogger.debug(s"event content: $event")
             (NORM, event)
           })
           .recover {
             case ex: EventExtractingException =>
-              taskLogger.warn(s"extract event from a http request failed with error $ex")
+              producerLogger.warn(s"extract event from a http request failed with error $ex")
               (FAIL(ex), EventImpl.createFromFailure(ex))
           }
       })

@@ -99,17 +99,17 @@ class HttpSink(val settings: HttpSinkSettings) extends SinkTask with Logging {
           .mapTo[Try[HttpResponse]]
           .map[(EventStatus, Event)] {
             case Success(resp) =>
-              taskLogger.info(s"sending event [$eventBrief] to [$endPoint] succeeded.")
+              consumerLogger.info(s"sending event [$eventBrief] to [$endPoint] succeeded.")
               (NORM, event)
             case Failure(ex) =>
-              taskLogger.warn(
+              consumerLogger.warn(
                 s"sending event [$eventBrief] to [$endPoint] failed with error $ex"
               )
               (TOFB(Some(ex)), event)
           }
           .recover {
             case ex: AskTimeoutException =>
-              taskLogger.warn(
+              consumerLogger.warn(
                 s"sending event [$eventBrief] to [$endPoint] timeout, exceed [$retryTimeout]"
               )
               (FAIL(ex), event)
@@ -173,7 +173,7 @@ object HttpSink extends Logging {
       )
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
-      taskLogger.debug(s"replying response to http-sink")
+      consumerLogger.debug(s"replying response to http-sink")
       receiver ! result
     }
 
@@ -198,11 +198,11 @@ object HttpSink extends Logging {
           case Success(resp) => self.tell(CheckResp(resp, req), receiver)
           case Failure(ex) =>
             if (retryTimes == 1)
-              taskLogger.warn(
+              consumerLogger.warn(
                 s"sending request to $requestUrl failed with error $ex, going to retry now."
               )
             else
-              taskLogger.info(
+              consumerLogger.info(
                 s"resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
               )
 
@@ -216,13 +216,13 @@ object HttpSink extends Logging {
             .byteStringUnmarshaller(entity)
             .map { _body =>
               val body = _body.utf8String
-              taskLogger.info(
+              consumerLogger.info(
                 s"get response from upstream with status code ${status.value} and body $body"
               )
               if (body == RESPONSE_OK) {
                 replyToReceiver(Success(resp), receiver)
               } else if (body == RESPONSE_EXPONENTIAL_BACKOFF) {
-                taskLogger.info(
+                consumerLogger.info(
                   s"going to retry now since got retry signal from the endpoint"
                 )
                 self.tell(Retry(req), receiver)
@@ -236,7 +236,7 @@ object HttpSink extends Logging {
             }
         } else {
           val errorMsg = s"get response from upstream with non-200 [$status] status code"
-          taskLogger.debug(errorMsg)
+          consumerLogger.debug(errorMsg)
           resp.discardEntityBytes()
           replyToReceiver(Failure(new UnexpectedResponseException(errorMsg)), receiver)
         }

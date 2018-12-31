@@ -114,14 +114,14 @@ class CassandraFallback(val settings: CassandraSettings) extends FallbackTask wi
               .map[(EventStatus, Event)](result => (INFB, event))
               .recover {
                 case NonFatal(ex) =>
-                  taskLogger.warn(
+                  consumerLogger.warn(
                     s"sending to cassandra[1] fallback was failed with error $ex"
                   )
                   (FAIL(ex), event)
               }
           } catch {
             case NonFatal(ex) =>
-              taskLogger.debug(
+              consumerLogger.debug(
                 s"sending to cassandra[2] fallback failed with error $ex"
               )
               Future.successful((FAIL(ex), event))

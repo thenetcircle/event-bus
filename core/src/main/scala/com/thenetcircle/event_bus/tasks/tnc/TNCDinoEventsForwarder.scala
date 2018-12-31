@@ -35,7 +35,7 @@ class TNCDinoEventsForwarder() extends TransformTask with Logging {
       val newTitle   = "dino." + shortGroup + verbOption.get
       val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
 
-      taskLogger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
+      consumerLogger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
       event.withNoTopic().withName(newTitle).withBody(newBody)
     } else {
       event
