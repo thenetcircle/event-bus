@@ -173,6 +173,72 @@ const transformSchema: any = {
         "required": true
       }
     }
+  },
+  'tnc-event-filter': {
+    "title": "TNC Event Filter",
+    "type": "object",
+    "properties": {
+      "event-name-white-list": {
+        "type": "array",
+        "title": "Event Name White List",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "title": "Event Name Regex"
+        },
+        "required": true
+      },
+      "event-name-black-list": {
+        "type": "array",
+        "title": "Event Name Black List",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "title": "Event Name Regex"
+        },
+        "required": true
+      },
+      "channel-white-list": {
+        "type": "array",
+        "title": "Channel White List",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "title": "Channel Regex"
+        },
+        "required": true
+      },
+      "channel-black-list": {
+        "type": "array",
+        "title": "Channel Black List",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "title": "Channel Regex"
+        },
+        "required": true
+      },
+      "allowed-transport-modes": {
+        "type": "array",
+        "title": "Allowed Transport Modes",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "enum": [
+            "SYNC_PLUS", "ASYNC", "BOTH", "NONE"
+          ],
+          "title": "Transport Mode"
+        },
+        "default": ["ASYNC", "BOTH", "NONE"],
+        "required": true
+      },
+      "only-extras": {
+        "type": "object",
+        "title": "Only Matched Extra Infos",
+        "required": true,
+        "properties": {}
+      }
+    }
   }
 }
 
