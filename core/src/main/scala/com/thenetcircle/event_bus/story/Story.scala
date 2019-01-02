@@ -41,7 +41,7 @@ class Story(
 ) extends Logging
     with MonitoringHelp {
 
-  type Payload = (EventStatus, Event) // middle result type
+  import com.thenetcircle.event_bus.story.Story.Payload
 
   val storyName: String = settings.name
 
@@ -53,7 +53,7 @@ class Story(
   private var runningFuture: Option[Future[Done]] = None
   def run()(implicit runningContext: TaskRunningContext): Future[Done] = runningFuture getOrElse {
     try {
-      val sourceHandler = wrapTask(Flow[Payload], s"story:$storyName:source", skipPreCheck = true)
+      val sourceHandler = Story.wrapTask(Flow[Payload], s"story:$storyName:source", fallbackTask, skipPreCheck = true)
 
       var transformId = 0
       val transformsHandler =
@@ -63,9 +63,10 @@ class Story(
               transformId += 1
               _chain
                 .via(
-                  wrapTask(
+                  Story.wrapTask(
                     Flow[Payload].map(_._2).via(_transform.prepare()),
-                    s"story:$storyName:transform:$transformId"
+                    s"story:$storyName:transform:$transformId",
+                    fallbackTask
                   )
                 )
             }
@@ -73,7 +74,7 @@ class Story(
           .getOrElse(Flow[Payload])
 
       val sinkHandler =
-        wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story:$storyName:sink")
+        Story.wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story:$storyName:sink", fallbackTask)
 
       val monitorFlow = Flow[Payload]
         .map(payload => {
@@ -121,9 +122,16 @@ class Story(
         throw ex
     }
 
+}
+
+object Story extends Logging {
+
+  type Payload = (EventStatus, Event) // middle result type
+
   def wrapTask(
       taskHandler: Flow[Payload, Payload, NotUsed],
       taskName: String,
+      fallbackTask: Option[FallbackTask] = None,
       skipPreCheck: Boolean = false
   )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
     Flow
@@ -179,7 +187,7 @@ class Story(
 
             // format: off
             // ---------------  workflow graph start ----------------
-            
+
 
             // NORM goes to taskHandler >>>
             preCheck.out(0)   ~>   finalTaskHandler   ~>   postCheck
@@ -187,7 +195,7 @@ class Story(
                                                            postCheck.out(0)            ~>              output.in(0)
                                                            // TOFB goes to fallback  >>>
                                                            postCheck.out(1) ~>      fallback      ~>   output.in(1)
-     
+
             // Other status will skip this task >>>
             preCheck.out(1)                                       ~>                                   output.in(2)
 
@@ -200,4 +208,5 @@ class Story(
           }
       )
       .named(taskName)
+
 }

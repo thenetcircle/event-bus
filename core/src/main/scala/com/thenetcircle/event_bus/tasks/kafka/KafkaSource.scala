@@ -148,7 +148,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    consumerLogger.info(s"going to subscribe kafka topics: $kafkaSubscription")
+    consumerLogger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer
@@ -175,7 +175,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                         val errorMessage =
                           s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
                         consumerLogger.error(errorMessage)
-                        throw new IllegalArgumentException(errorMessage)
+                        throw new IllegalStateException(errorMessage)
                     }
 
                   case (TOFB(exOp), event) =>
@@ -183,32 +183,31 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                       s"The event ${event.uuid} reaches the end with TOFB status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
-                    val offsetOption = event.getPassThrough[CommittableOffset]
-                    if (offsetOption.isDefined) {
-                      consumerLogger.info(
-                        s"The event ${event.uuid} is going to be committed with offset ${offsetOption.get}"
-                      )
-                      throw new CommittableException(offsetOption.get, "Non handled TOFB status")
-                    } else {
-                      throw new RuntimeException(
-                        "Non handled TOFB status without CommittableOffset"
-                      )
+                    event.getPassThrough[CommittableOffset] match {
+                      case Some(co) =>
+                        consumerLogger.info(
+                          s"The event ${event.uuid} is going to be committed with offset $co"
+                        )
+                        throw new CommittableException(co, "Non handled TOFB status")
+                      case None =>
+                        throw new RuntimeException(
+                          "Non handled TOFB status without CommittableOffset"
+                        )
                     }
 
                   case (FAIL(ex), event) =>
                     consumerLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
-                    val offsetOption = event.getPassThrough[CommittableOffset]
-                    if (offsetOption.isDefined) {
-                      consumerLogger.info(
-                        s"The event ${event.uuid} is going to be committed with offset ${offsetOption.get}"
-                      )
-                      throw new CommittableException(offsetOption.get, "FAIL status event")
-                    } else {
-                      throw ex
+                    event.getPassThrough[CommittableOffset] match {
+                      case Some(co) =>
+                        consumerLogger.info(
+                          s"The event ${event.uuid} is going to be committed with offset $co"
+                        )
+                        throw new CommittableException(co, "FAIL status event")
+                      case None =>
+                        throw ex
                     }
                 }
-                // TODO some test
                 .recover {
                   case ex: CommittableException =>
                     consumerLogger.info(
