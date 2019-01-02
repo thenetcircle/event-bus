@@ -35,6 +35,9 @@ case class TNCEventFilterSettings(
 )
 
 class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask with Logging {
+
+  logger.info(s"Initializing TNCEventFilter with settings: $settings")
+
   override def prepare()(
       implicit runningContext: TaskRunningContext
   ): Flow[Event, (EventStatus, Event), NotUsed] = Flow[Event].map(checkEvent)
@@ -49,20 +52,20 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask
       if (settings.eventNameBlackList.exists(
             pattern => event.metadata.name.get matches pattern
           )) {
-        consumerLogger.info(s"event $eventBrief is in event-name-black-list, skipped")
+        consumerLogger.info(s"A event is skipped because it is in event-name-black-list, $eventBrief")
         return (SKIP, event)
       }
     }
     if (settings.eventNameWhiteList.nonEmpty) {
       if (event.metadata.name.isEmpty) {
-        consumerLogger.info(s"event $eventBrief is not in event-name-white-list, skipped")
+        consumerLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
         return (SKIP, event)
       }
       // if the event name not in event_name white list, then skip it
       if (!settings.eventNameWhiteList.exists(
             pattern => event.metadata.name.get matches pattern
           )) {
-        consumerLogger.info(s"event $eventBrief is not in event-name-white-list, skipped")
+        consumerLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
         return (SKIP, event)
       }
     }
@@ -73,19 +76,20 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask
       if (settings.channelBlackList.exists(
             pattern => event.metadata.channel.get matches pattern
           )) {
-        consumerLogger.info(s"event $eventBrief is in channel-black-list, skipped")
+        consumerLogger.info(s"A event is skipped because it is in channel-black-list, $eventBrief")
         return (SKIP, event)
       }
     }
     if (settings.channelWhiteList.nonEmpty) {
       if (event.metadata.channel.isEmpty) {
+        consumerLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
         return (SKIP, event)
       }
       // if the event channel not in channel white list, then skip it
       if (!settings.channelWhiteList.exists(
             pattern => event.metadata.channel.get matches pattern
           )) {
-        consumerLogger.info(s"event $eventBrief is not in channel-white-list, skipped")
+        consumerLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
         return (SKIP, event)
       }
     }
@@ -99,7 +103,7 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask
           .getFromString(tm) == eventTransportMode.get)
 
       if (!settings.allowedTransportModes.exists(_predictor)) {
-        consumerLogger.info(s"event $eventBrief is not in allowed-transport-modes, skipped")
+        consumerLogger.info(s"A event is skipped because it is not in allowed-transport-modes,  $eventBrief")
         return (SKIP, event)
       }
     }
@@ -111,7 +115,7 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask
       if (!settings.onlyExtras.forall {
             case (_key, _value) => eventExtras.get(_key).contains(_value)
           }) {
-        consumerLogger.info(s"event $eventBrief does not match only-extras, skipped")
+        consumerLogger.info(s"A event is skipped because it does not match only-extras,  $eventBrief")
         return (SKIP, event)
       }
     }

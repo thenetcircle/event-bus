@@ -38,6 +38,6 @@ object Util {
   def makeUTF8String(bytes: Array[Byte]): String = new String(bytes, "UTF-8")
 
   def getBriefOfEvent(event: Event): String =
-    s"uuid: ${event.uuid}, name: ${event.metadata.name}, topic: ${event.metadata.topic}, createdAt: ${event.createdAt}"
+    s"uuid: ${event.uuid}, name: ${event.metadata.name}, topic: ${event.metadata.topic}, channel: ${event.metadata.channel},  createdAt: ${event.createdAt}"
 
 }

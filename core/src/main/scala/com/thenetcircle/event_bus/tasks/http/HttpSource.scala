@@ -82,7 +82,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Loggi
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
             producerLogger.info("received a new event: " + Util.getBriefOfEvent(event))
-            producerLogger.debug(s"event content: $event")
+            producerLogger.debug(s"extracted event content: $event")
             (NORM, event)
           })
           .recover {

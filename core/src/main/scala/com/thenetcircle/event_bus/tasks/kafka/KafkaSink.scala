@@ -85,7 +85,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    producerLogger.debug(s"new kafka record $record is created")
+    producerLogger.debug(s"Prepared a new kafka record,  $record")
     Message(record, event)
   }
 
@@ -121,7 +121,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
     val kafkaSettings = getProducerSettings()
 
     val _kafkaProducer = kafkaProducer.getOrElse({
-      logger.info("creating new kakfa producer")
+      logger.info("Creating a new Kafka producer")
       kafkaProducer = Some(kafkaSettings.createKafkaProducer())
       kafkaProducer.get
     })
@@ -141,13 +141,13 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
           val kafkaBrief =
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-          producerLogger.info(s"sending event [$eventBrief] to kafka [$kafkaBrief] succeeded.")
+          producerLogger.info(s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]")
 
           (NORM, message.passThrough)
       }
 
     if (settings.useAsyncBuffer) {
-      logger.debug("wrapping async buffer")
+      logger.debug("Wrapping async buffer")
       KafkaSink.wrapAsyncBuffer(settings.asyncBufferSize, producingFlow)
     } else {
       producingFlow
@@ -155,7 +155,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down kafka-sink of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down kafka-sink of story ${runningContext.getStoryName()}.")
     kafkaProducer.foreach(k => {
       k.close(5, TimeUnit.SECONDS); kafkaProducer = None
     })
@@ -217,7 +217,7 @@ object KafkaSink extends Logging {
         } else {
           if (!buffer.offer(event)) { // if the buffer is full
             producerLogger.warn(
-              "A event [" + Util.getBriefOfEvent(event) + "] is dropped since the AsyncBuffer is full."
+              "A event is dropped since the AsyncBuffer is full. [" + Util.getBriefOfEvent(event) + "]"
             )
             Logging.missedLogger.warn(event.body.data)
           }

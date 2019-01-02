@@ -168,19 +168,28 @@ class Story(
                   .getOrElse(Flow[Payload])
               )
 
+            val finalTaskHandler: Flow[Payload, Payload, NotUsed] = if (runningContext.getAppContext().isDev()) {
+              taskHandler.via(Flow[Payload].map(pl => {
+                logger.debug(s"task $taskName has returned $pl")
+                pl
+              }))
+            } else {
+              taskHandler
+            }
+
             // format: off
             // ---------------  workflow graph start ----------------
             
 
             // NORM goes to taskHandler >>>
-            preCheck.out(0)   ~>   taskHandler   ~>   postCheck
-                                                      // non-TOFB goes to next task
-                                                      postCheck.out(0)            ~>              output.in(0)
-                                                      // TOFB goes to fallback  >>>
-                                                      postCheck.out(1) ~>      fallback      ~>   output.in(1)
-
+            preCheck.out(0)   ~>   finalTaskHandler   ~>   postCheck
+                                                           // non-TOFB goes to next task
+                                                           postCheck.out(0)            ~>              output.in(0)
+                                                           // TOFB goes to fallback  >>>
+                                                           postCheck.out(1) ~>      fallback      ~>   output.in(1)
+     
             // Other status will skip this task >>>
-            preCheck.out(1)                                  ~>                                   output.in(2)
+            preCheck.out(1)                                       ~>                                   output.in(2)
 
 
             // ---------------  workflow graph end ----------------

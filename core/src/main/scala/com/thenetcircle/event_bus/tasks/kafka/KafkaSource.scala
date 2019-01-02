@@ -26,9 +26,10 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
+import com.thenetcircle.event_bus.interfaces.EventStatus._
 import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.tasks.kafka.KafkaSource.CommittableException
 import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
@@ -125,7 +126,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
             s"The event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
           )
           (
-            TOFB(Some(ex)),
+            SKIP,
             EventImpl
               .createFromFailure(
                 ex,
@@ -167,36 +168,66 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
                   case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        consumerLogger.debug(s"The event ${event.uuid} is adding to the kafka batch committer")
+                        consumerLogger.info(s"The event ${event.uuid} is going to be committed with offset $co")
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
                           s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
                         consumerLogger.error(errorMessage)
-                        throw new IllegalStateException(errorMessage)
+                        throw new IllegalArgumentException(errorMessage)
                     }
+
                   case (TOFB(exOp), event) =>
                     consumerLogger.error(
-                      s"Event ${event.uuid} reaches the end with TOFB status" +
+                      s"The event ${event.uuid} reaches the end with TOFB status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
-                    throw new RuntimeException("Non handled TOFB status")
+                    val offsetOption = event.getPassThrough[CommittableOffset]
+                    if (offsetOption.isDefined) {
+                      consumerLogger.info(
+                        s"The event ${event.uuid} is going to be committed with offset ${offsetOption.get}"
+                      )
+                      throw new CommittableException(offsetOption.get, "Non handled TOFB status")
+                    } else {
+                      throw new RuntimeException(
+                        "Non handled TOFB status without CommittableOffset"
+                      )
+                    }
+
                   case (FAIL(ex), event) =>
-                    consumerLogger.error(s"Event ${event.uuid} reaches the end with error $ex")
+                    consumerLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
-                    throw ex
+                    val offsetOption = event.getPassThrough[CommittableOffset]
+                    if (offsetOption.isDefined) {
+                      consumerLogger.info(
+                        s"The event ${event.uuid} is going to be committed with offset ${offsetOption.get}"
+                      )
+                      throw new CommittableException(offsetOption.get, "FAIL status event")
+                    } else {
+                      throw ex
+                    }
                 }
                 // TODO some test
                 .recover {
+                  case ex: CommittableException =>
+                    consumerLogger.info(
+                      s"The substream listening on topicPartition $topicPartition was failed with CommittableException, " +
+                        s"Now recovering the last item to be a Success()"
+                    )
+                    Success(ex.getCommittableOffset())
                   case NonFatal(ex) =>
                     consumerLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
-                        s"Now it's recovered to be a Failure()"
+                        s"Now recovering the last item to be a Failure()"
                     )
                     Failure(ex)
                 }
-                .collect { case Success(co) => co }
+                .collect {
+                  case Success(co) =>
+                    consumerLogger.debug(s"going to commit offset $co")
+                    co
+                }
                 .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
                   (batch, elem) =>
                     batch.updated(elem)
@@ -240,6 +271,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
       k.shutdown(); killSwitchOption = None
     })
   }
+}
+
+object KafkaSource {
+
+  class CommittableException(committableOffset: CommittableOffset, message: String) extends RuntimeException(message) {
+    def getCommittableOffset(): CommittableOffset = committableOffset
+  }
+
 }
 
 case class KafkaSourceSettings(

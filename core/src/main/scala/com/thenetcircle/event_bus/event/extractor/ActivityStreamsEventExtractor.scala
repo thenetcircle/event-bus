@@ -61,8 +61,11 @@ case class GeneralObject(
     // author: Option[ActivityObject]
 ) extends ActivityObject
 
-case class GeneratorObject(id: Option[String], objectType: Option[String], content: Option[String])
-    extends ActivityObject
+case class GeneratorObject(
+    id: Option[String],
+    objectType: Option[String],
+    content: Option[String]
+) extends ActivityObject
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
   implicit val generalObjectFormat   = jsonFormat2(GeneralObject)
