@@ -1,91 +1,107 @@
 <template>
 
-  <div class="container box story" style="margin-bottom: 1rem">
-    <div class="level">
-      <div class="level-left">
-        <div class="level-item">
-          <p class="title is-2 is-spaced story-name">{{ storyName }}</p>
-        </div>
-        <!--<div class="level-item">
-          <div class="tags has-addons">
-            <span class="tag is-dark">Status:</span>
-            <span class="tag is-info">{{ storyInfo.status }}</span>
-          </div>
-        </div>-->
-      </div>
-    </div>
-
-    <div class="tabs is-medium">
+  <div class="container">
+    <nav class="breadcrumb has-succeeds-separator" aria-label="breadcrumbs">
       <ul>
-        <li :class="{ 'is-active': isOverview }" @click="changeTab('overview')"><a>Overview</a></li>
-        <li :class="{ 'is-active': isRunners }" @click="changeTab('runners')"><a>Runners</a></li>
-        <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')">
-          <a>Statistics</a></li>
-        <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"
-            v-if="storyInfo.fallback !== undefined && 0"><a>Failed Events</a>
+        <li>
+          <router-link :to="{ name: 'home' }">Home</router-link>
         </li>
+        <li>
+          <router-link :to="{ name: 'stories' }">Stories</router-link>
+        </li>
+        <li class="is-active"><a href="#" aria-current="page">Story Details</a></li>
       </ul>
-    </div>
+    </nav>
 
-    <div v-if="isOverview">
-
-      <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"
-                   @save="onSaveStory"></story-graph>
-
-    </div>
-
-    <div v-if="isRunners">
+    <div class=" box story" style="margin-bottom: 1.5rem">
 
       <div class="level">
         <div class="level-left">
-        </div>
-        <div class="level-right">
           <div class="level-item">
-            <a class="button" @click="onOpenChooseRunner">Assign to a new runner</a>
+            <p class="title is-2 is-spaced story-name">{{ storyName }}</p>
           </div>
+          <!--<div class="level-item">
+            <div class="tags has-addons">
+              <span class="tag is-dark">Status:</span>
+              <span class="tag is-info">{{ storyInfo.status }}</span>
+            </div>
+          </div>-->
         </div>
       </div>
 
-      <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
-        <thead>
-        <tr>
-          <th>Name</th>
-          <th>Server</th>
-          <th>Version</th>
-          <th>Amount</th>
-          <th>Action</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr v-for="item in runners">
-          <td>
-            <router-link :to="{ name: 'runner', params: { 'runnerName': item.name } }">{{
-              item.name }}
-            </router-link>
-          </td>
-          <td>{{ item.host }}</td>
-          <td>{{ item.version }}</td>
-          <td>{{ item.stories[storyName] }}</td>
-          <td>
-            <a class="button is-primary" @click="onRerun(item)">Rerun</a>
-            <a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a>
-          </td>
-        </tr>
-        </tbody>
-      </table>
+      <div class="tabs is-medium">
+        <ul>
+          <li :class="{ 'is-active': isOverview }" @click="changeTab('overview')"><a>Overview</a>
+          </li>
+          <li :class="{ 'is-active': isRunners }" @click="changeTab('runners')"><a>Runners</a></li>
+          <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')">
+            <a>Statistics</a></li>
+          <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"
+              v-if="storyInfo.fallback !== undefined && 0"><a>Failed Events</a>
+          </li>
+        </ul>
+      </div>
 
-      <choose-runner v-if="chooseRunner" @close="onCloseChooseRunner" @choose="onAssignRunner"
-                     :excludes="runners.map(info => info.name)"></choose-runner>
+      <div v-if="isOverview">
+
+        <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo"
+                     @save="onSaveStory"></story-graph>
+
+      </div>
+
+      <div v-if="isRunners">
+
+        <div class="level">
+          <div class="level-left">
+          </div>
+          <div class="level-right">
+            <div class="level-item">
+              <a class="button" @click="onOpenChooseRunner">Assign to a new runner</a>
+            </div>
+          </div>
+        </div>
+
+        <table class="table is-bordered is-striped is-narrow is-hoverable is-fullwidth">
+          <thead>
+          <tr>
+            <th>Name</th>
+            <th>Server</th>
+            <th>Version</th>
+            <th>Amount</th>
+            <th>Action</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr v-for="item in runners">
+            <td>
+              <router-link :to="{ name: 'runner', params: { 'runnerName': item.name } }">{{
+                item.name }}
+              </router-link>
+            </td>
+            <td>{{ item.host }}</td>
+            <td>{{ item.version }}</td>
+            <td>{{ item.stories[storyName] }}</td>
+            <td>
+              <a class="button is-primary" @click="onRerun(item)">Rerun</a>
+              <a class="button is-danger" @click="onDismissRunner(item)">Dismiss</a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+
+        <choose-runner v-if="chooseRunner" @close="onCloseChooseRunner" @choose="onAssignRunner"
+                       :excludes="runners.map(info => info.name)"></choose-runner>
+
+      </div>
+
+      <div v-if="isFallback"></div>
+
+      <div v-if="isMonitoring">
+        <story-statistics :storyname="storyName"></story-statistics>
+      </div>
+
 
     </div>
-
-    <div v-if="isFallback"></div>
-
-    <div v-if="isMonitoring">
-      <story-statistics :storyname="storyName"></story-statistics>
-    </div>
-
-
   </div>
 
 </template>
@@ -101,7 +117,7 @@
   import StoryStatistics from './StoryStatistics.vue'
   import bus from '../lib/bus'
 
-  let tabRouteMapping: { [key:string]: string } = {
+  let tabRouteMapping: { [key: string]: string } = {
     'overview': 'story',
     'fallback': 'story-fallback',
     'monitoring': 'story-statistics',
@@ -148,7 +164,7 @@
 
       changeTab(tab: string) {
         let routeName = tabRouteMapping[tab]
-        this.$router.push({ name: routeName, params: { storyName: this.storyName } })
+        this.$router.push({name: routeName, params: {storyName: this.storyName}})
         // this.currTab = tab
       },
 

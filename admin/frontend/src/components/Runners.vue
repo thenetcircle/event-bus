@@ -2,6 +2,15 @@
 
   <div class="container">
 
+    <nav class="breadcrumb has-succeeds-separator" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <router-link :to="{ name: 'home' }">Home</router-link>
+        </li>
+        <li class="is-active"><a href="#" aria-current="page">Runners</a></li>
+      </ul>
+    </nav>
+
     <div class="columns is-multiline">
 
       <div class="column is-12" v-for="info in runners">

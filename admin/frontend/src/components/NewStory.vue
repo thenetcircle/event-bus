@@ -1,23 +1,37 @@
 <template>
 
-  <div class="container box story">
+  <div class="container">
+    <nav class="breadcrumb has-succeeds-separator" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <router-link :to="{ name: 'home' }">Home</router-link>
+        </li>
+        <li>
+          <router-link :to="{ name: 'stories' }">Stories</router-link>
+        </li>
+        <li class="is-active"><a href="#" aria-current="page">New Story</a></li>
+      </ul>
+    </nav>
 
-    <p class="title is-2 is-spaced">Create New Story</p>
+    <div class="box story">
 
-    <div class="field">
-      <label class="label">Story Name:</label>
-      <div class="control">
-        <input class="input is-primary" type="text" placeholder="StoryName" v-model="storyName">
+      <p class="title is-2 is-spaced">Create New Story</p>
+
+      <div class="field">
+        <label class="label">Story Name:</label>
+        <div class="control">
+          <input class="input is-primary" type="text" placeholder="StoryName" v-model="storyName">
+        </div>
       </div>
+
+      <div class="field">
+        <label class="label">Story Workflow:</label>
+      </div>
+
+      <story-graph :info="storyInfo"
+                   @save="onSaveStory"></story-graph>
+
     </div>
-
-    <div class="field">
-      <label class="label">Story Workflow:</label>
-    </div>
-
-    <story-graph :info="storyInfo"
-                 @save="onSaveStory"></story-graph>
-
   </div>
 
 </template>
@@ -63,7 +77,7 @@
 
         request.createStory(this.storyName, newStoryInfo)
           .then(() => {
-            this.$router.push({ name: 'story-runners', params: { storyName: this.storyName } }, () => {
+            this.$router.push({name: 'story-runners', params: {storyName: this.storyName}}, () => {
               bus.$emit('notify', `new story ${this.storyName} has been created.`)
             })
           })
