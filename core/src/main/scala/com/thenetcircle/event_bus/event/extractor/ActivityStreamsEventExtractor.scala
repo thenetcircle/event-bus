@@ -155,7 +155,7 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
         body.replaceFirst(Regex.quote("{"), s"""{"id": "$uuid",""")
       }
 
-      EventImpl(
+      DefaultEventImpl(
         uuid = uuid,
         metadata = metaData,
         body = EventBody(body, getFormat()),

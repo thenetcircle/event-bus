@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.event
 
 import java.util.Date
 
+import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 
 trait Event {
@@ -39,6 +40,26 @@ trait Event {
   def hasExtra(_key: String): Boolean
   def getExtra(_key: String): Option[String]
   def withExtra(_key: String, _value: String): Event
+}
+
+object Event {
+  def fromException(
+      ex: Throwable,
+      _body: EventBody = EventBody("", DataFormat.UNKNOWN),
+      _passThrough: Option[Any] = None
+  ): DefaultEventImpl =
+    DefaultEventImpl(
+      uuid = "ExceptionalEvent-" + java.util.UUID.randomUUID().toString,
+      metadata = EventMetaData(
+        name = Some("event-bus.exception.throw"),
+        extra = Map(
+          "class"   -> ex.getClass.getName,
+          "message" -> ex.getMessage
+        )
+      ),
+      body = _body,
+      passThrough = _passThrough
+    )
 }
 
 case class EventMetaData(

@@ -20,9 +20,7 @@ package com.thenetcircle.event_bus.event
 import java.time.Instant
 import java.util.Date
 
-import com.thenetcircle.event_bus.event.extractor.DataFormat
-
-case class EventImpl(
+case class DefaultEventImpl(
     uuid: String,
     metadata: EventMetaData,
     body: EventBody,
@@ -30,48 +28,28 @@ case class EventImpl(
     passThrough: Option[Any] = None
 ) extends Event {
 
-  override def withPassThrough[T](_passThrough: T): EventImpl = {
+  override def withPassThrough[T](_passThrough: T): DefaultEventImpl = {
     if (passThrough.isDefined) {
       throw new Exception("event passthrough is defined already.")
     }
     copy(passThrough = Some(_passThrough))
   }
 
-  override def withTopic(_topic: String): EventImpl =
+  override def withTopic(_topic: String): DefaultEventImpl =
     copy(metadata = metadata.copy(topic = Some(_topic)))
-  override def withNoTopic(): EventImpl =
+  override def withNoTopic(): DefaultEventImpl =
     copy(metadata = metadata.copy(topic = None))
 
-  override def withName(_name: String): EventImpl =
+  override def withName(_name: String): DefaultEventImpl =
     copy(metadata = metadata.copy(name = Some(_name)))
 
-  override def withUUID(_uuid: String): EventImpl = copy(uuid = _uuid)
+  override def withUUID(_uuid: String): DefaultEventImpl = copy(uuid = _uuid)
 
-  override def withBody(_body: EventBody): EventImpl = copy(body = _body)
-  override def withBody(_data: String): EventImpl    = copy(body = body.copy(data = _data))
+  override def withBody(_body: EventBody): DefaultEventImpl = copy(body = _body)
+  override def withBody(_data: String): DefaultEventImpl    = copy(body = body.copy(data = _data))
 
   override def hasExtra(_key: String): Boolean        = getExtra(_key).isDefined
   override def getExtra(_key: String): Option[String] = metadata.extra.get(_key)
   override def withExtra(_key: String, _value: String): Event =
     copy(metadata = metadata.copy(extra = metadata.extra + (_key -> _value)))
-}
-
-object EventImpl {
-  def createFromFailure(
-      ex: Throwable,
-      _body: EventBody = EventBody("", DataFormat.UNKNOWN),
-      _passThrough: Option[Any] = None
-  ): EventImpl =
-    EventImpl(
-      uuid = "FailureEvent-" + java.util.UUID.randomUUID().toString,
-      metadata = EventMetaData(
-        name = Some("event-bus.failure.trigger"),
-        extra = Map(
-          "class"   -> ex.getClass.getName,
-          "message" -> ex.getMessage
-        )
-      ),
-      body = _body,
-      passThrough = _passThrough
-    )
 }

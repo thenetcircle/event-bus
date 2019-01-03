@@ -26,10 +26,9 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.EventImpl
+import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.interfaces.{SourceTask, SourceTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
@@ -89,7 +88,7 @@ class HttpSource(val settings: HttpSourceSettings) extends SourceTask with Loggi
           .recover {
             case ex: EventExtractingException =>
               producerLogger.warn(s"extract event from a http request failed with error $ex")
-              (FAIL(ex), EventImpl.createFromFailure(ex))
+              (FAIL(ex), Event.fromException(ex))
           }
       })
   }

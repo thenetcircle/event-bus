@@ -21,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.EventImpl
+import com.thenetcircle.event_bus.event.DefaultEventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData, EventTransportMode}
 import com.thenetcircle.event_bus.misc.Logging
@@ -88,7 +88,7 @@ abstract class TestBase(_appContext: AppContext)
       transportMode: Option[EventTransportMode] = None,
       extra: Map[String, String] = Map.empty
   ): Event =
-    EventImpl(
+    DefaultEventImpl(
       uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(name = Some(name), channel = channel, transportMode = transportMode, extra = extra),
       body = EventBody(body, DataFormat.UNKNOWN)

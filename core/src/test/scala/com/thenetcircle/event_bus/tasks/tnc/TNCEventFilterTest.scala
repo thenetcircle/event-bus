@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.tasks.tnc
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.event.EventImpl
+import com.thenetcircle.event_bus.event.DefaultEventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{EventBody, EventMetaData, EventTransportMode}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
@@ -55,7 +55,7 @@ class TNCEventFilterTest extends TestBase {
     testEvent = createTestEvent("membership.login")
     eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
 
-    testEvent = EventImpl(
+    testEvent = DefaultEventImpl(
       uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(),
       body = EventBody("", DataFormat.UNKNOWN)
@@ -77,7 +77,7 @@ class TNCEventFilterTest extends TestBase {
     testEvent = createTestEvent("membership.login")
     eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
 
-    testEvent = EventImpl(
+    testEvent = DefaultEventImpl(
       uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(),
       body = EventBody("", DataFormat.UNKNOWN)

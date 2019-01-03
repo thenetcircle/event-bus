@@ -24,10 +24,9 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.EventImpl
-import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.EventStatus._
 import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.KafkaSource.CommittableException
@@ -128,12 +127,11 @@ class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Log
           )
           (
             SKIP,
-            EventImpl
-              .createFromFailure(
-                ex,
-                EventBody(messageValue, eventFormat),
-                Some(message.committableOffset)
-              )
+            Event.fromException(
+              ex,
+              EventBody(messageValue, eventFormat),
+              Some(message.committableOffset)
+            )
           )
       }
   }
