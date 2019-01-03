@@ -26,6 +26,7 @@ trait Event {
   def uuid: String
   def metadata: EventMetaData
   def body: EventBody
+  def status: EventStatus
   def createdAt: Date
   def passThrough: Option[Any]
 
@@ -40,6 +41,7 @@ trait Event {
   def hasExtra(_key: String): Boolean
   def getExtra(_key: String): Option[String]
   def withExtra(_key: String, _value: String): Event
+  def withStatus(_status: EventStatus): Event
 }
 
 object Event {
@@ -62,6 +64,18 @@ object Event {
     )
 }
 
+sealed trait EventStatus
+object EventStatus {
+  sealed trait SuccStatus extends EventStatus
+  sealed trait FailStatus extends EventStatus
+
+  case object NORM                                 extends SuccStatus
+  case object INFB                                 extends SuccStatus
+  case object SKIP                                 extends SuccStatus
+  case class TOFB(cause: Option[Throwable] = None) extends FailStatus
+  case class FAIL(cause: Throwable)                extends FailStatus
+}
+
 case class EventMetaData(
     name: Option[String] = None,
     channel: Option[String] = None,
@@ -74,18 +88,6 @@ case class EventBody(data: String, format: DataFormat)
 object EventBody {
   def apply(data: Array[Byte], format: DataFormat): EventBody =
     EventBody(new String(data, "UTF-8"), format)
-}
-
-sealed trait EventStatus
-object EventStatus {
-  sealed trait SuccStatus extends EventStatus
-  sealed trait FailStatus extends EventStatus
-
-  case object NORM                                 extends SuccStatus
-  case object INFB                                 extends SuccStatus
-  case object SKIP                                 extends SuccStatus
-  case class TOFB(cause: Option[Throwable] = None) extends FailStatus
-  case class FAIL(cause: Throwable)                extends FailStatus
 }
 
 sealed trait EventTransportMode

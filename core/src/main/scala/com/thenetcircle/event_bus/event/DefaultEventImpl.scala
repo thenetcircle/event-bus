@@ -24,6 +24,7 @@ case class DefaultEventImpl(
     uuid: String,
     metadata: EventMetaData,
     body: EventBody,
+    status: EventStatus = EventStatus.NORM,
     createdAt: Date = Date.from(Instant.now()),
     passThrough: Option[Any] = None
 ) extends Event {
@@ -46,10 +47,14 @@ case class DefaultEventImpl(
   override def withUUID(_uuid: String): DefaultEventImpl = copy(uuid = _uuid)
 
   override def withBody(_body: EventBody): DefaultEventImpl = copy(body = _body)
-  override def withBody(_data: String): DefaultEventImpl    = copy(body = body.copy(data = _data))
+  override def withBody(_data: String): DefaultEventImpl =
+    copy(body = body.copy(data = _data))
 
   override def hasExtra(_key: String): Boolean        = getExtra(_key).isDefined
   override def getExtra(_key: String): Option[String] = metadata.extra.get(_key)
   override def withExtra(_key: String, _value: String): Event =
     copy(metadata = metadata.copy(extra = metadata.extra + (_key -> _value)))
+
+  override def withStatus(_status: EventStatus): DefaultEventImpl =
+    copy(status = _status)
 }
