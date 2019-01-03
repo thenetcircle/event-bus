@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
-import com.thenetcircle.event_bus.story.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
+import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ISinkTask, ISourceTask, ITransformTask}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.matching.Regex
@@ -65,38 +65,38 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
     (re(0), if (re.length == 2) re(1) else "{}")
   }
 
-  def buildSourceTask(configString: String): Option[SourceTask] = {
+  def buildSourceTask(configString: String): Option[ISourceTask] = {
     val (_category, _config) = parseConfigString(configString)
     buildSourceTask(_category, _config)
   }
 
-  def buildSourceTask(category: String, configString: String): Option[SourceTask] =
+  def buildSourceTask(category: String, configString: String): Option[ISourceTask] =
     taskBuilderFactory.getSourceTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildTransformTask(configString: String): Option[TransformTask] = {
+  def buildTransformTask(configString: String): Option[ITransformTask] = {
     val (_category, _config) = parseConfigString(configString)
     buildTransformTask(_category, _config)
   }
 
-  def buildTransformTask(category: String, configString: String): Option[TransformTask] =
+  def buildTransformTask(category: String, configString: String): Option[ITransformTask] =
     taskBuilderFactory
       .getTransformTaskBuilder(category)
       .map(_builder => _builder.build(configString))
 
-  def buildSinkTask(configString: String): Option[SinkTask] = {
+  def buildSinkTask(configString: String): Option[ISinkTask] = {
     val (_category, _config) = parseConfigString(configString)
     buildSinkTask(_category, _config)
   }
 
-  def buildSinkTask(category: String, configString: String): Option[SinkTask] =
+  def buildSinkTask(category: String, configString: String): Option[ISinkTask] =
     taskBuilderFactory.getSinkTaskBuilder(category).map(_builder => _builder.build(configString))
 
-  def buildFallbackTask(configString: String): Option[FallbackTask] = {
+  def buildFallbackTask(configString: String): Option[IFallbackTask] = {
     val (_category, _config) = parseConfigString(configString)
     buildFallbackTask(_category, _config)
   }
 
-  def buildFallbackTask(category: String, configString: String): Option[FallbackTask] =
+  def buildFallbackTask(category: String, configString: String): Option[IFallbackTask] =
     taskBuilderFactory
       .getFallbackTaskBuilder(category)
       .map(_builder => _builder.build(configString))

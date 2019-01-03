@@ -22,12 +22,12 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{TransformTask, TransformTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.Logging
 
 import scala.util.matching.Regex
 
-class TNCDinoEventsForwarder() extends TransformTask with Logging {
+class TNCDinoEventsForwarder() extends ITransformTask with Logging {
 
   def appendTitleField(event: Event): Event = {
     val verbOption = event.getExtra("verb")
@@ -52,7 +52,7 @@ class TNCDinoEventsForwarder() extends TransformTask with Logging {
 
 }
 
-class TNCDinoEventsForwarderBuilder() extends TransformTaskBuilder {
+class TNCDinoEventsForwarderBuilder() extends ITransformTaskBuilder {
 
   override def build(
       configString: String

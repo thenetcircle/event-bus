@@ -22,45 +22,45 @@ import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 class TaskBuilderFactory() {
-  private var sourceTaskBuilders: Map[String, SourceTaskBuilder]       = Map.empty
-  private var transformTaskBuilders: Map[String, TransformTaskBuilder] = Map.empty
-  private var sinkTaskBuilers: Map[String, SinkTaskBuilder]            = Map.empty
-  private var fallbackTaskBuilers: Map[String, FallbackTaskBuilder]    = Map.empty
+  private var sourceTaskBuilders: Map[String, ISourceTaskBuilder]       = Map.empty
+  private var transformTaskBuilders: Map[String, ITransformTaskBuilder] = Map.empty
+  private var sinkTaskBuilers: Map[String, ISinkTaskBuilder]            = Map.empty
+  private var fallbackTaskBuilers: Map[String, IFallbackTaskBuilder]    = Map.empty
 
-  private def createInstance(cls: Class[TaskBuilder[Task]]): TaskBuilder[Task] = cls.newInstance()
+  private def createInstance(cls: Class[ITaskBuilder[ITask]]): ITaskBuilder[ITask] = cls.newInstance()
 
   def registerBuilder(category: String, builderClassName: String): Unit =
     registerBuilder(
       category,
-      Class.forName(builderClassName).asInstanceOf[Class[TaskBuilder[Task]]]
+      Class.forName(builderClassName).asInstanceOf[Class[ITaskBuilder[ITask]]]
     )
 
-  def registerBuilder(category: String, builderClass: Class[TaskBuilder[Task]]): Unit =
+  def registerBuilder(category: String, builderClass: Class[ITaskBuilder[ITask]]): Unit =
     registerBuilder(category, createInstance(builderClass))
 
-  def registerBuilder(category: String, builder: TaskBuilder[Task]): Unit =
+  def registerBuilder(category: String, builder: ITaskBuilder[ITask]): Unit =
     builder match {
-      case _: SourceTaskBuilder =>
-        sourceTaskBuilders += (category.toLowerCase -> builder.asInstanceOf[SourceTaskBuilder])
-      case _: TransformTaskBuilder =>
+      case _: ISourceTaskBuilder =>
+        sourceTaskBuilders += (category.toLowerCase -> builder.asInstanceOf[ISourceTaskBuilder])
+      case _: ITransformTaskBuilder =>
         transformTaskBuilders += (category.toLowerCase -> builder
-          .asInstanceOf[TransformTaskBuilder])
-      case _: SinkTaskBuilder =>
-        sinkTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[SinkTaskBuilder])
-      case _: FallbackTaskBuilder =>
-        fallbackTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[FallbackTaskBuilder])
+          .asInstanceOf[ITransformTaskBuilder])
+      case _: ISinkTaskBuilder =>
+        sinkTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[ISinkTaskBuilder])
+      case _: IFallbackTaskBuilder =>
+        fallbackTaskBuilers += (category.toLowerCase -> builder.asInstanceOf[IFallbackTaskBuilder])
     }
 
-  def getSourceTaskBuilder(category: String): Option[SourceTaskBuilder] =
+  def getSourceTaskBuilder(category: String): Option[ISourceTaskBuilder] =
     sourceTaskBuilders.get(category.toLowerCase)
 
-  def getTransformTaskBuilder(category: String): Option[TransformTaskBuilder] =
+  def getTransformTaskBuilder(category: String): Option[ITransformTaskBuilder] =
     transformTaskBuilders.get(category.toLowerCase)
 
-  def getSinkTaskBuilder(category: String): Option[SinkTaskBuilder] =
+  def getSinkTaskBuilder(category: String): Option[ISinkTaskBuilder] =
     sinkTaskBuilers.get(category.toLowerCase)
 
-  def getFallbackTaskBuilder(category: String): Option[FallbackTaskBuilder] =
+  def getFallbackTaskBuilder(category: String): Option[IFallbackTaskBuilder] =
     fallbackTaskBuilers.get(category.toLowerCase)
 }
 

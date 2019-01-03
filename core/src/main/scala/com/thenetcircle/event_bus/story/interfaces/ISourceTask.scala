@@ -17,15 +17,17 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
-import akka.NotUsed
 import akka.stream.scaladsl.Flow
+import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
+import com.thenetcircle.event_bus.event.Event
 
-trait SinkTask extends Task {
+import scala.concurrent.Future
 
-  def prepare()(
+trait ISourceTask extends ITask {
+
+  def runWith(handler: Flow[Event, Event, NotUsed])(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed]
+  ): Future[Done]
 
 }

@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFut
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{FallbackTask, FallbackTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, IFallbackTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import net.ceedubs.ficus.Ficus._
 
@@ -37,7 +37,7 @@ import scala.util.control.NonFatal
 
 case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraFallback(val settings: CassandraSettings) extends FallbackTask with Logging {
+class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask with Logging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -186,7 +186,7 @@ private[cassandra] object GuavaFutures {
   }
 }
 
-class CassandraFallbackBuilder() extends FallbackTaskBuilder {
+class CassandraFallbackBuilder() extends IFallbackTaskBuilder {
 
   override def build(
       configString: String

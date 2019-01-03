@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-class KafkaSource(val settings: KafkaSourceSettings) extends SourceTask with Logging {
+class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Logging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -297,7 +297,7 @@ case class KafkaSourceSettings(
     maxWakeups: Option[Int] = None
 )
 
-class KafkaSourceBuilder() extends SourceTaskBuilder {
+class KafkaSourceBuilder() extends ISourceTaskBuilder {
 
   override def build(
       configString: String

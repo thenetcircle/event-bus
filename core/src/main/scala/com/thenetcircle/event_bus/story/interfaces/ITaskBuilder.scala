@@ -17,15 +17,18 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
-import akka.NotUsed
-import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
+import com.thenetcircle.event_bus.context.TaskBuildingContext
 
-trait TransformTask extends Task {
+trait ITaskBuilder[+T <: ITask] {
 
-  def prepare()(
-      implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed]
+  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
 
 }
+
+trait ISourceTaskBuilder extends ITaskBuilder[ISourceTask]
+
+trait ITransformTaskBuilder extends ITaskBuilder[ITransformTask]
+
+trait ISinkTaskBuilder extends ITaskBuilder[ISinkTask]
+
+trait IFallbackTaskBuilder extends ITaskBuilder[IFallbackTask]

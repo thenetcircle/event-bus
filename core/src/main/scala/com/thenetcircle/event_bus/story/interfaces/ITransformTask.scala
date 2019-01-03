@@ -22,17 +22,10 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
-trait FallbackTask extends Task {
+trait ITransformTask extends ITask {
 
-  /**
-    * Returns a [[Flow]] which bind on a specific task and accepts TOFB events then send them into fallback
-    * Note that this method will be called multiple times aon each tasks of stories
-    *
-    * @param taskName [[String]]
-    * @param runningContext [[TaskRunningContext]]
-    */
-  def prepareForTask(taskName: String)(
+  def prepare()(
       implicit runningContext: TaskRunningContext
-  ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
+  ): Flow[Event, Event, NotUsed]
 
 }

@@ -35,7 +35,7 @@ case class TNCEventFilterSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask with Logging {
+class TNCEventFilter(val settings: TNCEventFilterSettings) extends ITransformTask with Logging {
 
   logger.info(s"Initializing TNCEventFilter with settings: $settings")
 
@@ -125,7 +125,7 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends TransformTask
   }
 }
 
-class TNCEventFilterBuilder() extends TransformTaskBuilder {
+class TNCEventFilterBuilder() extends ITransformTaskBuilder {
 
   override def build(
       configString: String

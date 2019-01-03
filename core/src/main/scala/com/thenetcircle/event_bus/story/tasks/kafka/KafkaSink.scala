@@ -30,7 +30,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
@@ -56,7 +56,7 @@ case class KafkaSinkSettings(
     asyncBufferSize: Int = 100
 )
 
-class KafkaSink(val settings: KafkaSinkSettings) extends SinkTask with Logging {
+class KafkaSink(val settings: KafkaSinkSettings) extends ISinkTask with Logging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -274,7 +274,7 @@ object KafkaSink extends Logging {
 
 }
 
-class KafkaSinkBuilder() extends SinkTaskBuilder {
+class KafkaSinkBuilder() extends ISinkTaskBuilder {
   override def build(
       configString: String
   )(implicit buildingContext: TaskBuildingContext): KafkaSink = {

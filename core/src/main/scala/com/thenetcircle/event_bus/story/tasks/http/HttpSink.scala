@@ -32,7 +32,7 @@ import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender
 import com.typesafe.config.Config
@@ -54,7 +54,7 @@ case class HttpSinkSettings(
     poolSettings: Option[ConnectionPoolSettings] = None
 )
 
-class HttpSink(val settings: HttpSinkSettings) extends SinkTask with Logging {
+class HttpSink(val settings: HttpSinkSettings) extends ISinkTask with Logging {
 
   def createRequest(event: Event): HttpRequest = {
     var _request = settings.defaultRequest.withEntity(HttpEntity(event.body.data))
@@ -248,7 +248,7 @@ object HttpSink extends Logging {
   }
 }
 
-class HttpSinkBuilder() extends SinkTaskBuilder with Logging {
+class HttpSinkBuilder() extends ISinkTaskBuilder with Logging {
 
   override def build(
       configString: String

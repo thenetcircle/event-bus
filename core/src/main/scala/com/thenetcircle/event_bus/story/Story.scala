@@ -23,7 +23,7 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, _}
-import com.thenetcircle.event_bus.story.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
+import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ISinkTask, ISourceTask, ITransformTask}
 import com.thenetcircle.event_bus.misc.{Logging, MonitoringHelp}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 
@@ -35,10 +35,10 @@ case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
 
 class Story(
     val settings: StorySettings,
-    val sourceTask: SourceTask,
-    val sinkTask: SinkTask,
-    val transformTasks: Option[List[TransformTask]] = None,
-    val fallbackTask: Option[FallbackTask] = None
+    val sourceTask: ISourceTask,
+    val sinkTask: ISinkTask,
+    val transformTasks: Option[List[ITransformTask]] = None,
+    val fallbackTask: Option[IFallbackTask] = None
 ) extends Logging
     with MonitoringHelp {
 
@@ -132,7 +132,7 @@ object Story extends Logging {
   def wrapTask(
       taskHandler: Flow[Payload, Payload, NotUsed],
       taskName: String,
-      fallbackTask: Option[FallbackTask] = None,
+      fallbackTask: Option[IFallbackTask] = None,
       skipPreCheck: Boolean = false
   )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
     Flow

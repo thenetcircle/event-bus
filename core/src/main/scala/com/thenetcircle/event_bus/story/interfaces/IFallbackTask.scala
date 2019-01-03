@@ -17,17 +17,22 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
+import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
-import scala.concurrent.Future
+trait IFallbackTask extends ITask {
 
-trait SourceTask extends Task {
-
-  def runWith(handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed])(
+  /**
+    * Returns a [[Flow]] which bind on a specific task and accepts TOFB events then send them into fallback
+    * Note that this method will be called multiple times aon each tasks of stories
+    *
+    * @param taskName [[String]]
+    * @param runningContext [[TaskRunningContext]]
+    */
+  def prepareForTask(taskName: String)(
       implicit runningContext: TaskRunningContext
-  ): Future[Done]
+  ): Flow[Event, Event, NotUsed]
 
 }
