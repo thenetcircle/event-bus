@@ -208,5 +208,4 @@ object Story extends Logging {
           }
       )
       .named(taskName)
-
 }

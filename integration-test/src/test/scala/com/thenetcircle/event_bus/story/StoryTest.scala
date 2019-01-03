@@ -20,21 +20,21 @@ package com.thenetcircle.event_bus.story
 import akka.NotUsed
 import akka.stream.Attributes
 import akka.stream.scaladsl.{Flow, Source}
-import com.thenetcircle.event_bus.TestBase
+import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.interfaces.EventStatus._
 import com.thenetcircle.event_bus.story.Story.Payload
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 import scala.util.Random
 
-class StoryTest extends TestBase {
+class StoryTest extends IntegrationTestBase {
 
   behavior of "Story"
 
   it should "make sure the message order after wrapping tasks" in {
 
-    val slowTask: Flow[Payload, Payload, NotUsed] = Flow[Payload]
-      .mapAsync(2) { pl =>
+    val slowTask1: Flow[Payload, Payload, NotUsed] = Flow[Payload]
+      .mapAsync(1) { pl =>
         Future {
           Thread.sleep(Random.nextInt(1000))
           pl
@@ -44,7 +44,7 @@ class StoryTest extends TestBase {
     val slowTask2: Flow[Payload, Payload, NotUsed] = Flow[Payload].async
       .addAttributes(Attributes.inputBuffer(1, 1))
 
-    val wrappedTask: Flow[Payload, Payload, NotUsed] = Story.wrapTask(slowTask2, "testTask")
+    val wrappedTask: Flow[Payload, Payload, NotUsed] = Story.wrapTask(slowTask1, "testTask")
 
     val testSource: Source[Payload, NotUsed] = Source(
       List(
