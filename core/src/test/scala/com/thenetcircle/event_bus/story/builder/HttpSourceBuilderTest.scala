@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.builder
+package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.extractor.DataFormat
