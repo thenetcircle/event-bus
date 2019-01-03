@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
-import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
+import com.thenetcircle.event_bus.story.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.matching.Regex

@@ -15,19 +15,17 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interfaces
+package com.thenetcircle.event_bus.story.interfaces
 
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
-trait Task {
+trait TransformTask extends Task {
 
-  /**
-    * Shutdown the task when something got wrong or the task has to be finished
-    * It's a good place to clear up the resources like connection, actor, etc...
-    * It's recommended to make this method to be idempotent, Because it could be called multiple times
-    *
-    * @param runningContext [[TaskRunningContext]]
-    */
-  def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
+  def prepare()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Event, (EventStatus, Event), NotUsed]
 
 }

@@ -23,7 +23,7 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, _}
-import com.thenetcircle.event_bus.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
+import com.thenetcircle.event_bus.story.interfaces.{FallbackTask, SinkTask, SourceTask, TransformTask}
 import com.thenetcircle.event_bus.misc.{Logging, MonitoringHelp}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 

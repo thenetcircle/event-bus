@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.interfaces._
+import com.thenetcircle.event_bus.story.interfaces._
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 

@@ -15,17 +15,24 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interfaces
+package com.thenetcircle.event_bus.story.interfaces
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
-trait TransformTask extends Task {
+trait FallbackTask extends Task {
 
-  def prepare()(
+  /**
+    * Returns a [[Flow]] which bind on a specific task and accepts TOFB events then send them into fallback
+    * Note that this method will be called multiple times aon each tasks of stories
+    *
+    * @param taskName [[String]]
+    * @param runningContext [[TaskRunningContext]]
+    */
+  def prepareForTask(taskName: String)(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed]
+  ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
 
 }

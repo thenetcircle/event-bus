@@ -15,20 +15,19 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interfaces
+package com.thenetcircle.event_bus.story.interfaces
 
-import com.thenetcircle.event_bus.context.TaskBuildingContext
+import com.thenetcircle.event_bus.context.TaskRunningContext
 
-trait TaskBuilder[+T <: Task] {
+trait Task {
 
-  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
+  /**
+    * Shutdown the task when something got wrong or the task has to be finished
+    * It's a good place to clear up the resources like connection, actor, etc...
+    * It's recommended to make this method to be idempotent, Because it could be called multiple times
+    *
+    * @param runningContext [[TaskRunningContext]]
+    */
+  def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 
 }
-
-trait SourceTaskBuilder extends TaskBuilder[SourceTask]
-
-trait TransformTaskBuilder extends TaskBuilder[TransformTask]
-
-trait SinkTaskBuilder extends TaskBuilder[SinkTask]
-
-trait FallbackTaskBuilder extends TaskBuilder[FallbackTask]

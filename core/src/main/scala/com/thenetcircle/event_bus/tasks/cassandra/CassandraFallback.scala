@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFut
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.interfaces.{FallbackTask, FallbackTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{FallbackTask, FallbackTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import net.ceedubs.ficus.Ficus._
 
