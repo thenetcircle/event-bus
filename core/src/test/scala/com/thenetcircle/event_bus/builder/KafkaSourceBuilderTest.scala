@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.tasks.kafka.{KafkaSource, KafkaSourceBuilder}
+import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceBuilder}
 
 class KafkaSourceBuilderTest extends TestBase {
 

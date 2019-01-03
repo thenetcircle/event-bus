@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.tasks.tnc.{TNCEventFilterBuilder, TNCEventFilterSettings}
+import com.thenetcircle.event_bus.story.tasks.tnc.{TNCEventFilterBuilder, TNCEventFilterSettings}
 
 class TNCEventFilterBuilderTest extends TestBase {
 

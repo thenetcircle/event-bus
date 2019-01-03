@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.kafka
+package com.thenetcircle.event_bus.story.tasks.kafka
 
 import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
@@ -29,8 +29,8 @@ import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.tasks.kafka.KafkaSource.CommittableException
-import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKeyDeserializer
+import com.thenetcircle.event_bus.story.tasks.kafka.KafkaSource.CommittableException
+import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserializer
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 

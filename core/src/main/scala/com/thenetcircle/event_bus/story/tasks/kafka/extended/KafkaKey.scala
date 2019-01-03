@@ -15,12 +15,12 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.kafka.extended
+package com.thenetcircle.event_bus.story.tasks.kafka.extended
 
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey._
+import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKey._
 
 import scala.util.control.NonFatal
 import scala.util.matching.Regex

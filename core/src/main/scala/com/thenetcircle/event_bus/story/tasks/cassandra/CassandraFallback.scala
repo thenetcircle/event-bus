@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.cassandra
+package com.thenetcircle.event_bus.story.tasks.cassandra
 
 import java.util.Date
 

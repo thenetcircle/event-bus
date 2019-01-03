@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.kafka
+package com.thenetcircle.event_bus.story.tasks.kafka
 
 import java.util
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
@@ -32,7 +32,12 @@ import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.story.interfaces.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
+import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
+  EventSerializer,
+  KafkaKey,
+  KafkaKeySerializer,
+  KafkaPartitioner
+}
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.KafkaException

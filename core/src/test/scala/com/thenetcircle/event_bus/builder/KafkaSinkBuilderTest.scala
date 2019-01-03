@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.tasks.kafka.{KafkaSink, KafkaSinkBuilder}
+import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSink, KafkaSinkBuilder}
 
 import scala.concurrent.duration._
 

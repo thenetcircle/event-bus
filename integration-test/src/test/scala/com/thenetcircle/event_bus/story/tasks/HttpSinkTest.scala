@@ -1,4 +1,4 @@
-package com.thenetcircle.event_bus.tasks
+package com.thenetcircle.event_bus.story.tasks
 
 import akka.NotUsed
 import akka.http.scaladsl.Http
@@ -10,7 +10,7 @@ import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSinkSettings, UnexpectedResponseException}
+import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings, UnexpectedResponseException}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

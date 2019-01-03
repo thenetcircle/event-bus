@@ -1,4 +1,4 @@
-package com.thenetcircle.event_bus.tasks
+package com.thenetcircle.event_bus.story.tasks
 
 import java.util.Properties
 
@@ -6,8 +6,8 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer}
-import com.thenetcircle.event_bus.tasks.kafka._
+import com.thenetcircle.event_bus.story.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer}
+import com.thenetcircle.event_bus.story.tasks.kafka._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerRecord}
 import org.scalatest.BeforeAndAfter
 

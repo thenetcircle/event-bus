@@ -15,9 +15,9 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks
+package com.thenetcircle.event_bus.story.tasks
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.tasks.kafka.extended.KafkaKey
+import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKey
 
 package object kafka {
   type ProducerKey   = KafkaKey

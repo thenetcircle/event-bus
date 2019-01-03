@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.builder
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.tasks.http.HttpSinkBuilder
+import com.thenetcircle.event_bus.story.tasks.http.HttpSinkBuilder
 
 import scala.concurrent.duration._
 

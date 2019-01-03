@@ -15,15 +15,15 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.kafka.extended
+package com.thenetcircle.event_bus.story.tasks.kafka.extended
 
 import java.util
 
-import org.apache.kafka.common.serialization.Deserializer
+import org.apache.kafka.common.serialization.Serializer
 
-class KafkaKeyDeserializer extends Deserializer[KafkaKey] {
-  override def deserialize(topic: String, data: Array[Byte]): KafkaKey =
-    new KafkaKey(new String(data, "UTF-8"))
+class KafkaKeySerializer extends Serializer[KafkaKey] {
+  override def serialize(topic: String, data: KafkaKey): Array[Byte] =
+    data.rawData.getBytes("UTF-8")
 
   override def configure(configs: util.Map[String, _], isKey: Boolean): Unit = {}
   override def close(): Unit                                                 = {}

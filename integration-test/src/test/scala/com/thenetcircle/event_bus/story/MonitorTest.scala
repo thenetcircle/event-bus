@@ -21,8 +21,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, Uri}
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.misc.Monitor
-import com.thenetcircle.event_bus.tasks.http.{HttpSource, HttpSourceSettings}
-import com.thenetcircle.event_bus.tasks.kafka.{KafkaSink, KafkaSinkSettings}
+import com.thenetcircle.event_bus.story.tasks.http.{HttpSource, HttpSourceSettings}
+import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSink, KafkaSinkSettings}
 
 import scala.io.StdIn
 

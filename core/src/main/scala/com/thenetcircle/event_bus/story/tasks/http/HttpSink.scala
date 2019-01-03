@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.tasks.http
+package com.thenetcircle.event_bus.story.tasks.http
 
 import java.util.concurrent.ThreadLocalRandom
 
@@ -34,7 +34,7 @@ import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.story.interfaces.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender
+import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
