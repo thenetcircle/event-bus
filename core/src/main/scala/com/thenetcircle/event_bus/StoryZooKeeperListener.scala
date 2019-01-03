@@ -15,12 +15,12 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus
 
 import akka.actor.{ActorRef, ActorSystem, Cancellable}
-import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
+import com.thenetcircle.event_bus.story._
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 import org.apache.curator.framework.recipes.leader.LeaderLatch

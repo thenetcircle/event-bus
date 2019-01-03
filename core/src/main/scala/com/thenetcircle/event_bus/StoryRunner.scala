@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus
 
 import akka.actor.{
   Actor,
@@ -29,6 +29,7 @@ import akka.actor.{
   Timers
 }
 import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContextFactory}
+import com.thenetcircle.event_bus.story.{Story, StorySupervisor}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -75,7 +76,7 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
 
       val actorName = s"story:$storyName:${java.util.UUID.randomUUID().toString}"
       val storyActor =
-        context.actorOf(StoryActor.props(story, self)(runningContext), actorName)
+        context.actorOf(StorySupervisor.props(story, self)(runningContext), actorName)
       context.watch(storyActor)
 
       runningStories += (storyActor -> storyName)
@@ -83,9 +84,9 @@ class StoryRunner(runnerName: String)(implicit appContext: AppContext, system: A
     case Shutdown(storyNameOption) =>
       storyNameOption match {
         case Some(storyName) =>
-          runningStories.filter(_._2 == storyName).foreach(_._1 ! StoryActor.Shutdown)
+          runningStories.filter(_._2 == storyName).foreach(_._1 ! StorySupervisor.Shutdown)
         case None =>
-          runningStories.foreach(_._1 ! StoryActor.Shutdown)
+          runningStories.foreach(_._1 ! StorySupervisor.Shutdown)
       }
 
     case Terminated(storyActor) =>

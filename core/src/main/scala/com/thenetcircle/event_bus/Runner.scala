@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus
 import akka.actor.ActorRef
 import akka.pattern.gracefulStop
 import com.thenetcircle.event_bus.misc.{Monitor, ZooKeeperManager}
-import com.thenetcircle.event_bus.story.{StoryBuilder, StoryRunner, StoryZooKeeperListener, TaskBuilderFactory}
+import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await

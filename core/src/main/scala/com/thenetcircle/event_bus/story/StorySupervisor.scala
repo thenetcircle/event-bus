@@ -6,19 +6,19 @@ import com.thenetcircle.event_bus.context.TaskRunningContext
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-object StoryActor {
+object StorySupervisor {
   def props(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext): Props =
-    Props(classOf[StoryActor], story, runner, runningContext)
+    Props(classOf[StorySupervisor], story, runner, runningContext)
 
   case object Shutdown
   case class Restart(ex: Throwable)
 }
 
-class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)
+class StorySupervisor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)
     extends Actor
     with ActorLogging {
 
-  import StoryActor._
+  import StorySupervisor._
 
   val storyName: String = story.storyName
 
