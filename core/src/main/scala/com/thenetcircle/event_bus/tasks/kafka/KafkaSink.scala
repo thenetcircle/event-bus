@@ -28,8 +28,9 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.NORM
-import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.event.EventStatus.NORM
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
+import com.thenetcircle.event_bus.interfaces.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.extended.{EventSerializer, KafkaKey, KafkaKeySerializer, KafkaPartitioner}
 import net.ceedubs.ficus.Ficus._

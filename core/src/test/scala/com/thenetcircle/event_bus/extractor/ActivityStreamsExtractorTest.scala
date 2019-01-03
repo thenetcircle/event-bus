@@ -22,7 +22,7 @@ import java.text.SimpleDateFormat
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor._
-import com.thenetcircle.event_bus.interfaces.{EventBody, EventTransportMode}
+import com.thenetcircle.event_bus.event.{EventBody, EventTransportMode}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

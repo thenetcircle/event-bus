@@ -20,6 +20,7 @@ package com.thenetcircle.event_bus.interfaces
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
 
 import scala.concurrent.Future
 

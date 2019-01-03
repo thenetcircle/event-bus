@@ -23,7 +23,7 @@ import java.util.Date
 
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData, EventTransportMode}
+import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData, EventTransportMode}
 import spray.json._
 
 import scala.concurrent.{ExecutionContext, Future}

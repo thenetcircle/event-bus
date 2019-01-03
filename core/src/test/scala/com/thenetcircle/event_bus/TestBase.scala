@@ -23,7 +23,7 @@ import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData, EventTransportMode}
+import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData, EventTransportMode}
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
 import com.typesafe.config.ConfigFactory

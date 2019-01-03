@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.stream.Attributes
 import akka.stream.scaladsl.{Flow, Source}
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.interfaces.EventStatus._
+import com.thenetcircle.event_bus.event.EventStatus._
 import com.thenetcircle.event_bus.story.Story.Payload
 
 import scala.concurrent.Future

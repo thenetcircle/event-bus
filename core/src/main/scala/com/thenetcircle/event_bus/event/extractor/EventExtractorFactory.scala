@@ -21,7 +21,7 @@ import akka.http.scaladsl.model.HttpEntity
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.util.ByteString
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.event.Event
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.collection.mutable

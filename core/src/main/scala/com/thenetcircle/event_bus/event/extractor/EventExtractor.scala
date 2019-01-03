@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.event.extractor
 
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.event.Event
 
 import scala.concurrent.{ExecutionContext, Future}
 

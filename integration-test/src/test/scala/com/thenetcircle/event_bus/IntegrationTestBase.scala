@@ -22,7 +22,7 @@ import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.misc.ZooKeeperManager
 import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
 import com.typesafe.config.{Config, ConfigFactory}

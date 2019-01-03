@@ -21,7 +21,6 @@ import java.time.Instant
 import java.util.Date
 
 import com.thenetcircle.event_bus.event.extractor.DataFormat
-import com.thenetcircle.event_bus.interfaces.{Event, EventBody, EventMetaData}
 
 case class EventImpl(
     uuid: String,

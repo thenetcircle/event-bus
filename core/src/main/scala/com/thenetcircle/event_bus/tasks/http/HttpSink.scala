@@ -30,8 +30,9 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{NORM, TOFB}
-import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, SinkTask, SinkTaskBuilder}
+import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
+import com.thenetcircle.event_bus.interfaces.{SinkTask, SinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.http.HttpSink.RetrySender
 import com.typesafe.config.Config

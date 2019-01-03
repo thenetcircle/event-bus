@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.tasks.tnc
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
-import com.thenetcircle.event_bus.interfaces.{EventBody, EventMetaData, EventTransportMode}
-import com.thenetcircle.event_bus.interfaces.EventStatus.{NORM, SKIP}
+import com.thenetcircle.event_bus.event.{EventBody, EventMetaData, EventTransportMode}
+import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
 
 class TNCEventFilterTest extends TestBase {
 

@@ -26,7 +26,8 @@ import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventImpl
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.interfaces.EventStatus._
+import com.thenetcircle.event_bus.event.EventStatus._
+import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.tasks.kafka.KafkaSource.CommittableException

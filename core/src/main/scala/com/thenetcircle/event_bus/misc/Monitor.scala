@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus.misc
 import com.thenetcircle.event_bus.BuildInfo
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.event.extractor.EventExtractingException
-import com.thenetcircle.event_bus.interfaces.EventStatus._
-import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
+import com.thenetcircle.event_bus.event.EventStatus._
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import kamon.Kamon
 import kamon.metric.instrument.{Counter, InstrumentFactory}
 import kamon.metric.{EntityRecorderFactory, GenericEntityRecorder}

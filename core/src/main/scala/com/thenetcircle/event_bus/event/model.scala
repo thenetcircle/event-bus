@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.interfaces
+package com.thenetcircle.event_bus.event
 
 import java.util.Date
 
@@ -53,4 +53,31 @@ case class EventBody(data: String, format: DataFormat)
 object EventBody {
   def apply(data: Array[Byte], format: DataFormat): EventBody =
     EventBody(new String(data, "UTF-8"), format)
+}
+
+sealed trait EventStatus
+object EventStatus {
+  sealed trait SuccStatus extends EventStatus
+  sealed trait FailStatus extends EventStatus
+
+  case object NORM                                 extends SuccStatus
+  case object INFB                                 extends SuccStatus
+  case object SKIP                                 extends SuccStatus
+  case class TOFB(cause: Option[Throwable] = None) extends FailStatus
+  case class FAIL(cause: Throwable)                extends FailStatus
+}
+
+sealed trait EventTransportMode
+object EventTransportMode {
+  case object SYNC_PLUS           extends EventTransportMode
+  case object ASYNC               extends EventTransportMode
+  case object BOTH                extends EventTransportMode
+  case class OTHERS(mode: String) extends EventTransportMode
+
+  def getFromString(mode: String): EventTransportMode = mode.toUpperCase match {
+    case "SYNC_PLUS" => SYNC_PLUS
+    case "ASYNC"     => ASYNC
+    case "BOTH"      => BOTH
+    case _           => OTHERS(mode)
+  }
 }

@@ -8,8 +8,8 @@ import akka.stream.scaladsl.{Flow, Keep}
 import akka.stream.testkit.{TestPublisher, TestSubscriber}
 import akka.stream.testkit.scaladsl.{TestSink, TestSource}
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.interfaces.EventStatus.{FAIL, NORM, TOFB}
-import com.thenetcircle.event_bus.interfaces.{Event, EventStatus}
+import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, TOFB}
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.tasks.http.{HttpSink, HttpSinkSettings, UnexpectedResponseException}
 
 import scala.concurrent.Await

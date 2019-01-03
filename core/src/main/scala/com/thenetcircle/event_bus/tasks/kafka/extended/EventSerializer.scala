@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.tasks.kafka.extended
 
 import java.util
 
-import com.thenetcircle.event_bus.interfaces.Event
+import com.thenetcircle.event_bus.event.Event
 import org.apache.kafka.common.serialization.Serializer
 
 class EventSerializer extends Serializer[Event] {

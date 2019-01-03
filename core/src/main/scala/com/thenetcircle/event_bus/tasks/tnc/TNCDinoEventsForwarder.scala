@@ -20,8 +20,9 @@ package com.thenetcircle.event_bus.tasks.tnc
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.interfaces.EventStatus.NORM
-import com.thenetcircle.event_bus.interfaces.{Event, EventStatus, TransformTask, TransformTaskBuilder}
+import com.thenetcircle.event_bus.event.EventStatus.NORM
+import com.thenetcircle.event_bus.event.{Event, EventStatus}
+import com.thenetcircle.event_bus.interfaces.{TransformTask, TransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.Logging
 
 import scala.util.matching.Regex
