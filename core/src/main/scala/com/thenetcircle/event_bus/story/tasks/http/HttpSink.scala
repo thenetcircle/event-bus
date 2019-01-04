@@ -80,7 +80,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISinkTask with Logging {
         system
           .actorOf(
             Props(classOf[RetrySender], settings, runningContext),
-            "http-sender-" + runningContext.getStoryName() + "-" + Random.nextInt()
+            "http-sender-" + getStoryName() + "-" + Random.nextInt()
           )
       )
       retrySender.get
@@ -123,7 +123,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISinkTask with Logging {
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down http-sink of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down http-sink of story ${getStoryName()}.")
     retrySender.foreach(s => {
       runningContext.getActorSystem().stop(s);
       retrySender = None

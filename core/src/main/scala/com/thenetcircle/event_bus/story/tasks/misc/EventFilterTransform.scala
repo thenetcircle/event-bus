@@ -37,7 +37,7 @@ case class EventFilterTransformSettings(
 
 class EventFilterTransform(val settings: EventFilterTransformSettings) extends ITransformTask with Logging {
 
-  logger.info(s"Initializing EventFilter with settings: $settings")
+  logger.info(s"Initializing EventFilterTransform with settings: $settings")
 
   override def flow()(
       implicit runningContext: TaskRunningContext

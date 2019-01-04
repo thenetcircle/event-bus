@@ -61,9 +61,7 @@ abstract class TestBase(_appContext: AppContext)
       system,
       materializer,
       executionContext,
-      "TestStoryRunner",
-      system.actorOf(TestActors.blackholeProps),
-      StorySettings("teststory")
+      system.actorOf(TestActors.blackholeProps)
     )
 
   lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)

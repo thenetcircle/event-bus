@@ -152,7 +152,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISinkTask with Logging 
           (NORM, message.passThrough)
       }
 
-    Story.wrapTaskFlow(
+    wrapPartialFlow(
       if (settings.useAsyncBuffer) {
         logger.debug("Wrapping async buffer")
         KafkaSink.wrapAsyncBuffer(settings.asyncBufferSize, producingFlow)
@@ -163,7 +163,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISinkTask with Logging 
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down kafka-sink of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down kafka-sink of story ${getStoryName()}.")
     kafkaProducer.foreach(k => {
       k.close(5, TimeUnit.SECONDS); kafkaProducer = None
     })

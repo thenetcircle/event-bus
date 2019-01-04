@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.context
 
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.collection.mutable.ListBuffer
@@ -39,9 +39,9 @@ class AppContext(appName: String, appEnv: String, systemConfig: Config) {
   def shutdown(): Unit =
     for (hook <- shutdownHooks) hook()
 
-  private var zkManager: Option[ZooKeeperManager]             = None
-  def setZooKeeperManager(_zkManager: ZooKeeperManager): Unit = zkManager = Some(_zkManager)
-  def getZooKeeperManager(): Option[ZooKeeperManager]         = zkManager
+  private var zkManager: Option[ZKManager]      = None
+  def setZKManager(_zkManager: ZKManager): Unit = zkManager = Some(_zkManager)
+  def getZKManager(): Option[ZKManager]         = zkManager
 
 }
 

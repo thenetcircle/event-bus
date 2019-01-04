@@ -21,7 +21,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
-import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
+import com.thenetcircle.event_bus.misc.{Logging, Util, ZKManager}
 import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import org.apache.curator.framework.recipes.cache.NodeCache
@@ -37,9 +37,7 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: String)
-    extends ITransformTask
-    with Logging {
+class TNCKafkaTopicResolver(zkManager: ZKManager, val _defaultTopic: String) extends ITransformTask with Logging {
 
   import TopicInfoProtocol._
 
@@ -64,7 +62,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
     var topic = _topic
     topic = topic.replaceAll(Regex.quote("""{app_name}"""), runningContext.getAppContext().getAppName())
     topic = topic.replaceAll(Regex.quote("""{app_env}"""), runningContext.getAppContext().getAppEnv())
-    topic = topic.replaceAll(Regex.quote("""{story_name}"""), runningContext.getStoryName())
+    topic = topic.replaceAll(Regex.quote("""{story_name}"""), getStoryName())
     topic
   }
 
@@ -171,7 +169,7 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down TNCKafkaTopicResolver of story ${runningContext.getStoryName()}.")
+    logger.info(s"shutting down TNCKafkaTopicResolver of story ${getStoryName()}.")
     nameIndex = Map.empty
     channelIndex = Map.empty
     zkWatcher.foreach(_.close())
@@ -187,7 +185,7 @@ class TNCKafkaTopicResolverBuilder() extends ITransformTaskBuilder {
       .convertJsonStringToConfig(configString)
       .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-topic-resolver"))
 
-    val zkMangerOption = buildingContext.getAppContext().getZooKeeperManager()
+    val zkMangerOption = buildingContext.getAppContext().getZKManager()
     if (zkMangerOption.isEmpty) {
       throw new IllegalArgumentException("ZooKeeperManager is required for TNCKafkaTopicResolver")
     }

@@ -26,8 +26,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.collection.JavaConverters._
 
-class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(implicit appContext: AppContext)
-    extends Logging {
+class ZKManager private (client: CuratorFramework, rootPath: String)(implicit appContext: AppContext) extends Logging {
 
   val appRootPath: String =
     appContext.getSystemConfig().getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
@@ -37,15 +36,15 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
     s"the zookeeper root path $rootPath is not allowed"
   )
 
-  logger.info(s"new ZookeeperManager instance created with rootPath $rootPath")
+  logger.info(s"new ZKManager instance created with rootPath $rootPath")
 
   def assertPermission(path: String): Unit =
     assert(path.startsWith(rootPath), s"the zookeeper path $path is not allowed")
 
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
-  def withAppRootPath(): ZooKeeperManager               = withRootPath(appRootPath)
-  def withRootPath(_rootpath: String): ZooKeeperManager = new ZooKeeperManager(client, _rootpath)
+  def withAppRootPath(): ZKManager               = withRootPath(appRootPath)
+  def withRootPath(_rootpath: String): ZKManager = new ZKManager(client, _rootpath)
 
   def getRootPath(): String                    = rootPath
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
@@ -172,25 +171,25 @@ class ZooKeeperManager private (client: CuratorFramework, rootPath: String)(impl
   }
 }
 
-object ZooKeeperManager {
+object ZKManager {
 
-  def init()(implicit appContext: AppContext): ZooKeeperManager = {
+  def init()(implicit appContext: AppContext): ZKManager = {
     val config = appContext.getSystemConfig()
     var rootPath: String =
       config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}/${appContext.getAppEnv()}"
     init(config.getString("app.zookeeper.servers"), rootPath)(appContext)
   }
 
-  def init(rootPath: String)(implicit appContext: AppContext): ZooKeeperManager =
+  def init(rootPath: String)(implicit appContext: AppContext): ZKManager =
     init(appContext.getSystemConfig().getString("app.zookeeper.servers"), rootPath)(appContext)
 
-  def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZooKeeperManager = {
+  def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager = {
     val client: CuratorFramework =
       CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
     client.start()
     appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
-    val zkManager = new ZooKeeperManager(client, rootPath)
-    appContext.setZooKeeperManager(zkManager)
+    val zkManager = new ZKManager(client, rootPath)
+    appContext.setZKManager(zkManager)
     zkManager
   }
 

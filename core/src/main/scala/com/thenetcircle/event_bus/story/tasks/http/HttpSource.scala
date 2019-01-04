@@ -134,7 +134,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down HTTP Source of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down HTTP Source of story ${getStoryName()}.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })

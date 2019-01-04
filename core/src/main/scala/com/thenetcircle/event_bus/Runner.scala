@@ -19,8 +19,8 @@ package com.thenetcircle.event_bus
 
 import akka.actor.ActorRef
 import akka.pattern.gracefulStop
-import com.thenetcircle.event_bus.misc.{Monitor, ZooKeeperManager}
-import com.thenetcircle.event_bus.story.{StoryBuilder, TaskBuilderFactory}
+import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
+import com.thenetcircle.event_bus.story.{StoryBuilder, StoryRunner, TaskBuilderFactory}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await
@@ -33,7 +33,7 @@ class Runner extends AbstractApp {
   def run(args: Array[String]): Unit = {
 
     Monitor.init()
-    ZooKeeperManager.init()
+    ZKManager.init()
 
     // Initialize StoryRunner
     val runnerName: String = config.getString("app.runner-name")
@@ -42,7 +42,7 @@ class Runner extends AbstractApp {
     appContext.addShutdownHook {
       try {
         Await.ready(
-          gracefulStop(storyRunner, 3.seconds, StoryRunner.Shutdown()),
+          gracefulStop(storyRunner, 3.seconds, StoryRunner.Commands.Shutdown()),
           3.seconds
         )
       } catch {
@@ -52,7 +52,7 @@ class Runner extends AbstractApp {
 
     val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
-    StoryZooKeeperListener(runnerName, storyRunner, storyBuilder).waitAndStart()
+    StoryZKListener(runnerName, storyRunner, storyBuilder).waitAndStart()
 
   }
 }

@@ -17,17 +17,15 @@
 
 package com.thenetcircle.event_bus.story
 
-import akka.stream._
-import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
-import akka.{Done, NotUsed}
+import akka.Done
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
-import com.thenetcircle.event_bus.misc.{Logging, Monitoring}
+import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.story.interfaces._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
@@ -39,8 +37,7 @@ class Story(
     val sinkTask: ISinkTask,
     val transformTasks: Option[List[ITransformTask]] = None,
     val fallbackTask: Option[IFallbackTask] = None
-) extends Logging
-    with Monitoring {
+) extends Logging {
 
   // initialize internal status
   val storyName: String                           = settings.name
@@ -63,26 +60,31 @@ class Story(
   def combineStoryFlow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] = {
     var storyFlow: Flow[Payload, Payload, StoryMat] = Flow[Payload]
 
+    // connect transforms flow
     transformTasks.foreach(_.foreach(tt => {
       storyFlow = storyFlow.via(tt.flow())
     }))
 
+    // connect sink flow
     storyFlow = storyFlow.via(sinkTask.flow())
 
+    // connect fallback flow
     fallbackTask.foreach(ft => {
       storyFlow = storyFlow.via(ft.flow())
     })
 
+    // connect monitor flow
     storyFlow = storyFlow
-      .map(pl => {
-        getStoryMonitor(storyName).newEvent(pl._2).onProcessed(pl._1, pl._2)
-        pl
-      })
+      .map {
+        case pl @ (status, event) =>
+          StoryMonitor(storyName).newEvent(event).onProcessed(status, event)
+          pl
+      }
       .watchTermination() {
         case (mat, done) =>
           done.onComplete {
-            case Success(_)  => getStoryMonitor(storyName).onCompleted()
-            case Failure(ex) => getStoryMonitor(storyName).onTerminated(ex)
+            case Success(_)  => StoryMonitor(storyName).onCompleted()
+            case Failure(ex) => StoryMonitor(storyName).onTerminated(ex)
           }(runningContext.getExecutionContext())
           mat
       }
@@ -119,119 +121,64 @@ class Story(
 }
 
 object Story extends Logging {
+  def props(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext): Props =
+    Props(classOf[StoryActor], story, runner, runningContext)
 
-  def wrapTaskFlow(
-      taskFlow: Flow[Event, Payload, NotUsed]
-  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
-    Flow
-      .fromGraph(
-        GraphDSL
-          .create() { implicit builder =>
-            import GraphDSL.Implicits._
+  object Commands {
+    case object Shutdown
+    case class Restart(cause: Throwable)
+  }
 
-            // NORM goes to 0, Others goes to 1
-            val partitioner =
-              builder.add(new Partition[Payload](2, {
-                case (NORM, _) => 0
-                case (_, _)    => 1
-              }, false))
-            val wrappedTaskFlow = Flow[Payload].map(_._2).via(taskFlow)
-            val output          = builder.add(Merge[Payload](2))
+  class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)
+      extends Actor
+      with ActorLogging {
 
-            // format: off
-            // ---------------  workflow graph start ----------------
-            // NORM goes to taskHandler >>>
-            partitioner.out(0)   ~>   wrappedTaskFlow   ~>   output.in(0)
-            // Other status will skip this task flow >>>
-            partitioner.out(1)              ~>               output.in(1)
-            // ---------------  workflow graph end ----------------
-            // format: on
+    import Story.Commands._
 
-            // ports
-            FlowShape(partitioner.in, output.out)
+    val storyName: String = story.storyName
+
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
+
+    override def preStart(): Unit = {
+      log.info(s"Starting the StoryActor of story $storyName")
+      val doneFuture = story.run()
+      // fix the case if this actor is dead already, the Shutdown commend will send to dead-letter
+      val selfPath = self.path
+
+      doneFuture.onComplete {
+        case Success(_) =>
+          log.warning(s"The story $storyName is complete, clean up now.")
+          try {
+            context.actorSelection(selfPath) ! Shutdown
+          } catch {
+            case ex: Throwable =>
           }
-      )
 
-  def wrapTask(
-      taskHandler: Flow[Payload, Payload, NotUsed],
-      taskName: String,
-      fallbackTask: Option[IFallbackTask] = None,
-      skipPreCheck: Boolean = false
-  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
-    Flow
-      .fromGraph(
-        GraphDSL
-          .create() { implicit builder =>
-            import GraphDSL.Implicits._
-
-            // SkipPreCheck goes to 0, NORM goes to 0, Others goes to 1
-            val preCheck =
-              builder.add(new Partition[Payload](2, input => {
-                if (skipPreCheck) 0
-                else {
-                  input match {
-                    case (NORM, _) => 0
-                    case (_, _)    => 1
-                  }
-                }
-              }))
-
-            // TOFB goes to 1, Others goes to 0
-            val postCheck =
-              builder.add(Partition[Payload](2, {
-                case (_: TOFB, _) => 1
-                case (_, _)       => 0
-              }))
-
-            val output = builder.add(Merge[Payload](3))
-
-            val fallback = Flow[Payload]
-              .map {
-                case input @ (_, event) =>
-                  val logMessage =
-                    s"Event ${event.uuid} was processing failed on task: $taskName." +
-                      (if (fallbackTask.isDefined) " Sending to fallbackTask." else "")
-                  logger.warn(logMessage)
-                  input
-              }
-              .via(
-                fallbackTask
-                  .map(_task => Flow[Payload].via(_task.flow()))
-                  .getOrElse(Flow[Payload])
-              )
-
-            val finalTaskHandler: Flow[Payload, Payload, NotUsed] = if (runningContext.getAppContext().isDev()) {
-              taskHandler.via(Flow[Payload].map(pl => {
-                logger.debug(s"The task $taskName has returned $pl")
-                pl
-              }))
-            } else {
-              taskHandler
-            }
-
-            // format: off
-            // ---------------  workflow graph start ----------------
-
-
-            // NORM goes to taskHandler >>>
-            preCheck.out(0)   ~>   finalTaskHandler   ~>   postCheck
-                                                           // non-TOFB goes to next task
-                                                           postCheck.out(0)            ~>              output.in(0)
-                                                           // TOFB goes to fallback  >>>
-                                                           postCheck.out(1) ~>      fallback      ~>   output.in(1)
-
-            // Other status will skip this task >>>
-            preCheck.out(1)                                       ~>                                   output.in(2)
-
-
-            // ---------------  workflow graph end ----------------
-            // format: on
-
-            // ports
-            FlowShape(preCheck.in, output.out)
+        case Failure(ex) =>
+          log.warning(s"The story $storyName was running failed with error $ex, clean up now.")
+          try {
+            context.actorSelection(selfPath) ! Restart(ex)
+          } catch {
+            case ex: Throwable =>
           }
-      )
-      .named(taskName)
+      }
+    }
+
+    override def postStop(): Unit = {
+      log.warning(s"Stopping the StoryActor of story $storyName")
+      story.shutdown()
+    }
+
+    override def receive: Receive = {
+      case Shutdown =>
+        log.info(s"Shutting down the StoryActor of story $storyName")
+        context.stop(self)
+
+      case Restart(ex) =>
+        log.info(s"Restarting the StoryActor of story $storyName")
+        throw ex
+    }
+  }
 }
 
 object StoryStatus extends Enumeration {

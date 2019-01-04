@@ -17,8 +17,13 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
+import akka.NotUsed
+import akka.stream.FlowShape
+import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.story.Story
+import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.event.EventStatus.NORM
+import com.thenetcircle.event_bus.story.{Payload, Story}
 
 trait ITask {
 
@@ -35,6 +40,40 @@ trait ITask {
   }
   def getTaskName(): String     = this.taskName.getOrElse("unknown")
   def getStory(): Option[Story] = this.story
+  def getStoryName(): String    = getStory().map(_.storyName).getOrElse("unknown")
+
+  def wrapPartialFlow(
+      partialFlow: Flow[Event, Payload, NotUsed],
+      decider: Payload => Boolean = {
+        case (NORM, _) => true
+        case _         => false
+      }
+  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
+    Flow
+      .fromGraph(
+        GraphDSL
+          .create() { implicit builder =>
+            import GraphDSL.Implicits._
+
+            // NORM goes to 0, Others goes to 1
+            val partitioner = builder.add(new Partition[Payload](2, decider andThen (if (_) 0 else 1), false))
+
+            val wrappedTaskFlow = Flow[Payload].map(_._2).via(partialFlow)
+            val output          = builder.add(Merge[Payload](2))
+
+            // format: off
+            // ---------------  workflow graph start ----------------
+            // NORM goes to taskHandler >>>
+            partitioner.out(0)   ~>   wrappedTaskFlow   ~>   output.in(0)
+            // Other status will skip this task flow >>>
+            partitioner.out(1)              ~>               output.in(1)
+            // ---------------  workflow graph end ----------------
+            // format: on
+
+            // ports
+            FlowShape(partitioner.in, output.out)
+          }
+      )
 
   /**
     * Shutdown the task when something got wrong or the task has to be finished

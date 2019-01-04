@@ -29,50 +29,24 @@ class TaskRunningContext(
     system: ActorSystem,
     materializer: Materializer,
     executionContext: ExecutionContext,
-    storyRunnerName: String,
-    storyRunner: ActorRef,
-    storySettings: StorySettings
+    storyRunner: ActorRef
 ) {
-
   def getAppContext(): AppContext             = appContext
   def getActorSystem(): ActorSystem           = system
   def getMaterializer(): Materializer         = materializer
   def getExecutionContext(): ExecutionContext = executionContext
-  def getStoryRunnerName(): String            = storyRunnerName
-  def getStoryRunner(): ActorRef              = storyRunner
-  def getStoryName(): String                  = storySettings.name
-
+  def getStoryRunenr(): ActorRef              = storyRunner
 }
 
-class TaskRunningContextFactory(system: ActorSystem, appContext: AppContext) extends LazyLogging {
-  val decider: Supervision.Decider = {
-    case ex: Throwable =>
-      logger.error(s"materializer supervision triggered by exception: $ex")
-      Supervision.Stop
-  }
+object TaskRunningContext {
 
-  lazy val materializer: Materializer =
-    ActorMaterializer(ActorMaterializerSettings(system).withSupervisionStrategy(decider))(system)
-
-  lazy val executionContext: ExecutionContext = ExecutionContext.global
-
-  def createNewRunningContext(
-      storyRunnerName: String,
-      storyRunner: ActorRef,
-      storySettings: StorySettings
+  def apply(
+      appContext: AppContext,
+      system: ActorSystem,
+      materializer: Materializer,
+      executionContext: ExecutionContext,
+      storyRunner: ActorRef
   ): TaskRunningContext =
-    new TaskRunningContext(
-      appContext,
-      system,
-      materializer,
-      executionContext,
-      storyRunnerName,
-      storyRunner,
-      storySettings
-    )
-}
+    new TaskRunningContext(appContext, system, materializer, executionContext, storyRunner)
 
-object TaskRunningContextFactory {
-  def apply(system: ActorSystem, appContext: AppContext): TaskRunningContextFactory =
-    new TaskRunningContextFactory(system, appContext)
 }

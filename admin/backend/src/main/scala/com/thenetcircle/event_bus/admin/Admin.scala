@@ -21,7 +21,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.AbstractApp
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.concurrent.Await
@@ -29,8 +29,8 @@ import scala.concurrent.duration._
 
 class Admin extends AbstractApp {
 
-  val config: Config                   = ConfigFactory.load()
-  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.init()
+  val config: Config            = ConfigFactory.load()
+  lazy val zkManager: ZKManager = ZKManager.init()
 
   def run(args: Array[String]): Unit = {
 

@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus
 
 import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
+import com.thenetcircle.event_bus.misc.{Logging, Util, ZKManager}
 import com.thenetcircle.event_bus.story._
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
@@ -29,25 +29,25 @@ import scala.concurrent.duration._
 import scala.util.Random
 import scala.util.control.NonFatal
 
-object StoryZooKeeperListener {
+object StoryZKListener {
   def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
       implicit appContext: AppContext,
       system: ActorSystem
-  ): StoryZooKeeperListener =
-    new StoryZooKeeperListener(runnerName, storyRunner, storyBuilder)
+  ): StoryZKListener =
+    new StoryZKListener(runnerName, storyRunner, storyBuilder)
 }
 
-class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
+class StoryZKListener(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
     implicit appContext: AppContext,
     system: ActorSystem
 ) extends Logging {
 
   require(
-    appContext.getZooKeeperManager().isDefined,
-    "StoryZooKeeperListener requires AppContext with ZookeeperManager injected"
+    appContext.getZKManager().isDefined,
+    "StoryZKListener requires AppContext with ZKManager injected"
   )
 
-  val zkManager: ZooKeeperManager = appContext.getZooKeeperManager().get
+  val zkManager: ZKManager = appContext.getZKManager().get
 
   type ZKEvent   = PathChildrenCacheEvent
   type ZKWatcher = PathChildrenCache
@@ -178,14 +178,14 @@ class StoryZooKeeperListener(runnerName: String, storyRunner: ActorRef, storyBui
       .foreach(data => {
         for (i <- 1 to amount) {
           createStory(storyName, data).foreach(story => {
-            storyRunner ! StoryRunner.Run(story)
+            storyRunner ! StoryRunner.Commands.Run(story)
           })
         }
       })
   }
 
   def shutdownStory(storyName: String): Unit =
-    storyRunner ! StoryRunner.Shutdown(Some(storyName))
+    storyRunner ! StoryRunner.Commands.Shutdown(Some(storyName))
 
   def createStory(storyName: String, storyData: Map[String, String]): Option[Story] =
     try {

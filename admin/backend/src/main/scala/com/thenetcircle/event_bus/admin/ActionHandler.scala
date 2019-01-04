@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.admin
 
 import akka.actor.ActorSystem
 import com.thenetcircle.event_bus.context.AppContext
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{ConfigFactory, ConfigObject}
 import com.typesafe.scalalogging.StrictLogging
 
@@ -40,8 +40,7 @@ case class RunnerStory(
     amount: Option[Int]
 )
 
-class ActionHandler(zkManager: ZooKeeperManager)(implicit appContext: AppContext, system: ActorSystem)
-    extends StrictLogging {
+class ActionHandler(zkManager: ZKManager)(implicit appContext: AppContext, system: ActorSystem) extends StrictLogging {
 
   def getZKNodeTreeAsJson(path: String): String =
     try {

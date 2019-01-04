@@ -153,7 +153,7 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
       import scala.collection.JavaConverters._
       statement.bind(
         event.uuid,
-        runningContext.getStoryName(),
+        getStoryName(),
         event.metadata.name.getOrElse(""),
         event.createdAt,
         new Date(),
@@ -167,7 +167,7 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down cassandra-fallback of story ${runningContext.getStoryName()}.")
+    logger.info(s"shutting down cassandra-fallback of story ${getStoryName()}.")
     sessionOption.foreach(s => { s.close(); sessionOption = None })
     clusterOption.foreach(c => { c.close(); clusterOption = None })
   }

@@ -23,7 +23,7 @@ import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.misc.ZooKeeperManager
+import com.thenetcircle.event_bus.misc.ZKManager
 import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
@@ -62,16 +62,14 @@ abstract class IntegrationTestBase(_appContext: AppContext)
       system,
       materializer,
       executionContext,
-      "TestStoryRunner",
-      system.actorOf(TestActors.blackholeProps),
-      StorySettings("teststory")
+      system.actorOf(TestActors.blackholeProps)
     )
 
   lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
   lazy val storyBuilder: StoryBuilder                        = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
-  private val _config                  = appContext.getSystemConfig()
-  lazy val zkManager: ZooKeeperManager = ZooKeeperManager.init()
+  private val _config           = appContext.getSystemConfig()
+  lazy val zkManager: ZKManager = ZKManager.init()
 
   def this() = {
     this(new AppContext("integration-test", "test", ConfigFactory.load()))

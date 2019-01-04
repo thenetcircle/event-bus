@@ -80,7 +80,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
       settings.groupId.getOrElse(
         "event-bus_consumer_" + runningContext.getAppContext().getAppName() +
           "_" + runningContext.getAppContext().getAppEnv() +
-          "_" + runningContext.getStoryName()
+          "_" + getStoryName()
       )
 
     _consumerSettings
@@ -158,7 +158,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
           case (topicPartition, source) =>
             try {
               consumerLogger.info(
-                s"A new topicPartition $topicPartition was assigned to runner ${runningContext.getStoryRunnerName()}."
+                s"A new topicPartition $topicPartition has been assigned to story ${getStoryName()}."
               )
 
               source
@@ -265,7 +265,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down kafka-source of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down kafka-source of story ${getStoryName()}.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })
