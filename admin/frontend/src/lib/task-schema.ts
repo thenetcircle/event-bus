@@ -174,7 +174,7 @@ const transformSchema: any = {
       }
     }
   },
-  'tnc-event-filter': {
+  'event-filter': {
     "title": "TNC Event Filter",
     "type": "object",
     "properties": {

@@ -18,18 +18,18 @@
 package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.misc.{TNCEventFilterBuilder, TNCEventFilterSettings}
+import com.thenetcircle.event_bus.story.tasks.misc.{EventFilterTransformBuilder, EventFilterTransformSettings}
 
-class TNCEventFilterBuilderTest extends TestBase {
+class EventFilterTransformBuilderTest extends TestBase {
 
-  behavior of "TNCEventFilterBuilder"
+  behavior of "EventFilterTransformBuilder"
 
-  val builder = new TNCEventFilterBuilder
+  val builder = new EventFilterTransformBuilder
 
-  it should "build proper TNCEventFilter with empty config" in {
+  it should "build proper EventFilterTransform with empty config" in {
     val sink = builder.build("""{}""".stripMargin)
 
-    val settings: TNCEventFilterSettings = sink.settings
+    val settings: EventFilterTransformSettings = sink.settings
 
     settings.eventNameWhiteList shouldEqual Seq.empty[String]
     settings.eventNameBlackList shouldEqual Seq.empty[String]
@@ -39,7 +39,7 @@ class TNCEventFilterBuilderTest extends TestBase {
     settings.onlyExtras shouldEqual Map.empty[String, String]
   }
 
-  it should "build proper TNCEventFilter with proper config" in {
+  it should "build proper EventFilterTransform with proper config" in {
     val sink = builder.build("""{
         |"event-name-white-list": ["user\\..*", "wio\\..*"],
         |"event-name-black-list": ["image\\..*"],
@@ -52,7 +52,7 @@ class TNCEventFilterBuilderTest extends TestBase {
         |}
         |}""".stripMargin)
 
-    val settings: TNCEventFilterSettings = sink.settings
+    val settings: EventFilterTransformSettings = sink.settings
 
     settings.eventNameWhiteList shouldEqual Seq("user\\..*", "wio\\..*")
     settings.eventNameBlackList shouldEqual Seq("image\\..*")

@@ -17,13 +17,12 @@
 
 package com.thenetcircle.event_bus.story.tasks.misc
 
-import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
+import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import org.apache.curator.framework.recipes.cache.NodeCache
 import spray.json._

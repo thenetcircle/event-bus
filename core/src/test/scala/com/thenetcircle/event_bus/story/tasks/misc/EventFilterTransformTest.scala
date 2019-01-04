@@ -23,11 +23,11 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{EventBody, EventMetaData, EventTransportMode}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
 
-class TNCEventFilterTest extends TestBase {
+class EventFilterTransformTest extends TestBase {
 
-  behavior of "TNCEventFilter"
+  behavior of "TNCEventFilterTransform"
 
-  val builder = new TNCEventFilterBuilder
+  val builder = new EventFilterTransformBuilder
 
   /*val eventFilter = builder.build("""{
         |"event-name-white-list": ["user\\..*", "wio\\..*"],

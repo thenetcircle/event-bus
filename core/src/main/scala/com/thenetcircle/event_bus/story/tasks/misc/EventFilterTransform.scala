@@ -26,7 +26,7 @@ import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import net.ceedubs.ficus.Ficus._
 
-case class TNCEventFilterSettings(
+case class EventFilterTransformSettings(
     eventNameWhiteList: Seq[String] = Seq.empty,
     eventNameBlackList: Seq[String] = Seq.empty,
     channelWhiteList: Seq[String] = Seq.empty,
@@ -35,9 +35,9 @@ case class TNCEventFilterSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class TNCEventFilter(val settings: TNCEventFilterSettings) extends ITransformTask with Logging {
+class EventFilterTransform(val settings: EventFilterTransformSettings) extends ITransformTask with Logging {
 
-  logger.info(s"Initializing TNCEventFilter with settings: $settings")
+  logger.info(s"Initializing EventFilter with settings: $settings")
 
   override def flow()(
       implicit runningContext: TaskRunningContext
@@ -128,14 +128,14 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends ITransformTas
   }
 }
 
-class TNCEventFilterBuilder() extends ITransformTaskBuilder {
+class EventFilterTransformBuilder() extends ITransformTaskBuilder {
 
   override def build(
       configString: String
-  )(implicit buildingContext: TaskBuildingContext): TNCEventFilter = {
+  )(implicit buildingContext: TaskBuildingContext): EventFilterTransform = {
     val config = Util
       .convertJsonStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.tnc-event-filter"))
+      .withFallback(buildingContext.getSystemConfig().getConfig("task.event-filter"))
 
     val eventNameWhiteList    = config.as[Option[Seq[String]]]("event-name-white-list").getOrElse(Seq.empty)
     val eventNameBlackList    = config.as[Option[Seq[String]]]("event-name-black-list").getOrElse(Seq.empty)
@@ -144,7 +144,7 @@ class TNCEventFilterBuilder() extends ITransformTaskBuilder {
     val allowedTransportModes = config.as[Option[Seq[String]]]("allowed-transport-modes").getOrElse(Seq.empty)
     val onlyExtras            = config.as[Option[Map[String, String]]]("only-extras").getOrElse(Map.empty)
 
-    val settings = TNCEventFilterSettings(
+    val settings = EventFilterTransformSettings(
       eventNameWhiteList,
       eventNameBlackList,
       channelWhiteList,
@@ -153,7 +153,7 @@ class TNCEventFilterBuilder() extends ITransformTaskBuilder {
       onlyExtras
     )
 
-    new TNCEventFilter(settings)
+    new EventFilterTransform(settings)
   }
 
 }
