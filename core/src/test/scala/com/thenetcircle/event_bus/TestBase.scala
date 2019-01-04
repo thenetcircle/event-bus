@@ -21,11 +21,9 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.DefaultEventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
-import com.thenetcircle.event_bus.event.{Event, EventBody, EventMetaData, EventTransportMode}
+import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 

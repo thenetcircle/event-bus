@@ -15,13 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.story.interfaces._
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 class TaskBuilderFactory() {
+
   private var sourceTaskBuilders: Map[String, ISourceTaskBuilder]       = Map.empty
   private var transformTaskBuilders: Map[String, ITransformTaskBuilder] = Map.empty
   private var sinkTaskBuilers: Map[String, ISinkTaskBuilder]            = Map.empty
@@ -62,6 +63,7 @@ class TaskBuilderFactory() {
 
   def getFallbackTaskBuilder(category: String): Option[IFallbackTaskBuilder] =
     fallbackTaskBuilers.get(category.toLowerCase)
+
 }
 
 object TaskBuilderFactory {

@@ -21,27 +21,21 @@ import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZKManager}
 import com.thenetcircle.event_bus.story._
+import com.thenetcircle.event_bus.story.builder.{StoryBuilder, StoryConfiguration}
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 import org.apache.curator.framework.recipes.leader.LeaderLatch
+import akka.pattern.gracefulStop
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Random
 import scala.util.control.NonFatal
 
-object StoryZKListener {
-  def apply(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
-      implicit appContext: AppContext,
-      system: ActorSystem
-  ): StoryZKListener =
-    new StoryZKListener(runnerName, storyRunner, storyBuilder)
-}
-
-class StoryZKListener(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
+private class ZKRunner(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
     implicit appContext: AppContext,
     system: ActorSystem
 ) extends Logging {
-
   require(
     appContext.getZKManager().isDefined,
     "StoryZKListener requires AppContext with ZKManager injected"
@@ -199,8 +193,8 @@ class StoryZKListener(runnerName: String, storyRunner: ActorRef, storyBuilder: S
         None
     }
 
-  def createStoryInfo(storyName: String, storyData: Map[String, String]): StoryInfo =
-    StoryInfo(
+  def createStoryInfo(storyName: String, storyData: Map[String, String]): StoryConfiguration =
+    StoryConfiguration(
       storyName,
       storyData.getOrElse("status", "INIT"),
       storyData.getOrElse("settings", ""),
@@ -208,5 +202,38 @@ class StoryZKListener(runnerName: String, storyRunner: ActorRef, storyBuilder: S
       storyData("sink"),
       storyData.get("transforms"),
       storyData.get("fallback")
+    )
+}
+
+object ZKRunner {
+  private var _instances: Map[String, ZKRunner] = Map.empty
+
+  def apply(runnerName: String)(
+      implicit appContext: AppContext,
+      system: ActorSystem
+  ): ZKRunner =
+    _instances.getOrElse(
+      runnerName, {
+
+        // TODO move insert zkmanager into appContext here
+        ZKManager.init()
+        val storyRunner: ActorRef =
+          system.actorOf(StoryRunner.props(runnerName), "runner:" + runnerName)
+        appContext.addShutdownHook {
+          try {
+            Await.ready(
+              gracefulStop(storyRunner, 3.seconds, StoryRunner.Commands.Shutdown()),
+              3.seconds
+            )
+          } catch {
+            case ex: Throwable =>
+          }
+        }
+
+        val _runner = new ZKRunner(runnerName, storyRunner, new StoryBuilder())
+        _instances = _instances.updated(runnerName, _runner)
+        _runner
+
+      }
     )
 }

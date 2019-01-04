@@ -17,43 +17,16 @@
 
 package com.thenetcircle.event_bus
 
-import akka.actor.ActorRef
-import akka.pattern.gracefulStop
 import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
-import com.thenetcircle.event_bus.story.{StoryBuilder, StoryRunner, TaskBuilderFactory}
 import com.typesafe.config.{Config, ConfigFactory}
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 class Runner extends AbstractApp {
 
   val config: Config = ConfigFactory.load()
 
   def run(args: Array[String]): Unit = {
-
     Monitor.init()
-    ZKManager.init()
-
-    // Initialize StoryRunner
-    val runnerName: String = config.getString("app.runner-name")
-    val storyRunner: ActorRef =
-      system.actorOf(StoryRunner.props(runnerName), "runner:" + runnerName)
-    appContext.addShutdownHook {
-      try {
-        Await.ready(
-          gracefulStop(storyRunner, 3.seconds, StoryRunner.Commands.Shutdown()),
-          3.seconds
-        )
-      } catch {
-        case ex: Throwable =>
-      }
-    }
-
-    val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
-
-    StoryZKListener(runnerName, storyRunner, storyBuilder).waitAndStart()
-
+    ZKRunner(config.getString("app.runner-name")).waitAndStart()
   }
 }
 

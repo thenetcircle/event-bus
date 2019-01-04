@@ -15,32 +15,24 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
+import com.thenetcircle.event_bus.story.{Story, StorySettings, StoryStatus}
 import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ISinkTask, ISourceTask, ITransformTask}
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.matching.Regex
 
-case class StoryInfo(
-    name: String,
-    status: String,
-    settings: String,
-    source: String,
-    sink: String,
-    transforms: Option[String],
-    fallback: Option[String]
-)
+class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
-class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext) extends LazyLogging {
-
+  val taskBuilderFactory: TaskBuilderFactory            = TaskBuilderFactory(appContext.getSystemConfig())
   implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
 
   val categoryDelimiter = """#"""
   val taskDelimiter     = """|||"""
 
-  def buildStory(storyInfo: StoryInfo): Story =
+  def buildStory(storyInfo: StoryConfiguration): Story =
     try {
       new Story(
         StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
@@ -100,9 +92,4 @@ class StoryBuilder(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: 
     taskBuilderFactory
       .getFallbackTaskBuilder(category)
       .map(_builder => _builder.build(configString))
-}
-
-object StoryBuilder {
-  def apply(taskBuilderFactory: TaskBuilderFactory)(implicit appContext: AppContext): StoryBuilder =
-    new StoryBuilder(taskBuilderFactory)
 }

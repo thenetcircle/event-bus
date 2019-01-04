@@ -24,7 +24,7 @@ import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, Task
 import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.misc.ZKManager
-import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings, TaskBuilderFactory}
+import com.thenetcircle.event_bus.story.{StoryBuilder, StorySettings}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
