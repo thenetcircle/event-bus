@@ -15,14 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story
+package com.thenetcircle.event_bus.misc
 
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpEntity, HttpRequest, Uri}
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.misc.Monitor
 import com.thenetcircle.event_bus.story.tasks.http.{HttpSource, HttpSourceSettings}
 import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSink, KafkaSinkSettings}
+import com.thenetcircle.event_bus.story.{Story, StorySettings}
 
 import scala.io.StdIn
 

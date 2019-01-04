@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.cassandra
+package com.thenetcircle.event_bus.story.tasks.misc
 
 import java.util.Date
 
@@ -173,7 +173,7 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
   }
 }
 
-private[cassandra] object GuavaFutures {
+private[tasks] object GuavaFutures {
   implicit final class GuavaFutureOpts[A](val guavaFut: ListenableFuture[A]) extends AnyVal {
     def asScala(): Future[A] = {
       val p = Promise[A]()

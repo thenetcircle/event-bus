@@ -1,4 +1,4 @@
-package com.thenetcircle.event_bus.story.tasks
+package com.thenetcircle.event_bus.story.tasks.http
 
 import akka.NotUsed
 import akka.http.scaladsl.Http
@@ -7,7 +7,6 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.tasks.http.{HttpSource, HttpSourceSettings}
 import org.scalatest.BeforeAndAfter
 
 import scala.concurrent.Await
