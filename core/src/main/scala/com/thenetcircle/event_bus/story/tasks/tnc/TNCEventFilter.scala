@@ -17,13 +17,13 @@
 
 package com.thenetcircle.event_bus.story.tasks.tnc
 
-import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
 import com.thenetcircle.event_bus.event._
-import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.interfaces._
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import net.ceedubs.ficus.Ficus._
 
 case class TNCEventFilterSettings(
@@ -39,11 +39,14 @@ class TNCEventFilter(val settings: TNCEventFilterSettings) extends ITransformTas
 
   logger.info(s"Initializing TNCEventFilter with settings: $settings")
 
-  override def prepare()(
+  override def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] = Flow[Event].map(checkEvent)
+  ): Flow[Payload, Payload, StoryMat] = Flow[Payload].map {
+    case (NORM, event) => checkEvent(event)
+    case others        => others
+  }
 
-  def checkEvent(event: Event): (EventStatus, Event) = {
+  def checkEvent(event: Event): Payload = {
 
     val eventBrief = Util.getBriefOfEvent(event)
 

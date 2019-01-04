@@ -27,7 +27,7 @@ class HttpSinkTest extends IntegrationTestBase {
 
     val story = new HttpSink(settings)
 
-    val flow: Flow[Event, (EventStatus, Event), NotUsed] = story.prepare()
+    val flow: Flow[Event, (EventStatus, Event), NotUsed] = story.flow()
 
     TestSource
       .probe[Event]

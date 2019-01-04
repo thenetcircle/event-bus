@@ -17,15 +17,14 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
-import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 
 trait ISinkTask extends ITask {
 
-  def prepare()(
+  def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, Event, NotUsed]
+  ): Flow[Payload, Payload, StoryMat]
 
 }

@@ -24,6 +24,7 @@ import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZooKeeperManager}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import org.apache.curator.framework.recipes.cache.NodeCache
 import spray.json._
 
@@ -110,19 +111,21 @@ class TNCKafkaTopicResolver(zkManager: ZooKeeperManager, val _defaultTopic: Stri
 
   def getChannelIndex(): Map[String, String] = channelIndex
 
-  override def prepare()(
+  override def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] = {
+  ): Flow[Payload, Payload, StoryMat] = {
     init()
-    Flow[Event].map(event => {
-      Try(resolveEvent(event)) match {
-        case Success(newEvent) =>
-          (NORM, newEvent)
-        case Failure(ex) =>
-          producerLogger.error(s"resolve kafka topic failed with error $ex")
-          (FAIL(ex), event)
-      }
-    })
+    Flow[Payload].map {
+      case (NORM, event) =>
+        Try(resolveEvent(event)) match {
+          case Success(newEvent) =>
+            (NORM, newEvent)
+          case Failure(ex) =>
+            producerLogger.error(s"resolve kafka topic failed with error $ex")
+            (FAIL(ex, getTaskName()), event)
+        }
+      case others => others
+    }
   }
 
   def getTopicFromIndex(event: Event): Option[String] = {

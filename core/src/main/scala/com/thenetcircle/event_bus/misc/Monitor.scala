@@ -64,7 +64,7 @@ object Monitor {
 
 }
 
-trait MonitoringHelp {
+trait Monitoring {
 
   def getStoryMonitor(storyName: String): StoryMonitor = StoryMonitor(storyName)
 
@@ -98,19 +98,19 @@ class StoryMonitor(storyName: String) {
   def onProcessed(status: EventStatus, event: Event): StoryMonitor = {
     status match {
       case NORM => entity.foreach(_.normEvent.increment())
-      case TOFB(exOp) =>
+      case TOFB(exOp, _) =>
         entity.foreach(e => {
           e.toFBEvent.increment()
           exOp.foreach(e.exception(_).increment())
         })
       case INFB => entity.foreach(_.inFBEvent.increment())
       case SKIP => entity.foreach(_.skipEvent.increment())
-      case FAIL(ex: EventExtractingException) =>
+      case FAIL(ex: EventExtractingException, _) =>
         entity.foreach(e => {
           e.badFormatEvent.increment()
           e.exception(ex).increment()
         })
-      case FAIL(ex) =>
+      case FAIL(ex, _) =>
         entity.foreach(e => {
           e.failEvent.increment()
           e.exception(ex).increment()

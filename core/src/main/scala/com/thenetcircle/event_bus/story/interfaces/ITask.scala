@@ -18,10 +18,23 @@
 package com.thenetcircle.event_bus.story.interfaces
 
 import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.story.Story
 
 trait ITask {
 
-  // TODO set story info
+  private var taskName: Option[String] = None
+  private var story: Option[Story]     = None
+
+  def initTask(taskName: String, story: Story): Unit = {
+    if (this.story.isDefined)
+      throw new IllegalStateException(
+        s"The task ${this.taskName} of story ${this.story.get.storyName} has been inited already."
+      )
+    this.taskName = Some(taskName);
+    this.story = Some(story)
+  }
+  def getTaskName(): String     = this.taskName.getOrElse("unknown")
+  def getStory(): Option[Story] = this.story
 
   /**
     * Shutdown the task when something got wrong or the task has to be finished

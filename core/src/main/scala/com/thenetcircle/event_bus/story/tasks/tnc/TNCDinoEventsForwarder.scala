@@ -17,13 +17,13 @@
 
 package com.thenetcircle.event_bus.story.tasks.tnc
 
-import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
 import com.thenetcircle.event_bus.misc.Logging
+import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 
 import scala.util.matching.Regex
 
@@ -43,10 +43,13 @@ class TNCDinoEventsForwarder() extends ITransformTask with Logging {
     }
   }
 
-  override def prepare()(
+  override def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] =
-    Flow[Event].map(e => NORM -> appendTitleField(e))
+  ): Flow[Payload, Payload, StoryMat] =
+    Flow[Payload].map {
+      case (NORM, event) => NORM -> appendTitleField(event)
+      case others        => others
+    }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 

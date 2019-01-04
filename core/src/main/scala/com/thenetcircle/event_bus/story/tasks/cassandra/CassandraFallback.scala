@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.story.tasks.cassandra
 
 import java.util.Date
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
@@ -28,8 +27,9 @@ import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFut
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, IFallbackTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, IFallbackTaskBuilder}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -88,9 +88,9 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
 
   }
 
-  override def prepareForTask(taskName: String)(
+  override def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = {
+  ): Flow[Payload, Payload, StoryMat] = {
 
     var keyspace = s"eventbus_${runningContext.getAppContext().getAppName()}".replaceAll("-", "_")
 
@@ -101,16 +101,16 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
     initializeCassandra(keyspace)
 
     val session         = sessionOption.get
-    val statementBinder = getStatementBinder(taskName)
+    val statementBinder = getStatementBinder()
 
     import GuavaFutures._
 
-    Flow[(EventStatus, Event)]
+    Flow[Payload]
       .mapAsync(settings.parallelism) {
-        case input @ (_, event) ⇒
+        case (status: TOFB, event) ⇒
           try {
             session
-              .executeAsync(statementBinder(input, statementOption.get))
+              .executeAsync(statementBinder((status, event), statementOption.get))
               .asScala()
               .map[(EventStatus, Event)](result => (INFB, event))
               .recover {
@@ -118,15 +118,18 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
                   consumerLogger.warn(
                     s"sending to cassandra[1] fallback was failed with error $ex"
                   )
-                  (FAIL(ex), event)
+                  (FAIL(ex, getTaskName()), event)
               }
           } catch {
             case NonFatal(ex) =>
               consumerLogger.debug(
                 s"sending to cassandra[2] fallback failed with error $ex"
               )
-              Future.successful((FAIL(ex), event))
+              Future.successful((FAIL(ex, getTaskName()), event))
           }
+
+        case (status, event) =>
+          Future.successful((status, event))
       }
   }
 
@@ -140,13 +143,11 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
                        |""".stripMargin)
   }
 
-  def getStatementBinder(failedTaskName: String)(
+  def getStatementBinder()(
       implicit runningContext: TaskRunningContext
-  ): ((EventStatus, Event), PreparedStatement) => BoundStatement = {
+  ): ((TOFB, Event), PreparedStatement) => BoundStatement = {
     case ((status, event), statement) =>
-      val cause =
-        if (status.isInstanceOf[TOFB]) status.asInstanceOf[TOFB].cause.map(_.toString).getOrElse("")
-        else ""
+      val cause = status.cause.map(_.toString).getOrElse("")
       logger.debug(s"binding cassandra statement")
 
       import scala.collection.JavaConverters._
@@ -156,7 +157,7 @@ class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask w
         event.metadata.name.getOrElse(""),
         event.createdAt,
         new Date(),
-        failedTaskName,
+        status.taskName,
         event.metadata.topic.getOrElse(""),
         event.body.data,
         event.body.format.toString,

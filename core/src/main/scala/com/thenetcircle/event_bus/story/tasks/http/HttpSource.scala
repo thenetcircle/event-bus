@@ -30,8 +30,9 @@ import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, SuccStatus, TOF
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{ISourceTask, ISourceTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.interfaces.{ISourceTask, ISourceTaskBuilder}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
@@ -49,21 +50,21 @@ case class HttpSourceSettings(
 
 class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logging {
 
-  def createResponse(result: (EventStatus, Event)): HttpResponse =
+  def createResponse(result: Payload): HttpResponse =
     result match {
       case (_: SuccStatus, _) =>
         HttpResponse(entity = HttpEntity(settings.succeededResponse))
-      case (TOFB(optionEx), _) =>
+      case (TOFB(optionEx, _), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
           entity = HttpEntity(optionEx.map(_.getMessage).getOrElse("Unhandled ToFallBack Status"))
         )
-      case (FAIL(ex: EventExtractingException), _) =>
+      case (FAIL(ex: EventExtractingException, _), _) =>
         HttpResponse(
           status = StatusCodes.BadRequest,
           entity = HttpEntity(ex.getMessage)
         )
-      case (FAIL(ex), _) =>
+      case (FAIL(ex, _), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
           entity = HttpEntity(ex.getMessage)
@@ -73,7 +74,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
   def getRequestUnmarshallerHandler()(
       implicit materializer: Materializer,
       executionContext: ExecutionContext
-  ): Flow[HttpRequest, (EventStatus, Event), NotUsed] = {
+  ): Flow[HttpRequest, Payload, NotUsed] = {
     val unmarshaller: Unmarshaller[HttpEntity, Event] =
       EventExtractorFactory.getHttpEntityUnmarshaller(settings.format)
 
@@ -81,22 +82,22 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            producerLogger.info("received a new event: " + Util.getBriefOfEvent(event))
-            producerLogger.debug(s"extracted event content: $event")
+            producerLogger.info("Received a new event: " + Util.getBriefOfEvent(event))
+            producerLogger.debug(s"Extracted content of the event: $event")
             (NORM, event)
           })
           .recover {
             case ex: EventExtractingException =>
-              producerLogger.warn(s"extract event from a http request failed with error $ex")
-              (FAIL(ex), Event.fromException(ex))
+              producerLogger.warn(s"Extract event from a http request failed with error $ex")
+              (FAIL(ex, getTaskName()), Event.fromException(ex))
           }
       })
   }
 
   var killSwitchOption: Option[KillSwitch] = None
 
-  override def runWith(
-      handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
+  override def run(
+      storyFlow: Flow[Payload, Payload, StoryMat]
   )(implicit runningContext: TaskRunningContext): Future[Done] = {
     implicit val system: ActorSystem                = runningContext.getActorSystem()
     implicit val materializer: Materializer         = runningContext.getMaterializer()
@@ -105,7 +106,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
     val internalHandler =
       Flow[HttpRequest]
         .via(getRequestUnmarshallerHandler())
-        .via(handler)
+        .via(storyFlow)
         .map(createResponse)
 
     val httpBindFuture =
@@ -121,7 +122,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
     killSwitchOption = Some(new KillSwitch {
       override def abort(ex: Throwable): Unit = shutdown()
       override def shutdown(): Unit = {
-        logger.info(s"unbinding http port.")
+        logger.info(s"Unbinding HTTP port.")
         Await.ready(
           httpBindFuture.flatMap(_.unbind().map(_ => donePromise tryComplete Success(Done))),
           5.seconds
@@ -133,7 +134,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down http-source of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down HTTP Source of story ${runningContext.getStoryName()}.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })

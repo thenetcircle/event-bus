@@ -106,7 +106,7 @@ class TNCKafkaTopicResolverTest extends IntegrationTestBase {
 
     val done = Source(0 to 100000)
       .map(i => createTestEvent(s"message.kick.$i"))
-      .via(resolver.prepare())
+      .via(resolver.flow())
       .runForeach {
         case (resultTry, event) =>
           println(event.metadata.group)

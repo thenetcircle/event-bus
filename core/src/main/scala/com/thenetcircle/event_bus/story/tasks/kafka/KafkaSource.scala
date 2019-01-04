@@ -29,6 +29,7 @@ import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import com.thenetcircle.event_bus.story.tasks.kafka.KafkaSource.CommittableException
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserializer
 import net.ceedubs.ficus.Ficus._
@@ -92,7 +93,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
-  )(implicit executionContext: ExecutionContext): Future[(EventStatus, Event)] = {
+  )(implicit executionContext: ExecutionContext): Future[Payload] = {
     val kafkaKeyDataOption = Option(message.record.key()).flatMap(_key => _key.data)
     val messageValue       = message.record.value()
     val kafkaTopic         = message.record.topic()
@@ -105,7 +106,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
 
     eventExtractor
       .extract(messageValue, Some(message.committableOffset))
-      .map[(EventStatus, Event)](event => {
+      .map[Payload](event => {
         var eve = event.withTopic(kafkaTopic)
         if (uuidOption.isDefined) {
           eve = eve.withUUID(uuidOption.get)
@@ -115,7 +116,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-        consumerLogger.info(s"extracted a new event: [$eventBrief] from kafka: [$kafkaBrief]")
+        consumerLogger.info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
 
         (NORM, eve)
       })
@@ -123,7 +124,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
           consumerLogger.warn(
-            s"The event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
+            s"The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
           )
           (
             SKIP,
@@ -138,8 +139,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
 
   var killSwitchOption: Option[KillSwitch] = None
 
-  override def runWith(
-      handler: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed]
+  override def run(
+      storyFlow: Flow[Payload, Payload, StoryMat]
   )(implicit runningContext: TaskRunningContext): Future[Done] = {
 
     implicit val materializer: Materializer         = runningContext.getMaterializer()
@@ -162,7 +163,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
 
               source
                 .mapAsync(1)(extractEventFromMessage)
-                .via(handler)
+                .via(storyFlow)
                 .map {
                   case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
@@ -177,7 +178,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
                         throw new IllegalStateException(errorMessage)
                     }
 
-                  case (TOFB(exOp), event) =>
+                  case (TOFB(exOp, _), event) =>
                     consumerLogger.error(
                       s"The event ${event.uuid} reaches the end with TOFB status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
@@ -194,7 +195,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
                         )
                     }
 
-                  case (FAIL(ex), event) =>
+                  case (FAIL(ex, _), event) =>
                     consumerLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
@@ -264,7 +265,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Lo
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down kafka-source of story ${runningContext.getStoryName()}.")
+    logger.info(s"Shutting down kafka-source of story ${runningContext.getStoryName()}.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })

@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus.story.tasks.http
 
 import java.util.concurrent.ThreadLocalRandom
 
-import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
@@ -32,14 +31,15 @@ import akka.util.Timeout
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Random, Success, Try}
 
 class UnexpectedResponseException(info: String) extends RuntimeException(info)
@@ -65,9 +65,9 @@ class HttpSink(val settings: HttpSinkSettings) extends ISinkTask with Logging {
 
   var retrySender: Option[ActorRef] = None
 
-  override def prepare()(
+  override def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] = {
+  ): Flow[Payload, Payload, StoryMat] = {
 
     implicit val system: ActorSystem               = runningContext.getActorSystem()
     implicit val materializer: Materializer        = runningContext.getMaterializer()
@@ -86,35 +86,38 @@ class HttpSink(val settings: HttpSinkSettings) extends ISinkTask with Logging {
       retrySender.get
     })
 
-    Flow[Event]
-      .mapAsync(settings.concurrentRetries) { event =>
-        val retryTimeout = settings.maxRetryTime
+    Flow[Payload]
+      .mapAsync(settings.concurrentRetries) {
+        case (NORM, event) =>
+          val retryTimeout = settings.maxRetryTime
 
-        import akka.pattern.ask
-        implicit val askTimeout: Timeout = Timeout(retryTimeout)
+          import akka.pattern.ask
+          implicit val askTimeout: Timeout = Timeout(retryTimeout)
 
-        val endPoint: String   = settings.defaultRequest.getUri().toString
-        val eventBrief: String = Util.getBriefOfEvent(event)
+          val endPoint: String   = settings.defaultRequest.getUri().toString
+          val eventBrief: String = Util.getBriefOfEvent(event)
 
-        (senderActor ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
-          .mapTo[Try[HttpResponse]]
-          .map[(EventStatus, Event)] {
-            case Success(resp) =>
-              consumerLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
-              (NORM, event)
-            case Failure(ex) =>
-              consumerLogger.warn(
-                s"A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
-              )
-              (TOFB(Some(ex)), event)
-          }
-          .recover {
-            case ex: AskTimeoutException =>
-              consumerLogger.warn(
-                s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryTimeout], $eventBrief"
-              )
-              (TOFB(Some(ex)), event)
-          }
+          (senderActor ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
+            .mapTo[Try[HttpResponse]]
+            .map[(EventStatus, Event)] {
+              case Success(resp) =>
+                consumerLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
+                (NORM, event)
+              case Failure(ex) =>
+                consumerLogger.warn(
+                  s"A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
+                )
+                (TOFB(Some(ex), getTaskName()), event)
+            }
+            .recover {
+              case ex: AskTimeoutException =>
+                consumerLogger.warn(
+                  s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryTimeout], $eventBrief"
+                )
+                (TOFB(Some(ex), getTaskName()), event)
+            }
+
+        case others => Future.successful(others)
       }
 
   }
@@ -230,7 +233,7 @@ object HttpSink extends Logging {
               } else {
                 // the response body was not expected
                 replyToReceiver(
-                  Failure(new UnexpectedResponseException(s"the response body $body was not expected.")),
+                  Failure(new UnexpectedResponseException(s"The response body $body was not expected.")),
                   receiver
                 )
               }

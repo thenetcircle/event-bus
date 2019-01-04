@@ -21,11 +21,11 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
-import com.thenetcircle.event_bus.event.{Event, _}
-import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ISinkTask, ISourceTask, ITransformTask}
-import com.thenetcircle.event_bus.misc.{Logging, MonitoringHelp}
+import com.thenetcircle.event_bus.misc.{Logging, Monitoring}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
+import com.thenetcircle.event_bus.story.interfaces._
 
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -40,70 +40,63 @@ class Story(
     val transformTasks: Option[List[ITransformTask]] = None,
     val fallbackTask: Option[IFallbackTask] = None
 ) extends Logging
-    with MonitoringHelp {
+    with Monitoring {
 
-  import com.thenetcircle.event_bus.story.Story.Payload
-
-  val storyName: String = settings.name
-
-  private var storyStatus: StoryStatus = settings.status
-  def updateStoryStatus(status: StoryStatus): Unit =
-    storyStatus = status
-  def getStoryStatus(): StoryStatus = storyStatus
-
+  // initialize internal status
+  val storyName: String                           = settings.name
+  private var storyStatus: StoryStatus            = settings.status
   private var runningFuture: Option[Future[Done]] = None
+
+  private def getTaskClassName(t: ITask): String = Option(t.getClass.getSimpleName).getOrElse("")
+
+  // initialize tasks
+  sourceTask.initTask(s"story:$storyName#source:${getTaskClassName(sourceTask)}", this)
+  sinkTask.initTask(s"story:$storyName#sink:${getTaskClassName(sinkTask)}", this)
+  transformTasks.foreach(_.zipWithIndex.foreach {
+    case (tt, i) => tt.initTask(s"story:$storyName#transform:$i:${getTaskClassName(tt)}", this)
+  })
+  fallbackTask.foreach(ft => ft.initTask(s"story:$storyName#fallback:${getTaskClassName(ft)}", this))
+
+  def updateStoryStatus(status: StoryStatus): Unit = storyStatus = status
+  def getStoryStatus(): StoryStatus                = storyStatus
+
+  def combineStoryFlow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] = {
+    var storyFlow: Flow[Payload, Payload, StoryMat] = Flow[Payload]
+
+    transformTasks.foreach(_.foreach(tt => {
+      storyFlow = storyFlow.via(tt.flow())
+    }))
+
+    storyFlow = storyFlow.via(sinkTask.flow())
+
+    fallbackTask.foreach(ft => {
+      storyFlow = storyFlow.via(ft.flow())
+    })
+
+    storyFlow = storyFlow
+      .map(pl => {
+        getStoryMonitor(storyName).newEvent(pl._2).onProcessed(pl._1, pl._2)
+        pl
+      })
+      .watchTermination() {
+        case (mat, done) =>
+          done.onComplete {
+            case Success(_)  => getStoryMonitor(storyName).onCompleted()
+            case Failure(ex) => getStoryMonitor(storyName).onTerminated(ex)
+          }(runningContext.getExecutionContext())
+          mat
+      }
+
+    storyFlow
+  }
+
   def run()(implicit runningContext: TaskRunningContext): Future[Done] = runningFuture getOrElse {
     try {
-      val sourceHandler = Story.wrapTask(Flow[Payload], s"story:$storyName:source", fallbackTask, skipPreCheck = true)
-
-      var transformId = 0
-      val transformsHandler =
-        transformTasks
-          .map(_.foldLeft(Flow[Payload]) { (_chain, _transform) =>
-            {
-              transformId += 1
-              _chain
-                .via(
-                  Story.wrapTask(
-                    Flow[Payload].map(_._2).via(_transform.prepare()),
-                    s"story:$storyName:transform:$transformId",
-                    fallbackTask
-                  )
-                )
-            }
-          })
-          .getOrElse(Flow[Payload])
-
-      val sinkHandler =
-        Story.wrapTask(Flow[Payload].map(_._2).via(sinkTask.prepare()), s"story:$storyName:sink", fallbackTask)
-
-      val monitorFlow = Flow[Payload]
-        .map(payload => {
-          getStoryMonitor(storyName).newEvent(payload._2).onProcessed(payload._1, payload._2)
-          payload
-        })
-        .watchTermination() {
-          case (mat, done) =>
-            done.onComplete {
-              case Success(_)  => getStoryMonitor(storyName).onCompleted()
-              case Failure(ex) => getStoryMonitor(storyName).onTerminated(ex)
-            }(runningContext.getExecutionContext())
-            mat
-        }
-
-      runningFuture = Some(
-        sourceTask.runWith(
-          sourceHandler
-            .via(transformsHandler)
-            .via(sinkHandler)
-            .via(monitorFlow)
-        )
-      )
-
+      runningFuture = Some(sourceTask.run(combineStoryFlow()))
       runningFuture.get
     } catch {
       case ex: Throwable =>
-        logger.error(s"run story $storyName failed with error $ex")
+        logger.error(s"Run story $storyName failed with error, $ex")
         shutdown()
         throw ex
     }
@@ -111,7 +104,7 @@ class Story(
 
   def shutdown()(implicit runningContext: TaskRunningContext): Unit =
     try {
-      logger.info(s"stopping story $storyName")
+      logger.info(s"Stopping story $storyName")
       runningFuture = None
       sourceTask.shutdown()
       transformTasks.foreach(_.foreach(_.shutdown()))
@@ -119,7 +112,7 @@ class Story(
       sinkTask.shutdown()
     } catch {
       case NonFatal(ex) =>
-        logger.error(s"get an error $ex when stopping story $storyName")
+        logger.error(s"Get an error when stopping story $storyName, $ex")
         throw ex
     }
 
@@ -127,7 +120,37 @@ class Story(
 
 object Story extends Logging {
 
-  type Payload = (EventStatus, Event) // middle result type
+  def wrapTaskFlow(
+      taskFlow: Flow[Event, Payload, NotUsed]
+  )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
+    Flow
+      .fromGraph(
+        GraphDSL
+          .create() { implicit builder =>
+            import GraphDSL.Implicits._
+
+            // NORM goes to 0, Others goes to 1
+            val partitioner =
+              builder.add(new Partition[Payload](2, {
+                case (NORM, _) => 0
+                case (_, _)    => 1
+              }, false))
+            val wrappedTaskFlow = Flow[Payload].map(_._2).via(taskFlow)
+            val output          = builder.add(Merge[Payload](2))
+
+            // format: off
+            // ---------------  workflow graph start ----------------
+            // NORM goes to taskHandler >>>
+            partitioner.out(0)   ~>   wrappedTaskFlow   ~>   output.in(0)
+            // Other status will skip this task flow >>>
+            partitioner.out(1)              ~>               output.in(1)
+            // ---------------  workflow graph end ----------------
+            // format: on
+
+            // ports
+            FlowShape(partitioner.in, output.out)
+          }
+      )
 
   def wrapTask(
       taskHandler: Flow[Payload, Payload, NotUsed],
@@ -173,13 +196,13 @@ object Story extends Logging {
               }
               .via(
                 fallbackTask
-                  .map(_task => Flow[Payload].via(_task.prepareForTask(taskName)))
+                  .map(_task => Flow[Payload].via(_task.flow()))
                   .getOrElse(Flow[Payload])
               )
 
             val finalTaskHandler: Flow[Payload, Payload, NotUsed] = if (runningContext.getAppContext().isDev()) {
               taskHandler.via(Flow[Payload].map(pl => {
-                logger.debug(s"task $taskName has returned $pl")
+                logger.debug(s"The task $taskName has returned $pl")
                 pl
               }))
             } else {

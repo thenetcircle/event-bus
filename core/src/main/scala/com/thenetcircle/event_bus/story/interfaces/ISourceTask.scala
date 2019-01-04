@@ -17,16 +17,16 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
+import akka.Done
 import akka.stream.scaladsl.Flow
-import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
 
 import scala.concurrent.Future
 
 trait ISourceTask extends ITask {
 
-  def runWith(handler: Flow[Event, Event, NotUsed])(
+  def run(storyFlow: Flow[Payload, Payload, StoryMat])(
       implicit runningContext: TaskRunningContext
   ): Future[Done]
 

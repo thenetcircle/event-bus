@@ -20,7 +20,6 @@ package com.thenetcircle.event_bus.story.tasks.kafka
 import java.util
 import java.util.concurrent.{LinkedBlockingQueue, TimeUnit}
 
-import akka.NotUsed
 import akka.kafka.ProducerMessage.{Envelope, Message, Result}
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
@@ -28,16 +27,17 @@ import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
-import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
   KafkaKeySerializer,
   KafkaPartitioner
 }
+import com.thenetcircle.event_bus.story.{Payload, Story, StoryMat}
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.KafkaException
@@ -120,9 +120,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISinkTask with Logging 
 
   var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
 
-  override def prepare()(
+  override def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Event, (EventStatus, Event), NotUsed] = {
+  ): Flow[Payload, Payload, StoryMat] = {
 
     val kafkaSettings = getProducerSettings()
 
@@ -152,12 +152,14 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISinkTask with Logging 
           (NORM, message.passThrough)
       }
 
-    if (settings.useAsyncBuffer) {
-      logger.debug("Wrapping async buffer")
-      KafkaSink.wrapAsyncBuffer(settings.asyncBufferSize, producingFlow)
-    } else {
-      producingFlow
-    }
+    Story.wrapTaskFlow(
+      if (settings.useAsyncBuffer) {
+        logger.debug("Wrapping async buffer")
+        KafkaSink.wrapAsyncBuffer(settings.asyncBufferSize, producingFlow)
+      } else {
+        producingFlow
+      }
+    )
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
@@ -170,7 +172,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISinkTask with Logging 
 
 object KafkaSink extends Logging {
 
-  def wrapAsyncBuffer(bufferSize: Int, producingFlow: Flow[Event, _, _]): Flow[Event, (EventStatus, Event), NotUsed] = {
+  def wrapAsyncBuffer(bufferSize: Int, producingFlow: Flow[Event, _, _]): Flow[Event, Payload, StoryMat] = {
     val decider: Supervision.Decider = {
       case _: RetriableException => Supervision.Resume
       case _: KafkaException     => Supervision.Stop
@@ -193,13 +195,13 @@ object KafkaSink extends Logging {
       )
   }
 
-  class AsyncBuffer(bufferSize: Int) extends GraphStage[FanOutShape2[Event, (EventStatus, Event), Event]] {
+  class AsyncBuffer(bufferSize: Int) extends GraphStage[FanOutShape2[Event, Payload, Event]] {
 
     val in   = Inlet[Event]("AsyncBuffer.in")
-    val out0 = Outlet[(EventStatus, Event)]("AsyncBuffer.out0")
+    val out0 = Outlet[Payload]("AsyncBuffer.out0")
     val out1 = Outlet[Event]("AsyncBuffer.out1")
 
-    val shape: FanOutShape2[Event, (EventStatus, Event), Event] = new FanOutShape2(in, out0, out1)
+    val shape: FanOutShape2[Event, Payload, Event] = new FanOutShape2(in, out0, out1)
 
     override def createLogic(
         inheritedAttributes: Attributes
