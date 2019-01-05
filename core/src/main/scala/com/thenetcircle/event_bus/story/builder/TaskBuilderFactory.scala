@@ -18,8 +18,6 @@
 package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.story.interfaces._
-import com.typesafe.config.{Config, ConfigFactory}
-import net.ceedubs.ficus.Ficus._
 
 class TaskBuilderFactory() {
 
@@ -64,22 +62,4 @@ class TaskBuilderFactory() {
   def getFallbackTaskBuilder(category: String): Option[IFallbackTaskBuilder] =
     fallbackTaskBuilers.get(category.toLowerCase)
 
-}
-
-object TaskBuilderFactory {
-  def apply(config: Config): TaskBuilderFactory = {
-    config.checkValid(ConfigFactory.defaultReference, "task.builders")
-
-    val taskBuilderFactory = new TaskBuilderFactory()
-    List("source", "transform", "sink", "fallback").foreach(prefix => {
-      config
-        .as[List[List[String]]](s"task.builders.$prefix")
-        .foreach {
-          case category :: builderClassName :: _ =>
-            taskBuilderFactory.registerBuilder(category, builderClassName)
-          case _ =>
-        }
-    })
-    taskBuilderFactory
-  }
 }

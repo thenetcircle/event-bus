@@ -21,6 +21,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, Materializer}
 import com.thenetcircle.event_bus.AbstractApp
+import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}
 
@@ -29,15 +30,13 @@ import scala.concurrent.duration._
 
 class Admin extends AbstractApp {
 
-  val config: Config            = ConfigFactory.load()
-  lazy val zkManager: ZKManager = ZKManager.init()
+  val config: Config = ConfigFactory.load()
 
   def run(args: Array[String]): Unit = {
-
     lazy implicit val materializer: Materializer = ActorMaterializer()
     import scala.concurrent.ExecutionContext.Implicits.global
 
-    val actionHandler = new ActionHandler(zkManager.withAppRootPath())
+    val actionHandler = new ActionHandler(initZKManager())
     val route: Route  = new Router().getRoute(actionHandler)
 
     val interface     = config.getString("app.admin.interface")
@@ -45,7 +44,16 @@ class Admin extends AbstractApp {
     val bindingFuture = Http().bindAndHandle(route, interface, port)
 
     appContext.addShutdownHook(Await.result(bindingFuture.map(_.unbind()), 5.seconds))
+  }
 
+  private def initZKManager()(implicit appContext: AppContext): ZKManager = {
+    val config        = appContext.getSystemConfig()
+    val connectString = config.getString("app.zookeeper.servers")
+    val rootPath      = appContext.getSystemConfig().getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
+    val zkManager     = new ZKManager(connectString, rootPath)
+    appContext.addShutdownHook(zkManager.close())
+    appContext.setZKManager(zkManager)
+    zkManager
   }
 
 }

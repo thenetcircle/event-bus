@@ -24,31 +24,32 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.util.matching.Regex
 
-class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
+class StoryBuilder(taskBuilderFactory: TaskBuilderFactory, taskBuildingContext: TaskBuildingContext)(
+    implicit appContext: AppContext
+) extends LazyLogging {
 
-  val taskBuilderFactory: TaskBuilderFactory            = TaskBuilderFactory(appContext.getSystemConfig())
-  implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
+  implicit val _context: TaskBuildingContext = taskBuildingContext
 
   val categoryDelimiter = """#"""
   val taskDelimiter     = """|||"""
 
-  def buildStory(storyInfo: StoryConfiguration): Story =
+  def buildStory(rawData: StoryRawData): Story =
     try {
       new Story(
-        StorySettings(storyInfo.name, StoryStatus(storyInfo.status)),
-        buildSourceTask(storyInfo.source).get,
-        buildSinkTask(storyInfo.sink).get,
-        storyInfo.transforms.map(_tcs => {
+        StorySettings(rawData.name, StoryStatus(rawData.status)),
+        buildSourceTask(rawData.source).get,
+        buildSinkTask(rawData.sink).get,
+        rawData.transforms.map(_tcs => {
           _tcs
             .split(Regex.quote(taskDelimiter))
             .map(_cs => buildTransformTask(_cs).get)
             .toList
         }),
-        storyInfo.fallback.map(buildFallbackTask(_).get)
+        rawData.fallback.map(buildFallbackTask(_).get)
       )
     } catch {
       case ex: Throwable =>
-        logger.error(s"story ${storyInfo.name} build failed with error $ex")
+        logger.error(s"story ${rawData.name} build failed with error $ex")
         throw ex
     }
 

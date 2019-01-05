@@ -21,8 +21,8 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
 import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
-import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.misc.Logging
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
@@ -63,8 +63,6 @@ abstract class TestBase(_appContext: AppContext)
     )
 
   lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
-
-  lazy val storyBuilder: StoryBuilder = StoryBuilder(TaskBuilderFactory(appContext.getSystemConfig()))
 
   def this() = {
     this(new AppContext("event-bus-test", "test", ConfigFactory.load()))

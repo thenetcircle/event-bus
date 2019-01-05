@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.context.AppContext
+import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache._
@@ -26,26 +27,29 @@ import org.apache.curator.retry.ExponentialBackoffRetry
 
 import scala.collection.JavaConverters._
 
-class ZKManager private (client: CuratorFramework, rootPath: String)(implicit appContext: AppContext) extends Logging {
+class ZKManager(
+    connectString: String,
+    private var rootPath: String,
+    retryPolicy: RetryPolicy = new ExponentialBackoffRetry(1000, 3)
+)(
+    implicit appContext: AppContext
+) extends Logging {
 
-  val appRootPath: String =
-    appContext.getSystemConfig().getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
+  private val client: CuratorFramework =
+    CuratorFrameworkFactory.newClient(connectString, retryPolicy)
 
-  assert(
-    rootPath.startsWith(appRootPath),
-    s"the zookeeper root path $rootPath is not allowed"
-  )
+  logger.info(s"A ZKManager has benn created with rootPath $rootPath")
 
-  logger.info(s"new ZKManager instance created with rootPath $rootPath")
+  client.start()
+
+  logger.info(s"ZooKeeper client has benn started.")
 
   def assertPermission(path: String): Unit =
-    assert(path.startsWith(rootPath), s"the zookeeper path $path is not allowed")
+    assert(path.startsWith(rootPath), s"The ZooKeeper path $path is not allowed")
 
   def close(): Unit = if (client.getState == CuratorFrameworkState.STARTED) client.close()
 
-  def withAppRootPath(): ZKManager               = withRootPath(appRootPath)
-  def withRootPath(_rootpath: String): ZKManager = new ZKManager(client, _rootpath)
-
+  def setRootPath(_rootpath: String): Unit     = rootPath = _rootpath
   def getRootPath(): String                    = rootPath
   def getAbsPath(relativePath: String): String = s"$rootPath/$relativePath"
 
@@ -71,7 +75,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
       client.delete().deletingChildrenIfNeeded().forPath(absPath)
     } catch {
       case ex: Throwable =>
-        logger.error(s"deletePath ZooKeeper node: $absPath failed with error: $ex")
+        logger.error(s"Deleting ZooKeeper path: $absPath failed with error: $ex")
         throw ex
     }
   }
@@ -84,7 +88,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
       Some(new String(client.getData.forPath(absPath), "UTF-8"))
     } catch {
       case ex: Throwable =>
-        logger.error(s"getData from ZooKeeper path: $absPath failed with error: $ex")
+        logger.error(s"Getting data from ZooKeeper path: $absPath failed with error: $ex")
         None
     }
   }
@@ -95,7 +99,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
       client.setData().forPath(absPath, data.getBytes())
     } catch {
       case ex: Throwable =>
-        logger.error(s"getData from ZooKeeper path: $absPath failed with error: $ex")
+        logger.error(s"Set data to ZooKeeper path: $absPath failed with error: $ex")
         throw ex
     }
   }
@@ -110,7 +114,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
       )
     } catch {
       case ex: Throwable =>
-        logger.error(s"getChildren from ZooKeeper path: $relativePath failed with error: $ex")
+        logger.error(s"Getting children from ZooKeeper path: $relativePath failed with error: $ex")
         None
     }
 
@@ -136,7 +140,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
     watcher.getListenable.addListener(new PathChildrenCacheListener {
       override def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent): Unit = {
         logger.debug(
-          s"get new event from zookeeper type: ${event.getType}, path: ${if (event.getData != null) event.getData.getPath
+          s"Getting a new event from ZooKeeper. type: ${event.getType}, path: ${if (event.getData != null) event.getData.getPath
           else ""}"
         )
         callback(event, watcher)
@@ -150,7 +154,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
 
   def watchData(relativePath: String)(callback: (Option[String]) => Unit): NodeCache = {
     val zkPath = getAbsPath(relativePath)
-    logger.debug(s"going to watch zookeeper node $zkPath")
+    logger.debug(s"Going to watch ZooKeeper node $zkPath")
     val watcher = new NodeCache(client, zkPath)
     watcher.start()
 
@@ -159,7 +163,7 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
         val data   = watcher.getCurrentData.getData
         val result = if (data == null) None else Some(Util.makeUTF8String(data))
         logger.debug(
-          s"watched zookeeper node $zkPath got updated, new data: $result"
+          s"Watching zookeeper node $zkPath changed, new data: $result"
         )
         callback(result)
       }
@@ -169,28 +173,4 @@ class ZKManager private (client: CuratorFramework, rootPath: String)(implicit ap
 
     watcher
   }
-}
-
-object ZKManager {
-
-  def init()(implicit appContext: AppContext): ZKManager = {
-    val config = appContext.getSystemConfig()
-    var rootPath: String =
-      config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}/${appContext.getAppEnv()}"
-    init(config.getString("app.zookeeper.servers"), rootPath)(appContext)
-  }
-
-  def init(rootPath: String)(implicit appContext: AppContext): ZKManager =
-    init(appContext.getSystemConfig().getString("app.zookeeper.servers"), rootPath)(appContext)
-
-  def init(connectString: String, rootPath: String)(implicit appContext: AppContext): ZKManager = {
-    val client: CuratorFramework =
-      CuratorFrameworkFactory.newClient(connectString, new ExponentialBackoffRetry(1000, 3))
-    client.start()
-    appContext.addShutdownHook(if (client.getState == CuratorFrameworkState.STARTED) client.close())
-    val zkManager = new ZKManager(client, rootPath)
-    appContext.setZKManager(zkManager)
-    zkManager
-  }
-
 }

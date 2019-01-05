@@ -59,6 +59,7 @@ class StoryMonitor(storyName: String) {
   }
 
 }
+
 object StoryMonitor {
   // TODO thread safe?
   private val instances = mutable.Map.empty[String, StoryMonitor]

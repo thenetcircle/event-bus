@@ -1,6 +1,6 @@
 package com.thenetcircle.event_bus.story.builder
 
-case class StoryConfiguration(
+case class StoryRawData(
     name: String,
     status: String,
     settings: String,

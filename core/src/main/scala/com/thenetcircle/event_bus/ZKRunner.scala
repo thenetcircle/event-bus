@@ -21,7 +21,7 @@ import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZKManager}
 import com.thenetcircle.event_bus.story._
-import com.thenetcircle.event_bus.story.builder.{StoryBuilder, StoryConfiguration}
+import com.thenetcircle.event_bus.story.builder.{StoryBuilder, StoryRawData}
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 import org.apache.curator.framework.recipes.leader.LeaderLatch
@@ -32,16 +32,24 @@ import scala.concurrent.duration._
 import scala.util.Random
 import scala.util.control.NonFatal
 
-private class ZKRunner(runnerName: String, storyRunner: ActorRef, storyBuilder: StoryBuilder)(
+class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: StoryBuilder)(
     implicit appContext: AppContext,
     system: ActorSystem
 ) extends Logging {
-  require(
-    appContext.getZKManager().isDefined,
-    "StoryZKListener requires AppContext with ZKManager injected"
-  )
 
-  val zkManager: ZKManager = appContext.getZKManager().get
+  // init StoryRunner
+  val storyRunner: ActorRef =
+    system.actorOf(StoryRunner.props(runnerName), "story-runner:" + runnerName)
+  appContext.addShutdownHook {
+    try {
+      Await.ready(
+        gracefulStop(storyRunner, 3.seconds, StoryRunner.Commands.Shutdown()),
+        3.seconds
+      )
+    } catch {
+      case ex: Throwable =>
+    }
+  }
 
   type ZKEvent   = PathChildrenCacheEvent
   type ZKWatcher = PathChildrenCache
@@ -183,9 +191,9 @@ private class ZKRunner(runnerName: String, storyRunner: ActorRef, storyBuilder: 
 
   def createStory(storyName: String, storyData: Map[String, String]): Option[Story] =
     try {
-      val storyInfo = createStoryInfo(storyName, storyData)
-      logger.info(s"creating new story $storyName with data: $storyInfo")
-      val story = storyBuilder.buildStory(storyInfo)
+      val storyRawData = createStoryRawData(storyName, storyData)
+      logger.info(s"creating new story $storyName with data: $storyRawData")
+      val story = storyBuilder.buildStory(storyRawData)
       Some(story)
     } catch {
       case NonFatal(ex) =>
@@ -193,8 +201,8 @@ private class ZKRunner(runnerName: String, storyRunner: ActorRef, storyBuilder: 
         None
     }
 
-  def createStoryInfo(storyName: String, storyData: Map[String, String]): StoryConfiguration =
-    StoryConfiguration(
+  def createStoryRawData(storyName: String, storyData: Map[String, String]): StoryRawData =
+    StoryRawData(
       storyName,
       storyData.getOrElse("status", "INIT"),
       storyData.getOrElse("settings", ""),
@@ -208,32 +216,16 @@ private class ZKRunner(runnerName: String, storyRunner: ActorRef, storyBuilder: 
 object ZKRunner {
   private var _instances: Map[String, ZKRunner] = Map.empty
 
-  def apply(runnerName: String)(
+  def apply(runnerName: String, zkManager: ZKManager, storyBuilder: StoryBuilder)(
       implicit appContext: AppContext,
       system: ActorSystem
   ): ZKRunner =
     _instances.getOrElse(
       runnerName, {
-
-        // TODO move insert zkmanager into appContext here
-        ZKManager.init()
-        val storyRunner: ActorRef =
-          system.actorOf(StoryRunner.props(runnerName), "runner:" + runnerName)
-        appContext.addShutdownHook {
-          try {
-            Await.ready(
-              gracefulStop(storyRunner, 3.seconds, StoryRunner.Commands.Shutdown()),
-              3.seconds
-            )
-          } catch {
-            case ex: Throwable =>
-          }
-        }
-
-        val _runner = new ZKRunner(runnerName, storyRunner, new StoryBuilder())
+        val _runner = new ZKRunner(runnerName, zkManager, storyBuilder)
         _instances = _instances.updated(runnerName, _runner)
         _runner
-
       }
     )
+
 }
