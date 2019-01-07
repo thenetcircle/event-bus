@@ -17,47 +17,103 @@
 
 package com.thenetcircle.event_bus.story.builder
 
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.TestBase
+import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
+import com.thenetcircle.event_bus.story.StoryStatus
+import com.thenetcircle.event_bus.story.interfaces._
+import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings}
+import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceSettings}
+import com.thenetcircle.event_bus.story.tasks.misc.{
+  CassandraFallback,
+  EventFilterTransform,
+  EventFilterTransformSettings
+}
+import com.typesafe.config.{Config, ConfigFactory}
+import net.ceedubs.ficus.Ficus._
+
+import scala.concurrent.duration.FiniteDuration
 
 class StoryBuilderTest extends TestBase {
 
   behavior of "StoryBuilder"
 
-  /*val builder = new StoryBuilder
+  val buildersConfig: Config =
+    ConfigFactory.parseString("""
+      |{
+      |  source = [
+      |    "com.thenetcircle.event_bus.story.tasks.http.HttpSourceBuilder",
+      |    "com.thenetcircle.event_bus.story.tasks.kafka.KafkaSourceBuilder"
+      |  ]
+      |  transform = [
+      |    "com.thenetcircle.event_bus.story.tasks.misc.TNCKafkaTopicResolverBuilder",
+      |    "com.thenetcircle.event_bus.story.tasks.misc.TNCDinoEventsForwarderBuilder",
+      |    "com.thenetcircle.event_bus.story.tasks.misc.EventFilterTransformBuilder"
+      |  ],
+      |  sink = [
+      |    "com.thenetcircle.event_bus.story.tasks.http.HttpSinkBuilder",
+      |    "com.thenetcircle.event_bus.story.tasks.kafka.KafkaSinkBuilder"
+      |  ],
+      |  fallback = [
+      |    "com.thenetcircle.event_bus.story.tasks.misc.CassandraFallbackBuilder"
+      |  ]
+      |}
+    """.stripMargin)
+  buildersConfig
+    .as[Option[List[String]]]("source")
+    .foreach(_.foreach(storyBuilder.addTaskBuilder[ISourceTask]))
+  buildersConfig.as[Option[List[String]]]("transform").foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformTask]))
+  buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISinkTask]))
+  buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IFallbackTask]))
 
   it should "build correct Story based on config" in {
 
-    val story = builder.build(
-      """{
-        |  "name": "testStory",
-        |  "sourceTask": [
-        |    "http",
-        |    "{\"interface\": \"127.0.0.1\",\"akka\": {  \"http\": {    \"server\": {}  }},\"succeeded-response\": \"okoo\",\"error-response\": \"kooo\",\"max-connections\": 1001}"
-        |  ],
-        |  "transformTasks": [
-        |    ["topic_resolver", "{}"]
-        |  ],
-        |  "sinkTask": [
-        |    "kafka",
-        |    "{\"producer\": {  \"close-timeout\": \"100s\",  \"use-dispatcher\": \"test-dispatcher\"}}"
-        |  ],
-        |  "fallbackTask": [
-        |    ["http", "{\"request\" : {\"host\": \"127.0.0.1\"}, \"expected-response\": \"TEST_RESPONSE\"}"]
-        |  ]
-        |}""".stripMargin
+    val storyInfo = StoryInfo(
+      name = "testStory",
+      status = "INIT",
+      settings = "",
+      source =
+        """kafka#{"bootstrap-servers":"localhost:9092,localhost:9093","topics":["event-test-filter","event-test-user","event-test-default"],"topic-pattern":"","max-concurrent-partitions":100,"commit-max-batches":20,"poll-interval":"50ms","wakeup-timeout":"3s","max-wakeups":10,"properties":{}}""",
+      sink =
+        """http#{"default-request":{"method":"POST","uri":"http://localhost:3001"},"min-backoff":"1 s","max-backoff":"30 s","max-retrytime":"12 h","concurrent-retries":1}""",
+      transforms = Some(
+        """event-filter#{"event-name-white-list":["event-name-1","event-name-2"],"event-name-black-list":["event-name-3"],"channel-white-list":["channel-1","channel-2"],"channel-black-list":["channel-3"],"allowed-transport-modes":["ASYNC","BOTH","NONE"],"only-extras":{"actorId":"test","generatorId":"tnc-event-dispatcher"}}"""
+      ),
+      fallbacks = Some("""cassandra#{"contact-points":[],"port":9042,"parallelism":3}""")
     )
 
+    val story = storyBuilder.buildStory(storyInfo)
+
     story.settings.name shouldEqual "testStory"
+    story.settings.status shouldEqual StoryStatus.INIT
 
-    story.sourceTask.isInstanceOf[HttpSource] shouldEqual true
-    story.sourceTask.asInstanceOf[HttpSource].settings.interface shouldEqual "127.0.0.1"
+    story.sourceTask shouldBe a[KafkaSource]
+    story.sourceTask.asInstanceOf[KafkaSource].settings shouldEqual KafkaSourceSettings(
+      "localhost:9092,localhost:9093",
+      None,
+      Left(Set("event-test-filter", "event-test-user", "event-test-default")),
+      pollInterval = Some(FiniteDuration(50, "ms")),
+      wakeupTimeout = Some(FiniteDuration(3, "s")),
+      maxWakeups = Some(10),
+      properties = Map("enable.auto.commit" -> "false")
+    )
 
-    story.transformTasks.get.head.isInstanceOf[TopicResolverTransform] shouldEqual true
+    story.sinkTask shouldBe a[HttpSink]
+    story.sinkTask.asInstanceOf[HttpSink].settings shouldEqual HttpSinkSettings(
+      HttpRequest(HttpMethods.POST, Uri("http://localhost:3001"))
+    )
 
-    story.sinkTask.get.isInstanceOf[KafkaSink] shouldEqual true
+    story.transformTasks shouldBe a[Option[List[EventFilterTransform]]]
+    story.transformTasks.get.head.asInstanceOf[EventFilterTransform].settings shouldEqual EventFilterTransformSettings(
+      eventNameWhiteList = Seq("event-name-1", "event-name-2"),
+      eventNameBlackList = Seq("event-name-3"),
+      channelWhiteList = Seq("channel-1", "channel-2"),
+      channelBlackList = Seq("channel-3"),
+      allowedTransportModes = Seq("ASYNC", "BOTH", "NONE"),
+      onlyExtras = Map("actorId" -> "test", "generatorId" -> "tnc-event-dispatcher")
+    )
 
-    story.fallbackTask.get.head.isInstanceOf[HttpSink] shouldEqual true
-
-  }*/
+    story.fallbackTasks shouldBe a[Option[List[CassandraFallback]]]
+  }
 
 }

@@ -17,18 +17,15 @@
 
 package com.thenetcircle.event_bus.story
 
-import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext}
+import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces._
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.runtime.universe._
 import scala.util.matching.Regex
 
-class StoryBuilder()(
-    implicit appContext: AppContext
-) extends LazyLogging {
-
-  implicit val _context: TaskBuildingContext = new TaskBuildingContext(appContext)
+class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   import StoryBuilder._
 
@@ -37,60 +34,71 @@ class StoryBuilder()(
   private var transformTaskBuilders: Map[String, ITaskBuilder[ITransformTask]] = Map.empty
   private var fallbackTaskBuilders: Map[String, ITaskBuilder[IFallbackTask]]   = Map.empty
 
-  def addTaskBuilder(builderClassName: String): Unit =
-    addTaskBuilder(Class.forName(builderClassName).asInstanceOf[Class[ITaskBuilder[ITask]]])
+  def addTaskBuilder[T <: ITask: TypeTag](builderClassName: String): Unit =
+    addTaskBuilder(Class.forName(builderClassName).asInstanceOf[Class[ITaskBuilder[T]]])
 
-  def addTaskBuilder(builderClass: Class[ITaskBuilder[ITask]]): Unit =
+  def addTaskBuilder[T <: ITask: TypeTag](builderClass: Class[ITaskBuilder[T]]): Unit =
     addTaskBuilder(createTaskBuilderInstance(builderClass))
 
-  private def createTaskBuilderInstance(builderClass: Class[ITaskBuilder[ITask]]): ITaskBuilder[ITask] =
+  private def createTaskBuilderInstance[T <: ITask](builderClass: Class[ITaskBuilder[T]]): ITaskBuilder[T] =
     builderClass.newInstance()
 
-  def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = builder match {
-    case _ if typeOf[T] <:< typeOf[ISourceTask]    => sourceTaskBuilders += (builder.taskType    -> builder)
-    case _ if typeOf[T] <:< typeOf[ISinkTask]      => sinkTaskBuilders += (builder.taskType      -> builder)
-    case _ if typeOf[T] <:< typeOf[ITransformTask] => transformTaskBuilders += (builder.taskType -> builder)
-    case _ if typeOf[T] <:< typeOf[IFallbackTask]  => fallbackTaskBuilders += (builder.taskType  -> builder)
+  def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = typeOf[T] match {
+    case t if t =:= typeOf[ISourceTask] =>
+      sourceTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISourceTask]])
+    case t if t =:= typeOf[ISinkTask] =>
+      sinkTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISinkTask]])
+    case t if t =:= typeOf[ITransformTask] =>
+      transformTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ITransformTask]])
+    case t if t =:= typeOf[IFallbackTask] =>
+      fallbackTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IFallbackTask]])
   }
 
-  def buildStory(rawData: StoryRawData): Story =
+  def buildStory(info: StoryInfo): Story =
     try {
       new Story(
-        StorySettings(rawData.name, StoryStatus(rawData.status)),
-        buildSourceTask(rawData.source),
-        buildSinkTask(rawData.sink),
-        rawData.transforms.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildTransformTask).toList),
-        rawData.fallback.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildFallbackTask).toList)
+        StorySettings(info.name, StoryStatus(info.status)),
+        buildSourceTask(info.source),
+        buildSinkTask(info.sink),
+        info.transforms.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildTransformTask).toList),
+        info.fallbacks.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildFallbackTask).toList)
       )
     } catch {
       case ex: Throwable =>
-        logger.error(s"story ${rawData.name} build failed with error $ex")
+        logger.error(s"story ${info.name} build failed with error $ex")
         throw ex
     }
+
+  def buildSourceTask(content: String): ISourceTask = {
+    val (taskType, configString) = parseTaskContent(content)
+    sourceTaskBuilders.get(taskType).map(buildTask(configString)).get
+  }
+
+  def buildTransformTask(content: String): ITransformTask = {
+    val (taskType, configString) = parseTaskContent(content)
+    transformTaskBuilders.get(taskType).map(buildTask(configString)).get
+  }
+
+  def buildSinkTask(content: String): ISinkTask = {
+    val (taskType, configString) = parseTaskContent(content)
+    sinkTaskBuilders.get(taskType).map(buildTask(configString)).get
+  }
+
+  def buildFallbackTask(content: String): IFallbackTask = {
+    val (taskType, configString) = parseTaskContent(content)
+    fallbackTaskBuilders.get(taskType).map(buildTask(configString)).get
+  }
 
   def parseTaskContent(content: String): (String, String) = {
     val re = content.split(Regex.quote(CONTENT_DELIMITER), 2)
     (re(0), if (re.length == 2) re(1) else "{}")
   }
 
-  def buildSourceTask(content: String): ISourceTask = {
-    val (taskType, configString) = parseTaskContent(content)
-    sourceTaskBuilders.get(taskType).map(_.build(configString)).get
-  }
-
-  def buildTransformTask(content: String): ITransformTask = {
-    val (taskType, configString) = parseTaskContent(content)
-    transformTaskBuilders.get(taskType).map(_.build(configString)).get
-  }
-
-  def buildSinkTask(content: String): ISinkTask = {
-    val (taskType, configString) = parseTaskContent(content)
-    sinkTaskBuilders.get(taskType).map(_.build(configString)).get
-  }
-
-  def buildFallbackTask(content: String): IFallbackTask = {
-    val (taskType, configString) = parseTaskContent(content)
-    fallbackTaskBuilders.get(taskType).map(_.build(configString)).get
+  def buildTask[T <: ITask](
+      configString: String
+  )(taskBuilder: ITaskBuilder[T]): T = {
+    val config = Util.convertJsonStringToConfig(configString).withFallback(taskBuilder.defaultConfig)
+    taskBuilder.buildTask(config)
   }
 }
 
@@ -98,13 +106,13 @@ object StoryBuilder {
   val CONTENT_DELIMITER = """#"""
   val TASK_DELIMITER    = """|||"""
 
-  case class StoryRawData(
+  case class StoryInfo(
       name: String,
       status: String,
       settings: String,
       source: String,
       sink: String,
       transforms: Option[String],
-      fallback: Option[String]
+      fallbacks: Option[String]
   )
 }

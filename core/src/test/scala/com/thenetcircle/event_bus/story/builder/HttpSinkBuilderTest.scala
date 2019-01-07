@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story.builder
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.http.HttpSinkBuilder
+import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkBuilder}
 
 import scala.concurrent.duration._
 
@@ -31,7 +31,7 @@ class HttpSinkBuilderTest extends TestBase {
 
   it should "build correct HttpSink with the default config" in {
 
-    val sink = builder.build("""{
+    val sink = storyBuilder.buildTask("""{
         |  "default-request" : {
         |    "uri": "http://www.google.com"
         |  },
@@ -42,7 +42,7 @@ class HttpSinkBuilderTest extends TestBase {
         |    "max-open-requests": 64,
         |    "idle-timeout": "10 min"
         |  }
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     val settings = sink.settings
 

@@ -25,15 +25,15 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.story.interfaces.{ISourceTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
-import com.thenetcircle.event_bus.story.interfaces.{ISourceTask, ISourceTaskBuilder}
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
@@ -141,17 +141,30 @@ class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logg
   }
 }
 
-class HttpSourceBuilder() extends ISourceTaskBuilder with Logging {
+class HttpSourceBuilder() extends ITaskBuilder[HttpSource] with Logging {
 
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): HttpSource =
+  override val taskType: String = "http"
+
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+        |  interface = "0.0.0.0"
+        |  port = 8000
+        |  format = ActivityStreams
+        |  succeeded-response = ok
+        |
+        |  # server settings will override the default settings of akka.http.server
+        |  server {
+        |    # max-connections = 1024
+        |    # ...
+        |  }
+        |}""".stripMargin
+    )
+
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): HttpSource =
     try {
-      val config: Config =
-        Util
-          .convertJsonStringToConfig(configString)
-          .withFallback(buildingContext.getSystemConfig().getConfig("task.http-source"))
-
       val serverSettingsMap = config.as[Map[String, String]]("server")
       val serverSettings = if (serverSettingsMap.nonEmpty) {
         var settingsStr =

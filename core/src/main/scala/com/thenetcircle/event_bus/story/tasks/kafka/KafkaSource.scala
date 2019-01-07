@@ -17,21 +17,22 @@
 
 package com.thenetcircle.event_bus.story.tasks.kafka
 
+import akka.Done
 import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
 import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
-import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus._
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.kafka.KafkaSource.CommittableException
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserializer
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
@@ -298,15 +299,36 @@ case class KafkaSourceSettings(
     maxWakeups: Option[Int] = None
 )
 
-class KafkaSourceBuilder() extends ISourceTaskBuilder {
+class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
 
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): KafkaSource = {
-    val config = Util
-      .convertJsonStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.kafka-source"))
+  override val taskType: String = "kafka"
 
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+        |  # bootstrap-servers = ""
+        |  # group-id = ""
+        |
+        |  # Will use either "topics" or "topic-pattern"
+        |  # topics = []
+        |  # topic-pattern = event-* # supports wildcard if topics are defined will use that one
+        |
+        |  max-concurrent-partitions = 100
+        |
+        |  commit-max-batches = 20
+        |
+        |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
+        |  # can be defined in this configuration section.
+        |  properties {
+        |    # Disable auto-commit by default
+        |    "enable.auto.commit" = false
+        |  }
+        |}""".stripMargin
+    )
+
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): KafkaSource = {
     val subscribedTopics: Either[Set[String], String] = {
       var topics = Set.empty[String]
       if (config.hasPath("topics")) {

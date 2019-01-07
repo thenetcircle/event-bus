@@ -26,18 +26,19 @@ import akka.kafka.scaladsl.Producer
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
   KafkaKeySerializer,
   KafkaPartitioner
 }
-import com.thenetcircle.event_bus.story.{Payload, Story, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.apache.kafka.common.KafkaException
@@ -276,14 +277,45 @@ object KafkaSink extends Logging {
 
 }
 
-class KafkaSinkBuilder() extends ISinkTaskBuilder {
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): KafkaSink = {
-    val config = Util
-      .convertJsonStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.kafka-sink"))
+class KafkaSinkBuilder() extends ITaskBuilder[KafkaSink] {
 
+  override val taskType: String = "kafka"
+
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+        |  # bootstrap-servers = ""
+        |  default-topic = "event-default"
+        |
+        |  # Tuning parameter of how many sends that can run in parallel.
+        |  parallelism = 100
+        |
+        |  # How long to wait for `KafkaProducer.close`
+        |  close-timeout = 60 s
+        |
+        |  # Fully qualified config path which holds the dispatcher configuration
+        |  # to be used by the producer stages. Some blocking may occur.
+        |  # When this value is empty the dispatcher configured for the stream
+        |  # will be used.
+        |  use-dispatcher = "akka.kafka.default-dispatcher"
+        |
+        |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
+        |  # can be defined in this configuration section.
+        |  properties {
+        |    acks = all
+        |    retries = 30
+        |    "max.in.flight.requests.per.connection" = 5
+        |    "enable.idempotence" = true
+        |  }
+        |
+        |  use-async-buffer = true
+        |  async-buffer-size = 100
+        |}""".stripMargin
+    )
+
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): KafkaSink = {
     val settings =
       KafkaSinkSettings(
         config.as[String]("bootstrap-servers"),

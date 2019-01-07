@@ -24,12 +24,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, IFallbackTaskBuilder}
+import com.thenetcircle.event_bus.misc.Logging
+import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -187,15 +188,22 @@ private[tasks] object GuavaFutures {
   }
 }
 
-class CassandraFallbackBuilder() extends IFallbackTaskBuilder {
+class CassandraFallbackBuilder() extends ITaskBuilder[CassandraFallback] {
 
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): CassandraFallback = {
-    val config = Util
-      .convertJsonStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.cassandra-fallback"))
+  override val taskType: String = "cassandra"
 
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+        |  contact-points = []
+        |  port = 9042
+        |  parallelism = 3
+        |}""".stripMargin
+    )
+
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): CassandraFallback = {
     val cassandraSettings = CassandraSettings(
       contactPoints = config.as[List[String]]("contact-points"),
       port = config.as[Int]("port"),

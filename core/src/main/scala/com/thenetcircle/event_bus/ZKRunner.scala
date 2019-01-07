@@ -18,14 +18,14 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.{ActorRef, ActorSystem, Cancellable}
+import akka.pattern.gracefulStop
 import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZKManager}
+import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
 import com.thenetcircle.event_bus.story.{StoryBuilder, _}
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent.Type._
 import org.apache.curator.framework.recipes.cache.{PathChildrenCache, PathChildrenCacheEvent}
 import org.apache.curator.framework.recipes.leader.LeaderLatch
-import akka.pattern.gracefulStop
-import com.thenetcircle.event_bus.story.builder.StoryBuilder.StoryRawData
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -191,9 +191,9 @@ class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: 
 
   def createStory(storyName: String, storyData: Map[String, String]): Option[Story] =
     try {
-      val storyRawData = createStoryRawData(storyName, storyData)
-      logger.info(s"creating new story $storyName with data: $storyRawData")
-      val story = storyBuilder.buildStory(storyRawData)
+      val storyInfo = createStoryRawData(storyName, storyData)
+      logger.info(s"creating new story $storyName with data: $storyInfo")
+      val story = storyBuilder.buildStory(storyInfo)
       Some(story)
     } catch {
       case NonFatal(ex) =>
@@ -201,8 +201,8 @@ class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: 
         None
     }
 
-  def createStoryRawData(storyName: String, storyData: Map[String, String]): StoryRawData =
-    StoryRawData(
+  def createStoryRawData(storyName: String, storyData: Map[String, String]): StoryInfo =
+    StoryInfo(
       storyName,
       storyData.getOrElse("status", "INIT"),
       storyData.getOrElse("settings", ""),

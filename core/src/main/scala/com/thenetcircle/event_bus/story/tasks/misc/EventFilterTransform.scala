@@ -18,12 +18,13 @@
 package com.thenetcircle.event_bus.story.tasks.misc
 
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 case class EventFilterTransformSettings(
@@ -128,15 +129,20 @@ class EventFilterTransform(val settings: EventFilterTransformSettings) extends I
   }
 }
 
-class EventFilterTransformBuilder() extends ITransformTaskBuilder {
+class EventFilterTransformBuilder() extends ITaskBuilder[EventFilterTransform] {
 
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): EventFilterTransform = {
-    val config = Util
-      .convertJsonStringToConfig(configString)
-      .withFallback(buildingContext.getSystemConfig().getConfig("task.event-filter"))
+  override val taskType: String = "event-filter"
 
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+        |  allowed-transport-modes = ["ASYNC", "BOTH", "NONE"]
+        |}""".stripMargin
+    )
+
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): EventFilterTransform = {
     val eventNameWhiteList    = config.as[Option[Seq[String]]]("event-name-white-list").getOrElse(Seq.empty)
     val eventNameBlackList    = config.as[Option[Seq[String]]]("event-name-black-list").getOrElse(Seq.empty)
     val channelWhiteList      = config.as[Option[Seq[String]]]("channel-white-list").getOrElse(Seq.empty)

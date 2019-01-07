@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus
 
 import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
 import com.thenetcircle.event_bus.story.StoryBuilder
+import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ISinkTask, ISourceTask, ITransformTask}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -46,20 +47,15 @@ class Runner extends AbstractApp {
   }
 
   private def initStoryBuilder(): StoryBuilder = {
-    config.checkValid(ConfigFactory.defaultReference, "task.builders")
+    config.checkValid(ConfigFactory.defaultReference, "app.task.builders")
 
     val storyBuilder = new StoryBuilder()
 
-    // initialize TaskBuilderFactory
-    List("source", "transform", "sink", "fallback").foreach(prefix => {
-      config
-        .as[List[List[String]]](s"task.builders.$prefix")
-        .foreach {
-          case category :: builderClassName :: _ =>
-            storyBuilder.addTaskBuilder(builderClassName)
-          case _ =>
-        }
-    })
+    val buildersConfig = config.getConfig("app.task.builders")
+    buildersConfig.as[Option[List[String]]]("source").foreach(_.foreach(storyBuilder.addTaskBuilder[ISourceTask]))
+    buildersConfig.as[Option[List[String]]]("transform").foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformTask]))
+    buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISinkTask]))
+    buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IFallbackTask]))
 
     storyBuilder
   }

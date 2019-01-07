@@ -28,14 +28,14 @@ import akka.pattern.AskTimeoutException
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ISinkTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
@@ -251,17 +251,39 @@ object HttpSink extends Logging {
   }
 }
 
-class HttpSinkBuilder() extends ISinkTaskBuilder with Logging {
+class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
 
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): HttpSink = {
+  override val taskType: String = "http"
 
-    val config: Config =
-      Util
-        .convertJsonStringToConfig(configString)
-        .withFallback(buildingContext.getSystemConfig().getConfig("task.http-sink"))
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+      |  # the default request could be overrided by info of the event
+      |  default-request {
+      |    method = POST
+      |    # uri = "http://www.google.com"
+      |  }
+      |  min-backoff = 1 s
+      |  max-backoff = 30 s
+      |  random-factor = 0.2
+      |  max-retrytime = 12 h
+      |  concurrent-retries = 1
+      |
+      |  # pool settings will override the default settings of akka.http.host-connection-pool
+      |  pool {
+      |    # max-connections = 4
+      |    # min-connections = 0
+      |    # max-open-requests = 32
+      |    # pipelining-limit = 1
+      |    # idle-timeout = 30 s
+      |    # ...
+      |  }
+      |}""".stripMargin
+    )
 
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): HttpSink =
     try {
       val requestMethod = config.as[String]("default-request.method").toUpperCase match {
         case "POST" => HttpMethods.POST
@@ -298,6 +320,4 @@ class HttpSinkBuilder() extends ISinkTaskBuilder with Logging {
         logger.error(s"Build HttpSink failed with error: ${ex.getMessage}")
         throw ex
     }
-
-  }
 }

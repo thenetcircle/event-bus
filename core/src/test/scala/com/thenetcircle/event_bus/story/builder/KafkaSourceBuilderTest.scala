@@ -28,7 +28,7 @@ class KafkaSourceBuilderTest extends TestBase {
 
   it should "build correct KafkaSource with the default config" in {
 
-    val sink = builder.build("""{
+    val sink = storyBuilder.buildTask("""{
         |  "bootstrap-servers": "test-server",
         |  "group-id": "test-group",
         |  "topics": [ "abc", "def" ],
@@ -37,7 +37,7 @@ class KafkaSourceBuilderTest extends TestBase {
         |  "properties": {
         |    "enable.auto.commit": "true"
         |  }
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     val settings         = sink.settings
     val kafkaSource      = new KafkaSource(settings)

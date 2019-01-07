@@ -24,6 +24,7 @@ import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, Task
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.misc.Logging
+import com.thenetcircle.event_bus.story.StoryBuilder
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfterAll, FlatSpecLike, Matchers}
 
@@ -62,7 +63,7 @@ abstract class TestBase(_appContext: AppContext)
       system.actorOf(TestActors.blackholeProps)
     )
 
-  lazy implicit val taskBuildingContext: TaskBuildingContext = new TaskBuildingContext(appContext)
+  lazy val storyBuilder = new StoryBuilder()
 
   def this() = {
     this(new AppContext("event-bus-test", "test", ConfigFactory.load()))

@@ -17,20 +17,29 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
-import com.thenetcircle.event_bus.context.TaskBuildingContext
+import com.thenetcircle.event_bus.context.AppContext
+import com.typesafe.config.Config
 
 trait ITaskBuilder[+T <: ITask] {
 
+  /**
+    * Using in configuration key
+    * @return String
+    */
   def taskType: String
 
-  def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
+  /**
+    * The default Config will be a fallback of user defined Config
+    * @return
+    */
+  def defaultConfig: Config
+
+  /**
+    * Build task based on Config
+    * @param config combined Config (user defined and default)
+    * @param appContext context
+    * @return [[ITask]]
+    */
+  def buildTask(config: Config)(implicit appContext: AppContext): T
 
 }
-
-trait ISourceTaskBuilder extends ITaskBuilder[ISourceTask]
-
-trait ITransformTaskBuilder extends ITaskBuilder[ITransformTask]
-
-trait ISinkTaskBuilder extends ITaskBuilder[ISinkTask]
-
-trait IFallbackTaskBuilder extends ITaskBuilder[IFallbackTask]

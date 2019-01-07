@@ -27,9 +27,9 @@ class EventFilterTransformBuilderTest extends TestBase {
   val builder = new EventFilterTransformBuilder
 
   it should "build proper EventFilterTransform with empty config" in {
-    val sink = builder.build("""{}""".stripMargin)
+    val task = storyBuilder.buildTask("""{}""".stripMargin)(builder)
 
-    val settings: EventFilterTransformSettings = sink.settings
+    val settings: EventFilterTransformSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq.empty[String]
     settings.eventNameBlackList shouldEqual Seq.empty[String]
@@ -40,19 +40,19 @@ class EventFilterTransformBuilderTest extends TestBase {
   }
 
   it should "build proper EventFilterTransform with proper config" in {
-    val sink = builder.build("""{
-        |"event-name-white-list": ["user\\..*", "wio\\..*"],
-        |"event-name-black-list": ["image\\..*"],
-        |"channel-white-list": ["membership", "forum"],
-        |"channel-black-list": ["quick\\-.*"],
-        |"allowed-transport-modes": ["SYNC-PLUS", "SYNC", "BOTH"],
-        |"only-extras": {
-        |   "actorId": "1234",
-        |   "generatorId": "tnc-event-dispatcher"
-        |}
-        |}""".stripMargin)
+    val task = storyBuilder.buildTask("""{
+        |  "event-name-white-list": ["user\\..*", "wio\\..*"],
+        |  "event-name-black-list": ["image\\..*"],
+        |  "channel-white-list": ["membership", "forum"],
+        |  "channel-black-list": ["quick\\-.*"],
+        |  "allowed-transport-modes": ["SYNC-PLUS", "SYNC", "BOTH"],
+        |  "only-extras": {
+        |    "actorId": "1234",
+        |    "generatorId": "tnc-event-dispatcher"
+        |  }
+        |}""".stripMargin)(builder)
 
-    val settings: EventFilterTransformSettings = sink.settings
+    val settings: EventFilterTransformSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq("user\\..*", "wio\\..*")
     settings.eventNameBlackList shouldEqual Seq("image\\..*")

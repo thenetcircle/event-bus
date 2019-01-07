@@ -18,12 +18,13 @@
 package com.thenetcircle.event_bus.story.tasks.misc
 
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.{TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{ITransformTask, ITransformTaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, ITransformTask}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.util.matching.Regex
 
@@ -55,11 +56,16 @@ class TNCDinoEventsForwarder() extends ITransformTask with Logging {
 
 }
 
-class TNCDinoEventsForwarderBuilder() extends ITransformTaskBuilder {
+class TNCDinoEventsForwarderBuilder() extends ITaskBuilder[TNCDinoEventsForwarder] {
 
-  override def build(
-      configString: String
-  )(implicit buildingContext: TaskBuildingContext): TNCDinoEventsForwarder =
+  override val taskType: String = "tnc-dino-forwarder"
+
+  override val defaultConfig: Config =
+    ConfigFactory.parseString("""{}""".stripMargin)
+
+  override def buildTask(
+      config: Config
+  )(implicit appContext: AppContext): TNCDinoEventsForwarder =
     new TNCDinoEventsForwarder()
 
 }

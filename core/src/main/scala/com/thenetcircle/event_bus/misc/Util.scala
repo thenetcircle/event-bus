@@ -22,11 +22,11 @@ import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyn
 
 object Util {
 
-  private val parseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
+  private lazy val jsonStringParseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
 
   def convertJsonStringToConfig(configString: String): Config =
     // ConfigFactory.parseString(configString, parseOptions)
-    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), parseOptions)
+    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), jsonStringParseOptions)
 
   def getLastPartOfPath(path: String): String =
     try {

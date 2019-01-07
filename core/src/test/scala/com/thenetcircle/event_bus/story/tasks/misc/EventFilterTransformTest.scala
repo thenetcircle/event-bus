@@ -42,9 +42,9 @@ class EventFilterTransformTest extends TestBase {
         |}""".stripMargin)*/
 
   it should "testEventNameWhiteList" in {
-    val eventFilter = builder.build("""{
+    val eventFilter = storyBuilder.buildTask("""{
         |"event-name-white-list": ["user\\..*", "wio\\..*"]
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent("user.login")
     eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
@@ -64,9 +64,9 @@ class EventFilterTransformTest extends TestBase {
   }
 
   it should "testEventNameBlackList" in {
-    val eventFilter = builder.build("""{
+    val eventFilter = storyBuilder.buildTask("""{
         |"event-name-black-list": ["user\\..*", "wio\\..*"]
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent("user.login")
     eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
@@ -86,9 +86,9 @@ class EventFilterTransformTest extends TestBase {
   }
 
   it should "testEventChannelWhiteList" in {
-    val eventFilter = builder.build("""{
+    val eventFilter = storyBuilder.buildTask("""{
         |"channel-white-list": ["membership", "forum"]
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent(channel = None)
     eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
@@ -107,9 +107,9 @@ class EventFilterTransformTest extends TestBase {
   }
 
   it should "testEventChannelBlackList" in {
-    val eventFilter = builder.build("""{
+    val eventFilter = storyBuilder.buildTask("""{
         |"channel-black-list": ["membership", "forum"]
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent(channel = None)
     eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
@@ -128,9 +128,9 @@ class EventFilterTransformTest extends TestBase {
   }
 
   it should "testEventTransportMode" in {
-    val eventFilter = builder.build("""{
+    val eventFilter = storyBuilder.buildTask("""{
         |"allowed-transport-modes": ["ASYNC", "BOTH", "NONE", "SYNC"]
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent()
     eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
@@ -152,12 +152,12 @@ class EventFilterTransformTest extends TestBase {
   }
 
   it should "testEventExtras" in {
-    val eventFilter = builder.build("""{
+    val eventFilter = storyBuilder.buildTask("""{
         |"only-extras": {
         |   "actorId": "1234",
         |   "generatorId": "tnc-event-dispatcher"
         |}
-        |}""".stripMargin)
+        |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent()
     eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
