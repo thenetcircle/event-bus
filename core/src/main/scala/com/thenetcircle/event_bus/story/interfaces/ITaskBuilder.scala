@@ -21,6 +21,8 @@ import com.thenetcircle.event_bus.context.TaskBuildingContext
 
 trait ITaskBuilder[+T <: ITask] {
 
+  def taskType: String
+
   def build(configString: String)(implicit buildingContext: TaskBuildingContext): T
 
 }

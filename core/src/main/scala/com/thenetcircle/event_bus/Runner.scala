@@ -17,9 +17,8 @@
 
 package com.thenetcircle.event_bus
 
-import com.thenetcircle.event_bus.context.TaskBuildingContext
 import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
-import com.thenetcircle.event_bus.story.builder.{StoryBuilder, TaskBuilderFactory}
+import com.thenetcircle.event_bus.story.StoryBuilder
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -49,21 +48,20 @@ class Runner extends AbstractApp {
   private def initStoryBuilder(): StoryBuilder = {
     config.checkValid(ConfigFactory.defaultReference, "task.builders")
 
+    val storyBuilder = new StoryBuilder()
+
     // initialize TaskBuilderFactory
-    val taskBuilderFactory = new TaskBuilderFactory()
     List("source", "transform", "sink", "fallback").foreach(prefix => {
       config
         .as[List[List[String]]](s"task.builders.$prefix")
         .foreach {
           case category :: builderClassName :: _ =>
-            taskBuilderFactory.registerBuilder(category, builderClassName)
+            storyBuilder.addTaskBuilder(builderClassName)
           case _ =>
         }
     })
-    // initialize TaskBuildingContext
-    val taskBuildingContext = new TaskBuildingContext(appContext)
 
-    new StoryBuilder(taskBuilderFactory, taskBuildingContext)
+    storyBuilder
   }
 }
 

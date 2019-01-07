@@ -36,7 +36,7 @@ class Story(
     val sourceTask: ISourceTask,
     val sinkTask: ISinkTask,
     val transformTasks: Option[List[ITransformTask]] = None,
-    val fallbackTask: Option[IFallbackTask] = None
+    val fallbackTask: Option[List[IFallbackTask]] = None
 ) extends Logging {
 
   // initialize internal status
@@ -52,7 +52,9 @@ class Story(
   transformTasks.foreach(_.zipWithIndex.foreach {
     case (tt, i) => tt.initTask(s"story:$storyName#transform:$i:${getTaskClassName(tt)}", this)
   })
-  fallbackTask.foreach(ft => ft.initTask(s"story:$storyName#fallback:${getTaskClassName(ft)}", this))
+  fallbackTask.foreach(_.zipWithIndex.foreach {
+    case (ft, i) => ft.initTask(s"story:$storyName#fallback:$i:${getTaskClassName(ft)}", this)
+  })
 
   def updateStoryStatus(status: StoryStatus): Unit = storyStatus = status
   def getStoryStatus(): StoryStatus                = storyStatus
@@ -69,9 +71,9 @@ class Story(
     storyFlow = storyFlow.via(sinkTask.flow())
 
     // connect fallback flow
-    fallbackTask.foreach(ft => {
+    fallbackTask.foreach(_.foreach(ft => {
       storyFlow = storyFlow.via(ft.flow())
-    })
+    }))
 
     // connect monitor flow
     storyFlow = storyFlow
@@ -110,7 +112,7 @@ class Story(
       runningFuture = None
       sourceTask.shutdown()
       transformTasks.foreach(_.foreach(_.shutdown()))
-      fallbackTask.foreach(_.shutdown())
+      fallbackTask.foreach(_.foreach(_.shutdown()))
       sinkTask.shutdown()
     } catch {
       case NonFatal(ex) =>

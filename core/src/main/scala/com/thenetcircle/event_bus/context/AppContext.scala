@@ -32,12 +32,9 @@ class AppContext(appName: String, appEnv: String, systemConfig: Config) {
   def isTest(): Boolean = appEnv.toLowerCase == "test"
   def isProd(): Boolean = appEnv.toLowerCase == "production" || appEnv.toLowerCase == "prod"
 
-  private val shutdownHooks = new ListBuffer[() => Unit]
-  def addShutdownHook(body: => Unit) {
-    shutdownHooks += (() => body)
-  }
-  def shutdown(): Unit =
-    for (hook <- shutdownHooks) hook()
+  private val shutdownHooks                = new ListBuffer[() => Unit]
+  def addShutdownHook(body: => Unit): Unit = shutdownHooks += (() => body)
+  def shutdown(): Unit                     = for (hook <- shutdownHooks) hook()
 
   private var zkManager: Option[ZKManager]      = None
   def setZKManager(_zkManager: ZKManager): Unit = zkManager = Some(_zkManager)
