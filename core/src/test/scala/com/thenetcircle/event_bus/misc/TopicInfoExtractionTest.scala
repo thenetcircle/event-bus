@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.misc.{TopicInfo, TopicInfoProtocol}
+import com.thenetcircle.event_bus.story.tasks.transformations.{TopicInfo, TopicInfoProtocol}
 import spray.json._
 
 class TopicInfoExtractionTest extends TestBase {

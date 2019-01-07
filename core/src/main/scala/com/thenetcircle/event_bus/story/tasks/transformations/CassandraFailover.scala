@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.misc
+package com.thenetcircle.event_bus.story.tasks.transformations
 
 import java.util.Date
 
@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
 
 case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraFallback(val settings: CassandraSettings) extends IPostOperator with Logging {
+class CassandraFailover(val settings: CassandraSettings) extends IPostOperator with Logging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -188,7 +188,7 @@ private[tasks] object GuavaFutures {
   }
 }
 
-class CassandraFallbackBuilder() extends ITaskBuilder[CassandraFallback] {
+class CassandraFailoverBuilder() extends ITaskBuilder[CassandraFailover] {
 
   override val taskType: String = "cassandra"
 
@@ -203,14 +203,14 @@ class CassandraFallbackBuilder() extends ITaskBuilder[CassandraFallback] {
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): CassandraFallback = {
+  )(implicit appContext: AppContext): CassandraFailover = {
     val cassandraSettings = CassandraSettings(
       contactPoints = config.as[List[String]]("contact-points"),
       port = config.as[Int]("port"),
       parallelism = config.as[Int]("parallelism")
     )
 
-    new CassandraFallback(cassandraSettings)
+    new CassandraFailover(cassandraSettings)
   }
 
 }

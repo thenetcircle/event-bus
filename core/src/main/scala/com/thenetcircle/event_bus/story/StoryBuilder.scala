@@ -29,10 +29,9 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   import StoryBuilder._
 
-  private var sourceTaskBuilders: Map[String, ITaskBuilder[ISource]]                = Map.empty
-  private var sinkTaskBuilders: Map[String, ITaskBuilder[ISink]]                    = Map.empty
-  private var transformTaskBuilders: Map[String, ITaskBuilder[ITransformationTask]] = Map.empty
-  private var fallbackTaskBuilders: Map[String, ITaskBuilder[IPostOperator]]        = Map.empty
+  private var sourceBuilders: Map[String, ITaskBuilder[ISource]]                     = Map.empty
+  private var sinkBuilders: Map[String, ITaskBuilder[ISink]]                         = Map.empty
+  private var transformationBuilders: Map[String, ITaskBuilder[ITransformationTask]] = Map.empty
 
   def addTaskBuilder[T <: ITask: TypeTag](builderClassName: String): Unit =
     addTaskBuilder(Class.forName(builderClassName).asInstanceOf[Class[ITaskBuilder[T]]])
@@ -45,23 +44,20 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = typeOf[T] match {
     case t if t =:= typeOf[ISource] =>
-      sourceTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
+      sourceBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
     case t if t =:= typeOf[ISink] =>
-      sinkTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
+      sinkBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
     case t if t =:= typeOf[ITransformationTask] =>
-      transformTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ITransformationTask]])
-    case t if t =:= typeOf[IPostOperator] =>
-      fallbackTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IPostOperator]])
+      transformationBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ITransformationTask]])
   }
 
   def buildStory(info: StoryInfo): Story =
     try {
       new Story(
-        StorySettings(info.name, StoryStatus(info.status)),
-        buildSourceTask(info.source),
-        buildSinkTask(info.sink),
-        info.transforms.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildTransformTask).toList),
-        info.fallbacks.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildFallbackTask).toList)
+        StorySettings(info.name, info.settings),
+        buildSource(info.source),
+        buildSink(info.sink),
+        info.transformations.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildTransformation).toList)
       )
     } catch {
       case ex: Throwable =>
@@ -69,24 +65,19 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
         throw ex
     }
 
-  def buildSourceTask(content: String): ISource = {
+  def buildSource(content: String): ISource = {
     val (taskType, configString) = parseTaskContent(content)
-    sourceTaskBuilders.get(taskType).map(buildTask(configString)).get
+    sourceBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildTransformTask(content: String): ITransformationTask = {
+  def buildTransformation(content: String): ITransformationTask = {
     val (taskType, configString) = parseTaskContent(content)
-    transformTaskBuilders.get(taskType).map(buildTask(configString)).get
+    transformationBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildSinkTask(content: String): ISink = {
+  def buildSink(content: String): ISink = {
     val (taskType, configString) = parseTaskContent(content)
-    sinkTaskBuilders.get(taskType).map(buildTask(configString)).get
-  }
-
-  def buildFallbackTask(content: String): IPostOperator = {
-    val (taskType, configString) = parseTaskContent(content)
-    fallbackTaskBuilders.get(taskType).map(buildTask(configString)).get
+    sinkBuilders.get(taskType).map(buildTask(configString)).get
   }
 
   def parseTaskContent(content: String): (String, String) = {
@@ -108,11 +99,9 @@ object StoryBuilder {
 
   case class StoryInfo(
       name: String,
-      status: String,
       settings: String,
       source: String,
       sink: String,
-      transforms: Option[String],
-      fallbacks: Option[String]
+      transformations: Option[String]
   )
 }

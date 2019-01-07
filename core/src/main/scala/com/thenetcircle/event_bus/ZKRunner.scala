@@ -203,12 +203,10 @@ class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: 
   def createStoryInfo(storyName: String, storyData: Map[String, String]): StoryInfo =
     StoryInfo(
       storyName,
-      storyData.getOrElse("status", "INIT"),
       storyData.getOrElse("settings", ""),
       storyData("source"),
       storyData("sink"),
-      storyData.get("transforms"),
-      storyData.get("fallback")
+      storyData.get("transformations").orElse(storyData.get("transforms"))
     )
 }
 

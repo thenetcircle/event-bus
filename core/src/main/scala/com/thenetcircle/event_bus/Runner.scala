@@ -54,10 +54,9 @@ class Runner extends AbstractApp {
     val buildersConfig = config.getConfig("app.task.builders")
     buildersConfig.as[Option[List[String]]]("source").foreach(_.foreach(storyBuilder.addTaskBuilder[ISource]))
     buildersConfig
-      .as[Option[List[String]]]("transform")
+      .as[Option[List[String]]]("transformations")
       .foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformationTask]))
     buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISink]))
-    buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IPostOperator]))
 
     storyBuilder
   }

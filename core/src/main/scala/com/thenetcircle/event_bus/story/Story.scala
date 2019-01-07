@@ -28,7 +28,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
+case class StorySettings(name: String, settings: String)
 
 class Story(
     val settings: StorySettings,
@@ -39,7 +39,7 @@ class Story(
 
   // initialize internal status
   val storyName: String                           = settings.name
-  private var storyStatus: StoryStatus            = settings.status
+  private var storyStatus: StoryStatus            = StoryStatus.INIT
   private var runningFuture: Option[Future[Done]] = None
 
   private def getTaskClassName(t: ITask): String = Option(t.getClass.getSimpleName).getOrElse("")

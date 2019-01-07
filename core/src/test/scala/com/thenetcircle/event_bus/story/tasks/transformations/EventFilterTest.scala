@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.misc
+package com.thenetcircle.event_bus.story.tasks.transformations
 
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.DefaultEventImpl
@@ -23,11 +23,11 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{EventBody, EventMetaData, EventTransportMode}
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
 
-class EventFilterTransformTest extends TestBase {
+class EventFilterTest extends TestBase {
 
-  behavior of "TNCEventFilterTransform"
+  behavior of "EventFilter"
 
-  val builder = new EventFilterTransformBuilder
+  val builder = new EventFilterBuilder
 
   /*val eventFilter = builder.build("""{
         |"event-name-white-list": ["user\\..*", "wio\\..*"],

@@ -15,14 +15,14 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.misc
+package com.thenetcircle.event_bus.story.tasks.transformations
 
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
 import com.thenetcircle.event_bus.misc.{Logging, ZKManager}
-import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, ITransformationTask}
+import com.thenetcircle.event_bus.story.interfaces.{IOperator, ITaskBuilder, ITransformationTask}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.curator.framework.recipes.cache.NodeCache
@@ -38,7 +38,7 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCKafkaTopicResolver(zkManager: ZKManager, val _defaultTopic: String) extends ITransformationTask with Logging {
+class TNCKafkaTopicResolver(zkManager: ZKManager, val _defaultTopic: String) extends IOperator with Logging {
 
   import TopicInfoProtocol._
 

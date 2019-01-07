@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.misc
+package com.thenetcircle.event_bus.story.tasks.transformations
 
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
@@ -27,7 +27,7 @@ import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
-case class EventFilterTransformSettings(
+case class EventFilterSettings(
     eventNameWhiteList: Seq[String] = Seq.empty,
     eventNameBlackList: Seq[String] = Seq.empty,
     channelWhiteList: Seq[String] = Seq.empty,
@@ -36,9 +36,9 @@ case class EventFilterTransformSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilterTransform(val settings: EventFilterTransformSettings) extends ITransformationTask with Logging {
+class EventFilter(val settings: EventFilterSettings) extends IOperator with Logging {
 
-  logger.info(s"Initializing EventFilterTransform with settings: $settings")
+  logger.info(s"Initializing EventFilter with settings: $settings")
 
   override def flow()(
       implicit runningContext: TaskRunningContext
@@ -129,7 +129,7 @@ class EventFilterTransform(val settings: EventFilterTransformSettings) extends I
   }
 }
 
-class EventFilterTransformBuilder() extends ITaskBuilder[EventFilterTransform] {
+class EventFilterBuilder() extends ITaskBuilder[EventFilter] {
 
   override val taskType: String = "event-filter"
 
@@ -142,7 +142,7 @@ class EventFilterTransformBuilder() extends ITaskBuilder[EventFilterTransform] {
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): EventFilterTransform = {
+  )(implicit appContext: AppContext): EventFilter = {
     val eventNameWhiteList    = config.as[Option[Seq[String]]]("event-name-white-list").getOrElse(Seq.empty)
     val eventNameBlackList    = config.as[Option[Seq[String]]]("event-name-black-list").getOrElse(Seq.empty)
     val channelWhiteList      = config.as[Option[Seq[String]]]("channel-white-list").getOrElse(Seq.empty)
@@ -150,7 +150,7 @@ class EventFilterTransformBuilder() extends ITaskBuilder[EventFilterTransform] {
     val allowedTransportModes = config.as[Option[Seq[String]]]("allowed-transport-modes").getOrElse(Seq.empty)
     val onlyExtras            = config.as[Option[Map[String, String]]]("only-extras").getOrElse(Map.empty)
 
-    val settings = EventFilterTransformSettings(
+    val settings = EventFilterSettings(
       eventNameWhiteList,
       eventNameBlackList,
       channelWhiteList,
@@ -159,7 +159,7 @@ class EventFilterTransformBuilder() extends ITaskBuilder[EventFilterTransform] {
       onlyExtras
     )
 
-    new EventFilterTransform(settings)
+    new EventFilter(settings)
   }
 
 }
