@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.context
+package com.thenetcircle.event_bus
 
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}

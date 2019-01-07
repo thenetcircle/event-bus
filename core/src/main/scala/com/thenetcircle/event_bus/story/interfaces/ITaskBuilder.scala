@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
-import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.AppContext
 import com.typesafe.config.Config
 
 trait ITaskBuilder[+T <: ITask] {

@@ -20,8 +20,7 @@ package com.thenetcircle.event_bus.admin
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.{ActorMaterializer, Materializer}
-import com.thenetcircle.event_bus.AbstractApp
-import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.{AbstractApp, AppContext}
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{Config, ConfigFactory}
 

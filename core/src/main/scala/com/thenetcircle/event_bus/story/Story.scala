@@ -20,7 +20,6 @@ package com.thenetcircle.event_bus.story
 import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.story.interfaces._

@@ -25,14 +25,14 @@ import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces.{ISourceTask, ITaskBuilder}
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 

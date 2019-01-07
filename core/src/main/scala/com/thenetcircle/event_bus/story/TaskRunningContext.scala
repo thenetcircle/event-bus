@@ -15,12 +15,11 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.context
+package com.thenetcircle.event_bus.story
 
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Materializer, Supervision}
-import com.thenetcircle.event_bus.story.StorySettings
-import com.typesafe.scalalogging.LazyLogging
+import akka.stream.Materializer
+import com.thenetcircle.event_bus.AppContext
 
 import scala.concurrent.ExecutionContext
 

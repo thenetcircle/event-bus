@@ -18,8 +18,7 @@
 package com.thenetcircle.event_bus.story.interfaces
 
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.TaskRunningContext
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
 trait ITransformTask extends ITask {
 

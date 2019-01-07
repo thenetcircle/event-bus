@@ -26,7 +26,7 @@ import akka.kafka.scaladsl.Producer
 import akka.stream._
 import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.misc.{Logging, Util}
@@ -37,7 +37,7 @@ import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   KafkaKeySerializer,
   KafkaPartitioner
 }
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}

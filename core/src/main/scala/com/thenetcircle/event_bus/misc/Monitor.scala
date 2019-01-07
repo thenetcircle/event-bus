@@ -17,8 +17,7 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.thenetcircle.event_bus.BuildInfo
-import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.{AppContext, BuildInfo}
 import kamon.Kamon
 
 object Monitor {

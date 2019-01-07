@@ -18,7 +18,6 @@
 package com.thenetcircle.event_bus
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.Logging
 import com.typesafe.config.Config
 

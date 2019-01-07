@@ -18,12 +18,12 @@
 package com.thenetcircle.event_bus.story.tasks.misc
 
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, ITransformTask}
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.util.matching.Regex

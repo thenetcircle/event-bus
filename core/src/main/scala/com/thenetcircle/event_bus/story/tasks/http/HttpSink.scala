@@ -28,13 +28,13 @@ import akka.pattern.AskTimeoutException
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 

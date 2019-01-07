@@ -19,7 +19,6 @@ package com.thenetcircle.event_bus
 
 import akka.actor.{ActorRef, ActorSystem, Cancellable}
 import akka.pattern.gracefulStop
-import com.thenetcircle.event_bus.context.AppContext
 import com.thenetcircle.event_bus.misc.{Logging, Util, ZKManager}
 import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
 import com.thenetcircle.event_bus.story.{StoryBuilder, _}

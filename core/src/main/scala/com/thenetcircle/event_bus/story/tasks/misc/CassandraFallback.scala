@@ -24,12 +24,12 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ITaskBuilder}
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 

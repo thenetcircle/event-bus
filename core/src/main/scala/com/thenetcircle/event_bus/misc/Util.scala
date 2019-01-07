@@ -25,7 +25,6 @@ object Util {
   private lazy val jsonStringParseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
 
   def convertJsonStringToConfig(configString: String): Config =
-    // ConfigFactory.parseString(configString, parseOptions)
     ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), jsonStringParseOptions)
 
   def getLastPartOfPath(path: String): String =

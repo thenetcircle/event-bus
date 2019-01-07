@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.admin
 
 import akka.actor.ActorSystem
-import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.typesafe.config.{ConfigFactory, ConfigObject}
 import com.typesafe.scalalogging.StrictLogging

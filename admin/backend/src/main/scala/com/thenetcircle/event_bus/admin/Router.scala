@@ -21,7 +21,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.server.Directives.{complete, get, path, _}
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.AppContext
 import com.typesafe.scalalogging.StrictLogging
 import spray.json.DefaultJsonProtocol
 

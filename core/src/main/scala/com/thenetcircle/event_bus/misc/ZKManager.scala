@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.thenetcircle.event_bus.context.AppContext
+import com.thenetcircle.event_bus.AppContext
 import org.apache.curator.RetryPolicy
 import org.apache.curator.framework.imps.CuratorFrameworkState
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode

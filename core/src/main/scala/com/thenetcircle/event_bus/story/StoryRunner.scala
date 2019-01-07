@@ -29,7 +29,7 @@ import akka.actor.{
   Timers
 }
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Materializer, Supervision}
-import com.thenetcircle.event_bus.context.{AppContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext

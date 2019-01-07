@@ -18,12 +18,12 @@
 package com.thenetcircle.event_bus.story.tasks.misc
 
 import akka.stream.scaladsl.Flow
-import com.thenetcircle.event_bus.context.{AppContext, TaskBuildingContext, TaskRunningContext}
+import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces._
-import com.thenetcircle.event_bus.story.{Payload, StoryMat}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 

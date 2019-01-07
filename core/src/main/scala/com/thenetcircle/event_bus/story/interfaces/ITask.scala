@@ -20,10 +20,9 @@ package com.thenetcircle.event_bus.story.interfaces
 import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
-import com.thenetcircle.event_bus.context.TaskRunningContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
-import com.thenetcircle.event_bus.story.{Payload, Story}
+import com.thenetcircle.event_bus.story.{Payload, Story, TaskRunningContext}
 
 trait ITask {
 
