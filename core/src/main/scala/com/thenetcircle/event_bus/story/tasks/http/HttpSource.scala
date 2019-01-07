@@ -31,7 +31,7 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISourceTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISource, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -48,7 +48,7 @@ case class HttpSourceSettings(
     serverSettings: Option[ServerSettings] = None
 )
 
-class HttpSource(val settings: HttpSourceSettings) extends ISourceTask with Logging {
+class HttpSource(val settings: HttpSourceSettings) extends ISource with Logging {
 
   def createResponse(result: Payload): HttpResponse =
     result match {

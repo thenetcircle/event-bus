@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IPostOperator, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
 
 case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraFallback(val settings: CassandraSettings) extends IFallbackTask with Logging {
+class CassandraFallback(val settings: CassandraSettings) extends IPostOperator with Logging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None

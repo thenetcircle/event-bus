@@ -61,10 +61,12 @@ class StoryBuilderTest extends TestBase {
     """.stripMargin)
   buildersConfig
     .as[Option[List[String]]]("source")
-    .foreach(_.foreach(storyBuilder.addTaskBuilder[ISourceTask]))
-  buildersConfig.as[Option[List[String]]]("transform").foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformTask]))
-  buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISinkTask]))
-  buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IFallbackTask]))
+    .foreach(_.foreach(storyBuilder.addTaskBuilder[ISource]))
+  buildersConfig
+    .as[Option[List[String]]]("transform")
+    .foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformationTask]))
+  buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISink]))
+  buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IPostOperator]))
 
   it should "build correct Story based on config" in {
 
@@ -87,8 +89,8 @@ class StoryBuilderTest extends TestBase {
     story.settings.name shouldEqual "testStory"
     story.settings.status shouldEqual StoryStatus.INIT
 
-    story.sourceTask shouldBe a[KafkaSource]
-    story.sourceTask.asInstanceOf[KafkaSource].settings shouldEqual KafkaSourceSettings(
+    story.source shouldBe a[KafkaSource]
+    story.source.asInstanceOf[KafkaSource].settings shouldEqual KafkaSourceSettings(
       "localhost:9092,localhost:9093",
       None,
       Left(Set("event-test-filter", "event-test-user", "event-test-default")),
@@ -98,8 +100,8 @@ class StoryBuilderTest extends TestBase {
       properties = Map("enable.auto.commit" -> "false")
     )
 
-    story.sinkTask shouldBe a[HttpSink]
-    story.sinkTask.asInstanceOf[HttpSink].settings shouldEqual HttpSinkSettings(
+    story.sink shouldBe a[HttpSink]
+    story.sink.asInstanceOf[HttpSink].settings shouldEqual HttpSinkSettings(
       HttpRequest(HttpMethods.POST, Uri("http://localhost:3001"))
     )
 

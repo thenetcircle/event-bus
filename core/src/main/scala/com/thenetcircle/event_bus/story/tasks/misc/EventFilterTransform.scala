@@ -36,7 +36,7 @@ case class EventFilterTransformSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilterTransform(val settings: EventFilterTransformSettings) extends ITransformTask with Logging {
+class EventFilterTransform(val settings: EventFilterTransformSettings) extends ITransformationTask with Logging {
 
   logger.info(s"Initializing EventFilterTransform with settings: $settings")
 

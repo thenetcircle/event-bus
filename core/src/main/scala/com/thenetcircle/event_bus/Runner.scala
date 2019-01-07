@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus
 
 import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
 import com.thenetcircle.event_bus.story.StoryBuilder
-import com.thenetcircle.event_bus.story.interfaces.{IFallbackTask, ISinkTask, ISourceTask, ITransformTask}
+import com.thenetcircle.event_bus.story.interfaces.{IPostOperator, ISink, ISource, ITransformationTask}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -52,10 +52,12 @@ class Runner extends AbstractApp {
     val storyBuilder = new StoryBuilder()
 
     val buildersConfig = config.getConfig("app.task.builders")
-    buildersConfig.as[Option[List[String]]]("source").foreach(_.foreach(storyBuilder.addTaskBuilder[ISourceTask]))
-    buildersConfig.as[Option[List[String]]]("transform").foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformTask]))
-    buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISinkTask]))
-    buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IFallbackTask]))
+    buildersConfig.as[Option[List[String]]]("source").foreach(_.foreach(storyBuilder.addTaskBuilder[ISource]))
+    buildersConfig
+      .as[Option[List[String]]]("transform")
+      .foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformationTask]))
+    buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISink]))
+    buildersConfig.as[Option[List[String]]]("fallback").foreach(_.foreach(storyBuilder.addTaskBuilder[IPostOperator]))
 
     storyBuilder
   }

@@ -32,7 +32,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISinkTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -54,7 +54,7 @@ case class HttpSinkSettings(
     poolSettings: Option[ConnectionPoolSettings] = None
 )
 
-class HttpSink(val settings: HttpSinkSettings) extends ISinkTask with Logging {
+class HttpSink(val settings: HttpSinkSettings) extends ISink with Logging {
 
   def createRequest(event: Event): HttpRequest = {
     var _request = settings.defaultRequest.withEntity(HttpEntity(event.body.data))

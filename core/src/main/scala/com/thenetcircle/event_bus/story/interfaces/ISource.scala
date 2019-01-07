@@ -17,18 +17,16 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
+import akka.Done
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
-trait IFallbackTask extends ITask {
+import scala.concurrent.Future
 
-  /**
-    * Returns a [[Flow]] which intends to accept TOFB events and output INFB events
-    *
-    * @param runningContext [[TaskRunningContext]]
-    */
-  def flow()(
+trait ISource extends ITask {
+
+  def run(storyFlow: Flow[Payload, Payload, StoryMat])(
       implicit runningContext: TaskRunningContext
-  ): Flow[Payload, Payload, StoryMat]
+  ): Future[Done]
 
 }

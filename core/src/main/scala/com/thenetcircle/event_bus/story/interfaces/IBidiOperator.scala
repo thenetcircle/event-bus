@@ -17,13 +17,13 @@
 
 package com.thenetcircle.event_bus.story.interfaces
 
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.BidiFlow
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
-trait ISinkTask extends ITask {
+trait IBidiOperator extends ITransformationTask {
 
   def flow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Payload, Payload, StoryMat]
+  ): BidiFlow[Payload, Payload, Payload, Payload, StoryMat]
 
 }

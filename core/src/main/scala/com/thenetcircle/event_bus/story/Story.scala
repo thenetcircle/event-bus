@@ -32,10 +32,9 @@ case class StorySettings(name: String, status: StoryStatus = StoryStatus.INIT)
 
 class Story(
     val settings: StorySettings,
-    val sourceTask: ISourceTask,
-    val sinkTask: ISinkTask,
-    val transformTasks: Option[List[ITransformTask]] = None,
-    val fallbackTasks: Option[List[IFallbackTask]] = None
+    val source: ISource,
+    val sink: ISink,
+    val transformations: Option[List[ITransformationTask]] = None
 ) extends Logging {
 
   // initialize internal status
@@ -46,33 +45,24 @@ class Story(
   private def getTaskClassName(t: ITask): String = Option(t.getClass.getSimpleName).getOrElse("")
 
   // initialize tasks
-  sourceTask.initTask(s"story:$storyName#source:${getTaskClassName(sourceTask)}", this)
-  sinkTask.initTask(s"story:$storyName#sink:${getTaskClassName(sinkTask)}", this)
-  transformTasks.foreach(_.zipWithIndex.foreach {
-    case (tt, i) => tt.initTask(s"story:$storyName#transform:$i:${getTaskClassName(tt)}", this)
-  })
-  fallbackTasks.foreach(_.zipWithIndex.foreach {
-    case (ft, i) => ft.initTask(s"story:$storyName#fallback:$i:${getTaskClassName(ft)}", this)
+  source.initTask(s"story:$storyName#source:${getTaskClassName(source)}", this)
+  sink.initTask(s"story:$storyName#sink:${getTaskClassName(sink)}", this)
+  transformations.foreach(_.zipWithIndex.foreach {
+    case (tt, i) => tt.initTask(s"story:$storyName#transformation:$i:${getTaskClassName(tt)}", this)
   })
 
   def updateStoryStatus(status: StoryStatus): Unit = storyStatus = status
   def getStoryStatus(): StoryStatus                = storyStatus
 
   def combineStoryFlow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] = {
-    var storyFlow: Flow[Payload, Payload, StoryMat] = Flow[Payload]
+    var storyFlow: Flow[Payload, Payload, StoryMat] = sink.flow()
 
-    // connect transforms flow
-    transformTasks.foreach(_.foreach(tt => {
-      storyFlow = storyFlow.via(tt.flow())
-    }))
-
-    // connect sink flow
-    storyFlow = storyFlow.via(sinkTask.flow())
-
-    // connect fallback flow
-    fallbackTasks.foreach(_.foreach(ft => {
-      storyFlow = storyFlow.via(ft.flow())
-    }))
+    transformations.foreach(_.reverse.foreach {
+      case o: IOperator     => storyFlow = o.flow().via(storyFlow)
+      case o: IPostOperator => storyFlow = storyFlow.via(o.flow())
+      case o: IBidiOperator => storyFlow = storyFlow.join(o.flow())
+      case _                =>
+    })
 
     // connect monitor flow
     storyFlow = storyFlow
@@ -95,7 +85,7 @@ class Story(
 
   def run()(implicit runningContext: TaskRunningContext): Future[Done] = runningFuture getOrElse {
     try {
-      runningFuture = Some(sourceTask.run(combineStoryFlow()))
+      runningFuture = Some(source.run(combineStoryFlow()))
       runningFuture.get
     } catch {
       case ex: Throwable =>
@@ -109,10 +99,9 @@ class Story(
     try {
       logger.info(s"Stopping story $storyName")
       runningFuture = None
-      sourceTask.shutdown()
-      transformTasks.foreach(_.foreach(_.shutdown()))
-      fallbackTasks.foreach(_.foreach(_.shutdown()))
-      sinkTask.shutdown()
+      source.shutdown()
+      transformations.foreach(_.foreach(_.shutdown()))
+      sink.shutdown()
     } catch {
       case NonFatal(ex) =>
         logger.error(s"Get an error when stopping story $storyName, $ex")

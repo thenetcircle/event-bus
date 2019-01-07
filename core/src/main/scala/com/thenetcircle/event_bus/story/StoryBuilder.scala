@@ -29,10 +29,10 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   import StoryBuilder._
 
-  private var sourceTaskBuilders: Map[String, ITaskBuilder[ISourceTask]]       = Map.empty
-  private var sinkTaskBuilders: Map[String, ITaskBuilder[ISinkTask]]           = Map.empty
-  private var transformTaskBuilders: Map[String, ITaskBuilder[ITransformTask]] = Map.empty
-  private var fallbackTaskBuilders: Map[String, ITaskBuilder[IFallbackTask]]   = Map.empty
+  private var sourceTaskBuilders: Map[String, ITaskBuilder[ISource]]                = Map.empty
+  private var sinkTaskBuilders: Map[String, ITaskBuilder[ISink]]                    = Map.empty
+  private var transformTaskBuilders: Map[String, ITaskBuilder[ITransformationTask]] = Map.empty
+  private var fallbackTaskBuilders: Map[String, ITaskBuilder[IPostOperator]]        = Map.empty
 
   def addTaskBuilder[T <: ITask: TypeTag](builderClassName: String): Unit =
     addTaskBuilder(Class.forName(builderClassName).asInstanceOf[Class[ITaskBuilder[T]]])
@@ -44,14 +44,14 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
     builderClass.newInstance()
 
   def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = typeOf[T] match {
-    case t if t =:= typeOf[ISourceTask] =>
-      sourceTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISourceTask]])
-    case t if t =:= typeOf[ISinkTask] =>
-      sinkTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISinkTask]])
-    case t if t =:= typeOf[ITransformTask] =>
-      transformTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ITransformTask]])
-    case t if t =:= typeOf[IFallbackTask] =>
-      fallbackTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IFallbackTask]])
+    case t if t =:= typeOf[ISource] =>
+      sourceTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
+    case t if t =:= typeOf[ISink] =>
+      sinkTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
+    case t if t =:= typeOf[ITransformationTask] =>
+      transformTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ITransformationTask]])
+    case t if t =:= typeOf[IPostOperator] =>
+      fallbackTaskBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IPostOperator]])
   }
 
   def buildStory(info: StoryInfo): Story =
@@ -69,22 +69,22 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
         throw ex
     }
 
-  def buildSourceTask(content: String): ISourceTask = {
+  def buildSourceTask(content: String): ISource = {
     val (taskType, configString) = parseTaskContent(content)
     sourceTaskBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildTransformTask(content: String): ITransformTask = {
+  def buildTransformTask(content: String): ITransformationTask = {
     val (taskType, configString) = parseTaskContent(content)
     transformTaskBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildSinkTask(content: String): ISinkTask = {
+  def buildSinkTask(content: String): ISink = {
     val (taskType, configString) = parseTaskContent(content)
     sinkTaskBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildFallbackTask(content: String): IFallbackTask = {
+  def buildFallbackTask(content: String): IPostOperator = {
     val (taskType, configString) = parseTaskContent(content)
     fallbackTaskBuilders.get(taskType).map(buildTask(configString)).get
   }

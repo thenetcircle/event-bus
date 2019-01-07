@@ -41,7 +41,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-class KafkaSource(val settings: KafkaSourceSettings) extends ISourceTask with Logging {
+class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Logging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 

@@ -190,7 +190,7 @@ class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: 
 
   def createStory(storyName: String, storyData: Map[String, String]): Option[Story] =
     try {
-      val storyInfo = createStoryRawData(storyName, storyData)
+      val storyInfo = createStoryInfo(storyName, storyData)
       logger.info(s"creating new story $storyName with data: $storyInfo")
       val story = storyBuilder.buildStory(storyInfo)
       Some(story)
@@ -200,7 +200,7 @@ class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: 
         None
     }
 
-  def createStoryRawData(storyName: String, storyData: Map[String, String]): StoryInfo =
+  def createStoryInfo(storyName: String, storyData: Map[String, String]): StoryInfo =
     StoryInfo(
       storyName,
       storyData.getOrElse("status", "INIT"),
