@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.story.interfaces
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
-trait IPostOperator extends ITransformationTask {
+trait IPostOperator extends IOperator {
 
   def flow()(
       implicit runningContext: TaskRunningContext

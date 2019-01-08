@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.story.tasks.transformations.TNCKafkaTopicResolver
+import com.thenetcircle.event_bus.story.tasks.operators.TNCKafkaTopicResolver
 
 class TNCKafkaTopicResolverTest extends IntegrationTestBase {
 

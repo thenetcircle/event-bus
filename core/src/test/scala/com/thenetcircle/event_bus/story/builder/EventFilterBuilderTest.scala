@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.transformations.{EventFilterBuilder, EventFilterSettings}
+import com.thenetcircle.event_bus.story.tasks.operators.{EventFilterBuilder, EventFilterSettings}
 
 class EventFilterBuilderTest extends TestBase {
 

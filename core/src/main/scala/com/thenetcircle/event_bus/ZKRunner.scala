@@ -206,7 +206,7 @@ class ZKRunner private (runnerName: String, zkManager: ZKManager, storyBuilder: 
       storyData.getOrElse("settings", ""),
       storyData("source"),
       storyData("sink"),
-      storyData.get("transformations").orElse(storyData.get("transforms"))
+      storyData.get("operators").orElse(storyData.get("transforms"))
     )
 }
 

@@ -29,9 +29,9 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   import StoryBuilder._
 
-  private var sourceBuilders: Map[String, ITaskBuilder[ISource]]                     = Map.empty
-  private var sinkBuilders: Map[String, ITaskBuilder[ISink]]                         = Map.empty
-  private var transformationBuilders: Map[String, ITaskBuilder[ITransformationTask]] = Map.empty
+  private var sourceBuilders: Map[String, ITaskBuilder[ISource]]     = Map.empty
+  private var sinkBuilders: Map[String, ITaskBuilder[ISink]]         = Map.empty
+  private var operatorBuilders: Map[String, ITaskBuilder[IOperator]] = Map.empty
 
   def addTaskBuilder[T <: ITask: TypeTag](builderClassName: String): Unit =
     addTaskBuilder(Class.forName(builderClassName).asInstanceOf[Class[ITaskBuilder[T]]])
@@ -47,8 +47,8 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
       sourceBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
     case t if t =:= typeOf[ISink] =>
       sinkBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
-    case t if t =:= typeOf[ITransformationTask] =>
-      transformationBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ITransformationTask]])
+    case t if t =:= typeOf[IOperator] =>
+      operatorBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IOperator]])
   }
 
   def buildStory(info: StoryInfo): Story =
@@ -57,7 +57,7 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
         StorySettings(info.name, info.settings),
         buildSource(info.source),
         buildSink(info.sink),
-        info.transformations.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildTransformation).toList)
+        info.operators.map(_.split(Regex.quote(TASK_DELIMITER)).map(buildOperator).toList)
       )
     } catch {
       case ex: Throwable =>
@@ -70,9 +70,9 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
     sourceBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildTransformation(content: String): ITransformationTask = {
+  def buildOperator(content: String): IOperator = {
     val (taskType, configString) = parseTaskContent(content)
-    transformationBuilders.get(taskType).map(buildTask(configString)).get
+    operatorBuilders.get(taskType).map(buildTask(configString)).get
   }
 
   def buildSink(content: String): ISink = {
@@ -102,6 +102,6 @@ object StoryBuilder {
       settings: String,
       source: String,
       sink: String,
-      transformations: Option[String]
+      operators: Option[String]
   )
 }

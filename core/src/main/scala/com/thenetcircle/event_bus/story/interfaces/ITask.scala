@@ -84,5 +84,3 @@ trait ITask {
   def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 
 }
-
-trait ITransformationTask extends ITask

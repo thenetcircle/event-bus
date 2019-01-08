@@ -34,7 +34,7 @@ class Story(
     val settings: StorySettings,
     val source: ISource,
     val sink: ISink,
-    val transformations: Option[List[ITransformationTask]] = None
+    val operators: Option[List[IOperator]] = None
 ) extends Logging {
 
   // initialize internal status
@@ -47,8 +47,8 @@ class Story(
   // initialize tasks
   source.initTask(s"story:$storyName#source:${getTaskClassName(source)}", this)
   sink.initTask(s"story:$storyName#sink:${getTaskClassName(sink)}", this)
-  transformations.foreach(_.zipWithIndex.foreach {
-    case (tt, i) => tt.initTask(s"story:$storyName#transformation:$i:${getTaskClassName(tt)}", this)
+  operators.foreach(_.zipWithIndex.foreach {
+    case (tt, i) => tt.initTask(s"story:$storyName#operator:$i:${getTaskClassName(tt)}", this)
   })
 
   def updateStoryStatus(status: StoryStatus): Unit = storyStatus = status
@@ -57,8 +57,8 @@ class Story(
   def combineStoryFlow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] = {
     var storyFlow: Flow[Payload, Payload, StoryMat] = sink.flow()
 
-    transformations.foreach(_.reverse.foreach {
-      case o: IOperator     => storyFlow = o.flow().via(storyFlow)
+    operators.foreach(_.reverse.foreach {
+      case o: IPreOperator  => storyFlow = o.flow().via(storyFlow)
       case o: IPostOperator => storyFlow = storyFlow.via(o.flow())
       case o: IBidiOperator => storyFlow = storyFlow.join(o.flow())
       case _                =>
@@ -100,7 +100,7 @@ class Story(
       logger.info(s"Stopping story $storyName")
       runningFuture = None
       source.shutdown()
-      transformations.foreach(_.foreach(_.shutdown()))
+      operators.foreach(_.foreach(_.shutdown()))
       sink.shutdown()
     } catch {
       case NonFatal(ex) =>

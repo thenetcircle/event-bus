@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus
 
 import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
 import com.thenetcircle.event_bus.story.StoryBuilder
-import com.thenetcircle.event_bus.story.interfaces.{IPostOperator, ISink, ISource, ITransformationTask}
+import com.thenetcircle.event_bus.story.interfaces.{IOperator, IPostOperator, ISink, ISource}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -54,8 +54,8 @@ class Runner extends AbstractApp {
     val buildersConfig = config.getConfig("app.task.builders")
     buildersConfig.as[Option[List[String]]]("source").foreach(_.foreach(storyBuilder.addTaskBuilder[ISource]))
     buildersConfig
-      .as[Option[List[String]]]("transformations")
-      .foreach(_.foreach(storyBuilder.addTaskBuilder[ITransformationTask]))
+      .as[Option[List[String]]]("operators")
+      .foreach(_.foreach(storyBuilder.addTaskBuilder[IOperator]))
     buildersConfig.as[Option[List[String]]]("sink").foreach(_.foreach(storyBuilder.addTaskBuilder[ISink]))
 
     storyBuilder

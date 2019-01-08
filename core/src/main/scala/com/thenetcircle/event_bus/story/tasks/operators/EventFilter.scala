@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.transformations
+package com.thenetcircle.event_bus.story.tasks.operators
 
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
@@ -36,7 +36,7 @@ case class EventFilterSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilter(val settings: EventFilterSettings) extends IOperator with Logging {
+class EventFilter(val settings: EventFilterSettings) extends IPreOperator with Logging {
 
   logger.info(s"Initializing EventFilter with settings: $settings")
 

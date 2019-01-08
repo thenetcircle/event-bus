@@ -15,7 +15,7 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.story.tasks.transformations
+package com.thenetcircle.event_bus.story.tasks.operators
 
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.DefaultEventImpl
