@@ -22,7 +22,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
 import com.thenetcircle.event_bus.misc.{Logging, ZKManager}
-import com.thenetcircle.event_bus.story.interfaces.{IOperator, IPreOperator, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IOperator, ITaskBuilder, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.curator.framework.recipes.cache.NodeCache
@@ -38,7 +38,7 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCKafkaTopicResolver(zkManager: ZKManager, val _defaultTopic: String) extends IPreOperator with Logging {
+class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String) extends IUndiOperator with Logging {
 
   import TopicInfoProtocol._
 
@@ -170,14 +170,14 @@ class TNCKafkaTopicResolver(zkManager: ZKManager, val _defaultTopic: String) ext
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down TNCKafkaTopicResolver of story ${getStoryName()}.")
+    logger.info(s"shutting down TNCTopicResolvingOperator of story ${getStoryName()}.")
     nameIndex = Map.empty
     channelIndex = Map.empty
     zkWatcher.foreach(_.close())
   }
 }
 
-class TNCKafkaTopicResolverBuilder() extends ITaskBuilder[TNCKafkaTopicResolver] {
+class TNCTopicResolvingOperatorBuilder() extends ITaskBuilder[TNCTopicResolvingOperator] {
 
   override val taskType: String = "tnc-topic-resolver"
 
@@ -190,13 +190,13 @@ class TNCKafkaTopicResolverBuilder() extends ITaskBuilder[TNCKafkaTopicResolver]
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): TNCKafkaTopicResolver = {
+  )(implicit appContext: AppContext): TNCTopicResolvingOperator = {
     val zkMangerOption = appContext.getZKManager()
     if (zkMangerOption.isEmpty) {
-      throw new IllegalArgumentException("ZooKeeperManager is required for TNCKafkaTopicResolver")
+      throw new IllegalArgumentException("ZooKeeperManager is required for TNCTopicResolvingOperator")
     }
 
-    new TNCKafkaTopicResolver(
+    new TNCTopicResolvingOperator(
       zkMangerOption.get,
       config.getString("default-topic")
     )

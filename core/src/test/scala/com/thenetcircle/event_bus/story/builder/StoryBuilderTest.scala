@@ -19,13 +19,17 @@ package com.thenetcircle.event_bus.story.builder
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.TestBase
+import com.thenetcircle.event_bus.story.Story.OperatorPosition
 import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
-import com.thenetcircle.event_bus.story.StoryStatus
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings}
 import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceSettings}
-import com.thenetcircle.event_bus.story.tasks.operators.{CassandraFailover, EventFilter, EventFilterSettings}
-import com.typesafe.config.{Config, ConfigFactory}
+import com.thenetcircle.event_bus.story.tasks.operators.{
+  CassandraOperator,
+  EventFilterOperator,
+  EventFilterOperatorSettings
+}
+import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration.FiniteDuration
@@ -34,27 +38,8 @@ class StoryBuilderTest extends TestBase {
 
   behavior of "StoryBuilder"
 
-  val buildersConfig: Config =
-    ConfigFactory.parseString(
-      """
-      |{
-      |  source = [
-      |    "com.thenetcircle.event_bus.story.tasks.http.HttpSourceBuilder",
-      |    "com.thenetcircle.event_bus.story.tasks.kafka.KafkaSourceBuilder"
-      |  ]
-      |  operators = [
-      |    "com.thenetcircle.event_bus.story.tasks.operators.TNCKafkaTopicResolverBuilder",
-      |    "com.thenetcircle.event_bus.story.tasks.operators.TNCDinoEventsForwarderBuilder",
-      |    "com.thenetcircle.event_bus.story.tasks.operators.EventFilterBuilder",
-      |    "com.thenetcircle.event_bus.story.tasks.operators.CassandraFailoverBuilder"
-      |  ],
-      |  sink = [
-      |    "com.thenetcircle.event_bus.story.tasks.http.HttpSinkBuilder",
-      |    "com.thenetcircle.event_bus.story.tasks.kafka.KafkaSinkBuilder"
-      |  ]
-      |}
-    """.stripMargin
-    )
+  val buildersConfig: Config = appContext.getSystemConfig().getConfig("app.task.builders")
+
   buildersConfig
     .as[Option[List[String]]]("source")
     .foreach(_.foreach(storyBuilder.addTaskBuilder[ISource]))
@@ -75,7 +60,7 @@ class StoryBuilderTest extends TestBase {
       operators = Some(
         """event-filter#{"event-name-white-list":["event-name-1","event-name-2"],"event-name-black-list":["event-name-3"],"channel-white-list":["channel-1","channel-2"],"channel-black-list":["channel-3"],"allowed-transport-modes":["ASYNC","BOTH","NONE"],"only-extras":{"actorId":"test","generatorId":"tnc-event-dispatcher"}}"""
           +
-            """|||cassandra#{"contact-points":[],"port":9042,"parallelism":3}"""
+            """|||cassandra#{"contact-points":[],"port":9042,"parallelism":3}#after"""
       )
     )
 
@@ -99,8 +84,9 @@ class StoryBuilderTest extends TestBase {
       HttpRequest(HttpMethods.POST, Uri("http://localhost:3001"))
     )
 
-    story.operators.get.apply(0) shouldBe a[EventFilter]
-    story.operators.get.apply(0).asInstanceOf[EventFilter].settings shouldEqual EventFilterSettings(
+    story.operators.get.apply(0)._1 shouldEqual OperatorPosition.Before
+    story.operators.get.apply(0)._2 shouldBe a[EventFilterOperator]
+    story.operators.get.apply(0)._2.asInstanceOf[EventFilterOperator].settings shouldEqual EventFilterOperatorSettings(
       eventNameWhiteList = Seq("event-name-1", "event-name-2"),
       eventNameBlackList = Seq("event-name-3"),
       channelWhiteList = Seq("channel-1", "channel-2"),
@@ -109,7 +95,8 @@ class StoryBuilderTest extends TestBase {
       onlyExtras = Map("actorId" -> "test", "generatorId" -> "tnc-event-dispatcher")
     )
 
-    story.operators.get.apply(1) shouldBe a[CassandraFailover]
+    story.operators.get.apply(1)._1 shouldEqual OperatorPosition.After
+    story.operators.get.apply(1)._2 shouldBe a[CassandraOperator]
   }
 
 }

@@ -18,13 +18,13 @@
 package com.thenetcircle.event_bus.misc
 
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.story.tasks.operators.TNCKafkaTopicResolver
+import com.thenetcircle.event_bus.story.tasks.operators.TNCTopicResolvingOperator
 
-class TNCKafkaTopicResolverTest extends IntegrationTestBase {
+class TNCTopicResolvingOperatorTest extends IntegrationTestBase {
 
-  behavior of "TNCKafkaTopicResolver"
+  behavior of "TNCTopicResolvingOperator"
 
-  val resolver = new TNCKafkaTopicResolver(zkManager, "event-default")
+  val resolver = new TNCTopicResolvingOperator(zkManager, "event-default")
   resolver.init()
 
   it should "solve topic correctly" in {

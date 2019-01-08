@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IPostOperator, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISinkableTask, ITaskBuilder, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -36,9 +36,9 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 
-case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
+case class CassandraOperatorSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraFailover(val settings: CassandraSettings) extends IPostOperator with Logging {
+class CassandraOperator(val settings: CassandraOperatorSettings) extends IUndiOperator with ISinkableTask with Logging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -188,7 +188,7 @@ private[tasks] object GuavaFutures {
   }
 }
 
-class CassandraFailoverBuilder() extends ITaskBuilder[CassandraFailover] {
+class CassandraOperatorBuilder() extends ITaskBuilder[CassandraOperator] {
 
   override val taskType: String = "cassandra"
 
@@ -203,14 +203,14 @@ class CassandraFailoverBuilder() extends ITaskBuilder[CassandraFailover] {
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): CassandraFailover = {
-    val cassandraSettings = CassandraSettings(
+  )(implicit appContext: AppContext): CassandraOperator = {
+    val cassandraSettings = CassandraOperatorSettings(
       contactPoints = config.as[List[String]]("contact-points"),
       port = config.as[Int]("port"),
       parallelism = config.as[Int]("parallelism")
     )
 
-    new CassandraFailover(cassandraSettings)
+    new CassandraOperator(cassandraSettings)
   }
 
 }

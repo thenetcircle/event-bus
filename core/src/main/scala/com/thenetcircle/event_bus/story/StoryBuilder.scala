@@ -19,6 +19,7 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.misc.Util
+import com.thenetcircle.event_bus.story.Story.OperatorPosition
 import com.thenetcircle.event_bus.story.interfaces._
 import com.typesafe.scalalogging.LazyLogging
 
@@ -70,19 +71,24 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
     sourceBuilders.get(taskType).map(buildTask(configString)).get
   }
 
-  def buildOperator(content: String): IOperator = {
-    val (taskType, configString) = parseTaskContent(content)
-    operatorBuilders.get(taskType).map(buildTask(configString)).get
-  }
-
   def buildSink(content: String): ISink = {
     val (taskType, configString) = parseTaskContent(content)
     sinkBuilders.get(taskType).map(buildTask(configString)).get
   }
 
+  def buildOperator(content: String): (OperatorPosition, IOperator) = {
+    val (taskType, configString, posString) = parserOperatorContent(content)
+    (OperatorPosition(posString), operatorBuilders.get(taskType).map(buildTask(configString)).get)
+  }
+
   def parseTaskContent(content: String): (String, String) = {
     val re = content.split(Regex.quote(CONTENT_DELIMITER), 2)
     (re(0), if (re.length == 2) re(1) else "{}")
+  }
+
+  def parserOperatorContent(content: String): (String, String, String) = {
+    val re = content.split(Regex.quote(CONTENT_DELIMITER), 3)
+    (re(0), if (re.length == 2) re(1) else "{}", if (re.length == 3) re(2) else "Before")
   }
 
   def buildTask[T <: ITask](

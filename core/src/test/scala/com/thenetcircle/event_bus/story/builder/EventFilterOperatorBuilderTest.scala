@@ -18,18 +18,18 @@
 package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.operators.{EventFilterBuilder, EventFilterSettings}
+import com.thenetcircle.event_bus.story.tasks.operators.{EventFilterOperatorBuilder, EventFilterOperatorSettings}
 
-class EventFilterBuilderTest extends TestBase {
+class EventFilterOperatorBuilderTest extends TestBase {
 
-  behavior of "EventFilterBuilder"
+  behavior of "EventFilterOperatorBuilder"
 
-  val builder = new EventFilterBuilder
+  val builder = new EventFilterOperatorBuilder
 
-  it should "build proper EventFilter with empty config" in {
+  it should "build proper EventFilterOperator with empty config" in {
     val task = storyBuilder.buildTask("""{}""".stripMargin)(builder)
 
-    val settings: EventFilterSettings = task.settings
+    val settings: EventFilterOperatorSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq.empty[String]
     settings.eventNameBlackList shouldEqual Seq.empty[String]
@@ -39,7 +39,7 @@ class EventFilterBuilderTest extends TestBase {
     settings.onlyExtras shouldEqual Map.empty[String, String]
   }
 
-  it should "build proper EventFilter with proper config" in {
+  it should "build proper EventFilterOperator with proper config" in {
     val task = storyBuilder.buildTask("""{
         |  "event-name-white-list": ["user\\..*", "wio\\..*"],
         |  "event-name-black-list": ["image\\..*"],
@@ -52,7 +52,7 @@ class EventFilterBuilderTest extends TestBase {
         |  }
         |}""".stripMargin)(builder)
 
-    val settings: EventFilterSettings = task.settings
+    val settings: EventFilterOperatorSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq("user\\..*", "wio\\..*")
     settings.eventNameBlackList shouldEqual Seq("image\\..*")

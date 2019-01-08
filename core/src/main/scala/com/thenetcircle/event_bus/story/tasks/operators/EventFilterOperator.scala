@@ -27,7 +27,7 @@ import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
-case class EventFilterSettings(
+case class EventFilterOperatorSettings(
     eventNameWhiteList: Seq[String] = Seq.empty,
     eventNameBlackList: Seq[String] = Seq.empty,
     channelWhiteList: Seq[String] = Seq.empty,
@@ -36,9 +36,9 @@ case class EventFilterSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilter(val settings: EventFilterSettings) extends IPreOperator with Logging {
+class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUndiOperator with Logging {
 
-  logger.info(s"Initializing EventFilter with settings: $settings")
+  logger.info(s"Initializing EventFilterOperator with settings: $settings")
 
   override def flow()(
       implicit runningContext: TaskRunningContext
@@ -127,9 +127,11 @@ class EventFilter(val settings: EventFilterSettings) extends IPreOperator with L
 
     (NORM, event)
   }
+
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 }
 
-class EventFilterBuilder() extends ITaskBuilder[EventFilter] {
+class EventFilterOperatorBuilder() extends ITaskBuilder[EventFilterOperator] {
 
   override val taskType: String = "event-filter"
 
@@ -142,7 +144,7 @@ class EventFilterBuilder() extends ITaskBuilder[EventFilter] {
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): EventFilter = {
+  )(implicit appContext: AppContext): EventFilterOperator = {
     val eventNameWhiteList    = config.as[Option[Seq[String]]]("event-name-white-list").getOrElse(Seq.empty)
     val eventNameBlackList    = config.as[Option[Seq[String]]]("event-name-black-list").getOrElse(Seq.empty)
     val channelWhiteList      = config.as[Option[Seq[String]]]("channel-white-list").getOrElse(Seq.empty)
@@ -150,7 +152,7 @@ class EventFilterBuilder() extends ITaskBuilder[EventFilter] {
     val allowedTransportModes = config.as[Option[Seq[String]]]("allowed-transport-modes").getOrElse(Seq.empty)
     val onlyExtras            = config.as[Option[Map[String, String]]]("only-extras").getOrElse(Map.empty)
 
-    val settings = EventFilterSettings(
+    val settings = EventFilterOperatorSettings(
       eventNameWhiteList,
       eventNameBlackList,
       channelWhiteList,
@@ -159,7 +161,7 @@ class EventFilterBuilder() extends ITaskBuilder[EventFilter] {
       onlyExtras
     )
 
-    new EventFilter(settings)
+    new EventFilterOperator(settings)
   }
 
 }

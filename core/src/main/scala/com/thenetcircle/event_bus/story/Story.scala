@@ -21,6 +21,8 @@ import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.misc.Logging
+import com.thenetcircle.event_bus.story.Story.OperatorPosition
+import com.thenetcircle.event_bus.story.Story.OperatorPosition.{After, Before}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.story.interfaces._
 
@@ -34,7 +36,7 @@ class Story(
     val settings: StorySettings,
     val source: ISource,
     val sink: ISink,
-    val operators: Option[List[IOperator]] = None
+    val operators: Option[List[(OperatorPosition, IOperator)]] = None
 ) extends Logging {
 
   // initialize internal status
@@ -48,7 +50,7 @@ class Story(
   source.initTask(s"story:$storyName#source:${getTaskClassName(source)}", this)
   sink.initTask(s"story:$storyName#sink:${getTaskClassName(sink)}", this)
   operators.foreach(_.zipWithIndex.foreach {
-    case (tt, i) => tt.initTask(s"story:$storyName#operator:$i:${getTaskClassName(tt)}", this)
+    case ((_, op), i) => op.initTask(s"story:$storyName#operator:$i:${getTaskClassName(op)}", this)
   })
 
   def updateStoryStatus(status: StoryStatus): Unit = storyStatus = status
@@ -58,10 +60,10 @@ class Story(
     var storyFlow: Flow[Payload, Payload, StoryMat] = sink.flow()
 
     operators.foreach(_.reverse.foreach {
-      case o: IPreOperator  => storyFlow = o.flow().via(storyFlow)
-      case o: IPostOperator => storyFlow = storyFlow.via(o.flow())
-      case o: IBidiOperator => storyFlow = storyFlow.join(o.flow())
-      case _                =>
+      case (_, o: IBidiOperator)      => storyFlow = storyFlow.join(o.flow())
+      case (Before, o: IUndiOperator) => storyFlow = o.flow().via(storyFlow)
+      case (After, o: IUndiOperator)  => storyFlow = storyFlow.via(o.flow())
+      case _                          =>
     })
 
     // connect monitor flow
@@ -100,7 +102,7 @@ class Story(
       logger.info(s"Stopping story $storyName")
       runningFuture = None
       source.shutdown()
-      operators.foreach(_.foreach(_.shutdown()))
+      operators.foreach(_.foreach(_._2.shutdown()))
       sink.shutdown()
     } catch {
       case NonFatal(ex) =>
@@ -117,6 +119,16 @@ object Story extends Logging {
   object Commands {
     case object Shutdown
     case class Restart(cause: Throwable)
+  }
+
+  sealed trait OperatorPosition
+  object OperatorPosition {
+    def apply(op: String): OperatorPosition = op.toLowerCase match {
+      case "after" => After
+      case _       => Before
+    }
+    case object Before extends OperatorPosition
+    case object After  extends OperatorPosition
   }
 
   class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)

@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus
 
 import com.thenetcircle.event_bus.misc.{Monitor, ZKManager}
 import com.thenetcircle.event_bus.story.StoryBuilder
-import com.thenetcircle.event_bus.story.interfaces.{IOperator, IPostOperator, ISink, ISource}
+import com.thenetcircle.event_bus.story.interfaces.{IOperator, ISink, ISource}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 

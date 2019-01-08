@@ -22,13 +22,13 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORM
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IPreOperator, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.util.matching.Regex
 
-class TNCDinoEventsForwarder() extends IPreOperator with Logging {
+class TNCDinoEventsOperator() extends IUndiOperator with Logging {
 
   def appendTitleField(event: Event): Event = {
     val verbOption = event.getExtra("verb")
@@ -56,16 +56,15 @@ class TNCDinoEventsForwarder() extends IPreOperator with Logging {
 
 }
 
-class TNCDinoEventsForwarderBuilder() extends ITaskBuilder[TNCDinoEventsForwarder] {
+class TNCDinoEventsOperatorBuilder() extends ITaskBuilder[TNCDinoEventsOperator] {
 
   override val taskType: String = "tnc-dino-forwarder"
 
-  override val defaultConfig: Config =
-    ConfigFactory.parseString("""{}""".stripMargin)
+  override val defaultConfig: Config = ConfigFactory.empty()
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): TNCDinoEventsForwarder =
-    new TNCDinoEventsForwarder()
+  )(implicit appContext: AppContext): TNCDinoEventsOperator =
+    new TNCDinoEventsOperator()
 
 }

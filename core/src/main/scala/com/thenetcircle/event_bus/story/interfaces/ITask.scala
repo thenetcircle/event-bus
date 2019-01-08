@@ -81,6 +81,6 @@ trait ITask {
     *
     * @param runningContext [[TaskRunningContext]]
     */
-  def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
+  def shutdown()(implicit runningContext: TaskRunningContext): Unit
 
 }
