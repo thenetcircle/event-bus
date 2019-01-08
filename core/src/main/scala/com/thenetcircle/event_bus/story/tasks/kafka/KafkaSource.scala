@@ -119,7 +119,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
         consumerLogger.info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
 
-        (NORM, eve)
+        (NORMAL, eve)
       })
       .recover {
         case ex: EventExtractingException =>
@@ -128,7 +128,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
             s"The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
           )
           (
-            SKIP,
+            SKIPPING,
             Event.fromException(
               ex,
               EventBody(messageValue, eventFormat),
@@ -179,9 +179,9 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                         throw new IllegalStateException(errorMessage)
                     }
 
-                  case (TOFB(exOp, _), event) =>
+                  case (STAGING(exOp, _), event) =>
                     consumerLogger.error(
-                      s"The event ${event.uuid} reaches the end with TOFB status" +
+                      s"The event ${event.uuid} reaches the end with STAGING status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     event.getPassThrough[CommittableOffset] match {
@@ -189,14 +189,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                         consumerLogger.info(
                           s"The event ${event.uuid} is going to be committed with offset $co"
                         )
-                        throw new CommittableException(co, "Non handled TOFB status")
+                        throw new CommittableException(co, "Non handled STAGING status")
                       case None =>
                         throw new RuntimeException(
-                          "Non handled TOFB status without CommittableOffset"
+                          "Non handled STAGING status without CommittableOffset"
                         )
                     }
 
-                  case (FAIL(ex, _), event) =>
+                  case (FAILED(ex, _), event) =>
                     consumerLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
@@ -204,7 +204,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                         consumerLogger.info(
                           s"The event ${event.uuid} is going to be committed with offset $co"
                         )
-                        throw new CommittableException(co, "FAIL status event")
+                        throw new CommittableException(co, "FAILED status event")
                       case None =>
                         throw ex
                     }

@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.story.tasks.operators
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM}
+import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL}
 import com.thenetcircle.event_bus.misc.{Logging, ZKManager}
 import com.thenetcircle.event_bus.story.interfaces.{IOperator, ITaskBuilder, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
@@ -114,13 +114,13 @@ class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String)
   ): Flow[Payload, Payload, StoryMat] = {
     init()
     Flow[Payload].map {
-      case (NORM, event) =>
+      case (NORMAL, event) =>
         Try(resolveEvent(event)) match {
           case Success(newEvent) =>
-            (NORM, newEvent)
+            (NORMAL, newEvent)
           case Failure(ex) =>
             producerLogger.error(s"resolve kafka topic failed with error $ex")
-            (FAIL(ex, getTaskName()), event)
+            (FAILED(ex, getTaskName()), event)
         }
       case others => others
     }

@@ -29,7 +29,7 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
 import com.thenetcircle.event_bus.AppContext
-import com.thenetcircle.event_bus.event.EventStatus.{NORM, TOFB}
+import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces.{ISink, ISinkableTask, ITaskBuilder}
@@ -88,7 +88,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ISinkableTask 
 
     Flow[Payload]
       .mapAsync(settings.concurrentRetries) {
-        case (NORM, event) =>
+        case (NORMAL, event) =>
           val retryTimeout = settings.maxRetryTime
 
           import akka.pattern.ask
@@ -102,19 +102,19 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ISinkableTask 
             .map[(EventStatus, Event)] {
               case Success(resp) =>
                 consumerLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
-                (NORM, event)
+                (NORMAL, event)
               case Failure(ex) =>
                 consumerLogger.warn(
                   s"A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
                 )
-                (TOFB(Some(ex), getTaskName()), event)
+                (STAGING(Some(ex), getTaskName()), event)
             }
             .recover {
               case ex: AskTimeoutException =>
                 consumerLogger.warn(
                   s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryTimeout], $eventBrief"
                 )
-                (TOFB(Some(ex), getTaskName()), event)
+                (STAGING(Some(ex), getTaskName()), event)
             }
 
         case others => Future.successful(others)

@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.story.tasks.operators
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.EventStatus.NORM
+import com.thenetcircle.event_bus.event.EventStatus.NORMAL
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
@@ -48,8 +48,8 @@ class TNCDinoEventsOperator() extends IUndiOperator with Logging {
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] =
     Flow[Payload].map {
-      case (NORM, event) => NORM -> appendTitleField(event)
-      case others        => others
+      case (NORMAL, event) => NORMAL -> appendTitleField(event)
+      case others          => others
     }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}

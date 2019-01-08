@@ -48,12 +48,12 @@ class StoryTest extends IntegrationTestBase {
 
     val testSource: Source[Payload, NotUsed] = Source(
       List(
-        (NORM, createTestEvent("norm_event1")),
-        (SKIP, createTestEvent("skip_event1")),
-        (NORM, createTestEvent("norm_event2")),
-        (SKIP, createTestEvent("skip_event2")),
-        (NORM, createTestEvent("norm_event3")),
-        (SKIP, createTestEvent("skip_event3"))
+        (NORMAL, createTestEvent("norm_event1")),
+        (SKIPPING, createTestEvent("skip_event1")),
+        (NORMAL, createTestEvent("norm_event2")),
+        (SKIPPING, createTestEvent("skip_event2")),
+        (NORMAL, createTestEvent("norm_event3")),
+        (SKIPPING, createTestEvent("skip_event3"))
       )
     )
 

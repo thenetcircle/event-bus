@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story.tasks.operators
 
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
-import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
+import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, SKIPPING}
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces._
@@ -43,8 +43,8 @@ class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUn
   override def flow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] = Flow[Payload].map {
-    case (NORM, event) => checkEvent(event)
-    case others        => others
+    case (NORMAL, event) => checkEvent(event)
+    case others          => others
   }
 
   def checkEvent(event: Event): Payload = {
@@ -58,20 +58,20 @@ class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUn
             pattern => event.metadata.name.get matches pattern
           )) {
         consumerLogger.info(s"A event is skipped because it is in event-name-black-list, $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
     }
     if (settings.eventNameWhiteList.nonEmpty) {
       if (event.metadata.name.isEmpty) {
         consumerLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
       // if the event name not in event_name white list, then skip it
       if (!settings.eventNameWhiteList.exists(
             pattern => event.metadata.name.get matches pattern
           )) {
         consumerLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
     }
 
@@ -82,20 +82,20 @@ class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUn
             pattern => event.metadata.channel.get matches pattern
           )) {
         consumerLogger.info(s"A event is skipped because it is in channel-black-list, $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
     }
     if (settings.channelWhiteList.nonEmpty) {
       if (event.metadata.channel.isEmpty) {
         consumerLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
       // if the event channel not in channel white list, then skip it
       if (!settings.channelWhiteList.exists(
             pattern => event.metadata.channel.get matches pattern
           )) {
         consumerLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
     }
 
@@ -109,7 +109,7 @@ class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUn
 
       if (!settings.allowedTransportModes.exists(_predictor)) {
         consumerLogger.info(s"A event is skipped because it is not in allowed-transport-modes,  $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
     }
 
@@ -121,11 +121,11 @@ class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUn
             case (_key, _value) => eventExtras.get(_key).contains(_value)
           }) {
         consumerLogger.info(s"A event is skipped because it does not match only-extras,  $eventBrief")
-        return (SKIP, event)
+        return (SKIPPING, event)
       }
     }
 
-    (NORM, event)
+    (NORMAL, event)
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}

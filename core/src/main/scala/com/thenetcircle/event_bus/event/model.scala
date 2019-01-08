@@ -69,11 +69,11 @@ object EventStatus {
   sealed trait SuccStatus extends EventStatus
   sealed trait FailStatus extends EventStatus
 
-  case object NORM                                                               extends SuccStatus
-  case object SKIP                                                               extends SuccStatus
-  case object INFB                                                               extends SuccStatus
-  case class TOFB(cause: Option[Throwable] = None, taskName: String = "unknown") extends FailStatus
-  case class FAIL(cause: Throwable, taskName: String = "unknown")                extends FailStatus
+  case object NORMAL                                                                extends SuccStatus
+  case object SKIPPING                                                              extends SuccStatus
+  case object STAGED                                                                extends SuccStatus
+  case class STAGING(cause: Option[Throwable] = None, taskName: String = "unknown") extends FailStatus
+  case class FAILED(cause: Throwable, taskName: String = "unknown")                 extends FailStatus
 }
 
 case class EventMetaData(

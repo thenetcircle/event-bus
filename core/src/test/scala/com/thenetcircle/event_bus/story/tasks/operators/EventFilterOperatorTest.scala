@@ -21,7 +21,7 @@ import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.DefaultEventImpl
 import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{EventBody, EventMetaData, EventTransportMode}
-import com.thenetcircle.event_bus.event.EventStatus.{NORM, SKIP}
+import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, SKIPPING}
 
 class EventFilterOperatorTest extends TestBase {
 
@@ -47,20 +47,20 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent("user.login")
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent("wio.invisible")
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent("membership.login")
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = DefaultEventImpl(
       uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(),
       body = EventBody("", DataFormat.UNKNOWN)
     )
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
   }
 
   it should "testEventNameBlackList" in {
@@ -69,20 +69,20 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent("user.login")
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent("wio.invisible")
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent("membership.login")
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = DefaultEventImpl(
       uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
       metadata = EventMetaData(),
       body = EventBody("", DataFormat.UNKNOWN)
     )
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
   }
 
   it should "testEventChannelWhiteList" in {
@@ -91,19 +91,19 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent(channel = None)
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(channel = Some("mychannel"))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(channel = Some("membership"))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(channel = Some("abc.forum.def"))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(channel = Some("forum"))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
   }
 
   it should "testEventChannelBlackList" in {
@@ -112,19 +112,19 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent(channel = None)
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(channel = Some("mychannel"))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(channel = Some("membership"))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(channel = Some("abc.forum.def"))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(channel = Some("forum"))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
   }
 
   it should "testEventTransportMode" in {
@@ -133,22 +133,22 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent()
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(transportMode = Some(EventTransportMode.SYNC_PLUS))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(transportMode = Some(EventTransportMode.ASYNC))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(transportMode = Some(EventTransportMode.BOTH))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(transportMode = Some(EventTransportMode.OTHERS("SYNC")))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
 
     testEvent = createTestEvent(transportMode = Some(EventTransportMode.OTHERS("UNKNOWN")))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
   }
 
   it should "testEventExtras" in {
@@ -160,17 +160,17 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)(builder)
 
     var testEvent = createTestEvent()
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(extra = Map("actorId" -> "1234"))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent = createTestEvent(extra = Map("generatorId" -> "tnc-event-dispatcher"))
-    eventFilter.checkEvent(testEvent) shouldEqual (SKIP, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (SKIPPING, testEvent)
 
     testEvent =
       createTestEvent(extra = Map("actorId" -> "1234", "objectId" -> "4321", "generatorId" -> "tnc-event-dispatcher"))
-    eventFilter.checkEvent(testEvent) shouldEqual (NORM, testEvent)
+    eventFilter.checkEvent(testEvent) shouldEqual (NORMAL, testEvent)
   }
 
 }

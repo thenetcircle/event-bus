@@ -25,7 +25,7 @@ import akka.stream.scaladsl.Flow
 import com.datastax.driver.core._
 import com.google.common.util.concurrent.{FutureCallback, Futures, ListenableFuture}
 import com.thenetcircle.event_bus.AppContext
-import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
+import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ISinkableTask, ITaskBuilder, IUndiOperator}
@@ -108,25 +108,25 @@ class CassandraOperator(val settings: CassandraOperatorSettings) extends IUndiOp
 
     Flow[Payload]
       .mapAsync(settings.parallelism) {
-        case (status: TOFB, event) ⇒
+        case (status: STAGING, event) ⇒
           try {
             session
               .executeAsync(statementBinder((status, event), statementOption.get))
               .asScala()
-              .map[(EventStatus, Event)](result => (INFB, event))
+              .map[(EventStatus, Event)](result => (STAGED, event))
               .recover {
                 case NonFatal(ex) =>
                   consumerLogger.warn(
                     s"sending to cassandra[1] fallback was failed with error $ex"
                   )
-                  (FAIL(ex, getTaskName()), event)
+                  (FAILED(ex, getTaskName()), event)
               }
           } catch {
             case NonFatal(ex) =>
               consumerLogger.debug(
                 s"sending to cassandra[2] fallback failed with error $ex"
               )
-              Future.successful((FAIL(ex, getTaskName()), event))
+              Future.successful((FAILED(ex, getTaskName()), event))
           }
 
         case (status, event) =>
@@ -146,7 +146,7 @@ class CassandraOperator(val settings: CassandraOperatorSettings) extends IUndiOp
 
   def getStatementBinder()(
       implicit runningContext: TaskRunningContext
-  ): ((TOFB, Event), PreparedStatement) => BoundStatement = {
+  ): ((STAGING, Event), PreparedStatement) => BoundStatement = {
     case ((status, event), statement) =>
       val cause = status.cause.map(_.toString).getOrElse("")
       logger.debug(s"binding cassandra statement")

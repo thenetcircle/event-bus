@@ -23,7 +23,7 @@ import akka.stream._
 import akka.stream.scaladsl.{BidiFlow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import com.thenetcircle.event_bus.AppContext
-import com.thenetcircle.event_bus.event.EventStatus.{FAIL, INFB, TOFB}
+import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, ISinkableTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
@@ -47,9 +47,9 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
     runningSecondarySink match {
       case Some(rss) =>
         rss.offer(payload).map {
-          case QueueOfferResult.Enqueued => (INFB, payload._2)
+          case QueueOfferResult.Enqueued => (STAGED, payload._2)
           case _ =>
-            (FAIL(new RuntimeException("Sending the event to secondary sink failed"), getTaskName()), payload._2)
+            (FAILED(new RuntimeException("Sending the event to secondary sink failed"), getTaskName()), payload._2)
         }
       case None =>
         producerLogger.warn(
@@ -146,7 +146,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
               val payload = grab(operated)
 
               payload match {
-                case (_: TOFB, _) =>
+                case (_: STAGING, _) =>
                   producerLogger.warn(
                     s"A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"

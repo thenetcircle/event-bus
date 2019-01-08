@@ -24,7 +24,7 @@ case class DefaultEventImpl(
     uuid: String,
     metadata: EventMetaData,
     body: EventBody,
-    status: EventStatus = EventStatus.NORM,
+    status: EventStatus = EventStatus.NORMAL,
     createdAt: Date = Date.from(Instant.now()),
     passThrough: Option[Any] = None
 ) extends Event {

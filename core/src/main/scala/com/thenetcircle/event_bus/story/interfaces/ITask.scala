@@ -21,7 +21,7 @@ import akka.NotUsed
 import akka.stream.FlowShape
 import akka.stream.scaladsl.{Flow, GraphDSL, Merge, Partition}
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.EventStatus.NORM
+import com.thenetcircle.event_bus.event.EventStatus.NORMAL
 import com.thenetcircle.event_bus.story.{Payload, Story, TaskRunningContext}
 
 trait ITask {
@@ -44,8 +44,8 @@ trait ITask {
   def wrapPartialFlow(
       partialFlow: Flow[Event, Payload, NotUsed],
       decider: Payload => Boolean = {
-        case (NORM, _) => true
-        case _         => false
+        case (NORMAL, _) => true
+        case _           => false
       }
   )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
     Flow

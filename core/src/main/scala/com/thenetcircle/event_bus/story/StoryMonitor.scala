@@ -36,22 +36,22 @@ class StoryMonitor(storyName: String) {
 
   def onProcessed(status: EventStatus, event: Event): StoryMonitor = {
     status match {
-      case NORM => entity.foreach(_.normEvent.increment())
-      case TOFB(exOp, _) =>
+      case NORMAL => entity.foreach(_.normalEvent.increment())
+      case STAGING(exOp, _) =>
         entity.foreach(e => {
-          e.toFBEvent.increment()
+          e.stagingEvent.increment()
           exOp.foreach(e.exception(_).increment())
         })
-      case INFB => entity.foreach(_.inFBEvent.increment())
-      case SKIP => entity.foreach(_.skipEvent.increment())
-      case FAIL(ex: EventExtractingException, _) =>
+      case STAGED   => entity.foreach(_.stagedEvent.increment())
+      case SKIPPING => entity.foreach(_.skippingEvent.increment())
+      case FAILED(ex: EventExtractingException, _) =>
         entity.foreach(e => {
           e.badFormatEvent.increment()
           e.exception(ex).increment()
         })
-      case FAIL(ex, _) =>
+      case FAILED(ex, _) =>
         entity.foreach(e => {
-          e.failEvent.increment()
+          e.failedEvent.increment()
           e.exception(ex).increment()
         })
     }
@@ -73,11 +73,11 @@ object StoryMonitor {
 
   class StoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
     val newEvent: Counter       = counter("new-event")
-    val normEvent: Counter      = counter("processed.normal")
-    val toFBEvent: Counter      = counter("processed.tofallback")
-    val inFBEvent: Counter      = counter("processed.infallback")
-    val failEvent: Counter      = counter("processed.failure")
-    val skipEvent: Counter      = counter("processed.skip")
+    val normalEvent: Counter    = counter("processed.normal")
+    val stagingEvent: Counter   = counter("processed.staging")
+    val skippingEvent: Counter  = counter("processed.skipping")
+    val stagedEvent: Counter    = counter("processed.staged")
+    val failedEvent: Counter    = counter("processed.failed")
     val badFormatEvent: Counter = counter("processed.badformat")
     val completion: Counter     = counter("completion")
     val termination: Counter    = counter("termination")

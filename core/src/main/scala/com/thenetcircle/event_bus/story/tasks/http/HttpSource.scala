@@ -26,7 +26,7 @@ import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.{Done, NotUsed}
 import com.thenetcircle.event_bus.AppContext
-import com.thenetcircle.event_bus.event.EventStatus.{FAIL, NORM, SuccStatus, TOFB}
+import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, STAGING, SuccStatus}
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
@@ -54,17 +54,17 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with Logging 
     result match {
       case (_: SuccStatus, _) =>
         HttpResponse(entity = HttpEntity(settings.succeededResponse))
-      case (TOFB(optionEx, _), _) =>
+      case (STAGING(optionEx, _), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
           entity = HttpEntity(optionEx.map(_.getMessage).getOrElse("Unhandled ToFallBack Status"))
         )
-      case (FAIL(ex: EventExtractingException, _), _) =>
+      case (FAILED(ex: EventExtractingException, _), _) =>
         HttpResponse(
           status = StatusCodes.BadRequest,
           entity = HttpEntity(ex.getMessage)
         )
-      case (FAIL(ex, _), _) =>
+      case (FAILED(ex, _), _) =>
         HttpResponse(
           status = StatusCodes.InternalServerError,
           entity = HttpEntity(ex.getMessage)
@@ -84,12 +84,12 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with Logging 
           .map[(EventStatus, Event)](event => {
             producerLogger.info("Received a new event: " + Util.getBriefOfEvent(event))
             producerLogger.debug(s"Extracted content of the event: $event")
-            (NORM, event)
+            (NORMAL, event)
           })
           .recover {
             case ex: EventExtractingException =>
               producerLogger.warn(s"Extract event from a http request failed with error $ex")
-              (FAIL(ex, getTaskName()), Event.fromException(ex))
+              (FAILED(ex, getTaskName()), Event.fromException(ex))
           }
       })
   }

@@ -28,7 +28,7 @@ import akka.stream.scaladsl.{Flow, GraphDSL, Sink}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.EventStatus.NORM
+import com.thenetcircle.event_bus.event.EventStatus.NORMAL
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces.{ISink, ISinkableTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
@@ -150,7 +150,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with ISinkableTas
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
           producerLogger.info(s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]")
 
-          (NORM, message.passThrough)
+          (NORMAL, message.passThrough)
       }
 
     wrapPartialFlow(
@@ -218,7 +218,7 @@ object KafkaSink extends Logging {
         val event = grab(in)
 
         if (isAvailable(out0)) {
-          push(out0, (NORM, event))
+          push(out0, (NORMAL, event))
         }
 
         if (buffer.isEmpty && isAvailable(out1)) {
