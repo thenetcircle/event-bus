@@ -43,14 +43,16 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
-  def divertToSecondarySink(payload: Payload): Future[Payload] =
+  def divertToSecondarySink(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] =
     runningSecondarySink match {
       case Some(rss) =>
-        rss.offer(payload).map {
-          case QueueOfferResult.Enqueued => (STAGED, payload._2)
-          case _ =>
-            (FAILED(new RuntimeException("Sending the event to secondary sink failed"), getTaskName()), payload._2)
-        }
+        rss
+          .offer(payload)
+          .map {
+            case QueueOfferResult.Enqueued => (STAGED, payload._2)
+            case _ =>
+              (FAILED(new RuntimeException("Sending the event to secondary sink failed"), getTaskName()), payload._2)
+          }(runningContext.getExecutionContext())
       case None =>
         producerLogger.warn(
           s"A event is going to be dropped since there is no secondary sink. Status: ${payload._1}, Event: ${Util
