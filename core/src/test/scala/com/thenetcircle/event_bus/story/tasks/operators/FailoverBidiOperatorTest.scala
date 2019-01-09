@@ -20,55 +20,99 @@ package com.thenetcircle.event_bus.story.tasks.operators
 import java.util.concurrent.ConcurrentLinkedDeque
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, SKIPPING}
-import com.thenetcircle.event_bus.story.interfaces.{ISink, ISinkableTask}
+import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, SKIPPING, STAGING}
+import com.thenetcircle.event_bus.story.interfaces.ISinkableTask
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
+import org.scalatest.BeforeAndAfter
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.util.Random
+import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
 
-class FailoverBidiOperatorTest extends TestBase {
+class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
 
   behavior of "FailoverBidiOperator"
 
-  it should "works properly" in {
+  val failoverResult = new ConcurrentLinkedDeque[Payload]()
+  val secondarySink = new ISinkableTask {
+    override def flow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] =
+      Flow[Payload].map(pl => {
+        failoverResult.offer(pl)
+        pl
+      })
+  }
+  val task = new FailoverBidiOperator(
+    FailoverBidiOperatorSettings(
+      secondarySink = Some(secondarySink)
+    )
+  )
 
-    val secondarySinkResult = new ConcurrentLinkedDeque[Payload]()
-    val secondarySink = new ISinkableTask {
-      override def flow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] =
-        Flow[Payload].map(pl => {
-          secondarySinkResult.offer(pl)
-          pl
-        })
+  val testSource: Source[Payload, NotUsed] = Source(
+    List(
+      (NORMAL, createTestEvent("event1")),
+      (SKIPPING, createTestEvent("event2")),
+      (FAILED(new RuntimeException("failed")), createTestEvent("event3")),
+      (STAGING(), createTestEvent("event4")),
+      (NORMAL, createTestEvent("event5")),
+      (STAGING(), createTestEvent("event6"))
+    )
+  )
+
+  val returnedResult         = new ConcurrentLinkedDeque[Payload]()
+  val returnSink             = Flow[Payload].map(returnedResult.offer).toMat(Sink.ignore)(Keep.right)
+  val operatedResult         = new ConcurrentLinkedDeque[Payload]()
+  val expectedNormalResult   = List("event1", "event2", "event3", "event4", "event5", "event6")
+  val expectedFailoverResult = List("event4", "event6")
+  val expectedReturnedResult = List("event1", "event2", "event3", "event4", "event5", "event6")
+
+  def resultToList(result: ConcurrentLinkedDeque[Payload]): List[String] =
+    result.iterator().asScala.map(_._2.metadata.name.get).toList
+
+  after {
+    operatedResult.clear()
+    failoverResult.clear()
+    returnedResult.clear()
+  }
+
+  it should "works properly with normal providers" in {
+    // test normal operation
+    val providers = Flow[Payload].map(pl => { operatedResult.offer(pl); pl })
+    Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 1 seconds)
+    resultToList(operatedResult) shouldEqual expectedNormalResult
+    resultToList(failoverResult) shouldEqual expectedFailoverResult
+    resultToList(returnedResult) shouldEqual expectedReturnedResult
+  }
+
+  it should "works with slow providers" in {
+    // test slow operation
+    val providers = Flow[Payload].mapAsync(3) { pl =>
+      Thread.sleep(Random.nextInt(1000))
+      operatedResult.offer(pl)
+      Future.successful(pl)
     }
+    Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 10 seconds)
+    resultToList(operatedResult) shouldEqual expectedNormalResult
+    resultToList(failoverResult) shouldEqual expectedFailoverResult
+    resultToList(returnedResult) shouldEqual expectedReturnedResult
+  }
 
-    val testSinkResult = new ConcurrentLinkedDeque[Payload]()
-    val testSink       = Flow[Payload].map(pl => { secondarySinkResult.offer(pl); pl })
+  it should "works with blocking providers" in {
 
-    val operator = new FailoverBidiOperator(
-      FailoverBidiOperatorSettings(
-        secondarySink = Some(secondarySink)
-      )
-    )
+    // test slow operation
+    val providers = Flow[Payload].mapAsync(3) { pl =>
+      while (true) Thread.sleep(100)
+      Future.successful(pl)
+    }
+    try {
+      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 3 seconds)
+    } catch { case NonFatal(ex) => }
 
-    val testSource: Source[Payload, NotUsed] = Source(
-      List(
-        (NORMAL, createTestEvent("norm_event1")),
-        (SKIPPING, createTestEvent("skip_event1")),
-        (NORMAL, createTestEvent("norm_event2")),
-        (SKIPPING, createTestEvent("skip_event2")),
-        (NORMAL, createTestEvent("norm_event3")),
-        (SKIPPING, createTestEvent("skip_event3"))
-      )
-    )
-
-    Await.result(testSource.via(testSink.join(operator.flow())).runWith(Sink.ignore), 10 seconds)
-
-    println(testSinkResult)
-    println(secondarySinkResult)
-
+    resultToList(returnedResult) shouldEqual expectedReturnedResult
+    resultToList(failoverResult) shouldEqual expectedFailoverResult
   }
 
 }

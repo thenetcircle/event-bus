@@ -96,6 +96,8 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
             divertToSecondarySink(buffer.poll())
           }
 
+        override def preStart(): Unit = pull(operated)
+
         override def postStop(): Unit = flushBuffer()
 
         setHandler(
@@ -136,7 +138,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
             override def onDownstreamFinish(): Unit = {
               flushBuffer()
-              super.onDownstreamFinish()
+              completeStage()
             }
           }
         )
@@ -181,7 +183,8 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
     })
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
+    runningSecondarySink.foreach(_.complete())
 }
 
 class FailoverBidiOperatorBuilder extends ITaskBuilder[FailoverBidiOperator] {
