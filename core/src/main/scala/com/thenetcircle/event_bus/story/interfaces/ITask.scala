@@ -42,10 +42,9 @@ trait ITask {
   def getStoryName(): String    = getStory().map(_.storyName).getOrElse("unknown")
 
   def wrapPartialFlow(
-      partialFlow: Flow[Event, Payload, NotUsed],
-      decider: Payload => Boolean = {
+      partialFlow: Flow[Payload, Payload, NotUsed],
+      decider: PartialFunction[Payload, Boolean] = {
         case (NORMAL, _) => true
-        case _           => false
       }
   )(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, NotUsed] =
     Flow
@@ -55,9 +54,11 @@ trait ITask {
             import GraphDSL.Implicits._
 
             // NORM goes to 0, Others goes to 1
-            val partitioner = builder.add(new Partition[Payload](2, decider andThen (if (_) 0 else 1), false))
+            val partitioner = builder.add(
+              new Partition[Payload](2, pl => if (decider.isDefinedAt(pl) && decider(pl)) 0 else 1, false)
+            )
 
-            val wrappedTaskFlow = Flow[Payload].map(_._2).via(partialFlow)
+            val wrappedTaskFlow = Flow[Payload].via(partialFlow)
             val output          = builder.add(Merge[Payload](2))
 
             // format: off
