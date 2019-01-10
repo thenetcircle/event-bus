@@ -3,7 +3,7 @@ package com.thenetcircle.event_bus.story.interfaces
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
-trait IStageableTask {
+trait IFailoverTask {
 
   def flow()(
       implicit runningContext: TaskRunningContext

@@ -25,9 +25,9 @@ import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings}
 import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceSettings}
 import com.thenetcircle.event_bus.story.tasks.operators.{
-  CassandraOperator,
+  CassandraStageOperator,
   EventFilterOperator,
-  EventFilterOperatorSettings
+  EventFilterSettings
 }
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -86,7 +86,7 @@ class StoryBuilderTest extends TestBase {
 
     story.operators.get.apply(0)._1 shouldEqual OperatorPosition.Before
     story.operators.get.apply(0)._2 shouldBe a[EventFilterOperator]
-    story.operators.get.apply(0)._2.asInstanceOf[EventFilterOperator].settings shouldEqual EventFilterOperatorSettings(
+    story.operators.get.apply(0)._2.asInstanceOf[EventFilterOperator].settings shouldEqual EventFilterSettings(
       eventNameWhiteList = Seq("event-name-1", "event-name-2"),
       eventNameBlackList = Seq("event-name-3"),
       channelWhiteList = Seq("channel-1", "channel-2"),
@@ -96,7 +96,7 @@ class StoryBuilderTest extends TestBase {
     )
 
     story.operators.get.apply(1)._1 shouldEqual OperatorPosition.After
-    story.operators.get.apply(1)._2 shouldBe a[CassandraOperator]
+    story.operators.get.apply(1)._2 shouldBe a[CassandraStageOperator]
   }
 
 }

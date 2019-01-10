@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IStageableTask, ITaskBuilder, IUndiOperator}
+import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -36,11 +36,11 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 
-case class CassandraOperatorSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
+case class CassandraStageSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraOperator(val settings: CassandraOperatorSettings)
+class CassandraStageOperator(val settings: CassandraStageSettings)
     extends IUndiOperator
-    with IStageableTask
+    with IFailoverTask
     with Logging {
 
   private var clusterOption: Option[Cluster]             = None
@@ -191,9 +191,9 @@ private[tasks] object GuavaFutures {
   }
 }
 
-class CassandraOperatorBuilder() extends ITaskBuilder[CassandraOperator] {
+class CassandraStageOperatorBuilder() extends ITaskBuilder[CassandraStageOperator] {
 
-  override val taskType: String = "cassandra"
+  override val taskType: String = "cassandra-stage"
 
   override val defaultConfig: Config =
     ConfigFactory.parseString(
@@ -206,14 +206,14 @@ class CassandraOperatorBuilder() extends ITaskBuilder[CassandraOperator] {
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): CassandraOperator = {
-    val cassandraSettings = CassandraOperatorSettings(
+  )(implicit appContext: AppContext): CassandraStageOperator = {
+    val cassandraSettings = CassandraStageSettings(
       contactPoints = config.as[List[String]]("contact-points"),
       port = config.as[Int]("port"),
       parallelism = config.as[Int]("parallelism")
     )
 
-    new CassandraOperator(cassandraSettings)
+    new CassandraStageOperator(cassandraSettings)
   }
 
 }

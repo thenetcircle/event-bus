@@ -26,7 +26,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IStageableTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -34,14 +34,14 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class AsyncBufferBidiOperatorSettings(
+case class SafeDisconnectorSettings(
     bufferSize: Int = 1,
     completeDelay: FiniteDuration = 10 minutes,
-    secondarySink: Option[IStageableTask] = None,
+    secondarySink: Option[IFailoverTask] = None,
     secondarySinkBufferSize: Int = 10
 )
 
-class AsyncBufferBidiOperator(settings: AsyncBufferBidiOperatorSettings) extends IBidiOperator with Logging {
+class SafeDisconnectorBidiOperator(settings: SafeDisconnectorSettings) extends IBidiOperator with Logging {
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
@@ -82,10 +82,10 @@ class AsyncBufferBidiOperator(settings: AsyncBufferBidiOperatorSettings) extends
 
     BidiFlow.fromGraph(new GraphStage[BidiShape[Payload, Payload, Payload, Payload]] {
 
-      val in        = Inlet[Payload]("AsyncBufferBidiOperator.in")
-      val toOperate = Outlet[Payload]("AsyncBufferBidiOperator.toOperate")
-      val operated  = Inlet[Payload]("AsyncBufferBidiOperator.operated")
-      val out       = Outlet[Payload]("AsyncBufferBidiOperator.out")
+      val in        = Inlet[Payload]("SafeDisconnector.in")
+      val toOperate = Outlet[Payload]("SafeDisconnector.toOperate")
+      val operated  = Inlet[Payload]("SafeDisconnector.operated")
+      val out       = Outlet[Payload]("SafeDisconnector.out")
 
       val shape: BidiShape[Payload, Payload, Payload, Payload] =
         BidiShape.of(operated, out, in, toOperate)
@@ -248,9 +248,9 @@ class AsyncBufferBidiOperator(settings: AsyncBufferBidiOperatorSettings) extends
     runningSecondarySink.foreach(_.complete())
 }
 
-class AsyncBufferBidiOperatorBuilder extends ITaskBuilder[AsyncBufferBidiOperator] {
+class SafeDisconnectorBidiOperatorBuilder extends ITaskBuilder[SafeDisconnectorBidiOperator] {
 
-  override val taskType: String = "async-buffer-bidi-operator"
+  override val taskType: String = "safe-disconnector"
 
   override val defaultConfig: Config =
     ConfigFactory.parseString("""{
@@ -259,12 +259,12 @@ class AsyncBufferBidiOperatorBuilder extends ITaskBuilder[AsyncBufferBidiOperato
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): AsyncBufferBidiOperator = {
-    val settings = AsyncBufferBidiOperatorSettings(
+  )(implicit appContext: AppContext): SafeDisconnectorBidiOperator = {
+    val settings = SafeDisconnectorSettings(
       bufferSize = config.as[Int]("buffer-size")
     )
 
-    new AsyncBufferBidiOperator(settings)
+    new SafeDisconnectorBidiOperator(settings)
   }
 
 }

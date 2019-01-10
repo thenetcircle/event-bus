@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.operators.{EventFilterOperatorBuilder, EventFilterOperatorSettings}
+import com.thenetcircle.event_bus.story.tasks.operators.{EventFilterOperatorBuilder, EventFilterSettings}
 
 class EventFilterOperatorBuilderTest extends TestBase {
 
@@ -29,7 +29,7 @@ class EventFilterOperatorBuilderTest extends TestBase {
   it should "build proper EventFilterOperator with empty config" in {
     val task = storyBuilder.buildTask("""{}""".stripMargin)(builder)
 
-    val settings: EventFilterOperatorSettings = task.settings
+    val settings: EventFilterSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq.empty[String]
     settings.eventNameBlackList shouldEqual Seq.empty[String]
@@ -52,7 +52,7 @@ class EventFilterOperatorBuilderTest extends TestBase {
         |  }
         |}""".stripMargin)(builder)
 
-    val settings: EventFilterOperatorSettings = task.settings
+    val settings: EventFilterSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq("user\\..*", "wio\\..*")
     settings.eventNameBlackList shouldEqual Seq("image\\..*")

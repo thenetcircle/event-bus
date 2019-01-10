@@ -27,7 +27,7 @@ import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
-case class EventFilterOperatorSettings(
+case class EventFilterSettings(
     eventNameWhiteList: Seq[String] = Seq.empty,
     eventNameBlackList: Seq[String] = Seq.empty,
     channelWhiteList: Seq[String] = Seq.empty,
@@ -36,7 +36,7 @@ case class EventFilterOperatorSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilterOperator(val settings: EventFilterOperatorSettings) extends IUndiOperator with Logging {
+class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperator with Logging {
 
   logger.info(s"Initializing EventFilterOperator with settings: $settings")
 
@@ -152,7 +152,7 @@ class EventFilterOperatorBuilder() extends ITaskBuilder[EventFilterOperator] {
     val allowedTransportModes = config.as[Option[Seq[String]]]("allowed-transport-modes").getOrElse(Seq.empty)
     val onlyExtras            = config.as[Option[Map[String, String]]]("only-extras").getOrElse(Map.empty)
 
-    val settings = EventFilterOperatorSettings(
+    val settings = EventFilterSettings(
       eventNameWhiteList,
       eventNameBlackList,
       channelWhiteList,

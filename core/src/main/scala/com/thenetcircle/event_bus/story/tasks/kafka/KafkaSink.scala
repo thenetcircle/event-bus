@@ -30,7 +30,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORMAL
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISink, IStageableTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ISink, ITaskBuilder}
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
@@ -57,7 +57,7 @@ case class KafkaSinkSettings(
     asyncBufferSize: Int = 100
 )
 
-class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IStageableTask with Logging {
+class KafkaSink(val settings: KafkaSinkSettings) extends ISink with Logging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 

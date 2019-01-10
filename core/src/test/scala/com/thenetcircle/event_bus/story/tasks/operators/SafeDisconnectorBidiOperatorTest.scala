@@ -23,7 +23,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, SKIPPING, STAGING}
-import com.thenetcircle.event_bus.story.interfaces.IStageableTask
+import com.thenetcircle.event_bus.story.interfaces.IFailoverTask
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import org.scalatest.BeforeAndAfter
 
@@ -33,12 +33,12 @@ import scala.concurrent.{Await, Future}
 import scala.util.Random
 import scala.util.control.NonFatal
 
-class AsyncBufferBidiOperatorTest extends TestBase with BeforeAndAfter {
+class SafeDisconnectorBidiOperatorTest extends TestBase with BeforeAndAfter {
 
-  behavior of "AsyncBufferBidiOperator"
+  behavior of "SafeDisconnectorBidiOperator"
 
   val failoverResult = new ConcurrentLinkedDeque[Payload]()
-  val secondarySink = new IStageableTask {
+  val secondarySink = new IFailoverTask {
     override def flow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] =
       Flow[Payload].map(pl => {
         failoverResult.offer(pl)
@@ -74,8 +74,8 @@ class AsyncBufferBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with normal providers" in {
-    val task = new AsyncBufferBidiOperator(
-      AsyncBufferBidiOperatorSettings(
+    val task = new SafeDisconnectorBidiOperator(
+      SafeDisconnectorSettings(
         secondarySink = Some(secondarySink)
       )
     )
@@ -88,8 +88,8 @@ class AsyncBufferBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with slow providers" in {
-    val task = new AsyncBufferBidiOperator(
-      AsyncBufferBidiOperatorSettings(
+    val task = new SafeDisconnectorBidiOperator(
+      SafeDisconnectorSettings(
         bufferSize = 2,
         completeDelay = 3 second,
         secondarySink = Some(secondarySink)
@@ -119,8 +119,8 @@ class AsyncBufferBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with blocking providers" in {
-    val task = new AsyncBufferBidiOperator(
-      AsyncBufferBidiOperatorSettings(
+    val task = new SafeDisconnectorBidiOperator(
+      SafeDisconnectorSettings(
         bufferSize = 3,
         completeDelay = 3 second,
         secondarySink = Some(secondarySink)
