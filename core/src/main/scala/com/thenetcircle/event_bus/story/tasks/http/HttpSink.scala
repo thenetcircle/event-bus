@@ -65,7 +65,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with Logging {
 
   var retrySender: Option[ActorRef] = None
 
-  override def flow()(
+  override def sinkFlow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] = {
 

@@ -22,7 +22,7 @@ import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
 trait ISink extends ITask {
 
-  def flow()(
+  def sinkFlow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat]
 

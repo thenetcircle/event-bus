@@ -57,7 +57,7 @@ class Story(
   def getStoryStatus(): StoryStatus                = storyStatus
 
   def combineStoryFlow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] = {
-    var storyFlow: Flow[Payload, Payload, StoryMat] = sink.flow()
+    var storyFlow: Flow[Payload, Payload, StoryMat] = sink.sinkFlow()
 
     operators.foreach(_.reverse.foreach {
       case (_, o: IBidiOperator)      => storyFlow = storyFlow.join(o.flow())

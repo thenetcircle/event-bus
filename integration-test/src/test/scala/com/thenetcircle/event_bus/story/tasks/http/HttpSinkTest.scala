@@ -26,9 +26,8 @@ class HttpSinkTest extends IntegrationTestBase {
       maxRetryTime = 5.seconds
     )
 
-    val story = new HttpSink(settings)
-
-    val flow: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = story.flow()
+    val sink                                                            = new HttpSink(settings)
+    val flow: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = sink.sinkFlow()
 
     TestSource
       .probe[(EventStatus, Event)]

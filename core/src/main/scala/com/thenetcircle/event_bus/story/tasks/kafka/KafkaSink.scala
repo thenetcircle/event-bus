@@ -114,7 +114,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with Logging {
 
   var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
 
-  override def flow()(
+  override def sinkFlow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] = {
 
