@@ -21,21 +21,23 @@ import java.util.concurrent.LinkedBlockingQueue
 
 import akka.stream._
 import akka.stream.scaladsl.{BidiFlow, Sink, Source, SourceQueueWithComplete}
-import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, ISinkableTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IStageableTask, ITaskBuilder}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class FailoverBidiOperatorSettings(
     bufferSize: Int = 1,
+    bufferFlushDelay: FiniteDuration = 10 minutes,
     detachUpAndDown: Boolean = true,
-    secondarySink: Option[ISinkableTask] = None,
+    secondarySink: Option[IStageableTask] = None,
     secondarySinkBufferSize: Int = 10
 )
 
@@ -73,6 +75,9 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
           .to(Sink.ignore)
           .run()(runningContext.getMaterializer())
       })
+      runningSecondarySink.foreach(_.watchCompletion().onComplete(result => {
+        producerLogger.info(s"The secondary sink of task ${getTaskName()} completed with result: $result")
+      })(runningContext.getExecutionContext()))
     }
 
     BidiFlow.fromGraph(new GraphStage[BidiShape[Payload, Payload, Payload, Payload]] {
@@ -87,18 +92,30 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
       override def createLogic(
           inheritedAttributes: Attributes
-      ): GraphStageLogic = new GraphStageLogic(shape) {
+      ): GraphStageLogic = new TimerGraphStageLogic(shape) {
 
         private val buffer: java.util.Queue[Payload] = new LinkedBlockingQueue(settings.bufferSize)
 
         private def flushBuffer(): Unit =
           while (!buffer.isEmpty) {
-            divertToSecondarySink(buffer.poll())
+            val payload = buffer.poll()
+            producerLogger.info(
+              s"A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${Util
+                .getBriefOfEvent(payload._2)}"
+            )
+            divertToSecondarySink(payload)
           }
+
+        private def scheduleCompleteStage(): Unit = scheduleOnce(None, settings.bufferFlushDelay)
+        override protected def onTimer(timerKey: Any): Unit = {
+          flushBuffer()
+          completeStage()
+        }
 
         override def preStart(): Unit = pull(operated)
 
-        override def postStop(): Unit = flushBuffer()
+        override def postStop(): Unit =
+          flushBuffer()
 
         setHandler(
           in,
@@ -114,7 +131,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
                 push(toOperate, payload)
               } else {
                 if (!buffer.offer(payload)) { // if the buffer is full
-                  producerLogger.warn(
+                  producerLogger.info(
                     s"A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
@@ -125,6 +142,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
             override def onUpstreamFinish(): Unit =
               if (buffer.isEmpty) completeStage()
+              else scheduleCompleteStage()
           }
         )
 
@@ -151,7 +169,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
               payload match {
                 case (_: STAGING, _) =>
-                  producerLogger.warn(
+                  producerLogger.info(
                     s"A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
@@ -160,6 +178,11 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
               }
 
               pull(operated)
+            }
+
+            override def onUpstreamFinish(): Unit = {
+              flushBuffer()
+              completeStage()
             }
           }
         )
@@ -177,6 +200,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
             override def onDownstreamFinish(): Unit =
               if (buffer.isEmpty) completeStage()
+              else scheduleCompleteStage()
           }
         )
       }
@@ -201,8 +225,8 @@ class FailoverBidiOperatorBuilder extends ITaskBuilder[FailoverBidiOperator] {
       config: Config
   )(implicit appContext: AppContext): FailoverBidiOperator = {
     val settings = FailoverBidiOperatorSettings(
-      config.as[Int]("buffer-size"),
-      config.as[Boolean]("detach-up-and-down")
+      bufferSize = config.as[Int]("buffer-size"),
+      detachUpAndDown = config.as[Boolean]("detach-up-and-down")
     )
 
     new FailoverBidiOperator(settings)

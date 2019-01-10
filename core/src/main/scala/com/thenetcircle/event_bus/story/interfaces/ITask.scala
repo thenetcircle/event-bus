@@ -34,7 +34,7 @@ trait ITask {
       throw new IllegalStateException(
         s"The task ${this.taskName} of story ${this.story.get.storyName} has been inited already."
       )
-    this.taskName = Some(taskName);
+    this.taskName = Some(taskName)
     this.story = Some(story)
   }
   def getTaskName(): String     = this.taskName.getOrElse("unknown")
