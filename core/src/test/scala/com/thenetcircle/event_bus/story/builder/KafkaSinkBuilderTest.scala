@@ -51,8 +51,6 @@ class KafkaSinkBuilderTest extends TestBase {
     settings.parallelism shouldEqual 50
     settings.useDispatcher.get shouldEqual "test-dispatcher"
 
-    settings.useAsyncBuffer shouldEqual true
-    settings.asyncBufferSize shouldEqual 100
     producerSettings.properties("acks") shouldEqual "all"
     producerSettings.properties("retries") shouldEqual "30"
     producerSettings.properties("max.in.flight.requests.per.connection") shouldEqual "10"

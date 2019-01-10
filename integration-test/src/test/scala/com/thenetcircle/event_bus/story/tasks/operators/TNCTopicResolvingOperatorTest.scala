@@ -15,10 +15,9 @@
  *     Beineng Ma <baineng.ma@gmail.com>
  */
 
-package com.thenetcircle.event_bus.misc
+package com.thenetcircle.event_bus.story.tasks.operators
 
 import com.thenetcircle.event_bus.IntegrationTestBase
-import com.thenetcircle.event_bus.story.tasks.operators.TNCTopicResolvingOperator
 
 class TNCTopicResolvingOperatorTest extends IntegrationTestBase {
 
@@ -32,16 +31,14 @@ class TNCTopicResolvingOperatorTest extends IntegrationTestBase {
     // ------ test resolving by event name
     resolver
       .resolveEvent(
-        createTestEvent("""{ "title": "unknown" }""")
+        createTestEvent("unknown")
       )
       .metadata
       .topic shouldEqual Some("event-default")
 
     resolver
       .resolveEvent(
-        createTestEvent(
-          """{ "title": "membership.test" }"""
-        )
+        createTestEvent("membership.test")
       )
       .metadata
       .topic shouldEqual Some(
@@ -50,9 +47,7 @@ class TNCTopicResolvingOperatorTest extends IntegrationTestBase {
 
     resolver
       .resolveEvent(
-        createTestEvent(
-          """{ "title": "user.test" }"""
-        )
+        createTestEvent("user.test")
       )
       .metadata
       .topic shouldEqual Some(
@@ -62,42 +57,21 @@ class TNCTopicResolvingOperatorTest extends IntegrationTestBase {
     // ------ test resolving by event channel
     resolver
       .resolveEvent(
-        createTestEvent(
-          """{
-            |"title": "user.test",
-            |"generator": {
-            |  "content": "{\"channel\":\"mychannel\"}",
-            |  "id": "tnc-event-dispatcher"
-            |}}""".stripMargin
-        )
+        createTestEvent("user.test", channel = Some("mychannel"))
       )
       .metadata
       .topic shouldEqual Some("event-user")
 
     resolver
       .resolveEvent(
-        createTestEvent(
-          """{
-            |"title": "user.test",
-            |"generator": {
-            |  "content": "{\"channel\":\"mem.normal\"}",
-            |  "id": "tnc-event-dispatcher"
-            |}}""".stripMargin
-        )
+        createTestEvent("user.test", channel = Some("mem.normal"))
       )
       .metadata
       .topic shouldEqual Some("event-membership")
 
     resolver
       .resolveEvent(
-        createTestEvent(
-          """{
-            |"title": "user.test",
-            |"generator": {
-            |  "content": "{\"channel\":\"dino\"}",
-            |  "id": "tnc-event-dispatcher"
-            |}}""".stripMargin
-        )
+        createTestEvent("user.test", channel = Some("dino"))
       )
       .metadata
       .topic shouldEqual Some("event-wio")

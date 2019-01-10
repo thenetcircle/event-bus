@@ -47,9 +47,7 @@ case class KafkaSinkSettings(
     parallelism: Int = 100,
     closeTimeout: FiniteDuration = 60.seconds,
     useDispatcher: Option[String] = None,
-    properties: Map[String, String] = Map.empty,
-    useAsyncBuffer: Boolean = true,
-    asyncBufferSize: Int = 100
+    properties: Map[String, String] = Map.empty
 )
 
 class KafkaSink(val settings: KafkaSinkSettings) extends ISink with Logging {
@@ -191,7 +189,6 @@ class KafkaSinkBuilder() extends ITaskBuilder[KafkaSink] {
         |    "enable.idempotence" = true
         |  }
         |
-        |  use-async-buffer = true
         |  async-buffer-size = 100
         |}""".stripMargin
     )
@@ -206,9 +203,7 @@ class KafkaSinkBuilder() extends ITaskBuilder[KafkaSink] {
         config.as[Int]("parallelism"),
         config.as[FiniteDuration]("close-timeout"),
         config.as[Option[String]]("use-dispatcher"),
-        config.as[Map[String, String]]("properties"),
-        config.as[Boolean]("use-async-buffer"),
-        config.as[Int]("async-buffer-size")
+        config.as[Map[String, String]]("properties")
       )
 
     new KafkaSink(settings)

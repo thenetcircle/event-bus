@@ -23,7 +23,7 @@ class HttpSourceTest extends IntegrationTestBase with BeforeAndAfter {
   ): (StatusCode, String) = {
     val settings   = HttpSourceSettings(interface = "127.0.0.1", port = port, succeededResponse = "ok")
     val httpSource = new HttpSource(settings)
-    httpSource.runWith(handler)
+    httpSource.run(handler)
     val result = Await.result(
       Http()
         .singleRequest(

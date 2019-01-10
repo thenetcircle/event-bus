@@ -36,7 +36,7 @@ class MonitorTest extends IntegrationTestBase {
   val testSink = new KafkaSink(
     KafkaSinkSettings(config.getString("app.test.kafka.bootstrap-servers"), defaultTopic = "event-bus-monitor-test")
   )
-  val story = new Story(StorySettings("monitor-test"), testSource, testSink)
+  val story = new Story(StorySettings("monitor-test", ""), testSource, testSink)
 
   override def afterAll(): Unit = {
     story.shutdown()

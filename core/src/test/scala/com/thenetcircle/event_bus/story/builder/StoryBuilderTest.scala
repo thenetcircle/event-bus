@@ -60,7 +60,7 @@ class StoryBuilderTest extends TestBase {
       operators = Some(
         """event-filter#{"event-name-white-list":["event-name-1","event-name-2"],"event-name-black-list":["event-name-3"],"channel-white-list":["channel-1","channel-2"],"channel-black-list":["channel-3"],"allowed-transport-modes":["ASYNC","BOTH","NONE"],"only-extras":{"actorId":"test","generatorId":"tnc-event-dispatcher"}}"""
           +
-            """|||cassandra#{"contact-points":[],"port":9042,"parallelism":3}#after"""
+            """|||cassandra-stage#{"contact-points":[],"port":9042,"parallelism":3}#after"""
       )
     )
 

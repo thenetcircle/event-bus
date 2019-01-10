@@ -54,7 +54,7 @@ class KafkaSourceTest extends IntegrationTestBase with BeforeAndAfter {
         receivedEvents.synchronized(receivedEvents += event)
         (NORMAL, event)
     }
-    kafkaSource.runWith(testFlow)
+    kafkaSource.run(testFlow)
 
     // Three partitions will subscribe three times
     /*val s1 = testSink.expectSubscription()
@@ -87,7 +87,7 @@ class KafkaSourceTest extends IntegrationTestBase with BeforeAndAfter {
     Thread.sleep(1000)
     println("--------------------------------")
 
-    kafkaSource.runWith(testFlow)
+    kafkaSource.run(testFlow)
 
     println(receivedEvents)
 

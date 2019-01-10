@@ -20,8 +20,8 @@ package com.thenetcircle.event_bus
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import akka.testkit.{ImplicitSender, TestActors, TestKit}
-import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.extractor.EventExtractorFactory
+import com.thenetcircle.event_bus.event._
+import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractorFactory}
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.thenetcircle.event_bus.story.{StoryBuilder, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -67,7 +67,7 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   lazy val storyBuilder: StoryBuilder = new StoryBuilder()
 
   private val _config = appContext.getSystemConfig()
-  lazy val zkManager: ZKManager = {
+  def zkManager: ZKManager = {
     val connectString = _config.getString("app.zookeeper.servers")
     val rootPath      = _config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}/${appContext.getAppEnv()}"
     val _zkManager    = new ZKManager(connectString, rootPath)
@@ -86,11 +86,16 @@ abstract class IntegrationTestBase(_appContext: AppContext)
   }
 
   def createTestEvent(
-      body: String = s"""{
-          |"id": "TestEvent-${java.util.UUID.randomUUID().toString}"
-          |}""".stripMargin,
-      passThrough: Option[Any] = None
+      name: String = "TestEvent",
+      body: String = """{ "title": "event.test" }""",
+      channel: Option[String] = None,
+      transportMode: Option[EventTransportMode] = None,
+      extra: Map[String, String] = Map.empty
   ): Event =
-    Await.result(EventExtractorFactory.defaultExtractor.extract(body.getBytes(), passThrough), 1.second)
+    DefaultEventImpl(
+      uuid = "TestEvent-" + java.util.UUID.randomUUID().toString,
+      metadata = EventMetaData(name = Some(name), channel = channel, transportMode = transportMode, extra = extra),
+      body = EventBody(body, DataFormat.ACTIVITYSTREAMS)
+    )
 
 }

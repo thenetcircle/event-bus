@@ -32,7 +32,11 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.util.matching.Regex
 
-case class FileStageSettings(path: String)
+case class FileStageSettings(
+    path: String,
+    contentDelimiter: String = "<tab>",
+    eventDelimiter: String = "<newline>#-:#:-#<newline>"
+)
 
 class FileStageOperator(val settings: FileStageSettings) extends IUndiOperator with IFailoverTask with Logging {
   private def getFilePath()(
@@ -42,34 +46,38 @@ class FileStageOperator(val settings: FileStageSettings) extends IUndiOperator w
 
   private def replaceSubstitutes(path: String)(
       implicit runningContext: TaskRunningContext
-  ): String = {
-    var newPath = path
-    newPath = newPath.replaceAll(Regex.quote("""${app_name}"""), runningContext.getAppContext().getAppName())
-    newPath = newPath.replaceAll(Regex.quote("""${app_env}"""), runningContext.getAppContext().getAppEnv())
-    newPath = newPath.replaceAll(Regex.quote("""${story_name}"""), getStoryName())
-    newPath = newPath.replaceAll(Regex.quote("""${task_name}"""), getTaskName())
-    newPath
-  }
+  ): String =
+    path
+      .replaceAll(Regex.quote("""{app_name}"""), runningContext.getAppContext().getAppName())
+      .replaceAll(Regex.quote("""{app_env}"""), runningContext.getAppContext().getAppEnv())
+      .replaceAll(Regex.quote("""{story_name}"""), getStoryName())
+      .replaceAll(Regex.quote("""{task_name}"""), getTaskName())
+
+  private def replaceDelimiter(delimiter: String): String =
+    delimiter
+      .replaceAll(Regex.quote("<tab>"), "\t")
+      .replaceAll(Regex.quote("<newline>"), "\n")
 
   override def flow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] = {
-    val fileFlow: Flow[Payload, Payload, NotUsed] =
-      Flow[Payload]
-        .alsoTo(
-          Flow[Payload]
-            .map {
-              case (STAGING(cause, taskName), event) =>
-                val causeString = cause.map(_.getClass).getOrElse("unknown")
-                ByteString(s"$taskName\t$causeString\t${event.body.data}")
-            }
-            .to(FileIO.toPath(getFilePath(), Set(StandardOpenOption.APPEND, StandardOpenOption.CREATE)))
-        )
-        .map {
-          case (_, event) => (STAGED, event)
-        }
+    val contentDelimiter = replaceDelimiter(settings.contentDelimiter)
+    val eventDelimiter   = replaceDelimiter(settings.eventDelimiter)
 
-    wrapPartialFlow(fileFlow, { case (_: STAGING, _) => true })
+    Flow[Payload]
+      .alsoTo(
+        Flow[Payload]
+          .collect {
+            case (STAGING(cause, taskName), event) =>
+              val causeString = cause.map(_.getClass.getName).getOrElse("unknown")
+              ByteString(s"$taskName$contentDelimiter$causeString$contentDelimiter${event.body.data}$eventDelimiter")
+          }
+          .to(FileIO.toPath(getFilePath(), Set(StandardOpenOption.APPEND, StandardOpenOption.CREATE)))
+      )
+      .map {
+        case (_: STAGING, event) => (STAGED, event)
+        case others              => others
+      }
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}

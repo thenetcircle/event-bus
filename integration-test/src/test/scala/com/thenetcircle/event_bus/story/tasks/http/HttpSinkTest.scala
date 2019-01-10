@@ -18,7 +18,9 @@ class HttpSinkTest extends IntegrationTestBase {
 
   behavior of "HttpSink"
 
-  def sendToUri(uri: String): (TestPublisher.Probe[Event], TestSubscriber.Probe[(EventStatus, Event)]) = {
+  def sendToUri(
+      uri: String
+  ): (TestPublisher.Probe[(EventStatus, Event)], TestSubscriber.Probe[(EventStatus, Event)]) = {
     val settings = HttpSinkSettings(
       defaultRequest = HttpRequest(uri = Uri(uri)),
       maxRetryTime = 5.seconds
@@ -26,10 +28,10 @@ class HttpSinkTest extends IntegrationTestBase {
 
     val story = new HttpSink(settings)
 
-    val flow: Flow[Event, (EventStatus, Event), NotUsed] = story.flow()
+    val flow: Flow[(EventStatus, Event), (EventStatus, Event), NotUsed] = story.flow()
 
     TestSource
-      .probe[Event]
+      .probe[(EventStatus, Event)]
       .via(flow)
       .toMat(TestSink.probe)(Keep.both)
       .run()
@@ -41,7 +43,7 @@ class HttpSinkTest extends IntegrationTestBase {
 
     val testEvent = createTestEvent()
 
-    source.sendNext(testEvent)
+    source.sendNext((NORMAL, testEvent))
 
     sink.request(1)
     val (status, event) = sink.expectNext(10.seconds)
@@ -58,7 +60,7 @@ class HttpSinkTest extends IntegrationTestBase {
 
     val testEvent = createTestEvent()
 
-    source.sendNext(testEvent)
+    source.sendNext((NORMAL, testEvent))
 
     sink.request(1)
     val (status, event) = sink.expectNext(10.seconds)
@@ -79,7 +81,7 @@ class HttpSinkTest extends IntegrationTestBase {
 
     val testEvent = createTestEvent()
 
-    source.sendNext(testEvent)
+    source.sendNext((NORMAL, testEvent))
 
     sink.request(1)
     val (status, event) = sink.expectNext(10.seconds)
