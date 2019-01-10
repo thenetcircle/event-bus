@@ -34,15 +34,14 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class FailoverBidiOperatorSettings(
+case class AsyncBufferBidiOperatorSettings(
     bufferSize: Int = 1,
     completeDelay: FiniteDuration = 10 minutes,
-    detachUpAndDown: Boolean = true,
     secondarySink: Option[IStageableTask] = None,
     secondarySinkBufferSize: Int = 10
 )
 
-class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidiOperator with Logging {
+class AsyncBufferBidiOperator(settings: AsyncBufferBidiOperatorSettings) extends IBidiOperator with Logging {
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
@@ -83,10 +82,10 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
     BidiFlow.fromGraph(new GraphStage[BidiShape[Payload, Payload, Payload, Payload]] {
 
-      val in        = Inlet[Payload]("AsyncFailoverBidiOperator.in")
-      val toOperate = Outlet[Payload]("AsyncFailoverBidiOperator.toOperate")
-      val operated  = Inlet[Payload]("AsyncFailoverBidiOperator.operated")
-      val out       = Outlet[Payload]("AsyncFailoverBidiOperator.out")
+      val in        = Inlet[Payload]("AsyncBufferBidiOperator.in")
+      val toOperate = Outlet[Payload]("AsyncBufferBidiOperator.toOperate")
+      val operated  = Inlet[Payload]("AsyncBufferBidiOperator.operated")
+      val out       = Outlet[Payload]("AsyncBufferBidiOperator.out")
 
       val shape: BidiShape[Payload, Payload, Payload, Payload] =
         BidiShape.of(operated, out, in, toOperate)
@@ -106,7 +105,22 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
               s"A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${Util
                 .getBriefOfEvent(payload._2)}"
             )
-            divertToSecondarySink(payload)
+            payload match {
+              case (_: STAGING, _) => divertToSecondarySink(payload)
+              case (status, event) =>
+                divertToSecondarySink(
+                  (
+                    STAGING(
+                      Some(
+                        new RuntimeException(s"Flushing buffer, It's original status is $status")
+                      ),
+                      getTaskName()
+                    ),
+                    event
+                  )
+                )
+            }
+
           }
         private def flushBufferAndCompleteStage(): Unit = {
           flushBuffer()
@@ -148,7 +162,17 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
                     s"A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
-                  divertToSecondarySink(payload)
+                  divertToSecondarySink(
+                    (
+                      STAGING(
+                        Some(
+                          new RuntimeException(s"The internal buffer is full, It's original status is ${payload._1}")
+                        ),
+                        getTaskName()
+                      ),
+                      payload._2
+                    )
+                  )
                 }
               }
             }
@@ -224,25 +248,23 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
     runningSecondarySink.foreach(_.complete())
 }
 
-class FailoverBidiOperatorBuilder extends ITaskBuilder[FailoverBidiOperator] {
+class AsyncBufferBidiOperatorBuilder extends ITaskBuilder[AsyncBufferBidiOperator] {
 
-  override val taskType: String = "failover-bidi-operator"
+  override val taskType: String = "async-buffer-bidi-operator"
 
   override val defaultConfig: Config =
     ConfigFactory.parseString("""{
-      |  "buffer-size": 1,
-      |  "detach-up-and-down": true
+      |  "buffer-size": 1
       |}""".stripMargin)
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): FailoverBidiOperator = {
-    val settings = FailoverBidiOperatorSettings(
-      bufferSize = config.as[Int]("buffer-size"),
-      detachUpAndDown = config.as[Boolean]("detach-up-and-down")
+  )(implicit appContext: AppContext): AsyncBufferBidiOperator = {
+    val settings = AsyncBufferBidiOperatorSettings(
+      bufferSize = config.as[Int]("buffer-size")
     )
 
-    new FailoverBidiOperator(settings)
+    new AsyncBufferBidiOperator(settings)
   }
 
 }

@@ -33,9 +33,9 @@ import scala.concurrent.{Await, Future}
 import scala.util.Random
 import scala.util.control.NonFatal
 
-class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
+class AsyncBufferBidiOperatorTest extends TestBase with BeforeAndAfter {
 
-  behavior of "FailoverBidiOperator"
+  behavior of "AsyncBufferBidiOperator"
 
   val failoverResult = new ConcurrentLinkedDeque[Payload]()
   val secondarySink = new IStageableTask {
@@ -74,8 +74,8 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with normal providers" in {
-    val task = new FailoverBidiOperator(
-      FailoverBidiOperatorSettings(
+    val task = new AsyncBufferBidiOperator(
+      AsyncBufferBidiOperatorSettings(
         secondarySink = Some(secondarySink)
       )
     )
@@ -88,8 +88,8 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with slow providers" in {
-    val task = new FailoverBidiOperator(
-      FailoverBidiOperatorSettings(
+    val task = new AsyncBufferBidiOperator(
+      AsyncBufferBidiOperatorSettings(
         bufferSize = 2,
         completeDelay = 3 second,
         secondarySink = Some(secondarySink)
@@ -108,7 +108,7 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
         pl
       })
     try {
-      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 10 seconds)
+      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 6 seconds)
     } catch { case _ => }
 
     resultToList(operatedResult) shouldEqual List("event1", "event2", "event3", "event4") // 4 get into operated, since buffer size is 2, and operation size is 2, so rest 2 gone to failover
@@ -119,8 +119,8 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with blocking providers" in {
-    val task = new FailoverBidiOperator(
-      FailoverBidiOperatorSettings(
+    val task = new AsyncBufferBidiOperator(
+      AsyncBufferBidiOperatorSettings(
         bufferSize = 3,
         completeDelay = 3 second,
         secondarySink = Some(secondarySink)
@@ -143,6 +143,8 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
     resultToList(failoverResult) shouldEqual List("event6", "event3", "event4", "event5")
     resultToList(operatedResult) should (contain("event1") and contain("event2"))
     task.shutdown()
+
+    failoverResult.forEach(println)
   }
 
 }
