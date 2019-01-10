@@ -18,6 +18,7 @@
 package com.thenetcircle.event_bus.story.tasks.operators
 
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicLong}
 
 import akka.stream._
 import akka.stream.scaladsl.{BidiFlow, Sink, Source, SourceQueueWithComplete}
@@ -35,7 +36,7 @@ import scala.concurrent.duration._
 
 case class FailoverBidiOperatorSettings(
     bufferSize: Int = 1,
-    bufferFlushDelay: FiniteDuration = 10 minutes,
+    completeDelay: FiniteDuration = 10 minutes,
     detachUpAndDown: Boolean = true,
     secondarySink: Option[IStageableTask] = None,
     secondarySinkBufferSize: Int = 10
@@ -94,7 +95,9 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
           inheritedAttributes: Attributes
       ): GraphStageLogic = new TimerGraphStageLogic(shape) {
 
-        private val buffer: java.util.Queue[Payload] = new LinkedBlockingQueue(settings.bufferSize)
+        private val buffer: java.util.Queue[Payload]     = new LinkedBlockingQueue(settings.bufferSize)
+        private val pendingToOperatePayloads: AtomicLong = new AtomicLong(0L)
+        private val completing: AtomicBoolean            = new AtomicBoolean(false)
 
         private def flushBuffer(): Unit =
           while (!buffer.isEmpty) {
@@ -105,12 +108,21 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
             )
             divertToSecondarySink(payload)
           }
-
-        private def scheduleCompleteStage(): Unit = scheduleOnce(None, settings.bufferFlushDelay)
-        override protected def onTimer(timerKey: Any): Unit = {
+        private def flushBufferAndCompleteStage(): Unit = {
           flushBuffer()
           completeStage()
         }
+        private def tryCompleteStage(): Unit =
+          if (!completing.get()) {
+            if (buffer.isEmpty && pendingToOperatePayloads.get() == 0)
+              completeStage()
+            else {
+              scheduleOnce(None, settings.completeDelay)
+              completing.set(true)
+            }
+          }
+        override protected def onTimer(timerKey: Any): Unit =
+          flushBufferAndCompleteStage()
 
         override def preStart(): Unit = pull(operated)
 
@@ -129,6 +141,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
 
               if (buffer.isEmpty && isAvailable(toOperate)) {
                 push(toOperate, payload)
+                pendingToOperatePayloads.incrementAndGet()
               } else {
                 if (!buffer.offer(payload)) { // if the buffer is full
                   producerLogger.info(
@@ -141,8 +154,7 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
             }
 
             override def onUpstreamFinish(): Unit =
-              if (buffer.isEmpty) completeStage()
-              else scheduleCompleteStage()
+              tryCompleteStage()
           }
         )
 
@@ -150,14 +162,15 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
           toOperate,
           new OutHandler {
             override def onPull(): Unit = {
-              if (!buffer.isEmpty) push(toOperate, buffer.poll())
-              if (isClosed(in) && buffer.isEmpty) completeStage()
+              if (!buffer.isEmpty) {
+                push(toOperate, buffer.poll())
+                pendingToOperatePayloads.incrementAndGet()
+              }
+              if (isClosed(in)) tryCompleteStage()
             }
 
-            override def onDownstreamFinish(): Unit = {
-              flushBuffer()
-              completeStage()
-            }
+            override def onDownstreamFinish(): Unit =
+              flushBufferAndCompleteStage()
           }
         )
 
@@ -166,6 +179,9 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
           new InHandler {
             override def onPush(): Unit = {
               val payload = grab(operated)
+
+              pendingToOperatePayloads.decrementAndGet()
+              if (isClosed(in)) tryCompleteStage()
 
               payload match {
                 case (_: STAGING, _) =>
@@ -180,10 +196,8 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
               pull(operated)
             }
 
-            override def onUpstreamFinish(): Unit = {
-              flushBuffer()
-              completeStage()
-            }
+            override def onUpstreamFinish(): Unit =
+              flushBufferAndCompleteStage()
           }
         )
 
@@ -193,14 +207,13 @@ class FailoverBidiOperator(settings: FailoverBidiOperatorSettings) extends IBidi
           new OutHandler {
             override def onPull(): Unit =
               if (isClosed(in)) {
-                if (buffer.isEmpty) completeStage()
+                tryCompleteStage()
               } else if (!hasBeenPulled(in)) {
                 pull(in)
               }
 
             override def onDownstreamFinish(): Unit =
-              if (buffer.isEmpty) completeStage()
-              else scheduleCompleteStage()
+              tryCompleteStage()
           }
         )
       }

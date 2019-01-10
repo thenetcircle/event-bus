@@ -20,7 +20,6 @@ package com.thenetcircle.event_bus.story.tasks.operators
 import java.util.concurrent.ConcurrentLinkedDeque
 
 import akka.NotUsed
-import akka.stream.Attributes
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import com.thenetcircle.event_bus.TestBase
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, SKIPPING, STAGING}
@@ -28,10 +27,10 @@ import com.thenetcircle.event_bus.story.interfaces.IStageableTask
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import org.scalatest.BeforeAndAfter
 
+import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Random
-import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
@@ -91,19 +90,31 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
   it should "works with slow providers" in {
     val task = new FailoverBidiOperator(
       FailoverBidiOperatorSettings(
+        bufferSize = 2,
+        completeDelay = 3 second,
         secondarySink = Some(secondarySink)
       )
     )
     // test slow operation
-    val providers = Flow[Payload].mapAsync(3) { pl =>
-      Thread.sleep(Random.nextInt(1000))
-      operatedResult.offer(pl)
-      Future.successful(pl)
-    }
-    Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 10 seconds)
-    resultToList(operatedResult) shouldEqual expectedNormalResult
-    resultToList(failoverResult) shouldEqual expectedFailoverResult // TODO waiting for failover result, otherwise will be affected by other tests
+    val providers = Flow[Payload]
+      .mapAsync(2) { pl =>
+        Future {
+          Thread.sleep(Random.nextInt(1000))
+          pl
+        }
+      }
+      .map(pl => {
+        operatedResult.offer(pl)
+        pl
+      })
+    try {
+      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 10 seconds)
+    } catch { case _ => }
+
+    resultToList(operatedResult) shouldEqual List("event1", "event2", "event3", "event4") // 4 get into operated, since buffer size is 2, and operation size is 2, so rest 2 gone to failover
     resultToList(returnedResult) shouldEqual expectedReturnedResult
+    resultToList(failoverResult) shouldEqual List("event5", "event6", "event4") // event4 is because it's in STAGING status
+
     task.shutdown()
   }
 
@@ -111,7 +122,7 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
     val task = new FailoverBidiOperator(
       FailoverBidiOperatorSettings(
         bufferSize = 3,
-        bufferFlushDelay = 3 second,
+        completeDelay = 3 second,
         secondarySink = Some(secondarySink)
       )
     )
@@ -125,7 +136,7 @@ class FailoverBidiOperatorTest extends TestBase with BeforeAndAfter {
       }
 
     try {
-      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 10 seconds)
+      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 6 seconds)
     } catch { case NonFatal(ex) => }
 
     resultToList(returnedResult) shouldEqual expectedReturnedResult
