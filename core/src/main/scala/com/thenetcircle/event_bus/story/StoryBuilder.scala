@@ -25,6 +25,7 @@ import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.runtime.universe._
 import scala.util.matching.Regex
+import scala.util.Try
 
 class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
@@ -77,7 +78,7 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
   }
 
   def buildOperator(content: String): (OperatorPosition, IOperator) = {
-    val (taskType, configString, posString) = parserOperatorContent(content)
+    val (posString, taskType, configString) = parserOperatorContent(content)
     (OperatorPosition(posString), operatorBuilders.get(taskType).map(buildTask(configString)).get)
   }
 
@@ -86,9 +87,13 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
     (re(0), if (re.length == 2) re(1) else "{}")
   }
 
-  def parserOperatorContent(content: String): (String, String, String) = {
+  def parserOperatorContent(_content: String): (String, String, String) = {
+    var content = _content
+    if (!content.startsWith("before#") && !content.startsWith("after#")) {
+      content = s"before#$content"
+    }
     val re = content.split(Regex.quote(CONTENT_DELIMITER), 3)
-    (re(0), if (re.length == 2) re(1) else "{}", if (re.length == 3) re(2) else "Before")
+    (re(0), re(1), Try(re(2)).getOrElse("{}"))
   }
 
   def buildTask[T <: ITask](

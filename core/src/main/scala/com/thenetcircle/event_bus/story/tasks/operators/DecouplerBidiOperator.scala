@@ -34,14 +34,14 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-case class SafeDisconnectorSettings(
+case class DecouplerSettings(
     bufferSize: Int = 1,
     completeDelay: FiniteDuration = 10 minutes,
     secondarySink: Option[IFailoverTask] = None,
     secondarySinkBufferSize: Int = 10
 )
 
-class SafeDisconnectorBidiOperator(settings: SafeDisconnectorSettings) extends IBidiOperator with Logging {
+class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator with Logging {
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
@@ -71,7 +71,7 @@ class SafeDisconnectorBidiOperator(settings: SafeDisconnectorSettings) extends I
       runningSecondarySink = settings.secondarySink.map(ssink => {
         Source
           .queue[Payload](settings.secondarySinkBufferSize, OverflowStrategy.dropNew)
-          .via(ssink.flow())
+          .via(ssink.failoverFlow())
           .to(Sink.ignore)
           .run()(runningContext.getMaterializer())
       })
@@ -82,10 +82,10 @@ class SafeDisconnectorBidiOperator(settings: SafeDisconnectorSettings) extends I
 
     BidiFlow.fromGraph(new GraphStage[BidiShape[Payload, Payload, Payload, Payload]] {
 
-      val in        = Inlet[Payload]("SafeDisconnector.in")
-      val toOperate = Outlet[Payload]("SafeDisconnector.toOperate")
-      val operated  = Inlet[Payload]("SafeDisconnector.operated")
-      val out       = Outlet[Payload]("SafeDisconnector.out")
+      val in        = Inlet[Payload]("Decoupler.in")
+      val toOperate = Outlet[Payload]("Decoupler.toOperate")
+      val operated  = Inlet[Payload]("Decoupler.operated")
+      val out       = Outlet[Payload]("Decoupler.out")
 
       val shape: BidiShape[Payload, Payload, Payload, Payload] =
         BidiShape.of(operated, out, in, toOperate)
@@ -248,9 +248,9 @@ class SafeDisconnectorBidiOperator(settings: SafeDisconnectorSettings) extends I
     runningSecondarySink.foreach(_.complete())
 }
 
-class SafeDisconnectorBidiOperatorBuilder extends ITaskBuilder[SafeDisconnectorBidiOperator] {
+class DecouplerBidiOperatorBuilder extends ITaskBuilder[DecouplerBidiOperator] {
 
-  override val taskType: String = "safe-disconnector"
+  override val taskType: String = "decoupler"
 
   override val defaultConfig: Config =
     ConfigFactory.parseString("""{
@@ -259,12 +259,12 @@ class SafeDisconnectorBidiOperatorBuilder extends ITaskBuilder[SafeDisconnectorB
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): SafeDisconnectorBidiOperator = {
-    val settings = SafeDisconnectorSettings(
+  )(implicit appContext: AppContext): DecouplerBidiOperator = {
+    val settings = DecouplerSettings(
       bufferSize = config.as[Int]("buffer-size")
     )
 
-    new SafeDisconnectorBidiOperator(settings)
+    new DecouplerBidiOperator(settings)
   }
 
 }

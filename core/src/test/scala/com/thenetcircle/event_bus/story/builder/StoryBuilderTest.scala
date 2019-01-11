@@ -24,11 +24,7 @@ import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings}
 import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceSettings}
-import com.thenetcircle.event_bus.story.tasks.operators.{
-  CassandraStageOperator,
-  EventFilterOperator,
-  EventFilterSettings
-}
+import com.thenetcircle.event_bus.story.tasks.operators.{CassandraOperator, EventFilterOperator, EventFilterSettings}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
 
@@ -60,7 +56,7 @@ class StoryBuilderTest extends TestBase {
       operators = Some(
         """event-filter#{"event-name-white-list":["event-name-1","event-name-2"],"event-name-black-list":["event-name-3"],"channel-white-list":["channel-1","channel-2"],"channel-black-list":["channel-3"],"allowed-transport-modes":["ASYNC","BOTH","NONE"],"only-extras":{"actorId":"test","generatorId":"tnc-event-dispatcher"}}"""
           +
-            """|||cassandra-stage#{"contact-points":[],"port":9042,"parallelism":3}#after"""
+            """|||after#cassandra#{"contact-points":[],"port":9042,"parallelism":3}"""
       )
     )
 
@@ -96,7 +92,7 @@ class StoryBuilderTest extends TestBase {
     )
 
     story.operators.get.apply(1)._1 shouldEqual OperatorPosition.After
-    story.operators.get.apply(1)._2 shouldBe a[CassandraStageOperator]
+    story.operators.get.apply(1)._2 shouldBe a[CassandraOperator]
   }
 
 }

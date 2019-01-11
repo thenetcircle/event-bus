@@ -5,7 +5,7 @@ import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 
 trait IFailoverTask {
 
-  def flow()(
+  def failoverFlow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat]
 

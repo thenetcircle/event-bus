@@ -18,19 +18,24 @@
 package com.thenetcircle.event_bus.story.tasks.operators
 
 import akka.NotUsed
+import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
 import com.thenetcircle.event_bus.IntegrationTestBase
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, SKIPPING, STAGING}
-import com.thenetcircle.event_bus.story.Payload
+import com.thenetcircle.event_bus.story.{Payload, Story}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class FileStageOperatorTest extends IntegrationTestBase {
+class FileOperatorTest extends IntegrationTestBase {
 
-  behavior of "FileStageOperatorTest"
+  behavior of "FileOperatorTest"
 
-  val operator = new FileStageOperator(FileStageSettings("/tmp/file-stage-test.txt"))
+  val operator = new FileOperator(
+    FileOperatorSettings(
+      "/tmp/file-stage-test.{app_name}.{app_env}.{story_name}.{task_name}.{year}.{month}.{day}.{minute}.txt"
+    )
+  )
 
   it should "properly written to file" in {
     val testSource: Source[Payload, NotUsed] = Source(
@@ -48,9 +53,16 @@ class FileStageOperatorTest extends IntegrationTestBase {
       Source(1 to 100000)
         .map(i => (STAGING(Some(new RuntimeException("to staging")), s"story:task$i"), createTestEvent(s"event$i")))
 
-    val result = testSource.via(operator.flow()).runForeach(println)
+    val testSource3: Source[Payload, Cancellable] =
+      Source.tick[Payload](
+        1 second,
+        1 second,
+        (STAGING(Some(new RuntimeException("to staging")), s"story:task"), createTestEvent("tickEvent"))
+      )
 
-    Await.result(result, 1 minute)
+    val result = testSource3.via(operator.flow()).runForeach(println)
+
+    Await.result(result, 6 minutes)
   }
 
 }

@@ -16,6 +16,7 @@ object Dependencies {
   val akkaHttpSprayJson   = "com.typesafe.akka"          %% "akka-http-spray-json"          % akkaHttpVersion
   val akkaStreamKafka     = "com.typesafe.akka"          %% "akka-stream-kafka"             % "0.22"
   val akkaStreamCassandra = "com.lightbend.akka"         %% "akka-stream-alpakka-cassandra" % "0.16"
+  val akkaStreamFile      = "com.lightbend.akka"         %% "akka-stream-alpakka-file"      % "1.0-M1"
   val scalaLogging        = "com.typesafe.scala-logging" %% "scala-logging"                 % "3.7.2"
 
   val curator   = "org.apache.curator"   % "curator-recipes" % "4.0.0" exclude ("org.apache.zookeeper", "zookeeper") // for zookeeper 3.4.x, needs to exclude original one
@@ -55,6 +56,7 @@ object Dependencies {
     akkaHttpSprayJson,
     akkaStreamKafka,
     akkaStreamCassandra,
+    akkaStreamFile,
     curator,
     zookeeper,
     ficus,

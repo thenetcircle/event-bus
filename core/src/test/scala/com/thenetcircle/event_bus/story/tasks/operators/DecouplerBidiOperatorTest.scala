@@ -33,13 +33,13 @@ import scala.concurrent.{Await, Future}
 import scala.util.Random
 import scala.util.control.NonFatal
 
-class SafeDisconnectorBidiOperatorTest extends TestBase with BeforeAndAfter {
+class DecouplerBidiOperatorTest extends TestBase with BeforeAndAfter {
 
-  behavior of "SafeDisconnectorBidiOperator"
+  behavior of "DecouplerBidiOperator"
 
   val failoverResult = new ConcurrentLinkedDeque[Payload]()
   val secondarySink = new IFailoverTask {
-    override def flow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] =
+    override def failoverFlow()(implicit runningContext: TaskRunningContext): Flow[Payload, Payload, StoryMat] =
       Flow[Payload].map(pl => {
         failoverResult.offer(pl)
         pl
@@ -74,8 +74,8 @@ class SafeDisconnectorBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with normal providers" in {
-    val task = new SafeDisconnectorBidiOperator(
-      SafeDisconnectorSettings(
+    val task = new DecouplerBidiOperator(
+      DecouplerSettings(
         secondarySink = Some(secondarySink)
       )
     )
@@ -88,8 +88,8 @@ class SafeDisconnectorBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with slow providers" in {
-    val task = new SafeDisconnectorBidiOperator(
-      SafeDisconnectorSettings(
+    val task = new DecouplerBidiOperator(
+      DecouplerSettings(
         bufferSize = 2,
         completeDelay = 3 second,
         secondarySink = Some(secondarySink)
@@ -119,8 +119,8 @@ class SafeDisconnectorBidiOperatorTest extends TestBase with BeforeAndAfter {
   }
 
   it should "works with blocking providers" in {
-    val task = new SafeDisconnectorBidiOperator(
-      SafeDisconnectorSettings(
+    val task = new DecouplerBidiOperator(
+      DecouplerSettings(
         bufferSize = 3,
         completeDelay = 3 second,
         secondarySink = Some(secondarySink)

@@ -36,12 +36,9 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 
-case class CassandraStageSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
+case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraStageOperator(val settings: CassandraStageSettings)
-    extends IUndiOperator
-    with IFailoverTask
-    with Logging {
+class CassandraOperator(val settings: CassandraSettings) extends IUndiOperator with IFailoverTask with Logging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -137,6 +134,10 @@ class CassandraStageOperator(val settings: CassandraStageSettings)
       }
   }
 
+  override def failoverFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Payload, Payload, StoryMat] = flow
+
   def getPreparedStatement(keyspace: String, session: Session): PreparedStatement = {
     logger.debug(s"preparing cassandra statement")
     session.prepare(s"""
@@ -191,9 +192,9 @@ private[tasks] object GuavaFutures {
   }
 }
 
-class CassandraStageOperatorBuilder() extends ITaskBuilder[CassandraStageOperator] {
+class CassandraOperatorBuilder() extends ITaskBuilder[CassandraOperator] {
 
-  override val taskType: String = "cassandra-stage"
+  override val taskType: String = "cassandra"
 
   override val defaultConfig: Config =
     ConfigFactory.parseString(
@@ -206,14 +207,14 @@ class CassandraStageOperatorBuilder() extends ITaskBuilder[CassandraStageOperato
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): CassandraStageOperator = {
-    val cassandraSettings = CassandraStageSettings(
+  )(implicit appContext: AppContext): CassandraOperator = {
+    val cassandraSettings = CassandraSettings(
       contactPoints = config.as[List[String]]("contact-points"),
       port = config.as[Int]("port"),
       parallelism = config.as[Int]("parallelism")
     )
 
-    new CassandraStageOperator(cassandraSettings)
+    new CassandraOperator(cassandraSettings)
   }
 
 }
