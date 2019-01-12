@@ -25,8 +25,7 @@ import akka.stream.scaladsl.{Flow, Sink}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{STAGED, STAGING}
-import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator}
+import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -39,7 +38,7 @@ case class FileOperatorSettings(
     eventDelimiter: String = "<newline>#-:#:-#<newline>"
 )
 
-class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator with IFailoverTask with Logging {
+class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator with IFailoverTask with TaskLogging {
   private def getBaseFilePath()(
       implicit runningContext: TaskRunningContext
   ): String =

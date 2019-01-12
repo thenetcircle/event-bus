@@ -21,14 +21,13 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORMAL
-import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, IUndiOperator}
+import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, IUndiOperator, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 
 import scala.util.matching.Regex
 
-class TNCDinoEventsOperator() extends IUndiOperator with Logging {
+class TNCDinoEventsOperator() extends IUndiOperator with TaskLogging {
 
   def appendTitleField(event: Event): Event = {
     val verbOption = event.getExtra("verb")
@@ -37,7 +36,7 @@ class TNCDinoEventsOperator() extends IUndiOperator with Logging {
       val newTitle   = "dino." + shortGroup + verbOption.get
       val newBody    = event.body.data.replaceFirst(Regex.quote("{"), s"""{"title": "$newTitle",""")
 
-      consumerLogger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
+      storyLogger.debug(s"appending new group: $shortGroup, new title: $newTitle to the event ${event.uuid}")
       event.withNoTopic().withName(newTitle).withBody(newBody)
     } else {
       event

@@ -27,7 +27,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.NORMAL
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, TaskLogging}
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
@@ -50,7 +50,7 @@ case class KafkaSinkSettings(
     properties: Map[String, String] = Map.empty
 )
 
-class KafkaSink(val settings: KafkaSinkSettings) extends ISink with Logging {
+class KafkaSink(val settings: KafkaSinkSettings) extends ISink with TaskLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -85,7 +85,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with Logging {
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    producerLogger.debug(s"Prepared a new kafka record,  $record")
+    storyLogger.debug(s"Prepared a new kafka record,  $record")
     Message(record, event)
   }
 
@@ -142,7 +142,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with Logging {
           val kafkaBrief =
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-          producerLogger.info(s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]")
+          storyLogger.info(s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]")
 
           (NORMAL, message.passThrough)
       }

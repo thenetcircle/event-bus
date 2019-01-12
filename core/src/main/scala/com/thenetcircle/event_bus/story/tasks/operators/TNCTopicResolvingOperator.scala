@@ -21,8 +21,8 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL}
-import com.thenetcircle.event_bus.misc.{Logging, ZKManager}
-import com.thenetcircle.event_bus.story.interfaces.{IOperator, ITaskBuilder, IUndiOperator}
+import com.thenetcircle.event_bus.misc.ZKManager
+import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, IUndiOperator, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.curator.framework.recipes.cache.NodeCache
@@ -38,7 +38,9 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String) extends IUndiOperator with Logging {
+class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String)
+    extends IUndiOperator
+    with TaskLogging {
 
   import TopicInfoProtocol._
 
@@ -119,7 +121,7 @@ class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String)
           case Success(newEvent) =>
             (NORMAL, newEvent)
           case Failure(ex) =>
-            producerLogger.error(s"resolve kafka topic failed with error $ex")
+            storyLogger.error(s"resolve kafka topic failed with error $ex")
             (FAILED(ex, getTaskName()), event)
         }
       case others => others
@@ -151,20 +153,20 @@ class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String)
 
   def resolveEvent(event: Event): Event = {
     if (event.metadata.topic.isDefined) {
-      producerLogger.info(
+      storyLogger.info(
         s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it."
       )
       return event
     }
     if (event.metadata.name.isEmpty && event.metadata.channel.isEmpty) {
-      producerLogger.info(
+      storyLogger.info(
         s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic."
       )
       return event.withTopic(defaultTopic)
     }
 
     val newTopic = getTopicFromIndex(event).getOrElse(defaultTopic)
-    producerLogger.info(s"event ${event.uuid} has been resolved to new topic $newTopic")
+    storyLogger.info(s"event ${event.uuid} has been resolved to new topic $newTopic")
 
     event.withTopic(newTopic)
   }

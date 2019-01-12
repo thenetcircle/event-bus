@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator}
+import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
 
 case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraOperator(val settings: CassandraSettings) extends IUndiOperator with IFailoverTask with Logging {
+class CassandraOperator(val settings: CassandraSettings) extends IUndiOperator with IFailoverTask with TaskLogging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -116,14 +116,14 @@ class CassandraOperator(val settings: CassandraSettings) extends IUndiOperator w
               .map[(EventStatus, Event)](result => (STAGED, event))
               .recover {
                 case NonFatal(ex) =>
-                  consumerLogger.warn(
+                  storyLogger.warn(
                     s"sending to cassandra[1] fallback was failed with error $ex"
                   )
                   (FAILED(ex, getTaskName()), event)
               }
           } catch {
             case NonFatal(ex) =>
-              consumerLogger.debug(
+              storyLogger.debug(
                 s"sending to cassandra[2] fallback failed with error $ex"
               )
               Future.successful((FAILED(ex, getTaskName()), event))

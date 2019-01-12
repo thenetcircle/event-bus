@@ -36,7 +36,7 @@ case class EventFilterSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperator with Logging {
+class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperator with TaskLogging {
 
   logger.info(s"Initializing EventFilterOperator with settings: $settings")
 
@@ -57,20 +57,20 @@ class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperat
       if (settings.eventNameBlackList.exists(
             pattern => event.metadata.name.get matches pattern
           )) {
-        consumerLogger.info(s"A event is skipped because it is in event-name-black-list, $eventBrief")
+        storyLogger.info(s"A event is skipped because it is in event-name-black-list, $eventBrief")
         return (SKIPPING, event)
       }
     }
     if (settings.eventNameWhiteList.nonEmpty) {
       if (event.metadata.name.isEmpty) {
-        consumerLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
+        storyLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
         return (SKIPPING, event)
       }
       // if the event name not in event_name white list, then skip it
       if (!settings.eventNameWhiteList.exists(
             pattern => event.metadata.name.get matches pattern
           )) {
-        consumerLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
+        storyLogger.info(s"A event is skipped because it is not in event-name-white-list, $eventBrief")
         return (SKIPPING, event)
       }
     }
@@ -81,20 +81,20 @@ class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperat
       if (settings.channelBlackList.exists(
             pattern => event.metadata.channel.get matches pattern
           )) {
-        consumerLogger.info(s"A event is skipped because it is in channel-black-list, $eventBrief")
+        storyLogger.info(s"A event is skipped because it is in channel-black-list, $eventBrief")
         return (SKIPPING, event)
       }
     }
     if (settings.channelWhiteList.nonEmpty) {
       if (event.metadata.channel.isEmpty) {
-        consumerLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
+        storyLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
         return (SKIPPING, event)
       }
       // if the event channel not in channel white list, then skip it
       if (!settings.channelWhiteList.exists(
             pattern => event.metadata.channel.get matches pattern
           )) {
-        consumerLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
+        storyLogger.info(s"A event is skipped because it is not in channel-white-list, $eventBrief")
         return (SKIPPING, event)
       }
     }
@@ -108,7 +108,7 @@ class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperat
           .getFromString(tm) == eventTransportMode.get)
 
       if (!settings.allowedTransportModes.exists(_predictor)) {
-        consumerLogger.info(s"A event is skipped because it is not in allowed-transport-modes,  $eventBrief")
+        storyLogger.info(s"A event is skipped because it is not in allowed-transport-modes,  $eventBrief")
         return (SKIPPING, event)
       }
     }
@@ -120,7 +120,7 @@ class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperat
       if (!settings.onlyExtras.forall {
             case (_key, _value) => eventExtras.get(_key).contains(_value)
           }) {
-        consumerLogger.info(s"A event is skipped because it does not match only-extras,  $eventBrief")
+        storyLogger.info(s"A event is skipped because it does not match only-extras,  $eventBrief")
         return (SKIPPING, event)
       }
     }

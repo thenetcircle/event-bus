@@ -31,7 +31,7 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISource, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{ISource, ITaskBuilder, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -48,7 +48,7 @@ case class HttpSourceSettings(
     serverSettings: Option[ServerSettings] = None
 )
 
-class HttpSource(val settings: HttpSourceSettings) extends ISource with Logging {
+class HttpSource(val settings: HttpSourceSettings) extends ISource with TaskLogging {
 
   def createResponse(result: Payload): HttpResponse =
     result match {
@@ -82,13 +82,13 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with Logging 
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            producerLogger.info("Received a new event: " + Util.getBriefOfEvent(event))
-            producerLogger.debug(s"Extracted content of the event: $event")
+            storyLogger.info("Received a new event: " + Util.getBriefOfEvent(event))
+            storyLogger.debug(s"Extracted content of the event: $event")
             (NORMAL, event)
           })
           .recover {
             case ex: EventExtractingException =>
-              producerLogger.warn(s"Extract event from a http request failed with error $ex")
+              storyLogger.warn(s"Extract event from a http request failed with error $ex")
               (FAILED(ex, getTaskName()), Event.fromException(ex))
           }
       })

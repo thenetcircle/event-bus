@@ -41,7 +41,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Logging {
+class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -117,14 +117,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-        consumerLogger.info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
+        storyLogger.info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
 
         (NORMAL, eve)
       })
       .recover {
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
-          consumerLogger.warn(
+          storyLogger.warn(
             s"The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
           )
           (
@@ -149,7 +149,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    consumerLogger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
+    storyLogger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer
@@ -158,7 +158,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
         .mapAsyncUnordered(settings.maxConcurrentPartitions) {
           case (topicPartition, source) =>
             try {
-              consumerLogger.info(
+              storyLogger.info(
                 s"A new topicPartition $topicPartition has been assigned to story ${getStoryName()}."
               )
 
@@ -169,24 +169,24 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                   case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        consumerLogger.info(s"The event ${event.uuid} is going to be committed with offset $co")
+                        storyLogger.info(s"The event ${event.uuid} is going to be committed with offset $co")
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
                           s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
-                        consumerLogger.error(errorMessage)
+                        storyLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
 
                   case (STAGING(exOp, _), event) =>
-                    consumerLogger.error(
+                    storyLogger.error(
                       s"The event ${event.uuid} reaches the end with STAGING status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        consumerLogger.info(
+                        storyLogger.info(
                           s"The event ${event.uuid} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "Non handled STAGING status")
@@ -197,11 +197,11 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                     }
 
                   case (FAILED(ex, _), event) =>
-                    consumerLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
+                    storyLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        consumerLogger.info(
+                        storyLogger.info(
                           s"The event ${event.uuid} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "FAILED status event")
@@ -211,13 +211,13 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                 }
                 .recover {
                   case ex: CommittableException =>
-                    consumerLogger.info(
+                    storyLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with CommittableException, " +
                         s"Now recovering the last item to be a Success()"
                     )
                     Success(ex.getCommittableOffset())
                   case NonFatal(ex) =>
-                    consumerLogger.info(
+                    storyLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
                         s"Now recovering the last item to be a Failure()"
                     )
@@ -225,7 +225,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                 }
                 .collect {
                   case Success(co) =>
-                    consumerLogger.debug(s"going to commit offset $co")
+                    storyLogger.debug(s"going to commit offset $co")
                     co
                 }
                 .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
@@ -237,7 +237,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
-                  consumerLogger
+                  storyLogger
                     .info(
                       s"The substream listening on topicPartition $topicPartition was completed."
                     )
@@ -245,14 +245,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with Loggin
                 })
                 .recover { // recover after run, to recover the stream running status
                   case NonFatal(ex) =>
-                    consumerLogger.error(
+                    storyLogger.error(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
                     )
                     Done
                 }
             } catch {
               case NonFatal(ex) ⇒
-                consumerLogger.error(
+                storyLogger.error(
                   s"Could not materialize topic $topicPartition listening stream with error: $ex"
                 )
                 throw ex

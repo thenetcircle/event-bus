@@ -26,7 +26,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder}
+import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -41,7 +41,7 @@ case class DecouplerSettings(
     secondarySinkBufferSize: Int = 10
 )
 
-class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator with Logging {
+class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator with TaskLogging {
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
@@ -56,7 +56,7 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
               (FAILED(new RuntimeException("Sending the event to secondary sink failed"), getTaskName()), payload._2)
           }(runningContext.getExecutionContext())
       case None =>
-        producerLogger.warn(
+        storyLogger.warn(
           s"A event is going to be dropped since there is no secondary sink. Status: ${payload._1}, Event: ${Util
             .getBriefOfEvent(payload._2)}"
         )
@@ -76,7 +76,7 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
           .run()(runningContext.getMaterializer())
       })
       runningSecondarySink.foreach(_.watchCompletion().onComplete(result => {
-        producerLogger.info(s"The secondary sink of task ${getTaskName()} completed with result: $result")
+        storyLogger.info(s"The secondary sink of task ${getTaskName()} completed with result: $result")
       })(runningContext.getExecutionContext()))
     }
 
@@ -101,7 +101,7 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
         private def flushBuffer(): Unit =
           while (!buffer.isEmpty) {
             val payload = buffer.poll()
-            producerLogger.info(
+            storyLogger.info(
               s"A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${Util
                 .getBriefOfEvent(payload._2)}"
             )
@@ -158,7 +158,7 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
                 pendingToOperatePayloads.incrementAndGet()
               } else {
                 if (!buffer.offer(payload)) { // if the buffer is full
-                  producerLogger.info(
+                  storyLogger.info(
                     s"A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
@@ -209,7 +209,7 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
 
               payload match {
                 case (_: STAGING, _) =>
-                  producerLogger.info(
+                  storyLogger.info(
                     s"A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
