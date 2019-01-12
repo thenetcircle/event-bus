@@ -34,7 +34,6 @@ class Runner extends AbstractApp {
 
   private def initZKManager(): ZKManager = {
     // initialize variables
-    val config        = appContext.getSystemConfig()
     val connectString = config.getString("app.zookeeper.servers")
     val rootPath      = config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}/${appContext.getAppEnv()}"
     val zkManager     = new ZKManager(connectString, rootPath)

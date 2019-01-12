@@ -46,9 +46,8 @@ class Admin extends AbstractApp {
   }
 
   private def initZKManager()(implicit appContext: AppContext): ZKManager = {
-    val config        = appContext.getSystemConfig()
     val connectString = config.getString("app.zookeeper.servers")
-    val rootPath      = appContext.getSystemConfig().getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
+    val rootPath      = config.getString("app.zookeeper.rootpath") + s"/${appContext.getAppName()}"
     val zkManager     = new ZKManager(connectString, rootPath)
     appContext.addShutdownHook(zkManager.close())
     appContext.setZKManager(zkManager)
