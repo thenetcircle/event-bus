@@ -229,8 +229,8 @@ class RequestImpl implements Request {
       'source': `${storyInfo.source.type}#${storyInfo.source.settings}`,
       'sink': `${storyInfo.sink.type}#${storyInfo.sink.settings}`
     }
-    if (storyInfo.transforms.length > 0) {
-      data.transforms = storyInfo.transforms.map(trans => {
+    if (storyInfo.operators.length > 0) {
+      data.transforms = storyInfo.operators.map(trans => {
         return `${trans.type}#${trans.settings}`
       }).join('|||')
     }
@@ -279,7 +279,8 @@ class OfflineRequest implements Request {
 }`
       },
       status: StoryStatus.INIT,
-      transforms: [{
+      operators: [{
+        position: 'before',
         type: 'tnc-topic-resolver', settings: `{
   "default-topic": "event-{app_name}-default",
   "use-cache": false
@@ -323,7 +324,7 @@ class OfflineRequest implements Request {
 }`
       },
       status: StoryStatus.INIT,
-      transforms: []
+      operators: []
     }]
   ]
 

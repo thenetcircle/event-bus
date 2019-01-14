@@ -4,6 +4,7 @@ export interface StoryData {
   source: string;
   sink: string;
   status: string;
+  operators?: string;
   transforms?: string;
   fallback?: string;
 }
@@ -13,17 +14,29 @@ export interface StoryTask {
   settings: string;
 }
 
+export interface StoryOperator extends StoryTask {
+  position: string;
+}
+
 export interface StoryInfo {
   source: StoryTask;
   sink: StoryTask;
   status: StoryStatus;
-  transforms: StoryTask[];
+  operators: StoryOperator[];
   fallback?: StoryTask;
 }
 
 function _createStoryTaskFromString(str: string): StoryTask {
   let _s = str.split('#')
   return { type: _s[0], settings: _s[1] }
+}
+
+function _createStoryOperatorFromString(str: string): StoryOperator {
+  if (str.indexOf('before#') !== 0 && str.indexOf('after#') !== 0) {
+    str = 'before#' + str;
+  }
+  let _s = str.split('#', 3)
+  return { position: _s[0], type: _s[1], settings: _s[2] || '{}' }
 }
 
 export class StoryUtils {
@@ -43,9 +56,12 @@ export class StoryUtils {
     let source: StoryTask = _createStoryTaskFromString(data.source)
     let sink: StoryTask = _createStoryTaskFromString(data.sink)
 
-    let transforms: StoryTask[] = []
-    if (data.transforms !== undefined && data.transforms.length > 0) {
-      transforms = data.transforms.split('|||').map(trans => _createStoryTaskFromString(trans))
+    let operators: StoryOperator[] = []
+    if (data.operators !== undefined && data.operators.length > 0) {
+      operators = data.operators.split('|||').map(trans => _createStoryOperatorFromString(trans))
+    }
+    else if (data.transforms !== undefined && data.transforms.length > 0) { // for old format
+      operators = data.transforms.split('|||').map(trans => _createStoryOperatorFromString(trans))
     }
 
     let fallback = undefined
@@ -57,7 +73,7 @@ export class StoryUtils {
       source: source,
       sink: sink,
       status: StoryUtils.getStoryStatus(data.status),
-      transforms: transforms,
+      operators: operators,
       fallback: fallback
     }
 
@@ -65,8 +81,8 @@ export class StoryUtils {
 
   static copyStoryInfo(info: StoryInfo): StoryInfo {
     let copied = <StoryInfo>{ ...info }
-    copied.transforms = []
-    info.transforms.forEach((trans: StoryTask) => copied.transforms.push({ ...trans }))
+    copied.operators = []
+    info.operators.forEach((trans: StoryOperator) => copied.operators.push({ ...trans }))
     return copied
   }
 

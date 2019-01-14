@@ -149,7 +149,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    storyLogger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
+    logger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer

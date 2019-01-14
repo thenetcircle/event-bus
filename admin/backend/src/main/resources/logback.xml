@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true">
 
-	<property name="EB_LOGPREFIX" value="${EB_LOGDIR:-./log}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}" />
+	<property name="EB_LOGPREFIX" value="${EB_LOGDIR:-./logs}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}" />
 
 	<!-- system appender -->
 	<appender name="ADMIN" class="ch.qos.logback.core.FileAppender">

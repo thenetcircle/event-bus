@@ -3,6 +3,7 @@
 target/
 /backup/
 /log/
+/logs/
 /conf/
 /test_receiver/
 /site/

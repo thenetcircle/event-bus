@@ -104,7 +104,7 @@ import {RunnerStatus} from '../lib/runner-utils';
               let summary: string[] = [];
               summary.push(`<span class="tag is-success">${storyInfo.source.type} Source</span>`)
 
-              storyInfo.transforms.forEach(trans =>
+              storyInfo.operators.forEach(trans =>
                 summary.push(`<span class="tag is-light">${trans.type} Transform</span>`))
 
               summary.push(`<span class="tag is-primary">${storyInfo.sink.type} Sink</span>`)

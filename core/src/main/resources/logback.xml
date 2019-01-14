@@ -4,7 +4,7 @@
     <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook" />
 
 	<property name="EB_LOGPREFIX"
-			  value="${EB_LOGDIR:-./log}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}.${EB_RUNNERNAME:-default-runner}" />
+			  value="${EB_LOGDIR:-./logs}/${EB_APPNAME:-event-bus}.${EB_ENV:-dev}.${EB_RUNNERNAME:-default-runner}" />
 
 	<!-- system appender -->
 	<appender name="SYSTEM" class="ch.qos.logback.core.rolling.RollingFileAppender">

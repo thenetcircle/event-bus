@@ -50,6 +50,25 @@
 
       <div class="arrow"><div></div><span></span></div>
 
+      <div class="columns" v-if="storyInfo.fallback">
+        <div class="column" style="text-align: right"><div style="margin-top: 5rem; color: #ccc;"> ------ Failed Events ----> </div></div>
+        <div class="column" :class="fatColumnClass">
+          <a class="box"
+             @click="onEditTask('Fallback', 'fallback', storyInfo.fallback)">
+            <h5 class="title is-5">
+              Fallback
+              <span class="tag is-warning">{{ storyInfo.fallback.type }}</span>
+              <a class="icon" @click.stop="onRemoveTask('fallback')"><i
+                class="fas fa-trash-alt"></i></a>
+            </h5>
+
+            <div class="content">
+              <pre class="settings">{{ storyInfo.fallback.settings | jsonPretty }}</pre>
+            </div>
+          </a>
+        </div>
+      </div>
+
     </div>
 
     <div style="margin-bottom: 1rem;">
@@ -91,7 +110,7 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import {StoryOperator, StoryTask, StoryUtils, TaskEditAction, TaskEditType} from '../lib/story-utils';
+  import {StoryTask, StoryUtils, TaskEditAction, TaskEditType} from '../lib/story-utils';
   import TaskEditor from "./TaskEditor.vue"
   import ConfirmationBox from './ConfirmationBox.vue'
 
@@ -185,7 +204,7 @@
         if (action.type == TaskEditType.ADD) {
           switch (action.taskCategory) {
             case 'transform':
-              this.storyInfo.operators.push(<StoryOperator>newTask)
+              this.storyInfo.operators.push(newTask)
               break;
             case 'fallback':
               this.storyInfo.fallback = newTask
