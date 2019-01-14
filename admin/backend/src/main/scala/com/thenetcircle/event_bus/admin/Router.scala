@@ -34,7 +34,7 @@ class Router()(implicit appContext: AppContext, materializer: Materializer)
   logger.debug(s"static directory $staticDir")
 
   import DefaultJsonProtocol._
-  implicit val storyInfoFormats   = jsonFormat6(StoryInfo)
+  implicit val storyInfoFormats   = jsonFormat5(StoryInfo)
   implicit val runnerStoryFormats = jsonFormat3(RunnerStory)
 
   def getRoute(actionHandler: ActionHandler): Route =

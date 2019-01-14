@@ -80,7 +80,7 @@ class StoryBuilderTest extends TestBase {
       HttpRequest(HttpMethods.POST, Uri("http://localhost:3001"))
     )
 
-    story.operators.get.apply(0)._1 shouldEqual OperatorPosition.Before
+    story.operators.get.apply(0)._1 shouldEqual OperatorPosition.Pre
     story.operators.get.apply(0)._2 shouldBe a[EventFilterOperator]
     story.operators.get.apply(0)._2.asInstanceOf[EventFilterOperator].settings shouldEqual EventFilterSettings(
       eventNameWhiteList = Seq("event-name-1", "event-name-2"),
@@ -91,7 +91,7 @@ class StoryBuilderTest extends TestBase {
       onlyExtras = Map("actorId" -> "test", "generatorId" -> "tnc-event-dispatcher")
     )
 
-    story.operators.get.apply(1)._1 shouldEqual OperatorPosition.After
+    story.operators.get.apply(1)._1 shouldEqual OperatorPosition.Post
     story.operators.get.apply(1)._2 shouldBe a[CassandraOperator]
   }
 

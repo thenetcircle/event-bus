@@ -30,8 +30,7 @@ case class StoryInfo(
     source: String,
     sink: String,
     status: Option[String],
-    transforms: Option[String],
-    fallback: Option[String]
+    operators: Option[String]
 )
 
 case class RunnerStory(
@@ -159,8 +158,7 @@ class ActionHandler(zkManager: ZKManager)(implicit appContext: AppContext, syste
       zkManager.ensurePath(s"$storyPath/status", storyInfo.status.getOrElse("INIT"))
       zkManager.ensurePath(s"$storyPath/source", storyInfo.source)
       zkManager.ensurePath(s"$storyPath/sink", storyInfo.sink)
-      storyInfo.transforms.foreach(d => zkManager.ensurePath(s"$storyPath/transforms", d))
-      storyInfo.fallback.foreach(d => zkManager.ensurePath(s"$storyPath/fallback", d))
+      storyInfo.operators.foreach(d => zkManager.ensurePath(s"$storyPath/operators", d))
 
       createResponse(0)
     } catch {
@@ -178,19 +176,11 @@ class ActionHandler(zkManager: ZKManager)(implicit appContext: AppContext, syste
       zkManager.setData(s"$storyPath/source", storyInfo.source)
       zkManager.setData(s"$storyPath/sink", storyInfo.sink)
 
-      if (storyInfo.transforms.isDefined) {
-        ensureAndUpdate(s"$storyPath/transforms", storyInfo.transforms.get)
+      if (storyInfo.operators.isDefined) {
+        ensureAndUpdate(s"$storyPath/operators", storyInfo.operators.get)
       } else {
         try {
-          zkManager.deletePath(s"$storyPath/transforms")
-        } catch { case _: Throwable => }
-      }
-
-      if (storyInfo.fallback.isDefined) {
-        ensureAndUpdate(s"$storyPath/fallback", storyInfo.fallback.get)
-      } else {
-        try {
-          zkManager.deletePath(s"$storyPath/fallback")
+          zkManager.deletePath(s"$storyPath/operators")
         } catch { case _: Throwable => }
       }
 

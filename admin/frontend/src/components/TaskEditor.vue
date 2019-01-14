@@ -1,3 +1,5 @@
+import {OperatorPosition} from '../lib/story-utils';
+import {OperatorPosition} from '../lib/story-utils';
 <template>
 
   <div class="modal is-active">
@@ -9,8 +11,8 @@
       </header>
       <section class="modal-card-body">
         <div class="select" style="margin-bottom: 1rem;">
-          <select @change="onTypeChanged" v-model="currType">
-            <option value="">choose type</option>
+          <select @change="onTypeChanged" v-model="currTaskType">
+            <option value="">Choose Type</option>
             <option v-for="item in supportedTypes" :value="item">{{ item }}</option>
           </select>
         </div>
@@ -29,7 +31,7 @@
 <script lang="ts">
   import Vue from "vue"
   import taskSchema from "../lib/task-schema"
-  import {TaskEditAction} from '../lib/story-utils';
+  import {OperatorPosition, StoryOperator, StoryTask, TaskEditAction} from '../lib/story-utils';
 
   export default Vue.extend({
     props: ['title', 'action'],
@@ -37,7 +39,7 @@
     data() {
       return {
         editor: {} as any,
-        currType: ''
+        currTaskType: ''
       }
     },
 
@@ -45,14 +47,14 @@
       let action: TaskEditAction = this.action
       let schema = taskSchema[this.action.taskCategory]
       if (action.task.type && schema[action.task.type]) {
-        this.currType = action.task.type
+        this.currTaskType = action.task.type
         this.renderJSONEditor(schema[action.task.type], JSON.parse(action.task.settings))
       }
     },
 
     computed: {
       supportedTypes(): string[] {
-        return Object.keys(taskSchema[(<TaskEditAction>this.action).taskCategory])
+        return Object.keys(taskSchema[this.action.taskCategory])
       }
     },
 
@@ -62,15 +64,25 @@
       },
 
       save() {
-        let newTask = {
-          type: this.currType,
-          settings: JSON.stringify(this.editor.getValue())
+        let newTask: StoryTask
+        if (this.action.taskCategory == 'operator') {
+          newTask = <StoryOperator>{
+            type: this.currTaskType,
+            settings: JSON.stringify(this.editor.getValue()),
+            position: taskSchema[this.action.taskCategory][this.currTaskType]['direction'] == 'bidi' ? OperatorPosition.BOTH : (this.action.task.position || OperatorPosition.PRE)
+          }
+        }
+        else {
+          newTask = {
+            type: this.currTaskType,
+            settings: JSON.stringify(this.editor.getValue())
+          }
         }
         this.$emit('save', this.action, newTask)
       },
 
       onTypeChanged() {
-        this.renderJSONEditor(taskSchema[(<TaskEditAction>this.action).taskCategory][this.currType])
+        this.renderJSONEditor(taskSchema[this.action.taskCategory][this.currTaskType])
       },
 
       renderJSONEditor(schema: any, startval?: any) {

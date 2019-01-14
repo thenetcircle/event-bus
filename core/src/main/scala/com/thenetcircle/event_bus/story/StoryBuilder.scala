@@ -89,8 +89,8 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   def parserOperatorContent(_content: String): (String, String, String) = {
     var content = _content
-    if (!content.startsWith("before#") && !content.startsWith("after#")) {
-      content = s"before#$content"
+    if (!content.startsWith("pre#") && !content.startsWith("post#")) {
+      content = s"pre#$content"
     }
     val re = content.split(Regex.quote(CONTENT_DELIMITER), 3)
     (re(0), re(1), Try(re(2)).getOrElse("{}"))

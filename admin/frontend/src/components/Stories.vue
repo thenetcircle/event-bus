@@ -109,10 +109,6 @@ import {RunnerStatus} from '../lib/runner-utils';
 
               summary.push(`<span class="tag is-primary">${storyInfo.sink.type} Sink</span>`)
 
-              if (storyInfo.fallback) {
-                summary.push(`<span class="tag is-warning">${storyInfo.fallback.type} Fallback</span>`)
-              }
-
               request.getStoryRunners(storyName).then(runners => {
                 stories.push({
                   name: storyName,

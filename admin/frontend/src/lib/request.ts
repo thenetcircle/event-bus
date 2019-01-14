@@ -1,6 +1,6 @@
 import axios from "axios"
 import bus from "../lib/bus"
-import {StoryInfo, StoryStatus, StoryUtils} from "./story-utils";
+import {OperatorPosition, StoryInfo, StoryStatus, StoryUtils} from "./story-utils";
 import {polyfill, Promise, Thenable} from "es6-promise";
 import {RunnerInfo, RunnerStatus, RunnerUtils} from "./runner-utils";
 
@@ -10,8 +10,7 @@ polyfill()
 type StorableStoryInfo = {
   source?: string
   sink?: string
-  transforms?: string
-  fallback?: string
+  operators?: string
   status?: string
 }
 
@@ -230,12 +229,9 @@ class RequestImpl implements Request {
       'sink': `${storyInfo.sink.type}#${storyInfo.sink.settings}`
     }
     if (storyInfo.operators.length > 0) {
-      data.transforms = storyInfo.operators.map(trans => {
-        return `${trans.type}#${trans.settings}`
+      data.operators = storyInfo.operators.map(trans => {
+        return `${trans.position.toLowerCase()}#${trans.type}#${trans.settings}`
       }).join('|||')
-    }
-    if (storyInfo.fallback) {
-      data.fallback = `${storyInfo.fallback.type}#${storyInfo.fallback.settings}`
     }
     return data
   }
@@ -248,7 +244,7 @@ class OfflineRequest implements Request {
       name: 'default-runner',
       status: RunnerStatus.RUNNING,
       host: 'test-server-01',
-      stories: { 'http-to-kafka-with-fallback': '1' },
+      stories: {'http-to-kafka': '1'},
       version: '2.1.0',
       instances: ['_c_db771980-fe76-4b1c-bfac-e463fee0e930-latch-0000000024']
     },
@@ -256,14 +252,14 @@ class OfflineRequest implements Request {
       name: 'extra-runner',
       status: RunnerStatus.RUNNING,
       host: 'test-server-02',
-      stories: { 'kafka-to-http-without-fallback': '1' },
+      stories: {'kafka-to-http': '1'},
       version: '2.1.0',
       instances: ['_c_db771980-fe76-4b1c-bfac-e463fee0e930-latch-0000000024']
     }
   ]
 
   testStories: [string, StoryInfo][] = [
-    ['http-to-kafka-with-fallback', {
+    ['http-to-kafka', {
       source: {
         type: 'http', settings: `{
   "interface": "0.0.0.0",
@@ -280,13 +276,13 @@ class OfflineRequest implements Request {
       },
       status: StoryStatus.INIT,
       operators: [{
-        position: 'before',
+        position: OperatorPosition.PRE,
         type: 'tnc-topic-resolver', settings: `{
   "default-topic": "event-{app_name}-default",
   "use-cache": false
 }`
-      }],
-      fallback: {
+      }, {
+        position: OperatorPosition.POST,
         type: 'cassandra', settings: `{
   "contact-points": [
     "cassandra-server-01",
@@ -295,10 +291,9 @@ class OfflineRequest implements Request {
   "port": 9042,
   "parallelism": 3
 }`
-      }
-    }],
+      }]}],
 
-    ['kafka-to-http-without-fallback', {
+    ['kafka-to-http', {
       source: {
         type: 'kafka', settings: `{
   "bootstrap-servers": "kafka-server-01:9092,kafka-server-02:9092",

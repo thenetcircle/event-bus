@@ -1,4 +1,5 @@
 export enum StoryStatus { INIT = 'INIT' }
+export enum OperatorPosition {PRE = 'pre', POST = 'post', BOTH = 'both' }
 
 export interface StoryData {
   source: string;
@@ -6,7 +7,6 @@ export interface StoryData {
   status: string;
   operators?: string;
   transforms?: string;
-  fallback?: string;
 }
 
 export interface StoryTask {
@@ -15,7 +15,7 @@ export interface StoryTask {
 }
 
 export interface StoryOperator extends StoryTask {
-  position: string;
+  position: OperatorPosition;
 }
 
 export interface StoryInfo {
@@ -23,7 +23,6 @@ export interface StoryInfo {
   sink: StoryTask;
   status: StoryStatus;
   operators: StoryOperator[];
-  fallback?: StoryTask;
 }
 
 function _createStoryTaskFromString(str: string): StoryTask {
@@ -32,11 +31,11 @@ function _createStoryTaskFromString(str: string): StoryTask {
 }
 
 function _createStoryOperatorFromString(str: string): StoryOperator {
-  if (str.indexOf('before#') !== 0 && str.indexOf('after#') !== 0) {
-    str = 'before#' + str;
+  if (str.indexOf(OperatorPosition.PRE + '#') !== 0 && str.indexOf(OperatorPosition.POST + '#') !== 0 && str.indexOf(OperatorPosition.BOTH + '#') !== 0 ) {
+    str = OperatorPosition.PRE + '#' + str;
   }
   let _s = str.split('#', 3)
-  return { position: _s[0], type: _s[1], settings: _s[2] || '{}' }
+  return { position: <OperatorPosition>_s[0], type: _s[1], settings: _s[2] || '{}' }
 }
 
 export class StoryUtils {
@@ -64,17 +63,11 @@ export class StoryUtils {
       operators = data.transforms.split('|||').map(trans => _createStoryOperatorFromString(trans))
     }
 
-    let fallback = undefined
-    if (data.fallback !== undefined) {
-      fallback = _createStoryTaskFromString(data.fallback)
-    }
-
     return {
       source: source,
       sink: sink,
       status: StoryUtils.getStoryStatus(data.status),
-      operators: operators,
-      fallback: fallback
+      operators: operators
     }
 
   }
@@ -82,7 +75,7 @@ export class StoryUtils {
   static copyStoryInfo(info: StoryInfo): StoryInfo {
     let copied = <StoryInfo>{ ...info }
     copied.operators = []
-    info.operators.forEach((trans: StoryOperator) => copied.operators.push({ ...trans }))
+    info.operators.forEach((ops: StoryOperator) => copied.operators.push({ ...ops }))
     return copied
   }
 

@@ -51,8 +51,7 @@
           source: {type: 'click to set', settings: '{}'},
           sink: {type: 'click to set', settings: '{}'},
           status: 'INIT',
-          operators: [],
-          fallback: undefined
+          operators: []
         } as StoryInfo
       }
     },

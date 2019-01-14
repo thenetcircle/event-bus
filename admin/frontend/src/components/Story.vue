@@ -36,9 +36,6 @@
           <li :class="{ 'is-active': isRunners }" @click="changeTab('runners')"><a>Runners</a></li>
           <li :class="{ 'is-active': isMonitoring }" @click="changeTab('monitoring')">
             <a>Statistics</a></li>
-          <li :class="{ 'is-active': isFallback }" @click="changeTab('fallback')"
-              v-if="storyInfo.fallback !== undefined && 0"><a>Failed Events</a>
-          </li>
         </ul>
       </div>
 
@@ -94,8 +91,6 @@
 
       </div>
 
-      <div v-if="isFallback"></div>
-
       <div v-if="isMonitoring">
         <story-statistics :storyname="storyName"></story-statistics>
       </div>
@@ -119,7 +114,6 @@
 
   let tabRouteMapping: { [key: string]: string } = {
     'overview': 'story',
-    'fallback': 'story-fallback',
     'monitoring': 'story-statistics',
     'runners': 'story-runners'
   }
@@ -235,9 +229,6 @@
       },
       isOverview(): boolean {
         return this.currTab == 'overview'
-      },
-      isFallback(): boolean {
-        return this.currTab == 'fallback'
       },
       isMonitoring(): boolean {
         return this.currTab == 'monitoring'

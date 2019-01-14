@@ -1,4 +1,4 @@
-const sourceSchema: any = {
+const sourceSchemas: any = {
   'http': {
     "title": "Http Source",
     "type": "object",
@@ -160,7 +160,7 @@ const sourceSchema: any = {
   }
 }
 
-const transformSchema: any = {
+const operatorSchemas: any = {
   'tnc-topic-resolver': {
     "title": "TNC Topic Resolver Transform",
     "type": "object",
@@ -239,10 +239,35 @@ const transformSchema: any = {
         "properties": {}
       }
     }
+  },
+  'cassandra': {
+    "type": "object",
+    "direction": "bidi",
+    "properties": {
+      "contact-points": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "type": "string",
+          "title": "host"
+        },
+        "required": true
+      },
+      "port": {
+        "type": "integer",
+        "default": 9042,
+        "required": true
+      },
+      "parallelism": {
+        "type": "integer",
+        "default": 3,
+        "required": true
+      }
+    }
   }
 }
 
-const sinkSchema: any = {
+const sinkSchemas: any = {
   'http': {
     "title": "Http Sink",
     "type": "object",
@@ -393,36 +418,8 @@ const sinkSchema: any = {
   }
 }
 
-const fallbackSchema: any = {
-  'cassandra': {
-    "type": "object",
-    "properties": {
-      "contact-points": {
-        "type": "array",
-        "uniqueItems": true,
-        "items": {
-          "type": "string",
-          "title": "host"
-        },
-        "required": true
-      },
-      "port": {
-        "type": "integer",
-        "default": 9042,
-        "required": true
-      },
-      "parallelism": {
-        "type": "integer",
-        "default": 3,
-        "required": true
-      }
-    }
-  }
-}
-
 export default {
-  'source': sourceSchema,
-  'transform': transformSchema,
-  'sink': sinkSchema,
-  'fallback': fallbackSchema
+  'source': sourceSchemas,
+  'operator': operatorSchemas,
+  'sink': sinkSchemas
 } as any

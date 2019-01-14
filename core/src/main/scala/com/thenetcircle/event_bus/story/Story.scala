@@ -22,7 +22,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.Story.OperatorPosition
-import com.thenetcircle.event_bus.story.Story.OperatorPosition.{After, Before}
+import com.thenetcircle.event_bus.story.Story.OperatorPosition.{Both, Post, Pre}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.story.interfaces._
 
@@ -60,10 +60,10 @@ class Story(
     var storyFlow: Flow[Payload, Payload, StoryMat] = sink.sinkFlow()
 
     operators.foreach(_.reverse.foreach {
-      case (_, o: IBidiOperator)      => storyFlow = storyFlow.join(o.flow())
-      case (Before, o: IUndiOperator) => storyFlow = o.flow().via(storyFlow)
-      case (After, o: IUndiOperator)  => storyFlow = storyFlow.via(o.flow())
-      case _                          =>
+      case (Both, o: IBidiOperator) => storyFlow = storyFlow.join(o.flow())
+      case (Pre, o: IUndiOperator)  => storyFlow = o.flow().via(storyFlow)
+      case (Post, o: IUndiOperator) => storyFlow = storyFlow.via(o.flow())
+      case _                        =>
     })
 
     // connect monitor flow
@@ -124,11 +124,13 @@ object Story extends Logging {
   sealed trait OperatorPosition
   object OperatorPosition {
     def apply(op: String): OperatorPosition = op.toLowerCase match {
-      case "after" => After
-      case _       => Before
+      case "both" => Both
+      case "post" => Post
+      case _      => Pre
     }
-    case object Before extends OperatorPosition
-    case object After  extends OperatorPosition
+    case object Pre  extends OperatorPosition
+    case object Post extends OperatorPosition
+    case object Both extends OperatorPosition
   }
 
   class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)
