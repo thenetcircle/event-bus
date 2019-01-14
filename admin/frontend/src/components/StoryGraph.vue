@@ -24,7 +24,51 @@
 
       <div class="box">
 
-        <div class="columns is-vcentered" style="overflow-x: auto;">
+        <!-- pre operators -->
+        <div class="columns">
+          <div class="column" v-for="(ops, index) in storyInfo.operators" style="width: 20rem;"
+               v-if="ops.position === 'pre' || ops.position === 'both'">
+
+            <a class="box"
+               @click="onEditTask('Operator ' + (index + 1), 'operator', ops)">
+
+              <h5 class="title is-5">
+                {{ ops.type }}
+                <span class="tag is-light">[{{ops.position}}] Operator {{ index + 1 }}</span>
+              </h5>
+
+              <div class="columns">
+                <div class="column">
+                  <a class="icon" v-show="index > 0"
+                     @click.stop="onChangeOperatorPos(index, 'left')"><i
+                    class="fas fa-arrow-left"></i></a>
+                  <a class="icon" v-show="ops.position === 'post'"
+                     @click.stop="onChangeOperatorPos(index, 'up')"><i
+                    class="fas fa-arrow-up"></i></a>
+                  <a class="icon" v-show="ops.position === 'pre'"
+                     @click.stop="onChangeOperatorPos(index, 'down')"><i
+                    class="fas fa-arrow-down"></i></a>
+                  <a class="icon" v-show="index + 1 < storyInfo.operators.length"
+                     @click.stop="onChangeOperatorPos(index, 'right')"><i
+                    class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="column is-narrow">
+                  <a class="icon" @click.stop="onRemoveTask('operator', index)"><i
+                    class="fas fa-trash-alt"></i></a>
+                </div>
+              </div>
+
+              <div class="content">
+                    <pre class="settings"
+                         style="height: 6rem;" :id="'operator' + index">{{ ops.settings | jsonPretty }}</pre>
+              </div>
+
+            </a>
+          </div>
+        </div>
+
+        <div class="columns is-vcentered">
 
           <div class="column" style="width: 22rem;">
             <a class="box"
@@ -32,106 +76,13 @@
               <h5 class="title is-5">Source <span
                 class="tag is-success">{{ storyInfo.source.type }}</span></h5>
               <div class="content">
-                <pre class="settings">{{ storyInfo.source.settings | jsonPretty }}</pre>
+                <pre class="settings" id="source">{{ storyInfo.source.settings | jsonPretty }}</pre>
               </div>
             </a>
           </div>
 
-          <div class="column">
-
-            <!-- pre operators -->
-            <div class="columns">
-              <div class="column" v-for="(ops, index) in storyInfo.operators" style="width: 20rem;">
-
-                <a class="box" v-if="ops.position === 'pre' || ops.position === 'both'"
-                   @click="onEditTask('Operator ' + (index + 1), 'operator', ops)">
-
-                  <h5 class="title is-5">
-                    {{ ops.type }}
-                    <span class="tag is-light">[{{ops.position}}] Operator {{ index + 1 }}</span>
-                  </h5>
-
-                  <div class="columns">
-                    <div class="column">
-                      <a class="icon" v-show="index > 0" @click.stop="onChangeOperatorPos(index, 'left')"><i
-                        class="fas fa-arrow-left"></i></a>
-                      <a class="icon" v-show="ops.position === 'post'" @click.stop="onChangeOperatorPos(index, 'up')"><i
-                        class="fas fa-arrow-up"></i></a>
-                      <a class="icon" v-show="ops.position === 'pre'" @click.stop="onChangeOperatorPos(index, 'down')"><i
-                        class="fas fa-arrow-down"></i></a>
-                      <a class="icon" v-show="index + 1 < storyInfo.operators.length" @click.stop="onChangeOperatorPos(index, 'right')"><i
-                        class="fas fa-arrow-right"></i></a>
-                    </div>
-
-                    <div class="column is-narrow">
-                      <a class="icon" @click.stop="onRemoveTask('operator', index)"><i
-                        class="fas fa-trash-alt"></i></a>
-                    </div>
-                  </div>
-
-                  <div class="content">
-                    <pre class="settings"
-                         style="height: 6rem;">{{ ops.settings | jsonPretty }}</pre>
-                  </div>
-
-                </a>
-
-              </div>
-            </div>
-
-            <div class="arrow-group">
-              <div class="arrow-right">
-                <div></div>
-                <span></span></div>
-              <div class="arrow-left"><span></span>
-                <div></div>
-              </div>
-            </div>
-
-            <!-- post operators -->
-            <div class="columns">
-              <div class="column" v-for="(ops, index) in storyInfo.operators" style="width: 20rem;">
-
-                <a class="box" v-if="ops.position === 'post'"
-                   @click="onEditTask('Operator ' + (index + 1), 'operator', ops)">
-
-                  <h5 class="title is-5">
-                    {{ ops.type }}
-                    <span class="tag is-light">[{{ops.position}}] Operator {{ index + 1 }}</span>
-                  </h5>
-
-                  <div class="columns">
-                    <div class="column">
-                      <a class="icon" v-show="index > 0" @click.stop="onChangeOperatorPos(index, 'left')"><i
-                        class="fas fa-arrow-left"></i></a>
-                      <a class="icon" v-show="ops.position === 'post'" @click.stop="onChangeOperatorPos(index, 'up')"><i
-                        class="fas fa-arrow-up"></i></a>
-                      <a class="icon" v-show="ops.position === 'pre'" @click.stop="onChangeOperatorPos(index, 'down')"><i
-                        class="fas fa-arrow-down"></i></a>
-                      <a class="icon" v-show="index + 1 < storyInfo.operators.length" @click.stop="onChangeOperatorPos(index, 'right')"><i
-                        class="fas fa-arrow-right"></i></a>
-                    </div>
-
-                    <div class="column is-narrow">
-                      <a class="icon" @click.stop="onRemoveTask('operator', index)"><i
-                        class="fas fa-trash-alt"></i></a>
-                    </div>
-                  </div>
-
-                  <div class="content">
-                    <pre class="settings"
-                         style="height: 6rem;">{{ ops.settings | jsonPretty }}</pre>
-                  </div>
-
-                </a>
-
-              </div>
-            </div>
-
-          </div>
-
           <div class="column" style="width: 22rem;">
-            <a class="box"
+            <a class="box" id="sink"
                @click="onEditTask('Sink', 'sink', storyInfo.sink)">
               <h5 class="title is-5">Sink <span
                 class="tag is-primary">{{ storyInfo.sink.type }}</span>
@@ -142,6 +93,51 @@
             </a>
           </div>
 
+        </div>
+
+        <!-- post operators -->
+        <div class="columns">
+          <div class="column" v-for="(ops, index) in storyInfo.operators" style="width: 20rem;"
+               v-if="ops.position === 'post'">
+
+            <a class="box"
+               @click="onEditTask('Operator ' + (index + 1), 'operator', ops)">
+
+              <h5 class="title is-5">
+                {{ ops.type }}
+                <span class="tag is-light">[{{ops.position}}] Operator {{ index + 1 }}</span>
+              </h5>
+
+              <div class="columns">
+                <div class="column">
+                  <a class="icon" v-show="index > 0"
+                     @click.stop="onChangeOperatorPos(index, 'left')"><i
+                    class="fas fa-arrow-left"></i></a>
+                  <a class="icon" v-show="ops.position === 'post'"
+                     @click.stop="onChangeOperatorPos(index, 'up')"><i
+                    class="fas fa-arrow-up"></i></a>
+                  <a class="icon" v-show="ops.position === 'pre'"
+                     @click.stop="onChangeOperatorPos(index, 'down')"><i
+                    class="fas fa-arrow-down"></i></a>
+                  <a class="icon" v-show="index + 1 < storyInfo.operators.length"
+                     @click.stop="onChangeOperatorPos(index, 'right')"><i
+                    class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="column is-narrow">
+                  <a class="icon" @click.stop="onRemoveTask('operator', index)"><i
+                    class="fas fa-trash-alt"></i></a>
+                </div>
+              </div>
+
+              <div class="content">
+                    <pre class="settings" :id="'operator' + index"
+                         style="height: 6rem;">{{ ops.settings | jsonPretty }}</pre>
+              </div>
+
+            </a>
+
+          </div>
         </div>
 
       </div>
@@ -188,8 +184,52 @@
       }
     },
 
-    computed: {
+    mounted() {
+
+      let lines: LeaderLine[] = [];
+      let preLineOption = {dash: {animation: true}, color: 'rgba(75, 192, 192)'}
+      let postLineOption = {dash: {animation: true}, color: 'red'}
+      let previousTask = 'source';
+
+      this.storyInfo.operators.forEach((ops, index) => {
+        if (ops.position == 'pre' || ops.position == 'both') {
+          let nextTask = 'operator' + index
+          lines.push(new LeaderLine(
+            document.getElementById(previousTask),
+            document.getElementById(nextTask),
+            preLineOption
+          ))
+          previousTask = nextTask
+        }
+      })
+
+      lines.push(new LeaderLine(
+        document.getElementById(previousTask),
+        document.getElementById('sink'),
+        preLineOption
+      ))
+      previousTask = 'sink'
+
+      for (let i = this.storyInfo.operators.length - 1; i >= 0; i--) {
+        let ops = this.storyInfo.operators[i]
+        if (ops.position == 'post' || ops.position == 'both') {
+          let nextTask = 'operator' + i
+          lines.push(new LeaderLine(
+            document.getElementById(previousTask),
+            document.getElementById(nextTask),
+            postLineOption
+          ))
+          previousTask = nextTask
+        }
+      }
+      lines.push(new LeaderLine(
+        document.getElementById(previousTask),
+        document.getElementById('source'),
+        postLineOption
+      ))
     },
+
+    computed: {},
 
     components: {
       TaskEditor,

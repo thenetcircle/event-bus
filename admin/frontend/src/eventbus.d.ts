@@ -12,3 +12,7 @@ declare module "vue-loading-template" {
   import Vue from "vue";
   export default Vue;
 }
+
+declare class LeaderLine {
+  constructor (a?: any, b?: any, c?: any)
+}
