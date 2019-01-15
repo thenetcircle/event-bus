@@ -103,6 +103,9 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with TaskLogg
     implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
+    // TODO consider merge sub-streams, since request sub-stream will materialize subsequent tasks
+    //      for example Decoupler buffer will not work on short-term connections
+    //      for now is ok since we are using Nginx as an reverse proxy
     val internalHandler =
       Flow[HttpRequest]
         .via(getRequestUnmarshallerHandler())

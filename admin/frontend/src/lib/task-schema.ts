@@ -348,7 +348,8 @@ const sinkSchemas: any = {
       },
       "random-factor": {
         "type": "number",
-        "default": 0.2
+        "default": 0.2,
+        "required": true
       },
       "max-retrytime": {
         "type": "string",
@@ -448,16 +449,6 @@ const sinkSchemas: any = {
             "required": true
           }
         }
-      },
-      "use-async-buffer": {
-        "type": "boolean",
-        "default": true,
-        "required": true
-      },
-      "async-buffer-size": {
-        "type": "integer",
-        "default": 100,
-        "required": true
       }
     }
   }

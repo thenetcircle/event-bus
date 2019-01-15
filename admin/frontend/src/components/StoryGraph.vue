@@ -32,7 +32,7 @@ import {OpExecPos} from "../lib/story-utils";
               <h5 class="title is-5" id="source">{{ storyInfo.source.type }} <span class="tag is-success">Source</span>
               </h5>
               <div class="content">
-                <pre class="settings" style="overflow: auto; max-width: 18rem; max-height: 16rem;">{{ storyInfo.source.settings | jsonPretty }}</pre>
+                <pre class="settings" style="overflow: auto; max-width: 18rem; height: 15rem;">{{ storyInfo.source.settings | jsonPretty }}</pre>
               </div>
             </a>
           </div>
@@ -92,7 +92,7 @@ import {OpExecPos} from "../lib/story-utils";
                @click="onEditTask('Sink', 'sink', storyInfo.sink)">
               <h5 class="title is-5" id="sink">{{ storyInfo.sink.type }} <span class="tag is-primary">Sink</span></h5>
               <div class="content">
-                <pre class="settings" style="overflow: auto; max-width: 18rem; max-height: 16rem;">{{ storyInfo.sink.settings | jsonPretty }}</pre>
+                <pre class="settings" style="overflow: auto; max-width: 18rem; height: 15rem;">{{ storyInfo.sink.settings | jsonPretty }}</pre>
               </div>
             </a>
           </div>
