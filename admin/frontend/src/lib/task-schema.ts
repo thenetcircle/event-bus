@@ -225,11 +225,11 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "enum": [
-            "SYNC_PLUS", "ASYNC", "Bidi", "NONE"
+            "SYNC_PLUS", "ASYNC", "BiDi", "NONE"
           ],
           "title": "Transport Mode"
         },
-        "default": ["ASYNC", "Bidi", "NONE"],
+        "default": ["ASYNC", "BiDi", "NONE"],
         "required": true
       },
       "only-extras": {
@@ -324,7 +324,7 @@ const sinkSchemas: any = {
           "method": {
             "type": "string",
             "enum": [
-              "AfterSink", "GET"
+              "After", "GET"
             ],
             "required": true
           },

@@ -1,3 +1,4 @@
+import {OpExecPos} from "../lib/story-utils";
 <template>
   <div>
 
@@ -28,32 +29,40 @@
           <div class="column is-narrow">
             <a class="box"
                @click="onEditTask('Source', 'source', storyInfo.source)">
-              <h5 class="title is-5" id="source">{{ storyInfo.source.type }} <span class="tag is-success">Source</span></h5>
+              <h5 class="title is-5" id="source">{{ storyInfo.source.type }} <span class="tag is-success">Source</span>
+              </h5>
               <div class="content">
-                <pre class="settings" style="overflow: auto; max-width: 15rem; max-height: 10rem;">{{ storyInfo.source.settings | jsonPretty }}</pre>
+                <pre class="settings" style="overflow: auto; max-width: 18rem; max-height: 16rem;">{{ storyInfo.source.settings | jsonPretty }}</pre>
               </div>
             </a>
           </div>
 
-          <div class="column is-narrow" :class="ops.execOrder" v-for="(ops, index) in storyInfo.operators">
+          <div class="column">
+
+            <div class="columns">
+              <div class="column is-narrow" :class="op.execPos" v-for="(op, index) in storyInfo.operators">
 
                 <a class="box"
-                   @click="onEditTask('Operator ' + (index + 1), 'operator', ops)">
+                   @click="onEditTask('Operator ' + (index + 1), 'operator', op)">
 
                   <h5 class="title is-5" :id="'operator' + index">
-                    {{ ops.type }}
-                    <span class="tag" :class="ops.execOrder == 'after' ? 'is-warning' : 'is-dark'" v-if="ops.execOrder != 'both'">{{ops.execOrder}}</span>
+                    {{ op.type }}
+                    <span class="tag is-light">Operator {{index + 1}}</span>
                   </h5>
 
                   <div class="columns">
                     <div class="column">
+                      <span class="tag" :class="isBiDiOp(op) ? 'is-link' : (isAfterOp(op) ? 'is-warning' : 'is-dark')">{{op.execPos}}</span>
+                    </div>
+
+                    <div class="column is-narrow">
                       <a class="icon" v-show="index > 0"
                          @click.stop="onChangeOperatorPos(index, 'left')"><i
                         class="fas fa-arrow-left"></i></a>
-                      <a class="icon" v-show="ops.execOrder === 'after'"
+                      <a class="icon" v-show="isAfterOp(op)"
                          @click.stop="onChangeOperatorPos(index, 'up')"><i
                         class="fas fa-arrow-up"></i></a>
-                      <a class="icon" v-show="ops.execOrder === 'before'"
+                      <a class="icon" v-show="isBeforeOp(op)"
                          @click.stop="onChangeOperatorPos(index, 'down')"><i
                         class="fas fa-arrow-down"></i></a>
                       <a class="icon" v-show="index + 1 < storyInfo.operators.length"
@@ -67,12 +76,15 @@
                     </div>
                   </div>
 
-                  <div>
-                    <span class="tag is-light">Operator {{ index + 1 }}</span>
-
+                  <div class="content">
+                    <pre class="settings">{{ op.settings | jsonPretty }}</pre>
                   </div>
 
                 </a>
+
+              </div>
+            </div>
+
           </div>
 
           <div class="column is-narrow">
@@ -80,7 +92,7 @@
                @click="onEditTask('Sink', 'sink', storyInfo.sink)">
               <h5 class="title is-5" id="sink">{{ storyInfo.sink.type }} <span class="tag is-primary">Sink</span></h5>
               <div class="content">
-                <pre class="settings" style="overflow: auto; max-width: 15rem; max-height: 10rem;">{{ storyInfo.sink.settings | jsonPretty }}</pre>
+                <pre class="settings" style="overflow: auto; max-width: 18rem; max-height: 16rem;">{{ storyInfo.sink.settings | jsonPretty }}</pre>
               </div>
             </a>
           </div>
@@ -104,14 +116,7 @@
 
 <script lang="ts">
   import Vue from "vue"
-  import {
-    UndiOpExecOrder,
-    StoryOperator,
-    StoryTask,
-    StoryUtils,
-    TaskEditAction,
-    TaskEditType
-  } from '../lib/story-utils';
+  import {OpExecPos, StoryOperator, StoryTask, StoryUtils, TaskEditAction, TaskEditType} from '../lib/story-utils';
   import TaskEditor from "./TaskEditor.vue"
   import ConfirmationBox from './ConfirmationBox.vue'
 
@@ -132,7 +137,6 @@
     },
 
     mounted() {
-
       /*let lines: LeaderLine[] = [];
       let preLineOption = {dash: {animation: true}, color: 'rgba(75, 192, 192)'}
       let postLineOption = {dash: {animation: true}, color: 'red'}
@@ -176,9 +180,7 @@
       ))*/
     },
 
-    computed: {
-
-    },
+    computed: {},
 
     components: {
       TaskEditor,
@@ -190,6 +192,15 @@
     },
 
     methods: {
+      isBeforeOp(op: StoryOperator): boolean {
+        return op.execPos == OpExecPos.Before
+      },
+      isAfterOp(op: StoryOperator): boolean {
+        return op.execPos == OpExecPos.After
+      },
+      isBiDiOp(op: StoryOperator): boolean {
+        return op.execPos == OpExecPos.BiDi
+      },
       onAddTask(title: string, category: string) {
         this.taskEditor = {
           ...this.taskEditor, ...{
@@ -250,13 +261,13 @@
             }
             break;
           case 'up':
-            if (operator.execOrder != UndiOpExecOrder.Bidi) {
-              operator.execOrder = UndiOpExecOrder.BeforeSink;
+            if (operator.execPos != OpExecPos.BiDi) {
+              operator.execPos = OpExecPos.Before;
             }
             break;
           case 'down':
-            if (operator.execOrder != UndiOpExecOrder.Bidi) {
-              operator.execOrder = UndiOpExecOrder.AfterSink;
+            if (operator.execPos != OpExecPos.BiDi) {
+              operator.execPos = OpExecPos.After;
             }
             break;
         }
@@ -275,8 +286,7 @@
               this.storyInfo.operators.push(<StoryOperator>newTask)
               break;
           }
-        }
-        else {
+        } else {
           if (action.task) {
             action.task.type = newTask.type
             action.task.settings = newTask.settings
@@ -391,16 +401,29 @@
     border-right-color: rgb(75, 192, 192);
   }
 
-  .column.pre {
-    /*margin-top: -50px;*/
+  .column.before {
+    /*padding-top: 20px;*/
+  }
+  .column.before a.box .content .settings
+  {
+    overflow: auto; max-width: 16rem; height: 3rem;
   }
 
-  .column.both {
-    /*margin-top: 50px;*/
-  }
 
-  .column.post {
+  /*a.box.bidi {
     margin-top: 50px;
+  }*/
+  .column.bidi a.box .content .settings
+  {
+    overflow: auto; max-width: 16rem; height: 10rem;
+  }
+
+  .column.after {
+    padding-top: 7.8rem;
+  }
+  .column.after a.box .content .settings
+  {
+    overflow: auto; max-width: 16rem; height: 3rem;
   }
 
 </style>

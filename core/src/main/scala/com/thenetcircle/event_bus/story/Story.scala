@@ -21,8 +21,8 @@ import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.Story.UndiOpExecOrder
-import com.thenetcircle.event_bus.story.Story.UndiOpExecOrder.{AfterSink, BeforeSink}
+import com.thenetcircle.event_bus.story.Story.OpExecPos
+import com.thenetcircle.event_bus.story.Story.OpExecPos.{AfterSink, BeforeSink}
 import com.thenetcircle.event_bus.story.StoryStatus.StoryStatus
 import com.thenetcircle.event_bus.story.interfaces._
 
@@ -36,7 +36,7 @@ class Story(
     val settings: StorySettings,
     val source: ISource,
     val sink: ISink,
-    val operators: Option[List[(UndiOpExecOrder, IOperator)]] = None
+    val operators: Option[List[(OpExecPos, IOperator)]] = None
 ) extends Logging {
 
   // initialize internal status
@@ -121,14 +121,14 @@ object Story extends Logging {
     case class Restart(cause: Throwable)
   }
 
-  sealed trait UndiOpExecOrder
-  object UndiOpExecOrder {
-    def apply(op: Option[String]): UndiOpExecOrder = op.map(_.toLowerCase) match {
+  sealed trait OpExecPos
+  object OpExecPos {
+    def apply(op: Option[String]): OpExecPos = op.map(_.toLowerCase) match {
       case Some("after") => AfterSink
       case _             => BeforeSink
     }
-    case object BeforeSink extends UndiOpExecOrder
-    case object AfterSink  extends UndiOpExecOrder
+    case object BeforeSink extends OpExecPos
+    case object AfterSink  extends OpExecPos
   }
 
   class StoryActor(story: Story, runner: ActorRef)(implicit runningContext: TaskRunningContext)

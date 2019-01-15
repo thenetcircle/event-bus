@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story.builder
 
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.Story.UndiOpExecOrder
+import com.thenetcircle.event_bus.story.Story.OpExecPos
 import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings}
@@ -81,7 +81,7 @@ class StoryBuilderTest extends TestBase {
       HttpRequest(HttpMethods.POST, Uri("http://localhost:3001"))
     )
 
-    story.operators.get.apply(0)._1 shouldEqual UndiOpExecOrder.BeforeSink
+    story.operators.get.apply(0)._1 shouldEqual OpExecPos.BeforeSink
     story.operators.get.apply(0)._2 shouldBe a[FilterOperator]
     story.operators.get.apply(0)._2.asInstanceOf[FilterOperator].settings shouldEqual FilterOperatorSettings(
       eventNameWhiteList = Seq("event-name-1", "event-name-2"),
@@ -92,7 +92,7 @@ class StoryBuilderTest extends TestBase {
       onlyExtras = Map("actorId" -> "test", "generatorId" -> "tnc-event-dispatcher")
     )
 
-    story.operators.get.apply(1)._1 shouldEqual UndiOpExecOrder.AfterSink
+    story.operators.get.apply(1)._1 shouldEqual OpExecPos.AfterSink
     story.operators.get.apply(1)._2 shouldBe a[CassandraOperator]
     story.operators.get.apply(1)._2.asInstanceOf[CassandraOperator].settings shouldEqual CassandraOperatorSettings(
       List("127.0.0.1"),
@@ -100,13 +100,13 @@ class StoryBuilderTest extends TestBase {
       parallelism = 8
     )
 
-    story.operators.get.apply(2)._1 shouldEqual UndiOpExecOrder.AfterSink
+    story.operators.get.apply(2)._1 shouldEqual OpExecPos.AfterSink
     story.operators.get.apply(2)._2 shouldBe a[FileOperator]
     story.operators.get.apply(2)._2.asInstanceOf[FileOperator].settings shouldEqual FileOperatorSettings(
       path = "/temp/failover.log"
     )
 
-    story.operators.get.apply(3)._1 shouldEqual UndiOpExecOrder.BeforeSink
+    story.operators.get.apply(3)._1 shouldEqual OpExecPos.BeforeSink
     story.operators.get.apply(3)._2 shouldBe a[IBidiOperator]
     story.operators.get.apply(3)._2 shouldBe a[DecouplerBidiOperator]
     story.operators.get.apply(3)._2.asInstanceOf[DecouplerBidiOperator].settings shouldEqual DecouplerSettings(

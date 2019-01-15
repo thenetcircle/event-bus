@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.misc.Util
-import com.thenetcircle.event_bus.story.Story.UndiOpExecOrder
+import com.thenetcircle.event_bus.story.Story.OpExecPos
 import com.thenetcircle.event_bus.story.interfaces._
 import com.typesafe.scalalogging.LazyLogging
 
@@ -80,10 +80,10 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
     sinkBuilders.get(taskContent.metadata.taskType).map(buildTaskWithBuilder(taskContent.config)).get
   }
 
-  def buildOperator(content: String): (UndiOpExecOrder, IOperator) = {
+  def buildOperator(content: String): (OpExecPos, IOperator) = {
     val taskContent = parseTaskContent(content)
     (
-      UndiOpExecOrder(taskContent.metadata.extra),
+      OpExecPos(taskContent.metadata.extra),
       operatorBuilders.get(taskContent.metadata.taskType).map(buildTaskWithBuilder(taskContent.config)).get
     )
   }

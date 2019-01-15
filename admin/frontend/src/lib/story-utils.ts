@@ -1,5 +1,8 @@
+import taskSchema from "./task-schema"
+
 export enum StoryStatus { INIT = 'INIT' }
-export enum UndiOpExecOrder { BeforeSink = 'before', AfterSink = 'after', Bidi = 'both' }
+
+export enum OpExecPos { Before = 'before', After = 'after', BiDi = 'bidi' }
 
 export interface StoryData {
   source: string;
@@ -15,7 +18,7 @@ export interface StoryTask {
 }
 
 export interface StoryOperator extends StoryTask {
-  execOrder: UndiOpExecOrder;
+  execPos: OpExecPos;
 }
 
 export interface StoryInfo {
@@ -26,14 +29,38 @@ export interface StoryInfo {
 }
 
 function _createStoryTaskFromString(str: string): StoryTask {
-  let _s = str.split('#')
-  return { type: _s[0], settings: _s[1] }
+  let type: string
+  let settings: string
+  let delimiterPos: number
+
+  if ((delimiterPos = str.indexOf('#')) !== -1) {
+    type = str.substr(0, delimiterPos)
+    settings = str.substr(delimiterPos + 1)
+  }
+  else {
+    type = str
+    settings = '{}'
+  }
+
+  return {type: type, settings: settings}
 }
 
 function _createStoryOperatorFromString(str: string): StoryOperator {
-  let _s = str.split('#', 2)
-  let _ms = _s[0].split(':')
-  return { type: _ms[0], settings: _s[1] || '{}', execOrder: _ms[1] && _ms[1] == 'after' ? UndiOpExecOrder.AfterSink : UndiOpExecOrder.BeforeSink }
+  let task = _createStoryTaskFromString(str)
+  let metadata = task.type.split(':')
+  let type = metadata[0]
+  let execPos: OpExecPos
+  try {
+    if (taskSchema['operator'][type]['direction'] == 'bidi')
+      execPos = OpExecPos.BiDi
+    else
+      execPos = metadata[1] && metadata[1] == OpExecPos.After ? OpExecPos.After : OpExecPos.Before
+  }
+  catch (e) {
+    execPos = OpExecPos.Before
+  }
+
+  return {type: type, settings: task.settings, execPos: execPos}
 }
 
 export class StoryUtils {
@@ -56,8 +83,7 @@ export class StoryUtils {
     let operators: StoryOperator[] = []
     if (data.operators !== undefined && data.operators.length > 0) {
       operators = data.operators.split('|||').map(trans => _createStoryOperatorFromString(trans))
-    }
-    else if (data.transforms !== undefined && data.transforms.length > 0) { // for old format
+    } else if (data.transforms !== undefined && data.transforms.length > 0) { // for old format
       operators = data.transforms.split('|||').map(trans => _createStoryOperatorFromString(trans))
     }
 
@@ -71,9 +97,9 @@ export class StoryUtils {
   }
 
   static copyStoryInfo(info: StoryInfo): StoryInfo {
-    let copied = <StoryInfo>{ ...info }
+    let copied = <StoryInfo>{...info}
     copied.operators = []
-    info.operators.forEach((ops: StoryOperator) => copied.operators.push({ ...ops }))
+    info.operators.forEach((ops: StoryOperator) => copied.operators.push({...ops}))
     return copied
   }
 
@@ -87,8 +113,7 @@ export class StoryUtils {
     }
     if (/^[a-z0-9]+(?:[\_\-][a-z0-9]+)*$/i.test(name)) {
       return true
-    }
-    else {
+    } else {
       return 'story name could only includes letters, number, and _, -'
     }
   }
@@ -106,6 +131,8 @@ export class StoryUtils {
 
 
 export enum TaskEditType { ADD, EDIT }
+
 export class TaskEditAction {
-  constructor(readonly type: TaskEditType, readonly taskCategory: string, readonly task: StoryTask) {}
+  constructor(readonly type: TaskEditType, readonly taskCategory: string, readonly task: StoryTask) {
+  }
 }
