@@ -108,7 +108,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
     eventExtractor
       .extract(messageValue, Some(message.committableOffset))
       .map[Payload](event => {
-        var eve = event.withTopic(kafkaTopic)
+        // var eve = event.withTopic(kafkaTopic)
+        var eve = event
         if (uuidOption.isDefined) {
           eve = eve.withUUID(uuidOption.get)
         }

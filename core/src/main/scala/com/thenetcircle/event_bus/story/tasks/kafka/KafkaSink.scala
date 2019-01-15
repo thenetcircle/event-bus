@@ -19,15 +19,16 @@ package com.thenetcircle.event_bus.story.tasks.kafka
 
 import java.util.concurrent.TimeUnit
 
+import akka.NotUsed
 import akka.kafka.ProducerMessage.{Envelope, Message, Result}
 import akka.kafka.ProducerSettings
 import akka.kafka.scaladsl.Producer
 import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
-import com.thenetcircle.event_bus.event.EventStatus.NORMAL
+import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
   KafkaKey,
@@ -50,7 +51,7 @@ case class KafkaSinkSettings(
     properties: Map[String, String] = Map.empty
 )
 
-class KafkaSink(val settings: KafkaSinkSettings) extends ISink with TaskLogging {
+class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTask with TaskLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -114,10 +115,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with TaskLogging 
 
   var kafkaProducer: Option[KafkaProducer[ProducerKey, ProducerValue]] = None
 
-  override def sinkFlow()(
+  private def getProducingFlow()(
       implicit runningContext: TaskRunningContext
-  ): Flow[Payload, Payload, StoryMat] = {
-
+  ): Flow[Payload, Payload, NotUsed] = {
     val kafkaSettings = getProducerSettings()
 
     val _kafkaProducer = kafkaProducer.getOrElse({
@@ -132,7 +132,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with TaskLogging 
     // DONE protects that the stream crashed by sending failure
     // DONE use Producer.flexiFlow
     // DONE optimize logging
-    val producingFlow = Flow[Payload]
+    Flow[Payload]
       .map(_._2)
       .map(createEnvelope)
       .via(Producer.flexiFlow(kafkaSettings, _kafkaProducer))
@@ -146,9 +146,20 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with TaskLogging 
 
           (NORMAL, message.passThrough)
       }
-
-    wrapPartialFlow(producingFlow)
   }
+
+  override def sinkFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Payload, Payload, StoryMat] =
+    ITask.wrapPartialFlow(getProducingFlow())
+
+  override def failoverFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Payload, Payload, StoryMat] =
+    ITask.wrapPartialFlow(
+      getProducingFlow().map { case (_, event) => (STAGED, event) },
+      { case (_: STAGING, _) => true }
+    )
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
     logger.info(s"Shutting down kafka-sink of story ${getStoryName()}.")

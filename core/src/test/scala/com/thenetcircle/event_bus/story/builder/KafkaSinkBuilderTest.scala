@@ -30,7 +30,7 @@ class KafkaSinkBuilderTest extends TestBase {
 
   it should "build correct KafkaSink with the default config" in {
 
-    val sink = storyBuilder.buildTask("""{
+    val sink = storyBuilder.buildTaskWithBuilder("""{
         |  "bootstrap-servers": "testserver1,testserver2",
         |  "close-timeout": "100 s",
         |  "parallelism": 50,

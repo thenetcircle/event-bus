@@ -36,9 +36,12 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 
-case class CassandraSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
+case class CassandraOperatorSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
 
-class CassandraOperator(val settings: CassandraSettings) extends IUndiOperator with IFailoverTask with TaskLogging {
+class CassandraOperator(val settings: CassandraOperatorSettings)
+    extends IUndiOperator
+    with IFailoverTask
+    with TaskLogging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -208,7 +211,7 @@ class CassandraOperatorBuilder() extends ITaskBuilder[CassandraOperator] {
   override def buildTask(
       config: Config
   )(implicit appContext: AppContext): CassandraOperator = {
-    val cassandraSettings = CassandraSettings(
+    val cassandraSettings = CassandraOperatorSettings(
       contactPoints = config.as[List[String]]("contact-points"),
       port = config.as[Int]("port"),
       parallelism = config.as[Int]("parallelism")

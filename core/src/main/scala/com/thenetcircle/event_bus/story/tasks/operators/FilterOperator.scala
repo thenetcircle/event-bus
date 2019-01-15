@@ -21,13 +21,13 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, SKIPPING}
 import com.thenetcircle.event_bus.event._
-import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
-case class EventFilterSettings(
+case class FilterOperatorSettings(
     eventNameWhiteList: Seq[String] = Seq.empty,
     eventNameBlackList: Seq[String] = Seq.empty,
     channelWhiteList: Seq[String] = Seq.empty,
@@ -36,9 +36,9 @@ case class EventFilterSettings(
     onlyExtras: Map[String, String] = Map.empty
 )
 
-class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperator with TaskLogging {
+class FilterOperator(val settings: FilterOperatorSettings) extends IUndiOperator with TaskLogging {
 
-  logger.info(s"Initializing EventFilterOperator with settings: $settings")
+  logger.info(s"Initializing FilterOperator with settings: $settings")
 
   override def flow()(
       implicit runningContext: TaskRunningContext
@@ -131,9 +131,9 @@ class EventFilterOperator(val settings: EventFilterSettings) extends IUndiOperat
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 }
 
-class EventFilterOperatorBuilder() extends ITaskBuilder[EventFilterOperator] {
+class FilterOperatorBuilder() extends ITaskBuilder[FilterOperator] {
 
-  override val taskType: String = "event-filter"
+  override val taskType: String = "filter"
 
   override val defaultConfig: Config =
     ConfigFactory.parseString(
@@ -144,7 +144,7 @@ class EventFilterOperatorBuilder() extends ITaskBuilder[EventFilterOperator] {
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): EventFilterOperator = {
+  )(implicit appContext: AppContext): FilterOperator = {
     val eventNameWhiteList    = config.as[Option[Seq[String]]]("event-name-white-list").getOrElse(Seq.empty)
     val eventNameBlackList    = config.as[Option[Seq[String]]]("event-name-black-list").getOrElse(Seq.empty)
     val channelWhiteList      = config.as[Option[Seq[String]]]("channel-white-list").getOrElse(Seq.empty)
@@ -152,7 +152,7 @@ class EventFilterOperatorBuilder() extends ITaskBuilder[EventFilterOperator] {
     val allowedTransportModes = config.as[Option[Seq[String]]]("allowed-transport-modes").getOrElse(Seq.empty)
     val onlyExtras            = config.as[Option[Map[String, String]]]("only-extras").getOrElse(Map.empty)
 
-    val settings = EventFilterSettings(
+    val settings = FilterOperatorSettings(
       eventNameWhiteList,
       eventNameBlackList,
       channelWhiteList,
@@ -161,7 +161,7 @@ class EventFilterOperatorBuilder() extends ITaskBuilder[EventFilterOperator] {
       onlyExtras
     )
 
-    new EventFilterOperator(settings)
+    new FilterOperator(settings)
   }
 
 }

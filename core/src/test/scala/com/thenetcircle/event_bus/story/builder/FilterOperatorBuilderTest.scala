@@ -18,18 +18,18 @@
 package com.thenetcircle.event_bus.story.builder
 
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.operators.{EventFilterOperatorBuilder, EventFilterSettings}
+import com.thenetcircle.event_bus.story.tasks.operators.{FilterOperatorBuilder, FilterOperatorSettings}
 
-class EventFilterOperatorBuilderTest extends TestBase {
+class FilterOperatorBuilderTest extends TestBase {
 
-  behavior of "EventFilterOperatorBuilder"
+  behavior of "FilterOperatorBuilder"
 
-  val builder = new EventFilterOperatorBuilder
+  val builder = new FilterOperatorBuilder
 
-  it should "build proper EventFilterOperator with empty config" in {
-    val task = storyBuilder.buildTask("""{}""".stripMargin)(builder)
+  it should "build proper FilterOperator with empty config" in {
+    val task = storyBuilder.buildTaskWithBuilder("""{}""".stripMargin)(builder)
 
-    val settings: EventFilterSettings = task.settings
+    val settings: FilterOperatorSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq.empty[String]
     settings.eventNameBlackList shouldEqual Seq.empty[String]
@@ -39,8 +39,8 @@ class EventFilterOperatorBuilderTest extends TestBase {
     settings.onlyExtras shouldEqual Map.empty[String, String]
   }
 
-  it should "build proper EventFilterOperator with proper config" in {
-    val task = storyBuilder.buildTask("""{
+  it should "build proper FilterOperator with proper config" in {
+    val task = storyBuilder.buildTaskWithBuilder("""{
         |  "event-name-white-list": ["user\\..*", "wio\\..*"],
         |  "event-name-black-list": ["image\\..*"],
         |  "channel-white-list": ["membership", "forum"],
@@ -52,7 +52,7 @@ class EventFilterOperatorBuilderTest extends TestBase {
         |  }
         |}""".stripMargin)(builder)
 
-    val settings: EventFilterSettings = task.settings
+    val settings: FilterOperatorSettings = task.settings
 
     settings.eventNameWhiteList shouldEqual Seq("user\\..*", "wio\\..*")
     settings.eventNameBlackList shouldEqual Seq("image\\..*")

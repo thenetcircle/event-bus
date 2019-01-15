@@ -44,6 +44,8 @@ class DecouplerBidiOperatorTest extends TestBase with BeforeAndAfter {
         failoverResult.offer(pl)
         pl
       })
+
+    override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
   }
 
   val testSource: Source[Payload, NotUsed] = Source(

@@ -23,11 +23,11 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat
 import com.thenetcircle.event_bus.event.{EventBody, EventMetaData, EventTransportMode}
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, SKIPPING}
 
-class EventFilterOperatorTest extends TestBase {
+class FilterOperatorTest extends TestBase {
 
-  behavior of "EventFilterOperator"
+  behavior of "FilterOperator"
 
-  val builder = new EventFilterOperatorBuilder
+  val builder = new FilterOperatorBuilder
 
   /*val eventFilter = builder.build("""{
         |"event-name-white-list": ["user\\..*", "wio\\..*"],
@@ -42,7 +42,7 @@ class EventFilterOperatorTest extends TestBase {
         |}""".stripMargin)*/
 
   it should "testEventNameWhiteList" in {
-    val eventFilter = storyBuilder.buildTask("""{
+    val eventFilter = storyBuilder.buildTaskWithBuilder("""{
         |"event-name-white-list": ["user\\..*", "wio\\..*"]
         |}""".stripMargin)(builder)
 
@@ -64,7 +64,7 @@ class EventFilterOperatorTest extends TestBase {
   }
 
   it should "testEventNameBlackList" in {
-    val eventFilter = storyBuilder.buildTask("""{
+    val eventFilter = storyBuilder.buildTaskWithBuilder("""{
         |"event-name-black-list": ["user\\..*", "wio\\..*"]
         |}""".stripMargin)(builder)
 
@@ -86,7 +86,7 @@ class EventFilterOperatorTest extends TestBase {
   }
 
   it should "testEventChannelWhiteList" in {
-    val eventFilter = storyBuilder.buildTask("""{
+    val eventFilter = storyBuilder.buildTaskWithBuilder("""{
         |"channel-white-list": ["membership", "forum"]
         |}""".stripMargin)(builder)
 
@@ -107,7 +107,7 @@ class EventFilterOperatorTest extends TestBase {
   }
 
   it should "testEventChannelBlackList" in {
-    val eventFilter = storyBuilder.buildTask("""{
+    val eventFilter = storyBuilder.buildTaskWithBuilder("""{
         |"channel-black-list": ["membership", "forum"]
         |}""".stripMargin)(builder)
 
@@ -128,7 +128,7 @@ class EventFilterOperatorTest extends TestBase {
   }
 
   it should "testEventTransportMode" in {
-    val eventFilter = storyBuilder.buildTask("""{
+    val eventFilter = storyBuilder.buildTaskWithBuilder("""{
         |"allowed-transport-modes": ["ASYNC", "BOTH", "NONE", "SYNC"]
         |}""".stripMargin)(builder)
 
@@ -152,7 +152,7 @@ class EventFilterOperatorTest extends TestBase {
   }
 
   it should "testEventExtras" in {
-    val eventFilter = storyBuilder.buildTask("""{
+    val eventFilter = storyBuilder.buildTaskWithBuilder("""{
         |"only-extras": {
         |   "actorId": "1234",
         |   "generatorId": "tnc-event-dispatcher"

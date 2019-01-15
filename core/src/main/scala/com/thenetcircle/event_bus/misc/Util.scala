@@ -25,7 +25,7 @@ object Util {
   private lazy val jsonStringParseOptions = ConfigParseOptions.defaults().setSyntax(ConfigSyntax.JSON)
 
   def convertJsonStringToConfig(configString: String): Config =
-    ConfigFactory.parseString(configString.replaceAll("""\s*\#.*""", ""), jsonStringParseOptions)
+    ConfigFactory.parseString(configString.replaceAll("""^\s*\#.*""", ""), jsonStringParseOptions)
 
   def getLastPartOfPath(path: String): String =
     try {
@@ -37,6 +37,6 @@ object Util {
   def makeUTF8String(bytes: Array[Byte]): String = new String(bytes, "UTF-8")
 
   def getBriefOfEvent(event: Event): String =
-    s"uuid: ${event.uuid}, name: ${event.metadata.name}, topic: ${event.metadata.topic}, channel: ${event.metadata.channel},  createdAt: ${event.createdAt}"
+    s"uuid: ${event.uuid}, name: ${event.metadata.name}, channel: ${event.metadata.channel},  createdAt: ${event.createdAt}"
 
 }

@@ -33,15 +33,16 @@ import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Try
 
 case class DecouplerSettings(
-    bufferSize: Int = 100,
+    bufferSize: Int = 10000,
     terminateDelay: FiniteDuration = 10 minutes,
     secondarySink: Option[IFailoverTask] = None,
-    secondarySinkBufferSize: Int = 100
+    secondarySinkBufferSize: Int = 1000
 )
 
-class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator with TaskLogging {
+class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperator with TaskLogging {
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
@@ -69,6 +70,9 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
 
     if (runningSecondarySink.isEmpty) {
       runningSecondarySink = settings.secondarySink.map(ssink => {
+        // init failover task
+        ssink.initTask(getTaskName(), getStory())
+        // materialize failover stream
         Source
           .queue[Payload](settings.secondarySinkBufferSize, OverflowStrategy.dropNew)
           .via(ssink.failoverFlow())
@@ -244,8 +248,10 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
     })
   }
 
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit =
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
     runningSecondarySink.foreach(_.complete())
+    settings.secondarySink.foreach(_.shutdown())
+  }
 }
 
 class DecouplerBidiOperatorBuilder extends ITaskBuilder[DecouplerBidiOperator] {
@@ -254,13 +260,9 @@ class DecouplerBidiOperatorBuilder extends ITaskBuilder[DecouplerBidiOperator] {
 
   override val defaultConfig: Config =
     ConfigFactory.parseString("""{
-      |  "buffer-size": 100,
+      |  "buffer-size": 10000,
       |  "terminate-delay": "10 m",
-      |  "secondary-sink": {
-      |    "builder": "com.thenetcircle.event_bus.story.tasks.operators.FileOperatorBuilder",
-      |    "config": "{}"
-      |  },
-      |  "secondary-sink-buffer-size": 100
+      |  "secondary-sink-buffer-size": 1000
       |}""".stripMargin)
 
   override def buildTask(
@@ -270,12 +272,8 @@ class DecouplerBidiOperatorBuilder extends ITaskBuilder[DecouplerBidiOperator] {
       bufferSize = config.as[Int]("buffer-size"),
       terminateDelay = config.as[FiniteDuration]("terminate-delay"),
       secondarySink = config
-        .as[Option[Config]]("secondary-sink")
-        .map(conf => {
-          storyBuilder.get.buildTask(conf.as[String]("config"))(
-            Class.forName(conf.as[String]("builder")).newInstance().asInstanceOf[ITaskBuilder[IFailoverTask]]
-          )
-        }),
+        .as[Option[String]]("secondary-sink")
+        .flatMap(content => Try(storyBuilder.map(_.buildFailoverTask(content))).getOrElse(None)),
       secondarySinkBufferSize = config.as[Int]("secondary-sink-buffer-size")
     )
 

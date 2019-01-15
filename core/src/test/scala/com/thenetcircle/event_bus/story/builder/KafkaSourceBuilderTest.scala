@@ -28,7 +28,7 @@ class KafkaSourceBuilderTest extends TestBase {
 
   it should "build correct KafkaSource with the default config" in {
 
-    val sink = storyBuilder.buildTask("""{
+    val sink = storyBuilder.buildTaskWithBuilder("""{
         |  "bootstrap-servers": "test-server",
         |  "group-id": "test-group",
         |  "topics": [ "abc", "def" ],

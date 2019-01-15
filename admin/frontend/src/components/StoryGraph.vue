@@ -35,14 +35,14 @@
             </a>
           </div>
 
-          <div class="column is-narrow" :class="ops.position" v-for="(ops, index) in storyInfo.operators">
+          <div class="column is-narrow" :class="ops.execOrder" v-for="(ops, index) in storyInfo.operators">
 
                 <a class="box"
                    @click="onEditTask('Operator ' + (index + 1), 'operator', ops)">
 
                   <h5 class="title is-5" :id="'operator' + index">
                     {{ ops.type }}
-                    <span class="tag" :class="ops.position == 'post' ? 'is-warning' : 'is-dark'" v-if="ops.position != 'both'">{{ops.position}}</span>
+                    <span class="tag" :class="ops.execOrder == 'after' ? 'is-warning' : 'is-dark'" v-if="ops.execOrder != 'both'">{{ops.execOrder}}</span>
                   </h5>
 
                   <div class="columns">
@@ -50,10 +50,10 @@
                       <a class="icon" v-show="index > 0"
                          @click.stop="onChangeOperatorPos(index, 'left')"><i
                         class="fas fa-arrow-left"></i></a>
-                      <a class="icon" v-show="ops.position === 'post'"
+                      <a class="icon" v-show="ops.execOrder === 'after'"
                          @click.stop="onChangeOperatorPos(index, 'up')"><i
                         class="fas fa-arrow-up"></i></a>
-                      <a class="icon" v-show="ops.position === 'pre'"
+                      <a class="icon" v-show="ops.execOrder === 'before'"
                          @click.stop="onChangeOperatorPos(index, 'down')"><i
                         class="fas fa-arrow-down"></i></a>
                       <a class="icon" v-show="index + 1 < storyInfo.operators.length"
@@ -105,7 +105,7 @@
 <script lang="ts">
   import Vue from "vue"
   import {
-    OperatorPosition,
+    UndiOpExecOrder,
     StoryOperator,
     StoryTask,
     StoryUtils,
@@ -228,7 +228,7 @@
       },
 
       onChangeOperatorPos(index: number, direction: String) {
-        let operator = this.storyInfo.operators[index]
+        let operator: StoryOperator = this.storyInfo.operators[index]
         let newOperators: StoryOperator[] = []
         switch (direction) {
           case 'left':
@@ -250,13 +250,13 @@
             }
             break;
           case 'up':
-            if (operator.position != OperatorPosition.BOTH) {
-              operator.position = OperatorPosition.PRE;
+            if (operator.execOrder != UndiOpExecOrder.Bidi) {
+              operator.execOrder = UndiOpExecOrder.BeforeSink;
             }
             break;
           case 'down':
-            if (operator.position != OperatorPosition.BOTH) {
-              operator.position = OperatorPosition.POST;
+            if (operator.execOrder != UndiOpExecOrder.Bidi) {
+              operator.execOrder = UndiOpExecOrder.AfterSink;
             }
             break;
         }

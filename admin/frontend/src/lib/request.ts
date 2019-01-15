@@ -1,6 +1,6 @@
 import axios from "axios"
 import bus from "../lib/bus"
-import {OperatorPosition, StoryInfo, StoryStatus, StoryUtils} from "./story-utils";
+import {StoryInfo, StoryStatus, StoryUtils, UndiOpExecOrder} from "./story-utils";
 import {polyfill, Promise, Thenable} from "es6-promise";
 import {RunnerInfo, RunnerStatus, RunnerUtils} from "./runner-utils";
 
@@ -229,8 +229,11 @@ class RequestImpl implements Request {
       'sink': `${storyInfo.sink.type}#${storyInfo.sink.settings}`
     }
     if (storyInfo.operators.length > 0) {
-      data.operators = storyInfo.operators.map(trans => {
-        return `${trans.position.toLowerCase()}#${trans.type}#${trans.settings}`
+      data.operators = storyInfo.operators.map(op => {
+        if (op.execOrder == UndiOpExecOrder.AfterSink)
+          return `${op.type}:after#${op.settings}`
+        else
+          return `${op.type}#${op.settings}`
       }).join('|||')
     }
     return data
@@ -276,13 +279,13 @@ class OfflineRequest implements Request {
       },
       status: StoryStatus.INIT,
       operators: [{
-        position: OperatorPosition.PRE,
+        execOrder: UndiOpExecOrder.BeforeSink,
         type: 'tnc-topic-resolver', settings: `{
   "default-topic": "event-{app_name}-default",
   "use-cache": false
 }`
       }, {
-        position: OperatorPosition.POST,
+        execOrder: UndiOpExecOrder.AfterSink,
         type: 'cassandra', settings: `{
   "contact-points": [
     "cassandra-server-01",

@@ -31,7 +31,7 @@ class HttpSourceBuilderTest extends TestBase {
 
   it should "build correct HttpSource with the default config" in {
 
-    val source = storyBuilder.buildTask("""{
+    val source = storyBuilder.buildTaskWithBuilder("""{
         |  "interface": "127.0.0.1",
         |  "port": 8888,
         |  "succeeded-response": "okoo",

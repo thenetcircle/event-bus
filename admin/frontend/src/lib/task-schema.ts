@@ -174,7 +174,7 @@ const operatorSchemas: any = {
       }
     }
   },
-  'event-filter': {
+  'filter': {
     "title": "TNC Event Filter",
     "type": "object",
     "properties": {
@@ -225,11 +225,11 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "enum": [
-            "SYNC_PLUS", "ASYNC", "BOTH", "NONE"
+            "SYNC_PLUS", "ASYNC", "Bidi", "NONE"
           ],
           "title": "Transport Mode"
         },
-        "default": ["ASYNC", "BOTH", "NONE"],
+        "default": ["ASYNC", "Bidi", "NONE"],
         "required": true
       },
       "only-extras": {
@@ -242,7 +242,6 @@ const operatorSchemas: any = {
   },
   'cassandra': {
     "type": "object",
-    "direction": "bidi",
     "properties": {
       "contact-points": {
         "type": "array",
@@ -264,6 +263,52 @@ const operatorSchemas: any = {
         "required": true
       }
     }
+  },
+  'decoupler': {
+    "type": "object",
+    "direction": "bidi",
+    "properties": {
+      "buffer-size": {
+        "type": "integer",
+        "default": 10000,
+        "required": true
+      },
+      "terminate-delay": {
+        "type": "string",
+        "default": "10 m",
+        "description": "possible units: (s)econd, (m)inute, (h)ours",
+        "required": true
+      },
+      "secondary-sink": {
+        "type": "string",
+        "description": "configuration of the failover task",
+        "required": true
+      },
+      "secondary-sink-buffer-size": {
+        "type": "integer",
+        "default": 1000,
+        "required": true
+      }
+    }
+  },
+  'file': {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string",
+        "required": true
+      },
+      "content-delimiter": {
+        "type": "string",
+        "default": "<tab>",
+        "required": true
+      },
+      "event-delimiter": {
+        "type": "string",
+        "default": "<newline>#-:#:-#<newline>",
+        "required": true
+      }
+    }
   }
 }
 
@@ -279,7 +324,7 @@ const sinkSchemas: any = {
           "method": {
             "type": "string",
             "enum": [
-              "POST", "GET"
+              "AfterSink", "GET"
             ],
             "required": true
           },

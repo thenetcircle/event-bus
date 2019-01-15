@@ -117,11 +117,23 @@ class FileOperatorBuilder extends ITaskBuilder[FileOperator] {
 
   override val taskType: String = "file"
 
-  override val defaultConfig: Config = ConfigFactory.empty()
+  override val defaultConfig: Config =
+    ConfigFactory.parseString(
+      """{
+        |  content-delimiter = "<tab>"
+        |  event-delimiter = "<newline>#-:#:-#<newline>"
+        |}""".stripMargin
+    )
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): FileOperator =
-    new FileOperator(FileOperatorSettings(path = config.as[String]("path")))
+  )(implicit appContext: AppContext): FileOperator = {
+    val settings = FileOperatorSettings(
+      path = config.as[String]("path"),
+      contentDelimiter = config.as[String]("content-delimiter"),
+      eventDelimiter = config.as[String]("event-delimiter")
+    )
+    new FileOperator(settings)
+  }
 
 }

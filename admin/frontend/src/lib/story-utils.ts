@@ -1,5 +1,5 @@
 export enum StoryStatus { INIT = 'INIT' }
-export enum OperatorPosition {PRE = 'pre', POST = 'post', BOTH = 'both' }
+export enum UndiOpExecOrder { BeforeSink = 'before', AfterSink = 'after', Bidi = 'both' }
 
 export interface StoryData {
   source: string;
@@ -15,7 +15,7 @@ export interface StoryTask {
 }
 
 export interface StoryOperator extends StoryTask {
-  position: OperatorPosition;
+  execOrder: UndiOpExecOrder;
 }
 
 export interface StoryInfo {
@@ -31,11 +31,9 @@ function _createStoryTaskFromString(str: string): StoryTask {
 }
 
 function _createStoryOperatorFromString(str: string): StoryOperator {
-  if (str.indexOf(OperatorPosition.PRE + '#') !== 0 && str.indexOf(OperatorPosition.POST + '#') !== 0 && str.indexOf(OperatorPosition.BOTH + '#') !== 0 ) {
-    str = OperatorPosition.PRE + '#' + str;
-  }
-  let _s = str.split('#', 3)
-  return { position: <OperatorPosition>_s[0], type: _s[1], settings: _s[2] || '{}' }
+  let _s = str.split('#', 2)
+  let _ms = _s[0].split(':')
+  return { type: _ms[0], settings: _s[1] || '{}', execOrder: _ms[1] && _ms[1] == 'after' ? UndiOpExecOrder.AfterSink : UndiOpExecOrder.BeforeSink }
 }
 
 export class StoryUtils {

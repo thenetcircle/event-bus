@@ -19,11 +19,11 @@ package com.thenetcircle.event_bus.story.tasks.operators
 
 import com.thenetcircle.event_bus.IntegrationTestBase
 
-class TNCTopicResolvingOperatorTest extends IntegrationTestBase {
+class TopicResolverOperatorTest extends IntegrationTestBase {
 
-  behavior of "TNCTopicResolvingOperator"
+  behavior of "TopicResolverOperator"
 
-  val resolver = new TNCTopicResolvingOperator(zkManager, "event-default")
+  val resolver = new TopicResolverOperator(zkManager, "event-default")
   resolver.init()
 
   it should "solve topic correctly" in {

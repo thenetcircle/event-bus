@@ -19,13 +19,13 @@ package com.thenetcircle.event_bus.story
 
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.misc.Util
-import com.thenetcircle.event_bus.story.Story.OperatorPosition
+import com.thenetcircle.event_bus.story.Story.UndiOpExecOrder
 import com.thenetcircle.event_bus.story.interfaces._
 import com.typesafe.scalalogging.LazyLogging
 
 import scala.reflect.runtime.universe._
+import scala.util.control.NonFatal
 import scala.util.matching.Regex
-import scala.util.Try
 
 class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
@@ -46,11 +46,11 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = {
     typeOf[T] match {
-      case t if t =:= typeOf[ISource] =>
+      case t if t <:< typeOf[ISource] =>
         sourceBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
-      case t if t =:= typeOf[ISink] =>
+      case t if t <:< typeOf[ISink] =>
         sinkBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
-      case t if t =:= typeOf[IOperator] =>
+      case t if t <:< typeOf[IOperator] =>
         operatorBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IOperator]])
     }
     builder.setStoryBuilder(this)
@@ -66,40 +66,58 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
       )
     } catch {
       case ex: Throwable =>
-        logger.error(s"story ${info.name} build failed with error $ex")
+        logger.error(s"Buiding story failed with StoryInfo: $info and error: $ex")
         throw ex
     }
 
   def buildSource(content: String): ISource = {
-    val (taskType, configString) = parseTaskContent(content)
-    sourceBuilders.get(taskType).map(buildTask(configString)).get
+    val taskContent = parseTaskContent(content)
+    sourceBuilders.get(taskContent.metadata.taskType).map(buildTaskWithBuilder(taskContent.config)).get
   }
 
   def buildSink(content: String): ISink = {
-    val (taskType, configString) = parseTaskContent(content)
-    sinkBuilders.get(taskType).map(buildTask(configString)).get
+    val taskContent = parseTaskContent(content)
+    sinkBuilders.get(taskContent.metadata.taskType).map(buildTaskWithBuilder(taskContent.config)).get
   }
 
-  def buildOperator(content: String): (OperatorPosition, IOperator) = {
-    val (posString, taskType, configString) = parserOperatorContent(content)
-    (OperatorPosition(posString), operatorBuilders.get(taskType).map(buildTask(configString)).get)
+  def buildOperator(content: String): (UndiOpExecOrder, IOperator) = {
+    val taskContent = parseTaskContent(content)
+    (
+      UndiOpExecOrder(taskContent.metadata.extra),
+      operatorBuilders.get(taskContent.metadata.taskType).map(buildTaskWithBuilder(taskContent.config)).get
+    )
   }
 
-  def parseTaskContent(content: String): (String, String) = {
-    val re = content.split(Regex.quote(CONTENT_DELIMITER), 2)
-    (re(0), if (re.length == 2) re(1) else "{}")
-  }
-
-  def parserOperatorContent(_content: String): (String, String, String) = {
-    var content = _content
-    if (!content.startsWith("pre#") && !content.startsWith("post#") && !content.startsWith("both#")) {
-      content = s"pre#$content"
+  def buildFailoverTask(content: String): IFailoverTask = {
+    val taskContent  = parseTaskContent(content)
+    val taskCategory = taskContent.metadata.extra.getOrElse("operator")
+    try {
+      taskCategory.toLowerCase match {
+        case "operator" => buildOperator(content)._2.asInstanceOf[IFailoverTask]
+        case "sink"     => buildSink(content).asInstanceOf[IFailoverTask]
+        case _          => throw new IllegalArgumentException(s"Unsupported task category $taskCategory")
+      }
+    } catch {
+      case NonFatal(ex) =>
+        val errorMsg = s"Building failover task failed with task content: $taskContent"
+        logger.error(errorMsg, ex)
+        throw new IllegalArgumentException(errorMsg, ex)
     }
-    val re = content.split(Regex.quote(CONTENT_DELIMITER), 3)
-    (re(0), re(1), Try(re(2)).getOrElse("{}"))
   }
 
-  def buildTask[T <: ITask](
+  def parseTaskContent(content: String): TaskContent = {
+    val re     = content.split(Regex.quote(CONTENT_DELIMITER), 2)
+    val metaRe = re(0).split(Regex.quote(CONTENT_METADATA_DELIMITER))
+    TaskContent(
+      metadata = TaskContentMetadata(
+        taskType = metaRe(0),
+        extra = if (metaRe.length > 1) Some(metaRe(1)) else None,
+      ),
+      config = if (re.length == 2) re(1) else "{}"
+    )
+  }
+
+  def buildTaskWithBuilder[T <: ITask](
       configString: String
   )(taskBuilder: ITaskBuilder[T]): T = {
     val config = Util.convertJsonStringToConfig(configString).withFallback(taskBuilder.defaultConfig)
@@ -108,8 +126,9 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 }
 
 object StoryBuilder {
-  val CONTENT_DELIMITER = """#"""
-  val TASK_DELIMITER    = """|||"""
+  val CONTENT_DELIMITER          = """#"""
+  val CONTENT_METADATA_DELIMITER = """:"""
+  val TASK_DELIMITER             = """|||"""
 
   case class StoryInfo(
       name: String,
@@ -117,5 +136,15 @@ object StoryBuilder {
       source: String,
       sink: String,
       operators: Option[String]
+  )
+
+  case class TaskContent(
+      metadata: TaskContentMetadata,
+      config: String
+  )
+
+  case class TaskContentMetadata(
+      taskType: String,
+      extra: Option[String] = None
   )
 }

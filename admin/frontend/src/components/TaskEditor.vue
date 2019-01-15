@@ -31,7 +31,7 @@ import {OperatorPosition} from '../lib/story-utils';
 <script lang="ts">
   import Vue from "vue"
   import taskSchema from "../lib/task-schema"
-  import {OperatorPosition, StoryOperator, StoryTask, TaskEditAction} from '../lib/story-utils';
+  import {UndiOpExecOrder, StoryOperator, StoryTask, TaskEditAction} from '../lib/story-utils';
 
   export default Vue.extend({
     props: ['title', 'action'],
@@ -69,7 +69,7 @@ import {OperatorPosition} from '../lib/story-utils';
           newTask = <StoryOperator>{
             type: this.currTaskType,
             settings: JSON.stringify(this.editor.getValue()),
-            position: taskSchema[this.action.taskCategory][this.currTaskType]['direction'] == 'bidi' ? OperatorPosition.BOTH : (this.action.task.position || OperatorPosition.PRE)
+            execOrder: taskSchema[this.action.taskCategory][this.currTaskType]['direction'] == 'bidi' ? UndiOpExecOrder.Bidi : (this.action.task.execOrder || UndiOpExecOrder.BeforeSink)
           }
         }
         else {

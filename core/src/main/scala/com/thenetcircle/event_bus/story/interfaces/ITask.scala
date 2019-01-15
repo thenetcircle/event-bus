@@ -29,17 +29,35 @@ trait ITask {
   private var taskName: Option[String] = None
   private var story: Option[Story]     = None
 
-  def initTask(taskName: String, story: Story): Unit = {
+  def initTask(taskName: String, story: Story): Unit = initTask(taskName, Some(story))
+
+  def initTask(taskName: String): Unit = initTask(taskName, None)
+
+  def initTask(taskName: String, story: Option[Story]): Unit = {
     if (this.story.isDefined)
       throw new IllegalStateException(
         s"The task ${this.taskName} of story ${this.story.get.storyName} has been inited already."
       )
     this.taskName = Some(taskName)
-    this.story = Some(story)
+    this.story = story
   }
+
   def getTaskName(): String     = this.taskName.getOrElse("unknown")
   def getStory(): Option[Story] = this.story
   def getStoryName(): String    = getStory().map(_.storyName).getOrElse("unknown")
+
+  /**
+    * Shutdown the task when something got wrong or the task has to be finished
+    * It's a good place to clear up the resources like connection, actor, etc...
+    * It's recommended to make this method to be idempotent, Because it could be called multiple times
+    *
+    * @param runningContext [[TaskRunningContext]]
+    */
+  def shutdown()(implicit runningContext: TaskRunningContext): Unit
+
+}
+
+object ITask {
 
   def wrapPartialFlow(
       partialFlow: Flow[Payload, Payload, NotUsed],
@@ -74,14 +92,5 @@ trait ITask {
             FlowShape(partitioner.in, output.out)
           }
       )
-
-  /**
-    * Shutdown the task when something got wrong or the task has to be finished
-    * It's a good place to clear up the resources like connection, actor, etc...
-    * It's recommended to make this method to be idempotent, Because it could be called multiple times
-    *
-    * @param runningContext [[TaskRunningContext]]
-    */
-  def shutdown()(implicit runningContext: TaskRunningContext): Unit
 
 }

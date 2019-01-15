@@ -38,9 +38,7 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String)
-    extends IUndiOperator
-    with TaskLogging {
+class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) extends IUndiOperator with TaskLogging {
 
   import TopicInfoProtocol._
 
@@ -172,14 +170,14 @@ class TNCTopicResolvingOperator(zkManager: ZKManager, val _defaultTopic: String)
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down TNCTopicResolvingOperator of story ${getStoryName()}.")
+    logger.info(s"shutting down TopicResolverOperator of story ${getStoryName()}.")
     nameIndex = Map.empty
     channelIndex = Map.empty
     zkWatcher.foreach(_.close())
   }
 }
 
-class TNCTopicResolvingOperatorBuilder() extends ITaskBuilder[TNCTopicResolvingOperator] {
+class TopicResolverOperatorBuilder() extends ITaskBuilder[TopicResolverOperator] {
 
   override val taskType: String = "tnc-topic-resolver"
 
@@ -192,13 +190,13 @@ class TNCTopicResolvingOperatorBuilder() extends ITaskBuilder[TNCTopicResolvingO
 
   override def buildTask(
       config: Config
-  )(implicit appContext: AppContext): TNCTopicResolvingOperator = {
+  )(implicit appContext: AppContext): TopicResolverOperator = {
     val zkMangerOption = appContext.getZKManager()
     if (zkMangerOption.isEmpty) {
-      throw new IllegalArgumentException("ZooKeeperManager is required for TNCTopicResolvingOperator")
+      throw new IllegalArgumentException("ZooKeeperManager is required for TopicResolverOperator")
     }
 
-    new TNCTopicResolvingOperator(
+    new TopicResolverOperator(
       zkMangerOption.get,
       config.getString("default-topic")
     )

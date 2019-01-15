@@ -31,7 +31,7 @@ class HttpSinkBuilderTest extends TestBase {
 
   it should "build correct HttpSink with the default config" in {
 
-    val sink = storyBuilder.buildTask("""{
+    val sink = storyBuilder.buildTaskWithBuilder("""{
         |  "default-request" : {
         |    "uri": "http://www.google.com"
         |  },
