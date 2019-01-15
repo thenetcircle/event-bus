@@ -44,13 +44,16 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
   private def createTaskBuilderInstance[T <: ITask](builderClass: Class[ITaskBuilder[T]]): ITaskBuilder[T] =
     builderClass.newInstance()
 
-  def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = typeOf[T] match {
-    case t if t =:= typeOf[ISource] =>
-      sourceBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
-    case t if t =:= typeOf[ISink] =>
-      sinkBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
-    case t if t =:= typeOf[IOperator] =>
-      operatorBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IOperator]])
+  def addTaskBuilder[T <: ITask: TypeTag](builder: ITaskBuilder[T]): Unit = {
+    typeOf[T] match {
+      case t if t =:= typeOf[ISource] =>
+        sourceBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISource]])
+      case t if t =:= typeOf[ISink] =>
+        sinkBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[ISink]])
+      case t if t =:= typeOf[IOperator] =>
+        operatorBuilders += (builder.taskType -> builder.asInstanceOf[ITaskBuilder[IOperator]])
+    }
+    builder.setStoryBuilder(this)
   }
 
   def buildStory(info: StoryInfo): Story =
@@ -89,7 +92,7 @@ class StoryBuilder()(implicit appContext: AppContext) extends LazyLogging {
 
   def parserOperatorContent(_content: String): (String, String, String) = {
     var content = _content
-    if (!content.startsWith("pre#") && !content.startsWith("post#")) {
+    if (!content.startsWith("pre#") && !content.startsWith("post#") && !content.startsWith("both#")) {
       content = s"pre#$content"
     }
     val re = content.split(Regex.quote(CONTENT_DELIMITER), 3)

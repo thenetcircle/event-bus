@@ -113,7 +113,7 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {}
 }
 
-class FileOperatorBuilder() extends ITaskBuilder[FileOperator] {
+class FileOperatorBuilder extends ITaskBuilder[FileOperator] {
 
   override val taskType: String = "file"
 

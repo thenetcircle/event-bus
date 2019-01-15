@@ -23,14 +23,12 @@ import org.slf4j.MDC
 
 object StoryLogger {
 
-  var instances: Map[String, StoryLogger] = Map.empty
+  // var instances: Map[String, StoryLogger] = Map.empty
 
-  def apply(storyName: String): StoryLogger =
-    instances.getOrElse(storyName, {
-      val logger = new StoryLogger(storyName)(Underlying(classOf[ITask]))
-      instances += (storyName -> logger)
-      logger
-    })
+  def apply(storyName: String): StoryLogger = apply(storyName, classOf[ITask].getName)
+
+  def apply(storyName: String, className: String): StoryLogger =
+    new StoryLogger(storyName)(Underlying("event_bus.story_logger." + className))
 
 }
 

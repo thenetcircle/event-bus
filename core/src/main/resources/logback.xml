@@ -92,7 +92,7 @@
 	<logger name="org.apache.zookeeper" level="INFO" />
 	<logger name="com.datastax.driver.core.Connection" level="INFO" />
 
-	<logger name="com.thenetcircle.event_bus.story.interfaces.ITask" level="${EB_LOGLEVEL:-DEBUG}" additivity="false">
+	<logger name="event_bus.story_logger" level="${EB_LOGLEVEL:-DEBUG}" additivity="false">
 		<appender-ref ref="${EB_LOGREF:-STORY}" />
 		<appender-ref ref="SENTRY" />
 	</logger>

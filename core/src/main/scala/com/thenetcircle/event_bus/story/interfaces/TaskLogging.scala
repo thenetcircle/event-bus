@@ -4,5 +4,5 @@ import com.thenetcircle.event_bus.story.StoryLogger
 
 trait TaskLogging extends Logging { _: ITask =>
   protected lazy val storyLogger: StoryLogger =
-    StoryLogger(getStoryName())
+    StoryLogger(getStoryName(), getClass.getName)
 }

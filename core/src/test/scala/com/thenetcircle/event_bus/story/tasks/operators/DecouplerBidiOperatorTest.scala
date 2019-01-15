@@ -91,7 +91,7 @@ class DecouplerBidiOperatorTest extends TestBase with BeforeAndAfter {
     val task = new DecouplerBidiOperator(
       DecouplerSettings(
         bufferSize = 2,
-        completeDelay = 3 second,
+        terminateDelay = 3 second,
         secondarySink = Some(secondarySink)
       )
     )
@@ -122,7 +122,7 @@ class DecouplerBidiOperatorTest extends TestBase with BeforeAndAfter {
     val task = new DecouplerBidiOperator(
       DecouplerSettings(
         bufferSize = 3,
-        completeDelay = 3 second,
+        terminateDelay = 3 second,
         secondarySink = Some(secondarySink)
       )
     )

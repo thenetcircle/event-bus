@@ -25,7 +25,7 @@ import akka.stream.scaladsl.{BidiFlow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
-import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -35,10 +35,10 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case class DecouplerSettings(
-    bufferSize: Int = 1,
-    completeDelay: FiniteDuration = 10 minutes,
+    bufferSize: Int = 100,
+    terminateDelay: FiniteDuration = 10 minutes,
     secondarySink: Option[IFailoverTask] = None,
-    secondarySinkBufferSize: Int = 10
+    secondarySinkBufferSize: Int = 100
 )
 
 class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator with TaskLogging {
@@ -131,7 +131,7 @@ class DecouplerBidiOperator(settings: DecouplerSettings) extends IBidiOperator w
             if (buffer.isEmpty && pendingToOperatePayloads.get() == 0)
               completeStage()
             else {
-              scheduleOnce(None, settings.completeDelay)
+              scheduleOnce(None, settings.terminateDelay)
               completing.set(true)
             }
           }
@@ -254,14 +254,29 @@ class DecouplerBidiOperatorBuilder extends ITaskBuilder[DecouplerBidiOperator] {
 
   override val defaultConfig: Config =
     ConfigFactory.parseString("""{
-      |  "buffer-size": 1
+      |  "buffer-size": 100,
+      |  "terminate-delay": "10 m",
+      |  "secondary-sink": {
+      |    "builder": "com.thenetcircle.event_bus.story.tasks.operators.FileOperatorBuilder",
+      |    "config": "{}"
+      |  },
+      |  "secondary-sink-buffer-size": 100
       |}""".stripMargin)
 
   override def buildTask(
       config: Config
   )(implicit appContext: AppContext): DecouplerBidiOperator = {
     val settings = DecouplerSettings(
-      bufferSize = config.as[Int]("buffer-size")
+      bufferSize = config.as[Int]("buffer-size"),
+      terminateDelay = config.as[FiniteDuration]("terminate-delay"),
+      secondarySink = config
+        .as[Option[Config]]("secondary-sink")
+        .map(conf => {
+          storyBuilder.get.buildTask(conf.as[String]("config"))(
+            Class.forName(conf.as[String]("builder")).newInstance().asInstanceOf[ITaskBuilder[IFailoverTask]]
+          )
+        }),
+      secondarySinkBufferSize = config.as[Int]("secondary-sink-buffer-size")
     )
 
     new DecouplerBidiOperator(settings)
