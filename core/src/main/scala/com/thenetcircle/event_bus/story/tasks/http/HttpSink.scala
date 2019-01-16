@@ -281,20 +281,23 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |}""".stripMargin
     )
 
+  private def buildHttpRequestFromConfig(config: Config)(implicit appContext: AppContext): HttpRequest = {
+    val requestMethod = config.as[String]("method").toUpperCase match {
+      case "POST" => HttpMethods.POST
+      case "GET"  => HttpMethods.GET
+      case unacceptedMethod =>
+        throw new IllegalArgumentException(s"Request method $unacceptedMethod is not supported.")
+    }
+    val requsetUri = Uri(config.as[String]("uri"))
+    HttpRequest(method = requestMethod, uri = requsetUri)
+  }
+
   override def buildTask(
       config: Config
   )(implicit appContext: AppContext): HttpSink =
     try {
-      val requestMethod = config.as[String]("default-request.method").toUpperCase match {
-        case "POST" => HttpMethods.POST
-        case "GET"  => HttpMethods.GET
-        case unacceptedMethod =>
-          throw new IllegalArgumentException(s"Request method $unacceptedMethod is not supported.")
-      }
-      val requsetUri                  = Uri(config.as[String]("default-request.uri"))
-      val defaultRequest: HttpRequest = HttpRequest(method = requestMethod, uri = requsetUri)
-
-      val poolSettingsMap = config.as[Map[String, String]]("pool")
+      val defaultRequest: HttpRequest = buildHttpRequestFromConfig(config.getConfig("default-request"))
+      val poolSettingsMap             = config.as[Map[String, String]]("pool")
       val poolSettingsOption = if (poolSettingsMap.nonEmpty) {
         var settingsStr =
           poolSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")

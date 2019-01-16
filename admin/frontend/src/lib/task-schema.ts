@@ -324,7 +324,7 @@ const sinkSchemas: any = {
           "method": {
             "type": "string",
             "enum": [
-              "After", "GET"
+              "POST", "GET"
             ],
             "required": true
           },
