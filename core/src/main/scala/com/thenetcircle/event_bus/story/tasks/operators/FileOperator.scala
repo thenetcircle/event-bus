@@ -34,8 +34,8 @@ import scala.util.matching.Regex
 
 case class FileOperatorSettings(
     path: String,
-    contentDelimiter: String = "<tab>",
-    eventDelimiter: String = "<newline>#-:#:-#<newline>"
+    lineDelimiter: String = "<tab>",
+    eventDelimiter: String = "#-:#:-#<newline>"
 )
 
 class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator with IFailoverTask with TaskLogging {
@@ -61,9 +61,9 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
   override def flow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] = {
-    val contentDelimiter = replaceDelimiter(settings.contentDelimiter)
-    val eventDelimiter   = replaceDelimiter(settings.eventDelimiter)
-    val baseFilePath     = getBaseFilePath()
+    val lineDelimiter  = replaceDelimiter(settings.lineDelimiter)
+    val eventDelimiter = replaceDelimiter(settings.eventDelimiter)
+    val baseFilePath   = getBaseFilePath()
     def getFilePath(): String = {
       val currentDateTime = LocalDateTime.now()
       baseFilePath
@@ -96,7 +96,7 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
           .collect {
             case (STAGING(cause, taskName), event) =>
               val causeString = cause.map(_.getClass.getName).getOrElse("unknown")
-              ByteString(s"$taskName$contentDelimiter$causeString$contentDelimiter${event.body.data}$eventDelimiter")
+              ByteString(s"$taskName$lineDelimiter$causeString$lineDelimiter${event.body.data}$eventDelimiter")
           }
           .to(rotatedFileSink)
       )
@@ -120,8 +120,8 @@ class FileOperatorBuilder extends ITaskBuilder[FileOperator] {
   override val defaultConfig: Config =
     ConfigFactory.parseString(
       """{
-        |  content-delimiter = "<tab>"
-        |  event-delimiter = "<newline>#-:#:-#<newline>"
+        |  line-delimiter = "<tab>"
+        |  event-delimiter = "#-:#:-#<newline>"
         |}""".stripMargin
     )
 
@@ -130,7 +130,7 @@ class FileOperatorBuilder extends ITaskBuilder[FileOperator] {
   )(implicit appContext: AppContext): FileOperator = {
     val settings = FileOperatorSettings(
       path = config.as[String]("path"),
-      contentDelimiter = config.as[String]("content-delimiter"),
+      lineDelimiter = config.as[String]("line-delimiter"),
       eventDelimiter = config.as[String]("event-delimiter")
     )
     new FileOperator(settings)

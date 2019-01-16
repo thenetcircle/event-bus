@@ -34,21 +34,21 @@ class FileOperatorBuilderTest extends TestBase {
     val settings: FileOperatorSettings = operator.settings
 
     settings.path shouldEqual "/tmp/failover.log"
-    settings.contentDelimiter shouldEqual "<tab>"
+    settings.lineDelimiter shouldEqual "<tab>"
     settings.eventDelimiter shouldEqual "<newline>#-:#:-#<newline>"
   }
 
   it should "build proper operator with proper config" in {
     val operator = storyBuilder.buildTaskWithBuilder("""{
         |  "path": "/tmp/test.log",
-        |  "content-delimiter": "<newline>",
+        |  "line-delimiter": "<newline>",
         |  "event-delimiter": "#-#-#"
         |}""".stripMargin)(builder)
 
     val settings: FileOperatorSettings = operator.settings
 
     settings.path shouldEqual "/tmp/test.log"
-    settings.contentDelimiter shouldEqual "<newline>"
+    settings.lineDelimiter shouldEqual "<newline>"
     settings.eventDelimiter shouldEqual "#-#-#"
   }
 

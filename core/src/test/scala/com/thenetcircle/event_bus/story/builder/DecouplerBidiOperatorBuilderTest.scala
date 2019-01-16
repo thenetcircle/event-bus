@@ -60,7 +60,7 @@ class DecouplerBidiOperatorBuilderTest extends TestBase {
     settings.secondarySink.get shouldBe a[FileOperator]
     settings.secondarySink.get.asInstanceOf[FileOperator].settings shouldEqual FileOperatorSettings(
       path = "/tmp/secondary-sink.log",
-      contentDelimiter = "<tab>",
+      lineDelimiter = "<tab>",
       eventDelimiter = "#-#-#"
     )
     settings.secondarySinkBufferSize shouldEqual 10

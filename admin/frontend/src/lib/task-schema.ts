@@ -298,7 +298,7 @@ const operatorSchemas: any = {
         "type": "string",
         "required": true
       },
-      "content-delimiter": {
+      "line-delimiter": {
         "type": "string",
         "default": "<tab>",
         "required": true
