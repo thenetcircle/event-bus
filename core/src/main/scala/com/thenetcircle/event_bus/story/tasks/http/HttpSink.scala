@@ -21,6 +21,7 @@ import java.util.concurrent.ThreadLocalRandom
 
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -46,22 +47,23 @@ class UnexpectedResponseException(info: String) extends RuntimeException(info)
 
 case class HttpSinkSettings(
     defaultRequest: HttpRequest,
+    retrySettings: RetrySettings = RetrySettings(),
+    connectionPoolSettings: Option[ConnectionPoolSettings] = None,
+    concurrentRetries: Int = 1,
+    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`
+)
+
+case class RetrySettings(
     minBackoff: FiniteDuration = 1.second,
     maxBackoff: FiniteDuration = 30.seconds,
     randomFactor: Double = 0.2,
-    maxRetryTime: FiniteDuration = 12.hours,
-    concurrentRetries: Int = 1,
-    poolSettings: Option[ConnectionPoolSettings] = None
+    maxRetryTime: FiniteDuration = 12.hours
 )
 
 class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
 
-  def createRequest(event: Event): HttpRequest = {
-    var _request = settings.defaultRequest.withEntity(HttpEntity(event.body.data))
-    if (event.hasExtra("generatorUrl"))
-      _request = _request.withUri(event.getExtra("generatorUrl").get)
-    _request
-  }
+  def createHttpRequest(event: Event): HttpRequest =
+    settings.defaultRequest.withEntity(HttpEntity(settings.requestContentType, event.body.data))
 
   var retrySender: Option[ActorRef] = None
 
@@ -89,7 +91,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
     Flow[Payload]
       .mapAsync(settings.concurrentRetries) {
         case (NORMAL, event) =>
-          val retryTimeout = settings.maxRetryTime
+          val retryTimeout = settings.retrySettings.maxRetryTime
 
           import akka.pattern.ask
           implicit val askTimeout: Timeout = Timeout(retryTimeout)
@@ -97,7 +99,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
           val endPoint: String   = settings.defaultRequest.getUri().toString
           val eventBrief: String = Util.getBriefOfEvent(event)
 
-          (senderActor ? RetrySender.Req(createRequest(event), retryTimeout.fromNow))
+          (senderActor ? RetrySender.Req(createHttpRequest(event), retryTimeout.fromNow))
             .mapTo[Try[HttpResponse]]
             .map[(EventStatus, Event)] {
               case Success(resp) =>
@@ -172,7 +174,7 @@ object HttpSink {
 
     val http = Http()
     val poolSettings: ConnectionPoolSettings =
-      httpSinkSettings.poolSettings.getOrElse(
+      httpSinkSettings.connectionPoolSettings.getOrElse(
         ConnectionPoolSettings(runningContext.getActorSystem())
       )
 
@@ -184,9 +186,9 @@ object HttpSink {
     def backoffRetry(req: Req, receiver: ActorRef): Unit = if (req.deadline.hasTimeLeft()) {
       val retryDelay = calculateDelay(
         req.retryTimes,
-        httpSinkSettings.minBackoff,
-        httpSinkSettings.maxBackoff,
-        httpSinkSettings.randomFactor
+        httpSinkSettings.retrySettings.minBackoff,
+        httpSinkSettings.retrySettings.maxBackoff,
+        httpSinkSettings.retrySettings.randomFactor
       )
       if (req.deadline.compare(retryDelay.fromNow) > 0)
         context.system.scheduler
@@ -261,6 +263,7 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |  # the default request could be overrided by info of the event
       |  default-request {
       |    method = POST
+      |    protocol = "HTTP/1.1"
       |    # uri = "http://www.google.com"
       |  }
       |  min-backoff = 1 s
@@ -282,14 +285,35 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
     )
 
   private def buildHttpRequestFromConfig(config: Config)(implicit appContext: AppContext): HttpRequest = {
-    val requestMethod = config.as[String]("method").toUpperCase match {
-      case "POST" => HttpMethods.POST
-      case "GET"  => HttpMethods.GET
-      case unacceptedMethod =>
-        throw new IllegalArgumentException(s"Request method $unacceptedMethod is not supported.")
-    }
-    val requsetUri = Uri(config.as[String]("uri"))
-    HttpRequest(method = requestMethod, uri = requsetUri)
+    val method = HttpMethods.getForKeyCaseInsensitive(config.as[String]("method")).get
+    val uri    = Uri(config.as[String]("uri"))
+    val headers = config
+      .as[Option[Map[String, String]]]("headers")
+      .map(
+        _.to[collection.immutable.Seq]
+          .map {
+            case (name, value) =>
+              HttpHeader.parse(name, value) match {
+                case Ok(header, errors) => Some(header)
+                case _                  => None
+              }
+          }
+          .filter(_.isDefined)
+          .map(_.get)
+      )
+      .getOrElse(Nil)
+    val protocol = HttpProtocols.getForKeyCaseInsensitive(config.as[String]("protocol")).get
+
+    HttpRequest(method = method, uri = uri, headers = headers, protocol = protocol)
+  }
+
+  private def buildConnectionPoolSettings(
+      settings: Map[String, String]
+  ): ConnectionPoolSettings = {
+    var configString = settings.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
+    ConnectionPoolSettings(s"""akka.http.host-connection-pool {
+                              |$configString
+                              |}""".stripMargin)
   }
 
   override def buildTask(
@@ -297,27 +321,23 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
   )(implicit appContext: AppContext): HttpSink =
     try {
       val defaultRequest: HttpRequest = buildHttpRequestFromConfig(config.getConfig("default-request"))
-      val poolSettingsMap             = config.as[Map[String, String]]("pool")
-      val poolSettingsOption = if (poolSettingsMap.nonEmpty) {
-        var settingsStr =
-          poolSettingsMap.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
-        Some(ConnectionPoolSettings(s"""akka.http.host-connection-pool {
-             |$settingsStr
-             |}""".stripMargin))
-      } else None
-
-      val settings = HttpSinkSettings(
-        defaultRequest,
+      val connectionPoolSettings =
+        config.as[Option[Map[String, String]]]("pool").filter(_.nonEmpty).map(buildConnectionPoolSettings)
+      val retrySettings = RetrySettings(
         config.as[FiniteDuration]("min-backoff"),
         config.as[FiniteDuration]("max-backoff"),
         config.as[Double]("random-factor"),
-        config.as[FiniteDuration]("max-retrytime"),
-        config.as[Int]("concurrent-retries"),
-        poolSettingsOption
+        config.as[FiniteDuration]("max-retrytime")
       )
 
-      new HttpSink(settings)
-
+      new HttpSink(
+        HttpSinkSettings(
+          defaultRequest,
+          retrySettings,
+          connectionPoolSettings,
+          config.as[Int]("concurrent-retries")
+        )
+      )
     } catch {
       case ex: Throwable =>
         logger.error(s"Build HttpSink failed with error: ${ex.getMessage}")

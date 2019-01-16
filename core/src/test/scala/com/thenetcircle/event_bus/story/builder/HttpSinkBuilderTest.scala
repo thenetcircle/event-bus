@@ -56,12 +56,12 @@ class HttpSinkBuilderTest extends TestBase {
       method = HttpMethods.POST,
       uri = Uri("http://www.google.com")
     )
-    settings.poolSettings.get.maxRetries shouldEqual 10
-    settings.poolSettings.get.maxOpenRequests shouldEqual 64
-    settings.poolSettings.get.idleTimeout shouldEqual 10.minutes
-    settings.poolSettings.get.pipeliningLimit shouldEqual 1
-    settings.poolSettings.get.maxConnections shouldEqual 4
-    settings.poolSettings.get.minConnections shouldEqual 0
+    settings.connectionPoolSettings.get.maxRetries shouldEqual 10
+    settings.connectionPoolSettings.get.maxOpenRequests shouldEqual 64
+    settings.connectionPoolSettings.get.idleTimeout shouldEqual 10.minutes
+    settings.connectionPoolSettings.get.pipeliningLimit shouldEqual 1
+    settings.connectionPoolSettings.get.maxConnections shouldEqual 4
+    settings.connectionPoolSettings.get.minConnections shouldEqual 0
 
   }
 
