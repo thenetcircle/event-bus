@@ -73,7 +73,7 @@ class DecouplerBidiOperatorBuilderTest extends TestBase {
       """{
         |  "buffer-size": 50,
         |  "terminate-delay": "20 m",
-        |  "secondary-sink": "kafka#{\"bootstrap-servers\": \"localhost:9092\"}",
+        |  "secondary-sink": "kafka:sink#{\"bootstrap-servers\": \"localhost:9092\"}",
         |  "secondary-sink-buffer-size": 10
         |}""".stripMargin
     )(builder)

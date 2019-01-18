@@ -35,7 +35,7 @@ class FileOperatorBuilderTest extends TestBase {
 
     settings.path shouldEqual "/tmp/failover.log"
     settings.lineDelimiter shouldEqual "<tab>"
-    settings.eventDelimiter shouldEqual "<newline>#-:#:-#<newline>"
+    settings.eventDelimiter shouldEqual "#-:#:-#<newline>"
   }
 
   it should "build proper operator with proper config" in {

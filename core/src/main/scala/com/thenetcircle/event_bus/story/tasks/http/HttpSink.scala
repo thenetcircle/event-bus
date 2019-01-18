@@ -47,12 +47,12 @@ class UnexpectedResponseException(info: String) extends RuntimeException(info)
 
 case class HttpSinkSettings(
     defaultRequest: HttpRequest,
-    ifRetryOnError: Boolean = true,
+    retryOnError: Boolean = true,
     retrySettings: RetrySettings = RetrySettings(),
     connectionPoolSettings: Option[ConnectionPoolSettings] = None,
     concurrentRequests: Int = 1,
     expectedResponse: Option[String] = Some("ok"),
-    allowExtraSignals: Boolean = false,
+    allowExtraSignals: Boolean = true,
     requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`
 )
 
@@ -68,8 +68,8 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
   def createHttpRequest(event: Event): HttpRequest =
     settings.defaultRequest.withEntity(HttpEntity(settings.requestContentType, event.body.data))
 
-  private var http: Option[HttpExt] = None
-  private def initHttp()(implicit runningContext: TaskRunningContext): Unit =
+  protected var http: Option[HttpExt] = None
+  protected def initHttp()(implicit runningContext: TaskRunningContext): Unit =
     if (http.isEmpty) {
       http = Some(Http()(runningContext.getActorSystem()))
     }
@@ -81,7 +81,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
       http.get.singleRequest(request = request)
     }
 
-  private def checkResponse(
+  protected def checkResponse(
       response: HttpResponse
   )(implicit runningContext: TaskRunningContext): Future[CheckResponseResult] = {
     implicit val materializer: Materializer         = runningContext.getMaterializer()
@@ -135,9 +135,9 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
       }
   }
 
-  private var retrySender: Option[ActorRef] = None
-  private def initRetrySender()(implicit runningContext: TaskRunningContext): Unit =
-    if (settings.ifRetryOnError && retrySender.isEmpty) {
+  protected var retrySender: Option[ActorRef] = None
+  protected def initRetrySender()(implicit runningContext: TaskRunningContext): Unit =
+    if (settings.retryOnError && retrySender.isEmpty) {
       retrySender = Some(
         runningContext
           .getActorSystem()
@@ -197,7 +197,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
     Flow[Payload]
       .mapAsync(settings.concurrentRequests) {
         case payload @ (NORMAL, _) =>
-          if (settings.ifRetryOnError) retrySend(payload)
+          if (settings.retryOnError) retrySend(payload)
           else nonRetrySend(payload)
         case others => Future.successful(others)
       }
@@ -223,8 +223,8 @@ object HttpSink {
 
     def resolveExtraSignals(signal: String): Option[CheckResponseResult] =
       signal.toLowerCase match {
-        case "exponential_backoff" => Some(ExpBackoffRetry)
-        case _                     => None
+        case "exponential_backoff_retry" => Some(ExpBackoffRetry)
+        case _                           => None
       }
   }
 
@@ -345,17 +345,18 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |    method = POST
       |    protocol = "HTTP/1.1"
       |    # uri = "http://www.google.com"
+      |    # headers {}
       |  }
       |
-      |  concurrent-retries = 1
+      |  concurrent-requests = 1
       |  expected-response = "ok"
-      |  allow-extra-signals = false
+      |  allow-extra-signals = true
       |
       |  retry-on-error = true
       |  min-backoff = 1 s
       |  max-backoff = 30 s
       |  random-factor = 0.2
-      |  max-retrytime = 12 h
+      |  retry-duration = 12 h
       |
       |  # pool settings will override the default settings of akka.http.host-connection-pool
       |  pool {
@@ -369,8 +370,8 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |}""".stripMargin
     )
 
-  private def buildHttpRequestFromConfig(config: Config)(implicit appContext: AppContext): HttpRequest = {
-    val method = HttpMethods.getForKeyCaseInsensitive(config.as[String]("method")).get
+  protected def buildHttpRequestFromConfig(config: Config)(implicit appContext: AppContext): HttpRequest = {
+    val method = HttpMethods.getForKey(config.as[String]("method").toUpperCase).get
     val uri    = Uri(config.as[String]("uri"))
     val headers = config
       .as[Option[Map[String, String]]]("headers")
@@ -387,12 +388,12 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
           .map(_.get)
       )
       .getOrElse(Nil)
-    val protocol = HttpProtocols.getForKeyCaseInsensitive(config.as[String]("protocol")).get
+    val protocol = HttpProtocols.getForKey(config.as[String]("protocol").toUpperCase).get
 
     HttpRequest(method = method, uri = uri, headers = headers, protocol = protocol)
   }
 
-  private def buildConnectionPoolSettings(
+  protected def buildConnectionPoolSettings(
       settings: Map[String, String]
   ): ConnectionPoolSettings = {
     var configString = settings.foldLeft("")((acc, kv) => acc + "\n" + s"${kv._1} = ${kv._2}")
@@ -412,7 +413,7 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
         config.as[FiniteDuration]("min-backoff"),
         config.as[FiniteDuration]("max-backoff"),
         config.as[Double]("random-factor"),
-        config.as[FiniteDuration]("max-retrytime")
+        config.as[FiniteDuration]("retry-duration")
       )
 
       new HttpSink(
@@ -421,8 +422,8 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
           config.as[Boolean]("retry-on-error"),
           retrySettings,
           connectionPoolSettings,
-          config.as[Int]("concurrent-retries"),
-          config.as[Option[String]]("expected-response"),
+          config.as[Int]("concurrent-requests"),
+          config.as[Option[String]]("expected-response").filter(_.trim != ""),
           config.as[Boolean]("allow-extra-signals")
         )
       )
