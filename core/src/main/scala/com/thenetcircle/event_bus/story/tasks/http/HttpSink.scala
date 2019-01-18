@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story.tasks.http
 
 import java.util.concurrent.ThreadLocalRandom
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -127,7 +127,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
         case result =>
           (
             STAGING(
-              Some(new UnexpectedResponseException(s"Check response failed with resutl $result")),
+              Some(new UnexpectedResponseException(s"Check response failed with result $result")),
               getTaskName()
             ),
             event
@@ -144,9 +144,9 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
           .actorOf(
             Props(
               classOf[RetrySender],
-              (request: HttpRequest) => this.send(request),
-              (response: HttpResponse) => this.checkResponse(response),
-              settings,
+              (request: HttpRequest) => this.send(request)(runningContext),
+              (response: HttpResponse) => this.checkResponse(response)(runningContext),
+              settings.retrySettings,
               storyLogger,
               runningContext
             ),
@@ -219,24 +219,23 @@ object HttpSink {
     case object Passed             extends CheckResponseResult
     case object UnexpectedHttpCode extends CheckResponseResult
     case object UnexpectedBody     extends CheckResponseResult
+    case object Retry              extends CheckResponseResult
     case object ExpBackoffRetry    extends CheckResponseResult
 
     def resolveExtraSignals(signal: String): Option[CheckResponseResult] =
       signal.toLowerCase match {
+        case "retry"                     => Some(Retry)
         case "exponential_backoff_retry" => Some(ExpBackoffRetry)
         case _                           => None
       }
   }
-
-  val RESPONSE_OK                  = "ok"
-  val RESPONSE_EXPONENTIAL_BACKOFF = "exponential_backoff"
 
   object RetrySender {
     object Commands {
       case class Req(request: HttpRequest, deadline: Deadline, retryTimes: Int = 1) {
         def retry(): Req = copy(retryTimes = retryTimes + 1)
       }
-      case class Retry(req: Req)
+      case class ExpBackoffRetry(req: Req)
       case class CheckResp(resp: HttpResponse, req: Req)
     }
 
@@ -268,8 +267,6 @@ object HttpSink {
 
     import RetrySender.Commands._
 
-    implicit val system: ActorSystem                = runningContext.getActorSystem()
-    implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
@@ -277,7 +274,7 @@ object HttpSink {
       receiver ! result
     }
 
-    def backoffRetry(req: Req, receiver: ActorRef): Unit = if (req.deadline.hasTimeLeft()) {
+    def doExpBackoffRetry(req: Req, receiver: ActorRef): Unit = if (req.deadline.hasTimeLeft()) {
       val retryDelay = RetrySender.calculateDelay(
         req.retryTimes,
         retrySettings.minBackoff,
@@ -303,7 +300,7 @@ object HttpSink {
             else
               storyLogger.info(s"Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes")
 
-            self.tell(Retry(req), receiver)
+            self.tell(ExpBackoffRetry(req), receiver)
         }
 
       case CheckResp(resp @ HttpResponse(status, _, entity, _), req) =>
@@ -322,13 +319,15 @@ object HttpSink {
               Failure(new UnexpectedResponseException(s"The response body was not expected.")),
               receiver
             )
+          case CheckResponseResult.Retry =>
+            self.tell(req.retry(), receiver)
           case CheckResponseResult.ExpBackoffRetry =>
-            storyLogger.info(s"Going to retry now since got retry signal from the endpoint")
-            self.tell(Retry(req), receiver)
+            storyLogger.info(s"Going to retry now since got ExpBackoffRetry signal from the endpoint")
+            self.tell(ExpBackoffRetry(req), receiver)
         }
 
-      case Retry(req) =>
-        backoffRetry(req, sender()) // not safe
+      case ExpBackoffRetry(req) =>
+        doExpBackoffRetry(req, sender()) // not safe
     }
   }
 }

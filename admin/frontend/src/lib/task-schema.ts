@@ -324,7 +324,7 @@ const sinkSchemas: any = {
           "method": {
             "type": "string",
             "enum": [
-              "POST", "GET"
+              "POST", "GET", "PUT", "OPTIONS", "DELETE", "HEAD", "PATCH"
             ],
             "required": true
           },
@@ -332,8 +332,37 @@ const sinkSchemas: any = {
             "type": "string",
             "description": "when event does not include url info, use this default one",
             "required": true
+          },
+          "protocol": {
+            "type": "string",
+            "default": "HTTP/1.1"
+          },
+          "headers": {
+            "type": "object",
+            "title": "Headers",
+            "properties": {}
           }
         },
+        "required": true
+      },
+      "concurrent-requests": {
+        "type": "integer",
+        "default": 1,
+        "required": true
+      },
+      "expected-response": {
+        "type": "string",
+        "default": "ok",
+        "required": true
+      },
+      "allow-extra-signals": {
+        "type": "boolean",
+        "default": true,
+        "required": true
+      },
+      "retry-on-error": {
+        "type": "boolean",
+        "default": true,
         "required": true
       },
       "min-backoff": {
@@ -351,14 +380,9 @@ const sinkSchemas: any = {
         "default": 0.2,
         "required": true
       },
-      "max-retrytime": {
+      "retry-duration": {
         "type": "string",
         "default": "12 h",
-        "required": true
-      },
-      "concurrent-retries": {
-        "type": "integer",
-        "default": 1,
         "required": true
       },
       "pool": {
