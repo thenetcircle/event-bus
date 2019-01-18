@@ -50,7 +50,7 @@ class HttpSinkBuilderTest extends TestBase {
     settings.maxBackoff shouldEqual 1.minute
     settings.randomFactor shouldEqual 0.2
     settings.maxRetryTime shouldEqual 12.hours
-    settings.concurrentRetries shouldEqual 1
+    settings.concurrentRequests shouldEqual 1
 
     settings.defaultRequest shouldEqual HttpRequest(
       method = HttpMethods.POST,
