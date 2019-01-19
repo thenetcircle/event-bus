@@ -25,6 +25,7 @@ import akka.stream.scaladsl.{Flow, Sink}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{STAGED, STAGING}
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator, TaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -35,7 +36,7 @@ import scala.util.matching.Regex
 case class FileOperatorSettings(
     path: String,
     lineDelimiter: String = "<tab>",
-    eventDelimiter: String = "#-:#:-#<newline>"
+    eventDelimiter: String = "<newline>#-:#:-#<newline>"
 )
 
 class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator with IFailoverTask with TaskLogging {
@@ -95,6 +96,10 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
         Flow[Payload]
           .collect {
             case (STAGING(cause, taskName), event) =>
+              storyLogger
+                .info(
+                  s"Going to send a STAGING event [${Util.getBriefOfEvent(event)}] to the failover file [${getFilePath()}]"
+                )
               val causeString = cause.map(_.getClass.getName).getOrElse("unknown")
               ByteString(s"$taskName$lineDelimiter$causeString$lineDelimiter${event.body.data}$eventDelimiter")
           }
@@ -121,7 +126,7 @@ class FileOperatorBuilder extends ITaskBuilder[FileOperator] {
     ConfigFactory.parseString(
       """{
         |  line-delimiter = "<tab>"
-        |  event-delimiter = "#-:#:-#<newline>"
+        |  event-delimiter = "<newline>#-:#:-#<newline>"
         |}""".stripMargin
     )
 

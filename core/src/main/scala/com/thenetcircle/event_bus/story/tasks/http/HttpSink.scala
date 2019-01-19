@@ -29,7 +29,7 @@ import akka.pattern.AskTimeoutException
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
-import com.thenetcircle.event_bus.AppContext
+import com.thenetcircle.event_bus.{AppContext, BuildInfo}
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
@@ -338,13 +338,15 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
 
   override val defaultConfig: Config =
     ConfigFactory.parseString(
-      """{
+      s"""{
       |  # the default request could be overrided by info of the event
       |  default-request {
+      |    # uri = "http://www.google.com"
       |    method = POST
       |    protocol = "HTTP/1.1"
-      |    # uri = "http://www.google.com"
-      |    # headers {}
+      |    headers {
+      |      "user-agent": "event-bus/${BuildInfo.version}"
+      |    }
       |  }
       |
       |  concurrent-requests = 1

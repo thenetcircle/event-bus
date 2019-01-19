@@ -225,11 +225,11 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "enum": [
-            "SYNC_PLUS", "ASYNC", "BiDi", "NONE"
+            "SYNC_PLUS", "ASYNC", "BOTH", "NONE"
           ],
           "title": "Transport Mode"
         },
-        "default": ["ASYNC", "BiDi", "NONE"],
+        "default": ["ASYNC", "BOTH", "NONE"],
         "required": true
       },
       "only-extras": {
@@ -300,13 +300,11 @@ const operatorSchemas: any = {
       },
       "line-delimiter": {
         "type": "string",
-        "default": "<tab>",
-        "required": true
+        "default": "<tab>"
       },
       "event-delimiter": {
         "type": "string",
-        "default": "<newline>#-:#:-#<newline>",
-        "required": true
+        "default": "<newline>#-:#:-#<newline>"
       }
     }
   }
