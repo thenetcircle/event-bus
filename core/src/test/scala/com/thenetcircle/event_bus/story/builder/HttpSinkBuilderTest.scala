@@ -57,17 +57,14 @@ class HttpSinkBuilderTest extends TestBase {
     settings.retrySettings.randomFactor shouldEqual 0.2
     settings.retrySettings.retryDuration shouldEqual 12.hours
 
-    settings.defaultRequest shouldEqual HttpRequest(
-      method = HttpMethods.POST,
-      uri = Uri("http://www.google.com")
-    )
+    settings.defaultRequest.uri shouldEqual Uri("http://www.google.com")
 
     settings.connectionPoolSettings.get.maxRetries shouldEqual 10
     settings.connectionPoolSettings.get.maxOpenRequests shouldEqual 64
     settings.connectionPoolSettings.get.idleTimeout shouldEqual 10.minutes
     settings.connectionPoolSettings.get.pipeliningLimit shouldEqual 1
-    settings.connectionPoolSettings.get.maxConnections shouldEqual 4
-    settings.connectionPoolSettings.get.minConnections shouldEqual 0
+    settings.connectionPoolSettings.get.maxConnections shouldEqual 32
+    settings.connectionPoolSettings.get.minConnections shouldEqual 3
   }
 
   it should "build correct sink with the full config" in {
@@ -121,8 +118,8 @@ class HttpSinkBuilderTest extends TestBase {
     settings.connectionPoolSettings.get.maxOpenRequests shouldEqual 64
     settings.connectionPoolSettings.get.idleTimeout shouldEqual 1.minutes
     settings.connectionPoolSettings.get.pipeliningLimit shouldEqual 1
-    settings.connectionPoolSettings.get.maxConnections shouldEqual 4
-    settings.connectionPoolSettings.get.minConnections shouldEqual 0
+    settings.connectionPoolSettings.get.maxConnections shouldEqual 32
+    settings.connectionPoolSettings.get.minConnections shouldEqual 3
   }
 
 }

@@ -361,9 +361,9 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |
       |  # pool settings will override the default settings of akka.http.host-connection-pool
       |  pool {
-      |    # max-connections = 4
-      |    # min-connections = 0
-      |    # max-open-requests = 32
+      |    max-connections = 32
+      |    min-connections = 3
+      |    max-open-requests = 256
       |    # pipelining-limit = 1
       |    # idle-timeout = 30 s
       |    # ...

@@ -77,9 +77,7 @@ class StoryBuilderTest extends TestBase {
     )
 
     story.sink shouldBe a[HttpSink]
-    story.sink.asInstanceOf[HttpSink].settings shouldEqual HttpSinkSettings(
-      HttpRequest(HttpMethods.POST, Uri("http://localhost:3001"))
-    )
+    story.sink.asInstanceOf[HttpSink].settings.defaultRequest.uri shouldEqual Uri("http://localhost:3001")
 
     story.operators.get.apply(0)._1 shouldEqual OpExecPos.BeforeSink
     story.operators.get.apply(0)._2 shouldBe a[FilterOperator]
