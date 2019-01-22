@@ -237,7 +237,6 @@ object HttpSink {
         def retry(): Req = copy(retryTimes = retryTimes + 1)
       }
       case class ExpBackoffRetry(req: Req)
-      case class CheckResp(resp: HttpResponse, req: Req)
     }
 
     private def calculateDelay(
@@ -294,7 +293,28 @@ object HttpSink {
         val requestUrl = request.getUri().toString
         sendFunc(request) andThen {
           case Success(resp) =>
-            self.tell(CheckResp(resp, req), receiver)
+            checkRespFunc(resp).map {
+              case CheckResponseResult.Passed => replyToReceiver(Success(resp), receiver)
+              case CheckResponseResult.UnexpectedHttpCode =>
+                replyToReceiver(
+                  Failure(
+                    new UnexpectedResponseException(
+                      s"$taskLoggingPrefix Get a response from upstream with non-200 [${resp.status}] status code"
+                    )
+                  ),
+                  receiver
+                )
+              case CheckResponseResult.UnexpectedBody =>
+                replyToReceiver(
+                  Failure(new UnexpectedResponseException(s"$taskLoggingPrefix The response body was not expected.")),
+                  receiver
+                )
+              case CheckResponseResult.Retry =>
+                self.tell(req.retry(), receiver)
+              case CheckResponseResult.ExpBackoffRetry =>
+                log.info(s"$taskLoggingPrefix Going to retry now since got ExpBackoffRetry signal from the endpoint")
+                self.tell(ExpBackoffRetry(req), receiver)
+            }
 
           case Failure(ex) =>
             if (retryTimes == 1)
@@ -306,31 +326,6 @@ object HttpSink {
                 s"$taskLoggingPrefix Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
               )
 
-            self.tell(ExpBackoffRetry(req), receiver)
-        }
-
-      case CheckResp(resp @ HttpResponse(status, _, entity, _), req) =>
-        val receiver = sender()
-        checkRespFunc(resp).map {
-          case CheckResponseResult.Passed => replyToReceiver(Success(resp), receiver)
-          case CheckResponseResult.UnexpectedHttpCode =>
-            replyToReceiver(
-              Failure(
-                new UnexpectedResponseException(
-                  s"$taskLoggingPrefix Get a response from upstream with non-200 [$status] status code"
-                )
-              ),
-              receiver
-            )
-          case CheckResponseResult.UnexpectedBody =>
-            replyToReceiver(
-              Failure(new UnexpectedResponseException(s"$taskLoggingPrefix The response body was not expected.")),
-              receiver
-            )
-          case CheckResponseResult.Retry =>
-            self.tell(req.retry(), receiver)
-          case CheckResponseResult.ExpBackoffRetry =>
-            log.info(s"$taskLoggingPrefix Going to retry now since got ExpBackoffRetry signal from the endpoint")
             self.tell(ExpBackoffRetry(req), receiver)
         }
 
