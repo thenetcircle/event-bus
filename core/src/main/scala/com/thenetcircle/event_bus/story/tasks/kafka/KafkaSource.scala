@@ -41,7 +41,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
-class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLogging {
+class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
@@ -118,15 +118,16 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-        storyLogger.info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
+        taskLogger
+          .info(s"$taskLoggingPrefix Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
 
         (NORMAL, eve)
       })
       .recover {
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
-          storyLogger.warn(
-            s"The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
+          taskLogger.warn(
+            s"$taskLoggingPrefix The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
           )
           (
             SKIPPING,
@@ -150,7 +151,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    logger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
+    taskLogger.info(s"$taskLoggingPrefix Going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer
@@ -159,8 +160,8 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
         .mapAsyncUnordered(settings.maxConcurrentPartitions) {
           case (topicPartition, source) =>
             try {
-              storyLogger.info(
-                s"A new topicPartition $topicPartition has been assigned to story ${getStoryName()}."
+              taskLogger.info(
+                s"$taskLoggingPrefix A new topicPartition $topicPartition has been assigned to story ${getStoryName()}."
               )
 
               source
@@ -170,25 +171,27 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
                   case (_: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        storyLogger.info(s"The event ${event.uuid} is going to be committed with offset $co")
+                        taskLogger.info(
+                          s"$taskLoggingPrefix The event ${event.uuid} is going to be committed with offset $co"
+                        )
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
-                          s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
-                        storyLogger.error(errorMessage)
+                          s"$taskLoggingPrefix The event ${event.uuid} missed PassThrough[CommittableOffset]"
+                        taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
 
                   case (STAGING(exOp, _), event) =>
-                    storyLogger.error(
-                      s"The event ${event.uuid} reaches the end with STAGING status" +
+                    taskLogger.error(
+                      s"$taskLoggingPrefix The event ${event.uuid} reaches the end with STAGING status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        storyLogger.info(
-                          s"The event ${event.uuid} is going to be committed with offset $co"
+                        taskLogger.info(
+                          s"$taskLoggingPrefix The event ${event.uuid} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "Non handled STAGING status")
                       case None =>
@@ -198,12 +201,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
                     }
 
                   case (FAILED(ex, _), event) =>
-                    storyLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
+                    taskLogger.error(s"$taskLoggingPrefix The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
-                        storyLogger.info(
-                          s"The event ${event.uuid} is going to be committed with offset $co"
+                        taskLogger.info(
+                          s"$taskLoggingPrefix The event ${event.uuid} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "FAILED status event")
                       case None =>
@@ -212,21 +215,21 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
                 }
                 .recover {
                   case ex: CommittableException =>
-                    storyLogger.info(
-                      s"The substream listening on topicPartition $topicPartition was failed with CommittableException, " +
+                    taskLogger.info(
+                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was failed with CommittableException, " +
                         s"Now recovering the last item to be a Success()"
                     )
                     Success(ex.getCommittableOffset())
                   case NonFatal(ex) =>
-                    storyLogger.info(
-                      s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
+                    taskLogger.info(
+                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
                         s"Now recovering the last item to be a Failure()"
                     )
                     Failure(ex)
                 }
                 .collect {
                   case Success(co) =>
-                    storyLogger.debug(s"going to commit offset $co")
+                    taskLogger.debug(s"$taskLoggingPrefix going to commit offset $co")
                     co
                 }
                 .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
@@ -238,23 +241,23 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
-                  storyLogger
+                  taskLogger
                     .info(
-                      s"The substream listening on topicPartition $topicPartition was completed."
+                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was completed."
                     )
                   done
                 })
                 .recover { // recover after run, to recover the stream running status
                   case NonFatal(ex) =>
-                    storyLogger.error(
-                      s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
+                    taskLogger.error(
+                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was failed with error: $ex"
                     )
                     Done
                 }
             } catch {
               case NonFatal(ex) ⇒
-                storyLogger.error(
-                  s"Could not materialize topic $topicPartition listening stream with error: $ex"
+                taskLogger.error(
+                  s"$taskLoggingPrefix Could not materialize topic $topicPartition listening stream with error: $ex"
                 )
                 throw ex
             }
@@ -267,7 +270,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with TaskLo
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down kafka-source of story ${getStoryName()}.")
+    taskLogger.info(s"$taskLoggingPrefix Shutting down kafka-source of story ${getStoryName()}.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })

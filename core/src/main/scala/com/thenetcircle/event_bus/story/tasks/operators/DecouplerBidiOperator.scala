@@ -26,7 +26,7 @@ import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.Util
-import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -42,7 +42,7 @@ case class DecouplerSettings(
     secondarySinkBufferSize: Int = 1000
 )
 
-class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperator with TaskLogging {
+class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperator with ITaskLogging {
 
   var runningSecondarySink: Option[SourceQueueWithComplete[Payload]] = None
 
@@ -57,8 +57,8 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
               (FAILED(new RuntimeException("Sending the event to secondary sink failed"), getTaskName()), payload._2)
           }(runningContext.getExecutionContext())
       case None =>
-        storyLogger.warn(
-          s"A event is going to be dropped since there is no secondary sink. Status: ${payload._1}, Event: ${Util
+        taskLogger.warn(
+          s"$taskLoggingPrefix A event is going to be dropped since there is no secondary sink. Status: ${payload._1}, Event: ${Util
             .getBriefOfEvent(payload._2)}"
         )
         Future.successful(payload)
@@ -80,7 +80,9 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
           .run()(runningContext.getMaterializer())
       })
       runningSecondarySink.foreach(_.watchCompletion().onComplete(result => {
-        storyLogger.info(s"The secondary sink of task ${getTaskName()} completed with result: $result")
+        taskLogger.info(
+          s"$taskLoggingPrefix The secondary sink of task ${getTaskName()} completed with result: $result"
+        )
       })(runningContext.getExecutionContext()))
     }
 
@@ -105,8 +107,8 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
         private def flushBuffer(): Unit =
           while (!buffer.isEmpty) {
             val payload = buffer.poll()
-            storyLogger.info(
-              s"A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${Util
+            taskLogger.info(
+              s"$taskLoggingPrefix A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${Util
                 .getBriefOfEvent(payload._2)}"
             )
             payload match {
@@ -162,8 +164,8 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
                 pendingToOperatePayloads.incrementAndGet()
               } else {
                 if (!buffer.offer(payload)) { // if the buffer is full
-                  storyLogger.info(
-                    s"A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${Util
+                  taskLogger.info(
+                    s"$taskLoggingPrefix A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
                   divertToSecondarySink(
@@ -213,8 +215,8 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
 
               payload match {
                 case (_: STAGING, _) =>
-                  storyLogger.info(
-                    s"A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${Util
+                  taskLogger.info(
+                    s"$taskLoggingPrefix A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${Util
                       .getBriefOfEvent(payload._2)}"
                   )
                   divertToSecondarySink(payload) // make it async without blocking thread

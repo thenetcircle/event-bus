@@ -28,7 +28,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
-import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, ITaskLogging, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -41,7 +41,7 @@ case class CassandraOperatorSettings(contactPoints: List[String], port: Int = 90
 class CassandraOperator(val settings: CassandraOperatorSettings)
     extends IUndiOperator
     with IFailoverTask
-    with TaskLogging {
+    with ITaskLogging {
 
   private var clusterOption: Option[Cluster]             = None
   private var sessionOption: Option[Session]             = None
@@ -119,15 +119,15 @@ class CassandraOperator(val settings: CassandraOperatorSettings)
               .map[(EventStatus, Event)](result => (STAGED, event))
               .recover {
                 case NonFatal(ex) =>
-                  storyLogger.warn(
-                    s"sending to cassandra[1] fallback was failed with error $ex"
+                  taskLogger.warn(
+                    s"$taskLoggingPrefix sending to cassandra[1] fallback was failed with error $ex"
                   )
                   (FAILED(ex, getTaskName()), event)
               }
           } catch {
             case NonFatal(ex) =>
-              storyLogger.debug(
-                s"sending to cassandra[2] fallback failed with error $ex"
+              taskLogger.debug(
+                s"$taskLoggingPrefix sending to cassandra[2] fallback failed with error $ex"
               )
               Future.successful((FAILED(ex, getTaskName()), event))
           }
@@ -142,7 +142,7 @@ class CassandraOperator(val settings: CassandraOperatorSettings)
   ): Flow[Payload, Payload, StoryMat] = flow
 
   def getPreparedStatement(keyspace: String, session: Session): PreparedStatement = {
-    logger.debug(s"preparing cassandra statement")
+    taskLogger.debug(s"$taskLoggingPrefix preparing cassandra statement")
     session.prepare(s"""
                        |INSERT INTO $keyspace.fallback
                        |(uuid, story_name, event_name, created_at, fallback_time, failed_task_name, group, body, format, cause, extra)
@@ -156,7 +156,7 @@ class CassandraOperator(val settings: CassandraOperatorSettings)
   ): ((STAGING, Event), PreparedStatement) => BoundStatement = {
     case ((status, event), statement) =>
       val cause = status.cause.map(_.toString).getOrElse("")
-      logger.debug(s"binding cassandra statement")
+      taskLogger.debug(s"$taskLoggingPrefix Binding a cassandra statement")
 
       import scala.collection.JavaConverters._
       statement.bind(
@@ -175,7 +175,7 @@ class CassandraOperator(val settings: CassandraOperatorSettings)
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down cassandra-fallback of story ${getStoryName()}.")
+    taskLogger.info(s"$taskLoggingPrefix Shutting down cassandra-fallback of story ${getStoryName()}.")
     sessionOption.foreach(s => { s.close(); sessionOption = None })
     clusterOption.foreach(c => { c.close(); clusterOption = None })
   }

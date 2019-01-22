@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story.tasks.http
 
 import java.util.concurrent.ThreadLocalRandom
 
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -29,13 +29,13 @@ import akka.pattern.AskTimeoutException
 import akka.stream._
 import akka.stream.scaladsl.Flow
 import akka.util.Timeout
-import com.thenetcircle.event_bus.{AppContext, BuildInfo}
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.{CheckResponseResult, RetrySender}
-import com.thenetcircle.event_bus.story.{Payload, StoryLogger, StoryMat, TaskRunningContext}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
+import com.thenetcircle.event_bus.{AppContext, BuildInfo}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
@@ -63,7 +63,7 @@ case class RetrySettings(
     retryDuration: FiniteDuration = 12.hours
 )
 
-class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
+class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
 
   def createHttpRequest(event: Event): HttpRequest =
     settings.defaultRequest.withEntity(HttpEntity(settings.requestContentType, event.body.data))
@@ -95,7 +95,9 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
           .byteStringUnmarshaller(response.entity)
           .map { _body =>
             val body = _body.utf8String
-            storyLogger.info(s"Get a response from upstream with status code ${status.value} and body $body")
+            taskLogger.info(
+              s"$taskLoggingPrefix Get a response from upstream with status code ${status.value} and body $body"
+            )
 
             if (body.trim == settings.expectedResponse.get.trim)
               CheckResponseResult.Passed
@@ -109,7 +111,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
         Future.successful(CheckResponseResult.Passed)
       }
     } else {
-      storyLogger.warn(s"Get a response from upstream with non-200 [$status] status code")
+      taskLogger.warn(s"$taskLoggingPrefix Get a response from upstream with non-200 [$status] status code")
       response.discardEntityBytes()
       Future.successful(CheckResponseResult.UnexpectedHttpCode)
     }
@@ -147,7 +149,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
               (request: HttpRequest) => this.send(request)(runningContext),
               (response: HttpResponse) => this.checkResponse(response)(runningContext),
               settings.retrySettings,
-              storyLogger,
+              taskLoggingPrefix,
               runningContext
             ),
             "HttpSink-retrySender-" + getStoryName() + "-" + Random.nextInt()
@@ -171,18 +173,18 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
       .mapTo[Try[HttpResponse]]
       .map[(EventStatus, Event)] {
         case Success(resp) =>
-          storyLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
+          taskLogger.info(s"$taskLoggingPrefix A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
           (NORMAL, event)
         case Failure(ex) =>
-          storyLogger.warn(
-            s"A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
+          taskLogger.warn(
+            s"$taskLoggingPrefix A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }
       .recover {
         case ex: AskTimeoutException =>
-          storyLogger.warn(
-            s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
+          taskLogger.warn(
+            s"$taskLoggingPrefix A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }
@@ -204,7 +206,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with TaskLogging {
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down HttpSink of story ${getStoryName()}.")
+    taskLogger.info(s"$taskLoggingPrefix Shutting down HttpSink of story ${getStoryName()}.")
     retrySender.foreach(s => {
       runningContext.getActorSystem().stop(s)
       retrySender = None
@@ -260,17 +262,18 @@ object HttpSink {
       sendFunc: HttpRequest => Future[HttpResponse],
       checkRespFunc: HttpResponse => Future[CheckResponseResult],
       retrySettings: RetrySettings,
-      storyLogger: StoryLogger
+      taskLoggingPrefix: String
   )(
       implicit runningContext: TaskRunningContext
-  ) extends Actor {
+  ) extends Actor
+      with ActorLogging {
 
     import RetrySender.Commands._
 
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
-      storyLogger.debug(s"Replying response to http-sink")
+      log.debug(s"$taskLoggingPrefix Replying response to http-sink")
       receiver ! result
     }
 
@@ -296,9 +299,13 @@ object HttpSink {
 
           case Failure(ex) =>
             if (retryTimes == 1)
-              storyLogger.warn(s"Sending request to $requestUrl failed with error $ex, going to retry now.")
+              log.warning(
+                s"$taskLoggingPrefix Sending request to $requestUrl failed with error $ex, going to retry now."
+              )
             else
-              storyLogger.info(s"Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes")
+              log.info(
+                s"$taskLoggingPrefix Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
+              )
 
             self.tell(ExpBackoffRetry(req), receiver)
         }
@@ -322,7 +329,7 @@ object HttpSink {
           case CheckResponseResult.Retry =>
             self.tell(req.retry(), receiver)
           case CheckResponseResult.ExpBackoffRetry =>
-            storyLogger.info(s"Going to retry now since got ExpBackoffRetry signal from the endpoint")
+            log.info(s"$taskLoggingPrefix Going to retry now since got ExpBackoffRetry signal from the endpoint")
             self.tell(ExpBackoffRetry(req), receiver)
         }
 

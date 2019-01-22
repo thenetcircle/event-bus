@@ -26,7 +26,7 @@ import akka.util.ByteString
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{STAGED, STAGING}
 import com.thenetcircle.event_bus.misc.Util
-import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, IUndiOperator, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, ITaskLogging, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -39,7 +39,7 @@ case class FileOperatorSettings(
     eventDelimiter: String = "<newline>#-:#:-#<newline>"
 )
 
-class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator with IFailoverTask with TaskLogging {
+class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator with IFailoverTask with ITaskLogging {
   private def getBaseFilePath()(
       implicit runningContext: TaskRunningContext
   ): String =
@@ -96,9 +96,10 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
         Flow[Payload]
           .collect {
             case (STAGING(cause, taskName), event) =>
-              storyLogger
+              taskLogger
                 .info(
-                  s"Going to send a STAGING event [${Util.getBriefOfEvent(event)}] to the failover file [${getFilePath()}]"
+                  s"$taskLoggingPrefix Going to send a STAGING event [${Util
+                    .getBriefOfEvent(event)}] to the failover file [${getFilePath()}]"
                 )
               val causeString = cause.map(_.getClass.getName).getOrElse("unknown")
               ByteString(s"$taskName$lineDelimiter$causeString$lineDelimiter${event.body.data}$eventDelimiter")

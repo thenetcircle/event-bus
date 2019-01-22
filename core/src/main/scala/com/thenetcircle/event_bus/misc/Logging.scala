@@ -17,7 +17,6 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.typesafe.scalalogging.{LazyLogging, Logger}
-import org.slf4j.LoggerFactory
+import com.typesafe.scalalogging.LazyLogging
 
 trait Logging extends LazyLogging

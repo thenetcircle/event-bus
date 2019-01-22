@@ -31,7 +31,7 @@ import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
-import com.thenetcircle.event_bus.story.interfaces.{ISource, ITaskBuilder, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces.{ISource, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -48,7 +48,7 @@ case class HttpSourceSettings(
     serverSettings: Option[ServerSettings] = None
 )
 
-class HttpSource(val settings: HttpSourceSettings) extends ISource with TaskLogging {
+class HttpSource(val settings: HttpSourceSettings) extends ISource with ITaskLogging {
 
   def createResponse(result: Payload): HttpResponse =
     result match {
@@ -82,13 +82,13 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with TaskLogg
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            storyLogger.info("Received a new event: " + Util.getBriefOfEvent(event))
-            storyLogger.debug(s"Extracted content of the event: $event")
+            taskLogger.info(s"$taskLoggingPrefix Received a new event: " + Util.getBriefOfEvent(event))
+            taskLogger.debug(s"$taskLoggingPrefix Extracted content of the event: $event")
             (NORMAL, event)
           })
           .recover {
             case ex: EventExtractingException =>
-              storyLogger.warn(s"Extract event from a http request failed with error $ex")
+              taskLogger.warn(s"$taskLoggingPrefix Extract event from a http request failed with error $ex")
               (FAILED(ex, getTaskName()), Event.fromException(ex))
           }
       })
@@ -125,7 +125,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with TaskLogg
     killSwitchOption = Some(new KillSwitch {
       override def abort(ex: Throwable): Unit = shutdown()
       override def shutdown(): Unit = {
-        logger.info(s"Unbinding HTTP port.")
+        taskLogger.info(s"$taskLoggingPrefix Unbinding HTTP port.")
         Await.ready(
           httpBindFuture.flatMap(_.unbind().map(_ => donePromise tryComplete Success(Done))),
           5.seconds
@@ -137,7 +137,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with TaskLogg
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down HTTP Source of story ${getStoryName()}.")
+    taskLogger.info(s"$taskLoggingPrefix Shutting down HTTP Source of story ${getStoryName()}.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })

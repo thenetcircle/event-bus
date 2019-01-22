@@ -22,7 +22,7 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL}
 import com.thenetcircle.event_bus.misc.ZKManager
-import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, IUndiOperator, TaskLogging}
+import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, ITaskLogging, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.curator.framework.recipes.cache.NodeCache
@@ -38,7 +38,7 @@ object TopicInfoProtocol extends DefaultJsonProtocol {
   implicit val topicInfoFormat = jsonFormat3(TopicInfo)
 }
 
-class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) extends IUndiOperator with TaskLogging {
+class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) extends IUndiOperator with ITaskLogging {
 
   import TopicInfoProtocol._
 
@@ -100,7 +100,9 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
   }
 
   def updateIndex(_nameIndex: Map[String, String], _channelIndex: Map[String, String]): Unit = {
-    logger.info("updating topic mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex)
+    taskLogger.info(
+      s"$taskLoggingPrefix Updating the topic-resolver mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex
+    )
     nameIndex = _nameIndex
     channelIndex = _channelIndex
   }
@@ -119,7 +121,7 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
           case Success(newEvent) =>
             (NORMAL, newEvent)
           case Failure(ex) =>
-            storyLogger.error(s"resolve kafka topic failed with error $ex")
+            taskLogger.error(s"$taskLoggingPrefix resolve kafka topic failed with error $ex")
             (FAILED(ex, getTaskName()), event)
         }
       case others => others
@@ -151,26 +153,26 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
 
   def resolveEvent(event: Event): Event = {
     if (event.metadata.topic.isDefined) {
-      storyLogger.info(
-        s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it."
+      taskLogger.info(
+        s"$taskLoggingPrefix event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it."
       )
       return event
     }
     if (event.metadata.name.isEmpty && event.metadata.channel.isEmpty) {
-      storyLogger.info(
-        s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic."
+      taskLogger.info(
+        s"$taskLoggingPrefix event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic."
       )
       return event.withTopic(defaultTopic)
     }
 
     val newTopic = getTopicFromIndex(event).getOrElse(defaultTopic)
-    storyLogger.info(s"event ${event.uuid} has been resolved to new topic $newTopic")
+    taskLogger.info(s"$taskLoggingPrefix event ${event.uuid} has been resolved to new topic $newTopic")
 
     event.withTopic(newTopic)
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"shutting down TopicResolverOperator of story ${getStoryName()}.")
+    taskLogger.info(s"$taskLoggingPrefix Shutting down TopicResolverOperator of story ${getStoryName()}.")
     nameIndex = Map.empty
     channelIndex = Map.empty
     zkWatcher.foreach(_.close())

@@ -27,7 +27,7 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGED, STAGING}
-import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
@@ -51,11 +51,11 @@ case class KafkaSinkSettings(
     properties: Map[String, String] = Map.empty
 )
 
-class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTask with TaskLogging {
+class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTask with ITaskLogging {
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
-  logger.info(s"Initializing KafkaSink with settings: $settings")
+  taskLogger.info(s"Initializing KafkaSink with settings: $settings")
 
   def getProducerSettings()(
       implicit runningContext: TaskRunningContext
@@ -86,7 +86,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    storyLogger.debug(s"Prepared a new kafka record,  $record")
+    taskLogger.debug(s"$taskLoggingPrefix Prepared a new kafka record,  $record")
     Message(record, event)
   }
 
@@ -121,7 +121,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
     val kafkaSettings = getProducerSettings()
 
     val _kafkaProducer = kafkaProducer.getOrElse({
-      logger.info("Creating a new Kafka producer")
+      taskLogger.info(s"$taskLoggingPrefix Creating a new Kafka producer")
       kafkaProducer = Some(kafkaSettings.createKafkaProducer())
       kafkaProducer.get
     })
@@ -142,7 +142,9 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
           val kafkaBrief =
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
-          storyLogger.info(s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]")
+          taskLogger.info(
+            s"$taskLoggingPrefix A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]"
+          )
 
           (NORMAL, message.passThrough)
       }
@@ -162,7 +164,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
     )
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    logger.info(s"Shutting down kafka-sink of story ${getStoryName()}.")
+    taskLogger.info(s"$taskLoggingPrefix Shutting down kafka-sink of story ${getStoryName()}.")
     kafkaProducer.foreach(k => {
       k.close(5, TimeUnit.SECONDS); kafkaProducer = None
     })
