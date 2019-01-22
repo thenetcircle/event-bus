@@ -319,7 +319,7 @@ class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
         |
         |  max-concurrent-partitions = 100
         |
-        |  commit-max-batches = 20
+        |  commit-max-batches = 50
         |
         |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
         |  # can be defined in this configuration section.

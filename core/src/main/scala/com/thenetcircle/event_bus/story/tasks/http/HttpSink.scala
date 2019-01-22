@@ -158,18 +158,17 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     }
 
   def retrySend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
-    val retrySettings = settings.retrySettings
-    val retryDuration = retrySettings.retryDuration
-    val event         = payload._2
-
     import akka.pattern.ask
-    implicit val askTimeout: Timeout               = Timeout(retryDuration)
-    implicit val exectionContext: ExecutionContext = runningContext.getExecutionContext()
+    val retryDuration                               = settings.retrySettings.retryDuration
+    implicit val askTimeout: Timeout                = Timeout(retryDuration)
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    val endPoint: String   = settings.defaultRequest.getUri().toString
-    val eventBrief: String = Util.getBriefOfEvent(event)
+    val event      = payload._2
+    val request    = createHttpRequest(event)
+    val endPoint   = request.getUri().toString
+    val eventBrief = Util.getBriefOfEvent(event)
 
-    (retrySender.get ? RetrySender.Commands.Req(createHttpRequest(event), retryDuration.fromNow))
+    (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
       .mapTo[Try[HttpResponse]]
       .map[(EventStatus, Event)] {
         case Success(resp) =>
@@ -317,13 +316,15 @@ object HttpSink {
           case CheckResponseResult.UnexpectedHttpCode =>
             replyToReceiver(
               Failure(
-                new UnexpectedResponseException(s"Get a response from upstream with non-200 [$status] status code")
+                new UnexpectedResponseException(
+                  s"$taskLoggingPrefix Get a response from upstream with non-200 [$status] status code"
+                )
               ),
               receiver
             )
           case CheckResponseResult.UnexpectedBody =>
             replyToReceiver(
-              Failure(new UnexpectedResponseException(s"The response body was not expected.")),
+              Failure(new UnexpectedResponseException(s"$taskLoggingPrefix The response body was not expected.")),
               receiver
             )
           case CheckResponseResult.Retry =>
