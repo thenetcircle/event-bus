@@ -293,9 +293,9 @@ object HttpSink {
         val requestUrl = request.getUri().toString
         sendFunc(request) andThen {
           case Success(resp) =>
-            checkRespFunc(resp).map {
-              case CheckResponseResult.Passed => replyToReceiver(Success(resp), receiver)
-              case CheckResponseResult.UnexpectedHttpCode =>
+            checkRespFunc(resp) andThen {
+              case Success(CheckResponseResult.Passed) => replyToReceiver(Success(resp), receiver)
+              case Success(CheckResponseResult.UnexpectedHttpCode) =>
                 replyToReceiver(
                   Failure(
                     new UnexpectedResponseException(
@@ -304,16 +304,20 @@ object HttpSink {
                   ),
                   receiver
                 )
-              case CheckResponseResult.UnexpectedBody =>
+              case Success(CheckResponseResult.UnexpectedBody) =>
                 replyToReceiver(
                   Failure(new UnexpectedResponseException(s"$taskLoggingPrefix The response body was not expected.")),
                   receiver
                 )
-              case CheckResponseResult.Retry =>
+              case Success(CheckResponseResult.Retry) =>
                 self.tell(req.retry(), receiver)
-              case CheckResponseResult.ExpBackoffRetry =>
+              case Success(CheckResponseResult.ExpBackoffRetry) =>
                 log.info(s"$taskLoggingPrefix Going to retry now since got ExpBackoffRetry signal from the endpoint")
                 self.tell(ExpBackoffRetry(req), receiver)
+              case Failure(ex) =>
+                log.info(s"$taskLoggingPrefix Checking a http response failed with error message: ${ex.getMessage}")
+                resp.discardEntityBytes()(runningContext.getMaterializer())
+                replyToReceiver(Failure(ex), receiver)
             }
 
           case Failure(ex) =>
