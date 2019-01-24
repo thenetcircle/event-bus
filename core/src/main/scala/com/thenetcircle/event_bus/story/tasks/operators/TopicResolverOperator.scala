@@ -121,7 +121,7 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
           case Success(newEvent) =>
             (NORMAL, newEvent)
           case Failure(ex) =>
-            taskLogger.error(s"Resolve a event topic failed with error $ex")
+            taskLogger.error(s"Resolve topic of a event ${event.summary} failed with error $ex")
             (FAILED(ex, getTaskName()), event)
         }
       case others => others
@@ -154,19 +154,19 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
   def resolveEvent(event: Event): Event = {
     if (event.metadata.topic.isDefined) {
       taskLogger.info(
-        s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it."
+        s"The event ${event.summary} has topic ${event.metadata.topic.get} already, will not resolve it."
       )
       return event
     }
     if (event.metadata.name.isEmpty && event.metadata.channel.isEmpty) {
       taskLogger.info(
-        s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic."
+        s"The event ${event.summary} has no name and channel, will be send to default topic $defaultTopic."
       )
       return event.withTopic(defaultTopic)
     }
 
     val newTopic = getTopicFromIndex(event).getOrElse(defaultTopic)
-    taskLogger.info(s"event ${event.uuid} has been resolved to new topic $newTopic")
+    taskLogger.info(s"The event ${event.summary} has been resolved to new topic $newTopic")
 
     event.withTopic(newTopic)
   }

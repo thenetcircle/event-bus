@@ -125,7 +125,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
           taskLogger.warn(
-            s"The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
+            s"A event read from Kafka was extracting failed with format: $eventFormat and error: $ex"
           )
           (
             SKIPPING,
@@ -170,26 +170,26 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"The event ${event.uuid} is going to be committed with offset $co"
+                          s"A event ${event.summary} is going to be committed with offset $co"
                         )
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
-                          s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
+                          s"A event ${event.summary} missed PassThrough[CommittableOffset]"
                         taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
 
                   case (STAGING(exOp, _), event) =>
                     taskLogger.error(
-                      s"The event ${event.uuid} reaches the end with STAGING status" +
+                      s"A event ${event.summary} reaches the end with STAGING status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"The event ${event.uuid} is going to be committed with offset $co"
+                          s"A event ${event.summary} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "Non handled STAGING status")
                       case None =>
@@ -199,12 +199,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     }
 
                   case (FAILED(ex, _), event) =>
-                    taskLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
+                    taskLogger.error(s"A event ${event.summary} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"The event ${event.uuid} is going to be committed with offset $co"
+                          s"A event ${event.summary} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "FAILED status event")
                       case None =>

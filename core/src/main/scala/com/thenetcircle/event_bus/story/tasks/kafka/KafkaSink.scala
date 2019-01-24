@@ -85,7 +85,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    taskLogger.debug(s"Prepared a new kafka record: $record")
+    taskLogger.debug(s"Prepared a new kafka record: $record from event: ${event.summary}")
     Message(record, event)
   }
 
