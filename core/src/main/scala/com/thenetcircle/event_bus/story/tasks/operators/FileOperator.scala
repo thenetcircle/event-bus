@@ -25,7 +25,6 @@ import akka.stream.scaladsl.{Flow, Sink}
 import akka.util.ByteString
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{STAGED, STAGING}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces.{IFailoverTask, ITaskBuilder, ITaskLogging, IUndiOperator}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -98,8 +97,7 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
             case (STAGING(cause, taskName), event) =>
               taskLogger
                 .info(
-                  s"Going to send a STAGING event [${Util
-                    .getBriefOfEvent(event)}] to the failover file [${getFilePath()}]"
+                  s"Going to send a STAGING event [${event.summary}] to the failover file [${getFilePath()}]"
                 )
               val causeString = cause.map(_.getClass.getName).getOrElse("unknown")
               ByteString(s"$taskName$lineDelimiter$causeString$lineDelimiter${event.body.data}$eventDelimiter")

@@ -31,7 +31,7 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.{CheckResponseResult, RetrySender}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskLogger, TaskRunningContext}
@@ -119,27 +119,26 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     implicit val askTimeout: Timeout                = Timeout(retryDuration)
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    val event      = payload._2
-    val request    = createHttpRequest(event)
-    val endPoint   = request.getUri().toString
-    val eventBrief = Util.getBriefOfEvent(event)
+    val event    = payload._2
+    val request  = createHttpRequest(event)
+    val endPoint = request.getUri().toString
 
     (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
       .mapTo[Try[HttpResponse]]
       .map[(EventStatus, Event)] {
         case Success(resp) =>
-          taskLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
+          taskLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], ${event.summary}")
           (NORMAL, event)
         case Failure(ex) =>
           taskLogger.warn(
-            s"A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
+            s"A event unsuccessfully sent to HTTP endpoint [$endPoint], ${event.summary}, failed with error $ex"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }
       .recover {
         case ex: AskTimeoutException =>
           taskLogger.warn(
-            s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
+            s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], ${event.summary}"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }

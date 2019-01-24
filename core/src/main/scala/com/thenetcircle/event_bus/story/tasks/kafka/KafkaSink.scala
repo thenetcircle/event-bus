@@ -27,7 +27,6 @@ import akka.stream.scaladsl.Flow
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGED, STAGING}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.{
   EventSerializer,
@@ -138,12 +137,11 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
       .via(Producer.flexiFlow(kafkaSettings, _kafkaProducer))
       .map {
         case Result(metadata, message) =>
-          val eventBrief = Util.getBriefOfEvent(message.passThrough)
           val kafkaBrief =
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
           taskLogger.info(
-            s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]"
+            s"A event successfully sent to Kafka. event: ${message.passThrough.summary}, kafka: [$kafkaBrief]"
           )
 
           (NORMAL, message.passThrough)

@@ -24,7 +24,6 @@ case class DefaultEventImpl(
     uuid: String,
     metadata: EventMetaData,
     body: EventBody,
-    status: EventStatus = EventStatus.NORMAL,
     createdAt: Date = Date.from(Instant.now()),
     passThrough: Option[Any] = None
 ) extends Event {
@@ -55,6 +54,11 @@ case class DefaultEventImpl(
   override def withExtra(_key: String, _value: String): Event =
     copy(metadata = metadata.copy(extra = metadata.extra + (_key -> _value)))
 
-  override def withStatus(_status: EventStatus): DefaultEventImpl =
-    copy(status = _status)
+  override def summary: String =
+    s"""EventSummary(
+       |uuid: $uuid,
+       |name: ${metadata.name}, 
+       |channel: ${metadata.channel},  
+       |createdAt: $createdAt
+       |)""".stripMargin
 }

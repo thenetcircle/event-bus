@@ -25,7 +25,6 @@ import akka.stream.scaladsl.{BidiFlow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.stage._
 import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, STAGED, STAGING}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces.{IBidiOperator, IFailoverTask, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -58,8 +57,7 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
           }(runningContext.getExecutionContext())
       case None =>
         taskLogger.warn(
-          s"A event is going to be dropped since there is no secondary sink. Status: ${payload._1}, Event: ${Util
-            .getBriefOfEvent(payload._2)}"
+          s"A event is going to be dropped since there is no secondary sink. Status: ${payload._1}, Event: ${payload._2.summary}"
         )
         Future.successful(payload)
     }
@@ -108,8 +106,7 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
           while (!buffer.isEmpty) {
             val payload = buffer.poll()
             taskLogger.info(
-              s"A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${Util
-                .getBriefOfEvent(payload._2)}"
+              s"A event is going to be sent to the secondary sink by flushBuffer(). Status: ${payload._1}, Event: ${payload._2.summary}"
             )
             payload match {
               case (_: STAGING, _) => divertToSecondarySink(payload)
@@ -165,8 +162,7 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
               } else {
                 if (!buffer.offer(payload)) { // if the buffer is full
                   taskLogger.info(
-                    s"A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${Util
-                      .getBriefOfEvent(payload._2)}"
+                    s"A event is going to be sent to the secondary sink since the internal buffer is full. Status: ${payload._1}, Event: ${payload._2.summary}"
                   )
                   divertToSecondarySink(
                     (
@@ -216,8 +212,7 @@ class DecouplerBidiOperator(val settings: DecouplerSettings) extends IBidiOperat
               payload match {
                 case (_: STAGING, _) =>
                   taskLogger.info(
-                    s"A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${Util
-                      .getBriefOfEvent(payload._2)}"
+                    s"A event is going to be sent to the secondary sink since it operated failed. Status: ${payload._1}, Event: ${payload._2.summary}"
                   )
                   divertToSecondarySink(payload) // make it async without blocking thread
                 case _ =>

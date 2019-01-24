@@ -26,9 +26,9 @@ trait Event {
   def uuid: String
   def metadata: EventMetaData
   def body: EventBody
-  def status: EventStatus
   def createdAt: Date
   def passThrough: Option[Any]
+  def summary: String
 
   def withPassThrough[T](_passThrough: T): Event
   def getPassThrough[T]: Option[T] = passThrough.map(_.asInstanceOf[T])
@@ -41,7 +41,6 @@ trait Event {
   def hasExtra(_key: String): Boolean
   def getExtra(_key: String): Option[String]
   def withExtra(_key: String, _value: String): Event
-  def withStatus(_status: EventStatus): Event
 }
 
 object Event {

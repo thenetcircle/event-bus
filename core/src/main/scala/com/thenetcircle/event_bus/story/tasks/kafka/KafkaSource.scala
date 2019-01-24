@@ -27,7 +27,6 @@ import com.thenetcircle.event_bus.AppContext
 import com.thenetcircle.event_bus.event.EventStatus._
 import com.thenetcircle.event_bus.event._
 import com.thenetcircle.event_bus.event.extractor.{EventExtractingException, EventExtractorFactory}
-import com.thenetcircle.event_bus.misc.Util
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.kafka.KafkaSource.CommittableException
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserializer
@@ -114,12 +113,11 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
           eve = eve.withUUID(uuidOption.get)
         }
 
-        val eventBrief = Util.getBriefOfEvent(eve)
         val kafkaBrief =
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
         taskLogger
-          .info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
+          .info(s"Extracted a new event from Kafka, event: [${eve.summary}], Kafka: [$kafkaBrief]")
 
         (NORMAL, eve)
       })

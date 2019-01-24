@@ -30,7 +30,7 @@ import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, STAGING, Su
 import com.thenetcircle.event_bus.event.extractor.DataFormat.DataFormat
 import com.thenetcircle.event_bus.event.extractor.{DataFormat, EventExtractingException, EventExtractorFactory}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
-import com.thenetcircle.event_bus.misc.{Logging, Util}
+import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ISource, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
@@ -82,7 +82,7 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with ITaskLog
       .mapAsync(1)(request => {
         unmarshaller(request.entity)
           .map[(EventStatus, Event)](event => {
-            taskLogger.info(s"Received a new event: " + Util.getBriefOfEvent(event))
+            taskLogger.info(s"Received a new event: " + event.summary)
             taskLogger.debug(s"Extracted content of the event: $event")
             (NORMAL, event)
           })
