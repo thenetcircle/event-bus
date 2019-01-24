@@ -20,14 +20,14 @@ package com.thenetcircle.event_bus.story.tasks.http
 import java.util.concurrent.ThreadLocalRandom
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.Unmarshaller
-import akka.http.scaladsl.{Http, HttpExt}
-import akka.pattern.AskTimeoutException
+import akka.pattern.{ask, AskTimeoutException}
 import akka.stream._
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
@@ -40,7 +40,8 @@ import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.util.control.NonFatal
 import scala.util.{Failure, Random, Success, Try}
 
 class UnexpectedResponseException(info: String) extends RuntimeException(info)
@@ -53,7 +54,8 @@ case class HttpSinkSettings(
     concurrentRequests: Int = 1,
     expectedResponse: Option[String] = Some("ok"),
     allowExtraSignals: Boolean = true,
-    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`
+    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`,
+    bufferSize: Int = 100
 )
 
 case class RetrySettings(
@@ -65,23 +67,126 @@ case class RetrySettings(
 
 class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
 
+  require(
+    settings.defaultRequest.uri.scheme.nonEmpty && settings.defaultRequest.uri.authority.nonEmpty,
+    "Default request scheme and target endpoint are required"
+  )
+
+  def nonRetrySendingFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Payload, Payload, StoryMat] =
+    Flow[Payload]
+      .mapAsync(settings.concurrentRequests) {
+        case payload @ (NORMAL, _) => nonRetrySend(payload)
+        case others                => Future.successful(others)
+      }
+
+  def nonRetrySend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
+    val event                                       = payload._2
+    send(createHttpRequest(event))
+      .flatMap(checkResponse)
+      .map {
+        case CheckResponseResult.Passed => (NORMAL, event)
+        case result =>
+          (
+            STAGING(
+              Some(new UnexpectedResponseException(s"Check response failed with result $result")),
+              getTaskName()
+            ),
+            event
+          )
+      }
+  }
+
+  def retrySendingFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Payload, Payload, StoryMat] = {
+    initRetrySender()
+    Flow[Payload]
+      .watch(retrySender.get)
+      .mapAsync(settings.concurrentRequests) {
+        case payload @ (NORMAL, _) => retrySend(payload)
+        case others                => Future.successful(others)
+      }
+  }
+
+  def retrySend(
+      payload: Payload
+  )(implicit runningContext: TaskRunningContext): Future[Payload] = {
+
+    val retryDuration                               = settings.retrySettings.retryDuration
+    implicit val askTimeout: Timeout                = Timeout(retryDuration)
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
+
+    val event      = payload._2
+    val request    = createHttpRequest(event)
+    val endPoint   = request.getUri().toString
+    val eventBrief = Util.getBriefOfEvent(event)
+
+    (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
+      .mapTo[Try[HttpResponse]]
+      .map[(EventStatus, Event)] {
+        case Success(resp) =>
+          taskLogger.info(s"$taskLoggingPrefix A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
+          (NORMAL, event)
+        case Failure(ex) =>
+          taskLogger.warn(
+            s"$taskLoggingPrefix A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
+          )
+          (STAGING(Some(ex), getTaskName()), event)
+      }
+      .recover {
+        case ex: AskTimeoutException =>
+          taskLogger.warn(
+            s"$taskLoggingPrefix A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
+          )
+          (STAGING(Some(ex), getTaskName()), event)
+      }
+  }
+
+  override def sinkFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Payload, Payload, StoryMat] = {
+    initHttpSender()
+
+    if (settings.retryOnError)
+      retrySendingFlow()
+    else
+      nonRetrySendingFlow()
+  }
+
+  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
+    taskLogger.info(s"$taskLoggingPrefix Shutting down HttpSink of story ${getStoryName()}.")
+    retrySender.foreach(s => {
+      runningContext.getActorSystem().stop(s)
+      retrySender = None
+    })
+    httpSender.foreach(_.complete())
+  }
+
   def createHttpRequest(event: Event): HttpRequest =
     settings.defaultRequest.withEntity(HttpEntity(settings.requestContentType, event.body.data))
 
-  protected var http: Option[HttpExt] = None
-  protected def initHttp()(implicit runningContext: TaskRunningContext): Unit =
-    if (http.isEmpty) {
-      http = Some(Http()(runningContext.getActorSystem()))
-    }
+  def send(request: HttpRequest)(implicit runningContext: TaskRunningContext): Future[HttpResponse] = {
+    val responsePromise = Promise[HttpResponse]()
+    httpSender.get
+      .offer(request -> responsePromise)
+      .flatMap {
+        case QueueOfferResult.Enqueued => responsePromise.future
+        case QueueOfferResult.Dropped =>
+          Future.failed(new RuntimeException(s"$taskLoggingPrefix HttpSender buffer overflowed. Try again later."))
+        case QueueOfferResult.Failure(ex) => Future.failed(ex)
+        case QueueOfferResult.QueueClosed =>
+          Future.failed(
+            new RuntimeException(
+              s"$taskLoggingPrefix HttpSender Buffer was closed (pool shut down) while running the request. Try again later."
+            )
+          )
+      }(runningContext.getExecutionContext())
+  }
 
-  def send(request: HttpRequest)(implicit runningContext: TaskRunningContext): Future[HttpResponse] =
-    if (settings.connectionPoolSettings.isDefined) {
-      http.get.singleRequest(request = request, settings = settings.connectionPoolSettings.get)
-    } else {
-      http.get.singleRequest(request = request)
-    }
-
-  protected def checkResponse(
+  def checkResponse(
       response: HttpResponse
   )(implicit runningContext: TaskRunningContext): Future[CheckResponseResult] = {
     implicit val materializer: Materializer         = runningContext.getMaterializer()
@@ -117,29 +222,44 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     }
   }
 
-  def nonRetrySend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
-    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
+  protected var httpSender: Option[SourceQueueWithComplete[(HttpRequest, Promise[HttpResponse])]] = None
+  protected def initHttpSender()(implicit runningContext: TaskRunningContext): Unit = {
+    if (httpSender.isDefined) return
 
-    val event = payload._2
+    implicit val materializer: Materializer = runningContext.getMaterializer()
 
-    send(createHttpRequest(event))
-      .flatMap(checkResponse)
-      .map {
-        case CheckResponseResult.Passed => (NORMAL, event)
-        case result =>
-          (
-            STAGING(
-              Some(new UnexpectedResponseException(s"Check response failed with result $result")),
-              getTaskName()
-            ),
-            event
-          )
-      }
+    val http = Http()(runningContext.getActorSystem())
+    val host = settings.defaultRequest.uri.authority.host.address()
+    val port = settings.defaultRequest.uri.authority.port
+
+    val poolClientFlow = if (settings.connectionPoolSettings.isDefined) {
+      val connectionPoolSettings = settings.connectionPoolSettings.get
+      taskLogger.info(
+        s"$taskLoggingPrefix Initializing a new HttpSender of $host:$port with connection pool settings: $connectionPoolSettings"
+      )
+      http.newHostConnectionPool[Promise[HttpResponse]](host, port, connectionPoolSettings)
+    } else {
+      taskLogger.info(s"$taskLoggingPrefix Initializing a new HttpSender of $host:$port")
+      http.newHostConnectionPool[Promise[HttpResponse]](host, port)
+    }
+
+    httpSender = Some(
+      Source
+        .queue[(HttpRequest, Promise[HttpResponse])](settings.bufferSize, OverflowStrategy.backpressure)
+        .via(poolClientFlow)
+        .toMat(Sink.foreach {
+          case (Success(resp), p) => p.success(resp)
+          case (Failure(e), p)    => p.failure(e)
+        })(Keep.left)
+        .run()
+    )
+
+    taskLogger.info(s"$taskLoggingPrefix The HttpSender of $host:$port is initialized.")
   }
 
   protected var retrySender: Option[ActorRef] = None
   protected def initRetrySender()(implicit runningContext: TaskRunningContext): Unit =
-    if (settings.retryOnError && retrySender.isEmpty) {
+    if (retrySender.isEmpty) {
       retrySender = Some(
         runningContext
           .getActorSystem()
@@ -156,61 +276,6 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
           )
       )
     }
-
-  def retrySend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
-    import akka.pattern.ask
-    val retryDuration                               = settings.retrySettings.retryDuration
-    implicit val askTimeout: Timeout                = Timeout(retryDuration)
-    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
-
-    val event      = payload._2
-    val request    = createHttpRequest(event)
-    val endPoint   = request.getUri().toString
-    val eventBrief = Util.getBriefOfEvent(event)
-
-    (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
-      .mapTo[Try[HttpResponse]]
-      .map[(EventStatus, Event)] {
-        case Success(resp) =>
-          taskLogger.info(s"$taskLoggingPrefix A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
-          (NORMAL, event)
-        case Failure(ex) =>
-          taskLogger.warn(
-            s"$taskLoggingPrefix A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
-          )
-          (STAGING(Some(ex), getTaskName()), event)
-      }
-      .recover {
-        case ex: AskTimeoutException =>
-          taskLogger.warn(
-            s"$taskLoggingPrefix A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
-          )
-          (STAGING(Some(ex), getTaskName()), event)
-      }
-  }
-
-  override def sinkFlow()(
-      implicit runningContext: TaskRunningContext
-  ): Flow[Payload, Payload, StoryMat] = {
-    initHttp()
-    initRetrySender()
-
-    Flow[Payload]
-      .mapAsync(settings.concurrentRequests) {
-        case payload @ (NORMAL, _) =>
-          if (settings.retryOnError) retrySend(payload)
-          else nonRetrySend(payload)
-        case others => Future.successful(others)
-      }
-  }
-
-  override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    taskLogger.info(s"$taskLoggingPrefix Shutting down HttpSink of story ${getStoryName()}.")
-    retrySender.foreach(s => {
-      runningContext.getActorSystem().stop(s)
-      retrySender = None
-    })
-  }
 }
 
 object HttpSink {
@@ -316,7 +381,7 @@ object HttpSink {
                 self.tell(ExpBackoffRetry(req), receiver)
               case Failure(ex) =>
                 log.info(s"$taskLoggingPrefix Checking a http response failed with error message: ${ex.getMessage}")
-                resp.discardEntityBytes()(runningContext.getMaterializer())
+                try { resp.discardEntityBytes()(runningContext.getMaterializer()) } catch { case NonFatal(_) => }
                 replyToReceiver(Failure(ex), receiver)
             }
 
