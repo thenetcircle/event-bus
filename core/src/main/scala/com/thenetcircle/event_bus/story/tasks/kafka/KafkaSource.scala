@@ -119,7 +119,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
           s"topic: $kafkaTopic, partition: ${message.record.partition()}, offset: ${message.record
             .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
         taskLogger
-          .info(s"$taskLoggingPrefix Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
+          .info(s"Extracted a new event from Kafka, event: [$eventBrief], Kafka: [$kafkaBrief]")
 
         (NORMAL, eve)
       })
@@ -127,7 +127,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
         case ex: EventExtractingException =>
           val eventFormat = eventExtractor.getFormat()
           taskLogger.warn(
-            s"$taskLoggingPrefix The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
+            s"The event read from Kafka extracted fail with format: $eventFormat and error: $ex"
           )
           (
             SKIPPING,
@@ -151,7 +151,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
 
     val kafkaConsumerSettings = getConsumerSettings()
     val kafkaSubscription     = getSubscription()
-    taskLogger.info(s"$taskLoggingPrefix Going to subscribe kafka topics: $kafkaSubscription")
+    taskLogger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
 
     val (killSwitch, doneFuture) =
       Consumer
@@ -161,7 +161,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
           case (topicPartition, source) =>
             try {
               taskLogger.info(
-                s"$taskLoggingPrefix A new topicPartition $topicPartition has been assigned to story ${getStoryName()}."
+                s"A new topicPartition $topicPartition has been assigned to story ${getStoryName()}."
               )
 
               source
@@ -172,26 +172,26 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"$taskLoggingPrefix The event ${event.uuid} is going to be committed with offset $co"
+                          s"The event ${event.uuid} is going to be committed with offset $co"
                         )
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
-                          s"$taskLoggingPrefix The event ${event.uuid} missed PassThrough[CommittableOffset]"
+                          s"The event ${event.uuid} missed PassThrough[CommittableOffset]"
                         taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
 
                   case (STAGING(exOp, _), event) =>
                     taskLogger.error(
-                      s"$taskLoggingPrefix The event ${event.uuid} reaches the end with STAGING status" +
+                      s"The event ${event.uuid} reaches the end with STAGING status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"$taskLoggingPrefix The event ${event.uuid} is going to be committed with offset $co"
+                          s"The event ${event.uuid} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "Non handled STAGING status")
                       case None =>
@@ -201,12 +201,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     }
 
                   case (FAILED(ex, _), event) =>
-                    taskLogger.error(s"$taskLoggingPrefix The event ${event.uuid} reaches the end with error $ex")
+                    taskLogger.error(s"The event ${event.uuid} reaches the end with error $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"$taskLoggingPrefix The event ${event.uuid} is going to be committed with offset $co"
+                          s"The event ${event.uuid} is going to be committed with offset $co"
                         )
                         throw new CommittableException(co, "FAILED status event")
                       case None =>
@@ -216,20 +216,20 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                 .recover {
                   case ex: CommittableException =>
                     taskLogger.info(
-                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was failed with CommittableException, " +
+                      s"The substream listening on topicPartition $topicPartition was failed with CommittableException, " +
                         s"Now recovering the last item to be a Success()"
                     )
                     Success(ex.getCommittableOffset())
                   case NonFatal(ex) =>
                     taskLogger.info(
-                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
+                      s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
                         s"Now recovering the last item to be a Failure()"
                     )
                     Failure(ex)
                 }
                 .collect {
                   case Success(co) =>
-                    taskLogger.debug(s"$taskLoggingPrefix going to commit offset $co")
+                    taskLogger.debug(s"going to commit offset $co")
                     co
                 }
                 .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
@@ -243,21 +243,21 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                 .map(done => {
                   taskLogger
                     .info(
-                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was completed."
+                      s"The substream listening on topicPartition $topicPartition was completed."
                     )
                   done
                 })
                 .recover { // recover after run, to recover the stream running status
                   case NonFatal(ex) =>
                     taskLogger.error(
-                      s"$taskLoggingPrefix The substream listening on topicPartition $topicPartition was failed with error: $ex"
+                      s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
                     )
                     Done
                 }
             } catch {
               case NonFatal(ex) ⇒
                 taskLogger.error(
-                  s"$taskLoggingPrefix Could not materialize topic $topicPartition listening stream with error: $ex"
+                  s"Could not materialize topic $topicPartition listening stream with error: $ex"
                 )
                 throw ex
             }
@@ -270,7 +270,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    taskLogger.info(s"$taskLoggingPrefix Shutting down kafka-source of story ${getStoryName()}.")
+    taskLogger.info(s"Shutting down Kafka Source.")
     killSwitchOption.foreach(k => {
       k.shutdown(); killSwitchOption = None
     })

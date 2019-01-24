@@ -55,7 +55,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
 
   require(settings.bootstrapServers.nonEmpty, "bootstrap servers is required.")
 
-  taskLogger.info(s"Initializing KafkaSink with settings: $settings")
+  logger.info(s"Initializing KafkaSink with settings: $settings")
 
   def getProducerSettings()(
       implicit runningContext: TaskRunningContext
@@ -86,7 +86,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
       implicit runningContext: TaskRunningContext
   ): Envelope[ProducerKey, ProducerValue, Event] = {
     val record = createProducerRecord(event)
-    taskLogger.debug(s"$taskLoggingPrefix Prepared a new kafka record,  $record")
+    taskLogger.debug(s"Prepared a new kafka record: $record")
     Message(record, event)
   }
 
@@ -121,7 +121,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
     val kafkaSettings = getProducerSettings()
 
     val _kafkaProducer = kafkaProducer.getOrElse({
-      taskLogger.info(s"$taskLoggingPrefix Creating a new Kafka producer")
+      taskLogger.info(s"Creating a new Kafka producer")
       kafkaProducer = Some(kafkaSettings.createKafkaProducer())
       kafkaProducer.get
     })
@@ -143,7 +143,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
             s"topic: ${metadata.topic()}, partition: ${metadata.partition()}, offset: ${metadata
               .offset()}, key: ${Option(message.record.key()).map(_.rawData).getOrElse("")}"
           taskLogger.info(
-            s"$taskLoggingPrefix A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]"
+            s"A event successfully sent to Kafka. event: $eventBrief, kafka: [$kafkaBrief]"
           )
 
           (NORMAL, message.passThrough)
@@ -164,7 +164,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
     )
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    taskLogger.info(s"$taskLoggingPrefix Shutting down kafka-sink of story ${getStoryName()}.")
+    taskLogger.info(s"Shutting down Kafka Sink.")
     kafkaProducer.foreach(k => {
       k.close(5, TimeUnit.SECONDS); kafkaProducer = None
     })

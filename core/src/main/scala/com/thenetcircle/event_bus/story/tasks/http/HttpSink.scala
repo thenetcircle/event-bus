@@ -19,7 +19,7 @@ package com.thenetcircle.event_bus.story.tasks.http
 
 import java.util.concurrent.ThreadLocalRandom
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model._
@@ -34,7 +34,7 @@ import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.{Logging, Util}
 import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, ITaskLogging}
 import com.thenetcircle.event_bus.story.tasks.http.HttpSink.{CheckResponseResult, RetrySender}
-import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
+import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskLogger, TaskRunningContext}
 import com.thenetcircle.event_bus.{AppContext, BuildInfo}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
@@ -128,18 +128,18 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
       .mapTo[Try[HttpResponse]]
       .map[(EventStatus, Event)] {
         case Success(resp) =>
-          taskLogger.info(s"$taskLoggingPrefix A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
+          taskLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], $eventBrief")
           (NORMAL, event)
         case Failure(ex) =>
           taskLogger.warn(
-            s"$taskLoggingPrefix A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
+            s"A event unsuccessfully sent to HTTP endpoint [$endPoint], $eventBrief, failed with error $ex"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }
       .recover {
         case ex: AskTimeoutException =>
           taskLogger.warn(
-            s"$taskLoggingPrefix A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
+            s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], $eventBrief"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }
@@ -157,7 +157,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    taskLogger.info(s"$taskLoggingPrefix Shutting down HttpSink of story ${getStoryName()}.")
+    taskLogger.info(s"Shutting down Http Sink.")
     retrySender.foreach(s => {
       runningContext.getActorSystem().stop(s)
       retrySender = None
@@ -175,12 +175,12 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
       .flatMap {
         case QueueOfferResult.Enqueued => responsePromise.future
         case QueueOfferResult.Dropped =>
-          Future.failed(new RuntimeException(s"$taskLoggingPrefix HttpSender buffer overflowed. Try again later."))
+          Future.failed(new RuntimeException(s"HttpSender buffer overflowed. Try again later."))
         case QueueOfferResult.Failure(ex) => Future.failed(ex)
         case QueueOfferResult.QueueClosed =>
           Future.failed(
             new RuntimeException(
-              s"$taskLoggingPrefix HttpSender Buffer was closed (pool shut down) while running the request. Try again later."
+              s"HttpSender Buffer was closed (pool shut down) while running the request. Try again later."
             )
           )
       }(runningContext.getExecutionContext())
@@ -201,7 +201,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
           .map { _body =>
             val body = _body.utf8String
             taskLogger.info(
-              s"$taskLoggingPrefix Get a response from upstream with status code ${status.value} and body $body"
+              s"Get a response from upstream with status code ${status.value} and body $body"
             )
 
             if (body.trim == settings.expectedResponse.get.trim)
@@ -216,7 +216,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
         Future.successful(CheckResponseResult.Passed)
       }
     } else {
-      taskLogger.warn(s"$taskLoggingPrefix Get a response from upstream with non-200 [$status] status code")
+      taskLogger.warn(s"Get a response from upstream with non-200 [$status] status code")
       response.discardEntityBytes()
       Future.successful(CheckResponseResult.UnexpectedHttpCode)
     }
@@ -235,11 +235,11 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     val poolClientFlow = if (settings.connectionPoolSettings.isDefined) {
       val connectionPoolSettings = settings.connectionPoolSettings.get
       taskLogger.info(
-        s"$taskLoggingPrefix Initializing a new HttpSender of $host:$port with connection pool settings: $connectionPoolSettings"
+        s"Initializing a new HttpSender of $host:$port with connection pool settings: $connectionPoolSettings"
       )
       http.newHostConnectionPool[Promise[HttpResponse]](host, port, connectionPoolSettings)
     } else {
-      taskLogger.info(s"$taskLoggingPrefix Initializing a new HttpSender of $host:$port")
+      taskLogger.info(s"Initializing a new HttpSender of $host:$port")
       http.newHostConnectionPool[Promise[HttpResponse]](host, port)
     }
 
@@ -254,7 +254,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
         .run()
     )
 
-    taskLogger.info(s"$taskLoggingPrefix The HttpSender of $host:$port is initialized.")
+    taskLogger.info(s"The HttpSender of $host:$port is initialized.")
   }
 
   protected var retrySender: Option[ActorRef] = None
@@ -269,7 +269,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
               (request: HttpRequest) => this.send(request)(runningContext),
               (response: HttpResponse) => this.checkResponse(response)(runningContext),
               settings.retrySettings,
-              taskLoggingPrefix,
+              taskLogger,
               runningContext
             ),
             "HttpSink-retrySender-" + getStoryName() + "-" + Random.nextInt()
@@ -325,18 +325,17 @@ object HttpSink {
       sendFunc: HttpRequest => Future[HttpResponse],
       checkRespFunc: HttpResponse => Future[CheckResponseResult],
       retrySettings: RetrySettings,
-      taskLoggingPrefix: String
+      taskLogger: TaskLogger
   )(
       implicit runningContext: TaskRunningContext
-  ) extends Actor
-      with ActorLogging {
+  ) extends Actor {
 
     import RetrySender.Commands._
 
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
-      log.debug(s"$taskLoggingPrefix Replying response to http-sink")
+      taskLogger.debug(s"Replying response to http-sink")
       receiver ! result
     }
 
@@ -364,35 +363,35 @@ object HttpSink {
                 replyToReceiver(
                   Failure(
                     new UnexpectedResponseException(
-                      s"$taskLoggingPrefix Get a response from upstream with non-200 [${resp.status}] status code"
+                      s"Get a response from upstream with non-200 [${resp.status}] status code"
                     )
                   ),
                   receiver
                 )
               case Success(CheckResponseResult.UnexpectedBody) =>
                 replyToReceiver(
-                  Failure(new UnexpectedResponseException(s"$taskLoggingPrefix The response body was not expected.")),
+                  Failure(new UnexpectedResponseException(s"The response body was not expected.")),
                   receiver
                 )
               case Success(CheckResponseResult.Retry) =>
                 self.tell(req.retry(), receiver)
               case Success(CheckResponseResult.ExpBackoffRetry) =>
-                log.info(s"$taskLoggingPrefix Going to retry now since got ExpBackoffRetry signal from the endpoint")
+                taskLogger.info(s"Going to retry now since got ExpBackoffRetry signal from the endpoint")
                 self.tell(ExpBackoffRetry(req), receiver)
               case Failure(ex) =>
-                log.info(s"$taskLoggingPrefix Checking a http response failed with error message: ${ex.getMessage}")
+                taskLogger.info(s"Checking a http response failed with error message: ${ex.getMessage}")
                 try { resp.discardEntityBytes()(runningContext.getMaterializer()) } catch { case NonFatal(_) => }
                 replyToReceiver(Failure(ex), receiver)
             }
 
           case Failure(ex) =>
             if (retryTimes == 1)
-              log.warning(
-                s"$taskLoggingPrefix Sending request to $requestUrl failed with error $ex, going to retry now."
+              taskLogger.warn(
+                s"Sending request to $requestUrl failed with error $ex, going to retry now."
               )
             else
-              log.info(
-                s"$taskLoggingPrefix Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
+              taskLogger.info(
+                s"Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
               )
 
             self.tell(ExpBackoffRetry(req), receiver)

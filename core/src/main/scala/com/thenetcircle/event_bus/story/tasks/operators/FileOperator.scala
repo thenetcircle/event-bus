@@ -98,7 +98,7 @@ class FileOperator(val settings: FileOperatorSettings) extends IUndiOperator wit
             case (STAGING(cause, taskName), event) =>
               taskLogger
                 .info(
-                  s"$taskLoggingPrefix Going to send a STAGING event [${Util
+                  s"Going to send a STAGING event [${Util
                     .getBriefOfEvent(event)}] to the failover file [${getFilePath()}]"
                 )
               val causeString = cause.map(_.getClass.getName).getOrElse("unknown")

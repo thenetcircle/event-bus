@@ -101,7 +101,7 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
 
   def updateIndex(_nameIndex: Map[String, String], _channelIndex: Map[String, String]): Unit = {
     taskLogger.info(
-      s"$taskLoggingPrefix Updating the topic-resolver mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex
+      s"Updating the topic-resolver mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex
     )
     nameIndex = _nameIndex
     channelIndex = _channelIndex
@@ -121,7 +121,7 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
           case Success(newEvent) =>
             (NORMAL, newEvent)
           case Failure(ex) =>
-            taskLogger.error(s"$taskLoggingPrefix resolve kafka topic failed with error $ex")
+            taskLogger.error(s"Resolve a event topic failed with error $ex")
             (FAILED(ex, getTaskName()), event)
         }
       case others => others
@@ -154,25 +154,25 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
   def resolveEvent(event: Event): Event = {
     if (event.metadata.topic.isDefined) {
       taskLogger.info(
-        s"$taskLoggingPrefix event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it."
+        s"event ${event.uuid} has topic ${event.metadata.topic.get} already, will not resolve it."
       )
       return event
     }
     if (event.metadata.name.isEmpty && event.metadata.channel.isEmpty) {
       taskLogger.info(
-        s"$taskLoggingPrefix event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic."
+        s"event ${event.uuid} has no name and channel, will be send to default topic $defaultTopic."
       )
       return event.withTopic(defaultTopic)
     }
 
     val newTopic = getTopicFromIndex(event).getOrElse(defaultTopic)
-    taskLogger.info(s"$taskLoggingPrefix event ${event.uuid} has been resolved to new topic $newTopic")
+    taskLogger.info(s"event ${event.uuid} has been resolved to new topic $newTopic")
 
     event.withTopic(newTopic)
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
-    taskLogger.info(s"$taskLoggingPrefix Shutting down TopicResolverOperator of story ${getStoryName()}.")
+    taskLogger.info(s"Shutting down TopicResolver Operator.")
     nameIndex = Map.empty
     channelIndex = Map.empty
     zkWatcher.foreach(_.close())
