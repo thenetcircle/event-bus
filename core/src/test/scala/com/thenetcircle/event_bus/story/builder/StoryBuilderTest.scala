@@ -23,7 +23,7 @@ import com.thenetcircle.event_bus.story.Story.OpExecPos
 import com.thenetcircle.event_bus.story.StoryBuilder.StoryInfo
 import com.thenetcircle.event_bus.story.interfaces._
 import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkSettings}
-import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceSettings}
+import com.thenetcircle.event_bus.story.tasks.kafka.{KafkaSource, KafkaSourceClientSettings, KafkaSourceSettings}
 import com.thenetcircle.event_bus.story.tasks.operators.{DecouplerBidiOperator, _}
 import com.typesafe.config.Config
 import net.ceedubs.ficus.Ficus._
@@ -50,7 +50,7 @@ class StoryBuilderTest extends TestBase {
       name = "testStory",
       settings = "",
       source =
-        """kafka#{"bootstrap-servers":"localhost:9092,localhost:9093","topics":["event-test-filter","event-test-user","event-test-default"],"topic-pattern":"","max-concurrent-partitions":100,"commit-max-batches":20,"poll-interval":"50ms","wakeup-timeout":"3s","max-wakeups":10,"properties":{}}""",
+        """kafka#{"bootstrap-servers":"localhost:9092,localhost:9093","topics":["event-test-filter","event-test-user","event-test-default"],"topic-pattern":"","akka-kafka": {"max-concurrent-partitions":100,"commit-max-batches":20,"poll-interval":"50ms","wakeup-timeout":"3s","max-wakeups":10},"properties":{}}""",
       sink =
         """http#{"default-request":{"method":"POST","uri":"http://localhost:3001"},"min-backoff":"1 s","max-backoff":"30 s","max-retrytime":"12 h","concurrent-retries":1}""",
       operators = Some(
@@ -70,10 +70,12 @@ class StoryBuilderTest extends TestBase {
       "localhost:9092,localhost:9093",
       None,
       Left(Set("event-test-filter", "event-test-user", "event-test-default")),
-      pollInterval = Some(FiniteDuration(50, "ms")),
-      wakeupTimeout = Some(FiniteDuration(3, "s")),
-      maxWakeups = Some(10),
-      properties = Map("enable.auto.commit" -> "false")
+      clientSettings = KafkaSourceClientSettings(
+        pollInterval = Some(FiniteDuration(50, "ms")),
+        wakeupTimeout = Some(FiniteDuration(3, "s")),
+        maxWakeups = Some(10),
+        properties = Map("enable.auto.commit" -> "false")
+      )
     )
 
     story.sink shouldBe a[HttpSink]

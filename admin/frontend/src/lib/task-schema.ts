@@ -5,8 +5,7 @@ const sourceSchemas: any = {
     "properties": {
       "interface": {
         "type": "string",
-        "default": "0.0.0.0",
-        "required": true
+        "default": "0.0.0.0"
       },
       "port": {
         "type": "integer",
@@ -19,13 +18,11 @@ const sourceSchemas: any = {
         "type": "string",
         "enum": [
           "ActivityStreams"
-        ],
-        "required": true
+        ]
       },
       "succeeded-response": {
         "type": "string",
-        "default": "ok",
-        "required": true
+        "default": "ok"
       },
       "server": {
         "type": "object",
@@ -33,14 +30,12 @@ const sourceSchemas: any = {
         "properties": {
           "max-connections": {
             "type": "integer",
-            "default": 1024,
-            "required": true
+            "default": 1024
           },
           "request-timeout": {
             "type": "string",
             "default": "10 s",
-            "description": "possible units: (s)econd, (m)inute, (h)ours",
-            "required": true
+            "description": "possible units: (s)econd, (m)inute, (h)ours"
           },
           "idle-timeout": {
             "type": "string",
@@ -57,8 +52,7 @@ const sourceSchemas: any = {
             "default": "1 min",
             "description": "possible units: (s)econd, (m)inute, (h)ours"
           }
-        },
-        "required": true
+        }
       }
     }
   },
@@ -97,64 +91,66 @@ const sourceSchemas: any = {
       },
       "max-concurrent-partitions": {
         "type": "integer",
-        "default": 100,
-        "required": true
+        "default": 1024
       },
       "commit-max-batches": {
         "type": "integer",
-        "default": 20,
-        "required": true
+        "default": 50
       },
-      "use-dispatcher": {
-        "type": "string",
-        "default": "akka.kafka.default-dispatcher"
-      },
-      "poll-interval": {
-        "type": "string",
-        "default": "50ms",
-        "required": true
-      },
-      "poll-timeout": {
-        "type": "string",
-        "default": "50ms"
-      },
-      "stop-timeout": {
-        "type": "string",
-        "default": "30s"
-      },
-      "close-timeout": {
-        "type": "string",
-        "default": "20s"
-      },
-      "commit-timeout": {
-        "type": "string",
-        "default": "15s"
-      },
-      "commit-time-warning": {
-        "type": "string",
-        "default": "1s"
-      },
-      "wakeup-timeout": {
-        "type": "string",
-        "default": "3s",
-        "required": true
-      },
-      "max-wakeups": {
-        "type": "integer",
-        "default": 10,
-        "required": true
+      "akka-kafka": {
+        "type": "object",
+        "title": "Akka Kafka Configuration",
+        "properties": {
+          "use-dispatcher": {
+            "type": "string",
+            "default": "akka.kafka.default-dispatcher"
+          },
+          "poll-interval": {
+            "type": "string",
+            "default": "50ms"
+          },
+          "poll-timeout": {
+            "type": "string",
+            "default": "50ms"
+          },
+          "stop-timeout": {
+            "type": "string",
+            "default": "30s"
+          },
+          "close-timeout": {
+            "type": "string",
+            "default": "20s"
+          },
+          "commit-timeout": {
+            "type": "string",
+            "default": "15s"
+          },
+          "commit-time-warning": {
+            "type": "string",
+            "default": "1s"
+          },
+          "wakeup-timeout": {
+            "type": "string",
+            "default": "3s"
+          },
+          "max-wakeups": {
+            "type": "integer",
+            "default": 10
+          },
+          "wait-close-partition": {
+            "type": "string",
+            "default": "500ms"
+          },
+          "wakeup-debug": {
+            "type": "boolean",
+            "default": true
+          }
+        }
       },
       "properties": {
         "type": "object",
         "title": "Kafka Consumer Properties",
-        "properties": {
-          /*"enable.auto.commit": {
-            "type": "boolean",
-            "title": "Enable auto commit?",
-            "default": false
-          }*/
-        },
-        "required": true
+        "properties": {}
       }
     }
   }

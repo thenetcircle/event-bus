@@ -54,25 +54,29 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
   def getConsumerSettings()(
       implicit runningContext: TaskRunningContext
   ): ConsumerSettings[ConsumerKey, ConsumerValue] = {
-    var _consumerSettings = ConsumerSettings[ConsumerKey, ConsumerValue](
+    var consumerSettings = ConsumerSettings[ConsumerKey, ConsumerValue](
       runningContext.getActorSystem(),
       new KafkaKeyDeserializer,
       new ByteArrayDeserializer
     )
 
-    settings.properties.foreach {
-      case (_key, _value) => _consumerSettings = _consumerSettings.withProperty(_key, _value)
+    val clientSettings = settings.clientSettings
+
+    clientSettings.properties.foreach {
+      case (_key, _value) => consumerSettings = consumerSettings.withProperty(_key, _value)
     }
 
-    settings.useDispatcher.foreach(v => _consumerSettings = _consumerSettings.withDispatcher(v))
-    settings.pollInterval.foreach(v => _consumerSettings = _consumerSettings.withPollInterval(v))
-    settings.pollTimeout.foreach(v => _consumerSettings = _consumerSettings.withPollTimeout(v))
-    settings.stopTimeout.foreach(v => _consumerSettings = _consumerSettings.withStopTimeout(v))
-    settings.closeTimeout.foreach(v => _consumerSettings = _consumerSettings.withCloseTimeout(v))
-    settings.commitTimeout.foreach(v => _consumerSettings = _consumerSettings.withCommitTimeout(v))
-    settings.commitTimeWarning.foreach(v => _consumerSettings = _consumerSettings.withCommitWarning(v))
-    settings.wakeupTimeout.foreach(v => _consumerSettings = _consumerSettings.withWakeupTimeout(v))
-    settings.maxWakeups.foreach(v => _consumerSettings = _consumerSettings.withMaxWakeups(v))
+    clientSettings.useDispatcher.foreach(v => consumerSettings = consumerSettings.withDispatcher(v))
+    clientSettings.pollInterval.foreach(v => consumerSettings = consumerSettings.withPollInterval(v))
+    clientSettings.pollTimeout.foreach(v => consumerSettings = consumerSettings.withPollTimeout(v))
+    clientSettings.stopTimeout.foreach(v => consumerSettings = consumerSettings.withStopTimeout(v))
+    clientSettings.closeTimeout.foreach(v => consumerSettings = consumerSettings.withCloseTimeout(v))
+    clientSettings.commitTimeout.foreach(v => consumerSettings = consumerSettings.withCommitTimeout(v))
+    clientSettings.commitTimeWarning.foreach(v => consumerSettings = consumerSettings.withCommitWarning(v))
+    clientSettings.wakeupTimeout.foreach(v => consumerSettings = consumerSettings.withWakeupTimeout(v))
+    clientSettings.maxWakeups.foreach(v => consumerSettings = consumerSettings.withMaxWakeups(v))
+    clientSettings.waitClosePartition.foreach(v => consumerSettings = consumerSettings.withWaitClosePartition(v))
+    clientSettings.wakeupDebug.foreach(v => consumerSettings = consumerSettings.withWakeupDebug(v))
 
     val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
 
@@ -83,7 +87,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
           "_" + getStoryName()
       )
 
-    _consumerSettings
+    consumerSettings
       .withBootstrapServers(settings.bootstrapServers)
       .withGroupId(groupId)
 
@@ -287,9 +291,12 @@ case class KafkaSourceSettings(
     bootstrapServers: String,
     groupId: Option[String],
     subscribedTopics: Either[Set[String], String],
-    maxConcurrentPartitions: Int = 100,
-    commitMaxBatches: Int = 20,
-    properties: Map[String, String] = Map.empty,
+    maxConcurrentPartitions: Int = 1024,
+    commitMaxBatches: Int = 50,
+    clientSettings: KafkaSourceClientSettings
+)
+
+case class KafkaSourceClientSettings(
     useDispatcher: Option[String] = None,
     pollInterval: Option[FiniteDuration] = None,
     pollTimeout: Option[FiniteDuration] = None,
@@ -298,7 +305,10 @@ case class KafkaSourceSettings(
     commitTimeout: Option[FiniteDuration] = None,
     commitTimeWarning: Option[FiniteDuration] = None,
     wakeupTimeout: Option[FiniteDuration] = None,
-    maxWakeups: Option[Int] = None
+    maxWakeups: Option[Int] = None,
+    waitClosePartition: Option[FiniteDuration] = None,
+    wakeupDebug: Option[Boolean] = None,
+    properties: Map[String, String] = Map.empty
 )
 
 class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
@@ -315,9 +325,22 @@ class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
         |  # topics = []
         |  # topic-pattern = event-* # supports wildcard if topics are defined will use that one
         |
-        |  max-concurrent-partitions = 100
-        |
+        |  max-concurrent-partitions = 1024
         |  commit-max-batches = 50
+        |
+        |  akka-kafka {
+        |    # poll-interval = 50ms
+        |    # poll-timeout = 50ms
+        |    # stop-timeout = 30s
+        |    # close-timeout = 20s
+        |    # commit-timeout = 15s
+        |    # commit-time-warning = 1s
+        |    # wakeup-timeout = 3s
+        |    # max-wakeups = 10
+        |    # use-dispatcher = "akka.kafka.default-dispatcher"
+        |    # wait-close-partition = 500ms
+        |    # wakeup-debug = true
+        |  }
         |
         |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig
         |  # can be defined in this configuration section.
@@ -344,6 +367,22 @@ class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
       }
     }
 
+    val akkaKafkaConfig = config.getConfig("akka-kafka")
+    val clientSettings = KafkaSourceClientSettings(
+      akkaKafkaConfig.as[Option[String]]("use-dispatcher"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("poll-interval"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("poll-timeout"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("stop-timeout"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("close-timeout"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("commit-timeout"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("commit-time-warning"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("wakeup-timeout"),
+      akkaKafkaConfig.as[Option[Int]]("max-wakeups"),
+      akkaKafkaConfig.as[Option[FiniteDuration]]("wait-close-partition"),
+      akkaKafkaConfig.as[Option[Boolean]]("wakeup-debug"),
+      config.as[Map[String, String]]("properties")
+    )
+
     val settings =
       KafkaSourceSettings(
         config.as[String]("bootstrap-servers"),
@@ -351,16 +390,7 @@ class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
         subscribedTopics,
         config.as[Int]("max-concurrent-partitions"),
         config.as[Int]("commit-max-batches"),
-        config.as[Map[String, String]]("properties"),
-        config.as[Option[String]]("use-dispatcher"),
-        config.as[Option[FiniteDuration]]("poll-interval"),
-        config.as[Option[FiniteDuration]]("poll-timeout"),
-        config.as[Option[FiniteDuration]]("stop-timeout"),
-        config.as[Option[FiniteDuration]]("close-timeout"),
-        config.as[Option[FiniteDuration]]("commit-timeout"),
-        config.as[Option[FiniteDuration]]("commit-time-warning"),
-        config.as[Option[FiniteDuration]]("wakeup-timeout"),
-        config.as[Option[Int]]("max-wakeups")
+        clientSettings
       )
 
     new KafkaSource(settings)

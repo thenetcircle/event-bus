@@ -103,8 +103,8 @@ class HttpSource(val settings: HttpSourceSettings) extends ISource with ITaskLog
     implicit val materializer: Materializer         = runningContext.getMaterializer()
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    // TODO consider merge sub-streams, since request sub-stream will materialize subsequent tasks
-    //      for example Decoupler buffer will not work on short-term connections
+    // TODO consider merge sub-streams, since each sub-stream will materialize subsequent tasks onece
+    //      for example Decoupler buffer will not work on short connections
     //      for now is ok since we are using Nginx as an reverse proxy
     val internalHandler =
       Flow[HttpRequest]
@@ -158,7 +158,13 @@ class HttpSourceBuilder() extends ITaskBuilder[HttpSource] with Logging {
         |
         |  # server settings will override the default settings of akka.http.server
         |  server {
-        |    # max-connections = 1024
+        |    idle-timeout = "3 min"
+        |    request-timeout = "10 s"
+        |    bind-timeout = "1 s"
+        |    linger-timeout = "1 min"
+        |    max-connections = 1024
+        |    pipelining-limit = 16
+        |    backlog = 1024
         |    # ...
         |  }
         |}""".stripMargin

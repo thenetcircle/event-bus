@@ -29,9 +29,31 @@ class HttpSourceBuilderTest extends TestBase {
 
   val builder = new HttpSourceBuilder
 
+  it should "work correctly with minimum config" in {
+
+    val task = storyBuilder.buildTaskWithBuilder("""{
+                                                     |  "port": 8888
+                                                     |}""".stripMargin)(builder)
+
+    val settings = task.settings
+
+    settings.interface shouldEqual "0.0.0.0"
+    settings.port shouldEqual 8888
+    settings.format shouldEqual DataFormat.ACTIVITYSTREAMS
+    settings.succeededResponse shouldEqual "ok"
+
+    settings.serverSettings.get.idleTimeout shouldEqual 3.minutes
+    settings.serverSettings.get.requestTimeout shouldEqual 10.seconds
+    settings.serverSettings.get.bindTimeout shouldEqual 1.second
+    settings.serverSettings.get.lingerTimeout shouldEqual 1.minute
+    settings.serverSettings.get.maxConnections shouldEqual 1024
+    settings.serverSettings.get.pipeliningLimit shouldEqual 16
+    settings.serverSettings.get.backlog shouldEqual 1024
+  }
+
   it should "build correct HttpSource with the default config" in {
 
-    val source = storyBuilder.buildTaskWithBuilder("""{
+    val task = storyBuilder.buildTaskWithBuilder("""{
         |  "interface": "127.0.0.1",
         |  "port": 8888,
         |  "succeeded-response": "okoo",
@@ -41,15 +63,19 @@ class HttpSourceBuilderTest extends TestBase {
         |  }
         |}""".stripMargin)(builder)
 
-    val settings = source.settings
+    val settings = task.settings
 
     settings.interface shouldEqual "127.0.0.1"
     settings.port shouldEqual 8888
     settings.format shouldEqual DataFormat.ACTIVITYSTREAMS
     settings.succeededResponse shouldEqual "okoo"
-    settings.serverSettings.get.maxConnections shouldEqual 1001
-    settings.serverSettings.get.requestTimeout shouldEqual 5.seconds
-    settings.serverSettings.get.lingerTimeout shouldEqual 1.minute
 
+    settings.serverSettings.get.idleTimeout shouldEqual 3.minutes
+    settings.serverSettings.get.requestTimeout shouldEqual 5.seconds
+    settings.serverSettings.get.bindTimeout shouldEqual 1.second
+    settings.serverSettings.get.lingerTimeout shouldEqual 1.minute
+    settings.serverSettings.get.maxConnections shouldEqual 1001
+    settings.serverSettings.get.pipeliningLimit shouldEqual 16
+    settings.serverSettings.get.backlog shouldEqual 1024
   }
 }
