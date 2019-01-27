@@ -18,9 +18,8 @@
 package com.thenetcircle.event_bus.story.builder
 
 import akka.http.scaladsl.model._
-import com.google.common.net.HttpHeaders
 import com.thenetcircle.event_bus.TestBase
-import com.thenetcircle.event_bus.story.tasks.http.{HttpSink, HttpSinkBuilder}
+import com.thenetcircle.event_bus.story.tasks.http.HttpSinkBuilder
 
 import scala.concurrent.duration._
 
@@ -30,14 +29,50 @@ class HttpSinkBuilderTest extends TestBase {
 
   val builder = new HttpSinkBuilder
 
+  it should "build correct HttpSink with minimum config" in {
+
+    val task = storyBuilder.buildTaskWithBuilder("""{
+                                                   |  "default-request" : {
+                                                   |    "method": "GET",
+                                                   |    "uri": "http://www.google.com"
+                                                   |  }
+                                                   |}""".stripMargin)(builder)
+
+    val settings = task.settings
+
+    settings.concurrentRequests shouldEqual 1
+    settings.requestBufferSize shouldEqual 100
+    settings.expectedResponse shouldEqual Some("ok")
+    settings.allowExtraSignals shouldEqual true
+
+    settings.useRetrySender shouldEqual true
+    settings.retrySenderSettings.minBackoff shouldEqual 1.second
+    settings.retrySenderSettings.maxBackoff shouldEqual 30.seconds
+    settings.retrySenderSettings.randomFactor shouldEqual 0.2
+    settings.retrySenderSettings.retryDuration shouldEqual 12.hours
+
+    settings.defaultRequest.method shouldEqual HttpMethods.GET
+    settings.defaultRequest.uri shouldEqual Uri("http://www.google.com")
+    settings.defaultRequest.protocol shouldEqual HttpProtocols.`HTTP/1.1`
+
+    settings.connectionPoolSettings.get.maxConnections shouldEqual 32
+    settings.connectionPoolSettings.get.minConnections shouldEqual 0
+    settings.connectionPoolSettings.get.maxOpenRequests shouldEqual 256
+    settings.connectionPoolSettings.get.maxRetries shouldEqual 5
+    settings.connectionPoolSettings.get.idleTimeout shouldEqual 30.seconds
+    settings.connectionPoolSettings.get.pipeliningLimit shouldEqual 1
+  }
+
   it should "build correct HttpSink with the default config" in {
 
     val sink = storyBuilder.buildTaskWithBuilder("""{
         |  "default-request" : {
         |    "uri": "http://www.google.com"
         |  },
-        |  "min-backoff": "3 s",
-        |  "max-backoff": "1 m",
+        |  "retry-sender": {
+        |    "min-backoff": "3 s",
+        |    "max-backoff": "1 m"
+        |  },
         |  "pool": {
         |    "max-retries": 10,
         |    "max-open-requests": 64,
@@ -48,23 +83,26 @@ class HttpSinkBuilderTest extends TestBase {
     val settings = sink.settings
 
     settings.concurrentRequests shouldEqual 1
-    settings.allowExtraSignals shouldEqual true
+    settings.requestBufferSize shouldEqual 100
     settings.expectedResponse shouldEqual Some("ok")
-    settings.retryOnError shouldEqual true
+    settings.allowExtraSignals shouldEqual true
 
-    settings.retrySettings.minBackoff shouldEqual 3.seconds
-    settings.retrySettings.maxBackoff shouldEqual 1.minute
-    settings.retrySettings.randomFactor shouldEqual 0.2
-    settings.retrySettings.retryDuration shouldEqual 12.hours
+    settings.useRetrySender shouldEqual true
+    settings.retrySenderSettings.minBackoff shouldEqual 3.seconds
+    settings.retrySenderSettings.maxBackoff shouldEqual 1.minute
+    settings.retrySenderSettings.randomFactor shouldEqual 0.2
+    settings.retrySenderSettings.retryDuration shouldEqual 12.hours
 
+    settings.defaultRequest.method shouldEqual HttpMethods.POST
     settings.defaultRequest.uri shouldEqual Uri("http://www.google.com")
+    settings.defaultRequest.protocol shouldEqual HttpProtocols.`HTTP/1.1`
 
-    settings.connectionPoolSettings.get.maxRetries shouldEqual 10
+    settings.connectionPoolSettings.get.maxConnections shouldEqual 32
+    settings.connectionPoolSettings.get.minConnections shouldEqual 0
     settings.connectionPoolSettings.get.maxOpenRequests shouldEqual 64
+    settings.connectionPoolSettings.get.maxRetries shouldEqual 10
     settings.connectionPoolSettings.get.idleTimeout shouldEqual 10.minutes
     settings.connectionPoolSettings.get.pipeliningLimit shouldEqual 1
-    settings.connectionPoolSettings.get.maxConnections shouldEqual 32
-    settings.connectionPoolSettings.get.minConnections shouldEqual 3
   }
 
   it should "build correct sink with the full config" in {
@@ -81,14 +119,17 @@ class HttpSinkBuilderTest extends TestBase {
         |      "referer": "http://www.google.com"
         |    }
         |  },
-        |  "retry-on-error": false,
         |  "concurrent-requests": 100,
+        |  "request-buffer-size": 1000,
         |  "expected-response": "",
         |  "allow-extra-signals": false,
-        |  "min-backoff": "3 s",
-        |  "max-backoff": "1 m",
-        |  "random-factor": 0.8,
-        |  "retry-duration": "10 m",
+        |  "use-retry-sender": false,
+        |  "retry-sender": {
+        |    "min-backoff": "3 s",
+        |    "max-backoff": "1 m",
+        |    "random-factor": 0.8,
+        |    "retry-duration": "10 m"
+        |  },
         |  "pool": {
         |    "max-retries": 11,
         |    "max-open-requests": 64,
@@ -100,14 +141,15 @@ class HttpSinkBuilderTest extends TestBase {
     val settings = sink.settings
 
     settings.concurrentRequests shouldEqual 100
+    settings.requestBufferSize shouldEqual 1000
     settings.allowExtraSignals shouldEqual false
     settings.expectedResponse shouldEqual None
-    settings.retryOnError shouldEqual false
 
-    settings.retrySettings.minBackoff shouldEqual 3.seconds
-    settings.retrySettings.maxBackoff shouldEqual 1.minute
-    settings.retrySettings.randomFactor shouldEqual 0.8
-    settings.retrySettings.retryDuration shouldEqual 10.minutes
+    settings.useRetrySender shouldEqual false
+    settings.retrySenderSettings.minBackoff shouldEqual 3.seconds
+    settings.retrySenderSettings.maxBackoff shouldEqual 1.minute
+    settings.retrySenderSettings.randomFactor shouldEqual 0.8
+    settings.retrySenderSettings.retryDuration shouldEqual 10.minutes
 
     settings.defaultRequest.method shouldEqual HttpMethods.PUT
     settings.defaultRequest.uri shouldEqual Uri("http://www.bing.com")
@@ -116,10 +158,10 @@ class HttpSinkBuilderTest extends TestBase {
 
     settings.connectionPoolSettings.get.maxRetries shouldEqual 11
     settings.connectionPoolSettings.get.maxOpenRequests shouldEqual 64
-    settings.connectionPoolSettings.get.idleTimeout shouldEqual 1.minutes
+    settings.connectionPoolSettings.get.idleTimeout shouldEqual 1.minute
     settings.connectionPoolSettings.get.pipeliningLimit shouldEqual 1
     settings.connectionPoolSettings.get.maxConnections shouldEqual 32
-    settings.connectionPoolSettings.get.minConnections shouldEqual 3
+    settings.connectionPoolSettings.get.minConnections shouldEqual 0
   }
 
 }

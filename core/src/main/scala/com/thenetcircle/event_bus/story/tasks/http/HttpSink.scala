@@ -48,17 +48,17 @@ class UnexpectedResponseException(info: String) extends RuntimeException(info)
 
 case class HttpSinkSettings(
     defaultRequest: HttpRequest,
-    retryOnError: Boolean = true,
-    retrySettings: RetrySettings = RetrySettings(),
+    useRetrySender: Boolean = true,
+    retrySenderSettings: RetrySenderSettings = RetrySenderSettings(),
     connectionPoolSettings: Option[ConnectionPoolSettings] = None,
     concurrentRequests: Int = 1,
+    requestBufferSize: Int = 100,
     expectedResponse: Option[String] = Some("ok"),
     allowExtraSignals: Boolean = true,
-    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`,
-    bufferSize: Int = 100
+    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`
 )
 
-case class RetrySettings(
+case class RetrySenderSettings(
     minBackoff: FiniteDuration = 1.second,
     maxBackoff: FiniteDuration = 30.seconds,
     randomFactor: Double = 0.2,
@@ -72,16 +72,16 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     "Default request scheme and target endpoint are required"
   )
 
-  def nonRetrySendingFlow()(
+  def normalSendingFlow()(
       implicit runningContext: TaskRunningContext
   ): Flow[Payload, Payload, StoryMat] =
     Flow[Payload]
       .mapAsync(settings.concurrentRequests) {
-        case payload @ (NORMAL, _) => nonRetrySend(payload)
+        case payload @ (NORMAL, _) => doNormalSend(payload)
         case others                => Future.successful(others)
       }
 
-  def nonRetrySend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
+  def doNormalSend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
     val event                                       = payload._2
     send(createHttpRequest(event))
@@ -106,16 +106,16 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     Flow[Payload]
       .watch(retrySender.get)
       .mapAsync(settings.concurrentRequests) {
-        case payload @ (NORMAL, _) => retrySend(payload)
+        case payload @ (NORMAL, _) => doRetrySend(payload)
         case others                => Future.successful(others)
       }
   }
 
-  def retrySend(
+  def doRetrySend(
       payload: Payload
   )(implicit runningContext: TaskRunningContext): Future[Payload] = {
 
-    val retryDuration                               = settings.retrySettings.retryDuration
+    val retryDuration                               = settings.retrySenderSettings.retryDuration
     implicit val askTimeout: Timeout                = Timeout(retryDuration)
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
@@ -149,10 +149,10 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
   ): Flow[Payload, Payload, StoryMat] = {
     initHttpSender()
 
-    if (settings.retryOnError)
+    if (settings.useRetrySender)
       retrySendingFlow()
     else
-      nonRetrySendingFlow()
+      normalSendingFlow()
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
@@ -244,7 +244,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
 
     httpSender = Some(
       Source
-        .queue[(HttpRequest, Promise[HttpResponse])](settings.bufferSize, OverflowStrategy.backpressure)
+        .queue[(HttpRequest, Promise[HttpResponse])](settings.requestBufferSize, OverflowStrategy.backpressure)
         .via(poolClientFlow)
         .toMat(Sink.foreach {
           case (Success(resp), p) => p.success(resp)
@@ -267,7 +267,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
               classOf[RetrySender],
               (request: HttpRequest) => this.send(request)(runningContext),
               (response: HttpResponse) => this.checkResponse(response)(runningContext),
-              settings.retrySettings,
+              settings.retrySenderSettings,
               taskLogger,
               runningContext
             ),
@@ -323,7 +323,7 @@ object HttpSink {
   class RetrySender(
       sendFunc: HttpRequest => Future[HttpResponse],
       checkRespFunc: HttpResponse => Future[CheckResponseResult],
-      retrySettings: RetrySettings,
+      retrySettings: RetrySenderSettings,
       taskLogger: TaskLogger
   )(
       implicit runningContext: TaskRunningContext
@@ -420,19 +420,22 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |  }
       |
       |  concurrent-requests = 1
+      |  request-buffer-size = 100
       |  expected-response = "ok"
       |  allow-extra-signals = true
       |
-      |  retry-on-error = true
-      |  min-backoff = 1 s
-      |  max-backoff = 30 s
-      |  random-factor = 0.2
-      |  retry-duration = 12 h
+      |  use-retry-sender = true
+      |  retry-sender {
+      |    min-backoff = 1 s
+      |    max-backoff = 30 s
+      |    random-factor = 0.2
+      |    retry-duration = 12 h
+      |  }
       |
       |  # pool settings will override the default settings of akka.http.host-connection-pool
       |  pool {
       |    max-connections = 32
-      |    min-connections = 3
+      |    min-connections = 0
       |    max-open-requests = 256
       |    # pipelining-limit = 1
       |    # idle-timeout = 30 s
@@ -480,20 +483,23 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       val defaultRequest: HttpRequest = buildHttpRequestFromConfig(config.getConfig("default-request"))
       val connectionPoolSettings =
         config.as[Option[Map[String, String]]]("pool").filter(_.nonEmpty).map(buildConnectionPoolSettings)
-      val retrySettings = RetrySettings(
-        config.as[FiniteDuration]("min-backoff"),
-        config.as[FiniteDuration]("max-backoff"),
-        config.as[Double]("random-factor"),
-        config.as[FiniteDuration]("retry-duration")
+
+      val retrySenderConfig = config.getConfig("retry-sender")
+      val retrySenderSettings = RetrySenderSettings(
+        retrySenderConfig.as[FiniteDuration]("min-backoff"),
+        retrySenderConfig.as[FiniteDuration]("max-backoff"),
+        retrySenderConfig.as[Double]("random-factor"),
+        retrySenderConfig.as[FiniteDuration]("retry-duration")
       )
 
       new HttpSink(
         HttpSinkSettings(
           defaultRequest,
-          config.as[Boolean]("retry-on-error"),
-          retrySettings,
+          config.as[Boolean]("use-retry-sender"),
+          retrySenderSettings,
           connectionPoolSettings,
           config.as[Int]("concurrent-requests"),
+          config.as[Int]("request-buffer-size"),
           config.as[Option[String]]("expected-response").filter(_.trim != ""),
           config.as[Boolean]("allow-extra-signals")
         )

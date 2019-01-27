@@ -23,13 +23,14 @@ import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL}
 import com.thenetcircle.event_bus.misc.ZKManager
 import com.thenetcircle.event_bus.story.interfaces.{ITaskBuilder, ITaskLogging, IUndiOperator}
+import com.thenetcircle.event_bus.story.tasks.kafka.replaceKafkaTopicSubstitutes
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.curator.framework.recipes.cache.NodeCache
 import spray.json._
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.matching.Regex
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 case class TopicInfo(topic: String, patterns: Option[List[String]], channels: Option[List[String]])
@@ -52,19 +53,9 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
   def init()(
       implicit runningContext: TaskRunningContext
   ): Unit = if (!inited) {
-    defaultTopic = replaceSubstitutes(defaultTopic)
+    defaultTopic = replaceKafkaTopicSubstitutes(defaultTopic)
     updateAndWatchIndex()
     inited = true
-  }
-
-  def replaceSubstitutes(_topic: String)(
-      implicit runningContext: TaskRunningContext
-  ): String = {
-    var topic = _topic
-    topic = topic.replaceAll(Regex.quote("""{app_name}"""), runningContext.getAppContext().getAppName())
-    topic = topic.replaceAll(Regex.quote("""{app_env}"""), runningContext.getAppContext().getAppEnv())
-    topic = topic.replaceAll(Regex.quote("""{story_name}"""), getStoryName())
-    topic
   }
 
   private def updateAndWatchIndex()(
@@ -76,23 +67,28 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
         _ foreach {
           data =>
             if (data.nonEmpty) {
-              val topicInfo        = data.parseJson.convertTo[List[TopicInfo]]
-              val nameIndexList    = ArrayBuffer.empty[(String, String)]
-              val channelIndexList = ArrayBuffer.empty[(String, String)]
+              try {
+                val topicInfo        = data.parseJson.convertTo[List[TopicInfo]]
+                val nameIndexList    = ArrayBuffer.empty[(String, String)]
+                val channelIndexList = ArrayBuffer.empty[(String, String)]
 
-              topicInfo
-                .foreach(info => {
-                  // val _topic = replaceSubstitutes(info.topic)
-                  val _topic = info.topic
-                  info.patterns.foreach(_.foreach(s => {
-                    nameIndexList += (s -> _topic)
-                  }))
-                  info.channels.foreach(_.foreach(s => {
-                    channelIndexList += (s -> _topic)
-                  }))
-                })
+                topicInfo
+                  .foreach(info => {
+                    // val _topic = replaceSubstitutes(info.topic)
+                    val _topic = info.topic
+                    info.patterns.foreach(_.foreach(s => {
+                      nameIndexList += (s -> _topic)
+                    }))
+                    info.channels.foreach(_.foreach(s => {
+                      channelIndexList += (s -> _topic)
+                    }))
+                  })
 
-              updateIndex(nameIndexList.toMap, channelIndexList.toMap)
+                updateIndex(nameIndexList.toMap, channelIndexList.toMap)
+              } catch {
+                case NonFatal(ex) =>
+                  taskLogger.error(s"Updating TopicResolver mapping failed with error: $ex")
+              }
             }
         }
       }
@@ -101,7 +97,7 @@ class TopicResolverOperator(zkManager: ZKManager, val _defaultTopic: String) ext
 
   def updateIndex(_nameIndex: Map[String, String], _channelIndex: Map[String, String]): Unit = {
     taskLogger.info(
-      s"Updating the topic-resolver mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex
+      s"Updating TopicResolver mapping, nameIndex : " + _nameIndex + ", channelIndex: " + _channelIndex
     )
     nameIndex = _nameIndex
     channelIndex = _channelIndex
@@ -186,7 +182,7 @@ class TopicResolverOperatorBuilder() extends ITaskBuilder[TopicResolverOperator]
   override val defaultConfig: Config =
     ConfigFactory.parseString(
       """{
-        |  default-topic = "event-{app_name}-default"
+        |  default-topic = "event-v2-{app_name}{app_env}-default"
         |}""".stripMargin
     )
 

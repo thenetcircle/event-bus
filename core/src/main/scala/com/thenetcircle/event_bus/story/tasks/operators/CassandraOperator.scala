@@ -36,7 +36,7 @@ import net.ceedubs.ficus.Ficus._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.control.NonFatal
 
-case class CassandraOperatorSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 2)
+case class CassandraOperatorSettings(contactPoints: List[String], port: Int = 9042, parallelism: Int = 3)
 
 class CassandraOperator(val settings: CassandraOperatorSettings)
     extends IUndiOperator

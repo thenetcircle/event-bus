@@ -17,11 +17,27 @@
 
 package com.thenetcircle.event_bus.story.tasks
 import com.thenetcircle.event_bus.event.Event
+import com.thenetcircle.event_bus.story.TaskRunningContext
 import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKey
+
+import scala.util.matching.Regex
 
 package object kafka {
   type ProducerKey   = KafkaKey
   type ProducerValue = Event
   type ConsumerKey   = KafkaKey
   type ConsumerValue = Array[Byte]
+
+  def replaceKafkaTopicSubstitutes(topic: String)(
+      implicit runningContext: TaskRunningContext
+  ): String = {
+    val appContext = runningContext.getAppContext()
+
+    topic
+      .replaceAll(Regex.quote("""{app_name}"""), appContext.getAppName())
+      .replaceAll(
+        Regex.quote("""{app_env}"""),
+        if (appContext.isDev() || appContext.isProd()) "" else appContext.getAppEnv()
+      )
+  }
 }

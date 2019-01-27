@@ -17,7 +17,6 @@
 
 package com.thenetcircle.event_bus.misc
 
-import com.thenetcircle.event_bus.event.Event
 import com.typesafe.config.{Config, ConfigFactory, ConfigParseOptions, ConfigSyntax}
 
 object Util {

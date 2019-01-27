@@ -44,8 +44,12 @@ import scala.concurrent.duration._
 case class KafkaSinkSettings(
     bootstrapServers: String,
     defaultTopic: String = "event-default",
-    parallelism: Int = 100,
-    closeTimeout: FiniteDuration = 60.seconds,
+    clientSettings: KafkaSinkClientSettings
+)
+
+case class KafkaSinkClientSettings(
+    parallelism: Option[Int] = None,
+    closeTimeout: Option[FiniteDuration] = None,
     useDispatcher: Option[String] = None,
     properties: Map[String, String] = Map.empty
 )
@@ -59,23 +63,24 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
   def getProducerSettings()(
       implicit runningContext: TaskRunningContext
   ): ProducerSettings[ProducerKey, ProducerValue] = {
-    var _producerSettings = ProducerSettings[ProducerKey, ProducerValue](
+    var producerSettings = ProducerSettings[ProducerKey, ProducerValue](
       runningContext.getActorSystem(),
       new KafkaKeySerializer,
       new EventSerializer
     )
+    val clientSettings = settings.clientSettings
 
-    settings.properties.foreach {
-      case (_key, _value) => _producerSettings = _producerSettings.withProperty(_key, _value)
+    clientSettings.properties.foreach {
+      case (_key, _value) => producerSettings = producerSettings.withProperty(_key, _value)
     }
 
-    settings.useDispatcher.foreach(dp => _producerSettings = _producerSettings.withDispatcher(dp))
+    clientSettings.parallelism.foreach(dp => producerSettings = producerSettings.withParallelism(dp))
+    clientSettings.closeTimeout.foreach(dp => producerSettings = producerSettings.withCloseTimeout(dp))
+    clientSettings.useDispatcher.foreach(dp => producerSettings = producerSettings.withDispatcher(dp))
 
-    val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
+    // val clientId = s"eventbus-${runningContext.getAppContext().getAppName()}"
 
-    _producerSettings
-      .withParallelism(settings.parallelism)
-      .withCloseTimeout(settings.closeTimeout)
+    producerSettings
       .withProperty(ProducerConfig.PARTITIONER_CLASS_CONFIG, classOf[KafkaPartitioner].getName)
       .withBootstrapServers(settings.bootstrapServers)
     // .withProperty("client.id", clientId)
@@ -89,10 +94,15 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
     Message(record, event)
   }
 
+  def getDefaultTopic()(
+      implicit runningContext: TaskRunningContext
+  ): String =
+    replaceKafkaTopicSubstitutes(settings.defaultTopic)
+
   def createProducerRecord(event: Event)(
       implicit runningContext: TaskRunningContext
   ): ProducerRecord[ProducerKey, ProducerValue] = {
-    val topic: String        = event.metadata.topic.getOrElse(settings.defaultTopic)
+    val topic: String        = event.metadata.topic.getOrElse(getDefaultTopic())
     val key: ProducerKey     = KafkaKey(event)
     val value: ProducerValue = event
     // val timestamp: Long      = event.createdAt.getTime
@@ -177,46 +187,39 @@ class KafkaSinkBuilder() extends ITaskBuilder[KafkaSink] {
     ConfigFactory.parseString(
       """{
         |  # bootstrap-servers = ""
-        |  default-topic = "event-default"
+        |  default-topic = "event-v2-{app_name}{app_env}-default"
         |
-        |  # Tuning parameter of how many sends that can run in parallel.
-        |  parallelism = 100
-        |
-        |  # How long to wait for `KafkaProducer.close`
-        |  close-timeout = 60 s
-        |
-        |  # Fully qualified config path which holds the dispatcher configuration
-        |  # to be used by the producer stages. Some blocking may occur.
-        |  # When this value is empty the dispatcher configured for the stream
-        |  # will be used.
-        |  use-dispatcher = "akka.kafka.default-dispatcher"
+        |  akka-kafka {
+        |    # parallelism = 100
+        |    # close-timeout = 60 s
+        |    # use-dispatcher = "akka.kafka.default-dispatcher"
+        |  }
         |
         |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
-        |  # can be defined in this configuration section.
         |  properties {
         |    acks = all
         |    retries = 30
         |    "max.in.flight.requests.per.connection" = 5
         |    "enable.idempotence" = true
         |  }
-        |
-        |  async-buffer-size = 100
         |}""".stripMargin
     )
 
   override def buildTask(
       config: Config
   )(implicit appContext: AppContext): KafkaSink = {
+    val akkaKafkaConfig = config.getConfig("akka-kafka")
     val settings =
       KafkaSinkSettings(
         config.as[String]("bootstrap-servers"),
         config.as[String]("default-topic"),
-        config.as[Int]("parallelism"),
-        config.as[FiniteDuration]("close-timeout"),
-        config.as[Option[String]]("use-dispatcher"),
-        config.as[Map[String, String]]("properties")
+        KafkaSinkClientSettings(
+          akkaKafkaConfig.as[Option[Int]]("parallelism"),
+          akkaKafkaConfig.as[Option[FiniteDuration]]("close-timeout"),
+          akkaKafkaConfig.as[Option[String]]("use-dispatcher"),
+          config.as[Map[String, String]]("properties")
+        )
       )
-
     new KafkaSink(settings)
   }
 }

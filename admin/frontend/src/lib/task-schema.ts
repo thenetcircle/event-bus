@@ -165,8 +165,7 @@ const operatorSchemas: any = {
         "type": "string",
         "title": "Default Topic",
         "description": "supports substitutes: {app_name}, {app_env}, {story_name}",
-        "default": "event-{app_name}-default",
-        "required": true
+        "default": "event-v2-{app_name}{app_env}-default"
       }
     }
   },
@@ -181,8 +180,7 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "title": "Event Name Regex"
-        },
-        "required": true
+        }
       },
       "event-name-black-list": {
         "type": "array",
@@ -191,8 +189,7 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "title": "Event Name Regex"
-        },
-        "required": true
+        }
       },
       "channel-white-list": {
         "type": "array",
@@ -201,8 +198,7 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "title": "Channel Regex"
-        },
-        "required": true
+        }
       },
       "channel-black-list": {
         "type": "array",
@@ -211,8 +207,7 @@ const operatorSchemas: any = {
         "items": {
           "type": "string",
           "title": "Channel Regex"
-        },
-        "required": true
+        }
       },
       "allowed-transport-modes": {
         "type": "array",
@@ -225,13 +220,11 @@ const operatorSchemas: any = {
           ],
           "title": "Transport Mode"
         },
-        "default": ["ASYNC", "BOTH", "NONE"],
-        "required": true
+        "default": ["ASYNC", "BOTH", "NONE"]
       },
       "only-extras": {
         "type": "object",
         "title": "Only Matched Extra Infos",
-        "required": true,
         "properties": {}
       }
     }
@@ -255,8 +248,7 @@ const operatorSchemas: any = {
       },
       "parallelism": {
         "type": "integer",
-        "default": 3,
-        "required": true
+        "default": 3
       }
     }
   },
@@ -266,14 +258,12 @@ const operatorSchemas: any = {
     "properties": {
       "buffer-size": {
         "type": "integer",
-        "default": 10000,
-        "required": true
+        "default": 10000
       },
       "terminate-delay": {
         "type": "string",
         "default": "10 m",
-        "description": "possible units: (s)econd, (m)inute, (h)ours",
-        "required": true
+        "description": "possible units: (s)econd, (m)inute, (h)ours"
       },
       "secondary-sink": {
         "type": "string",
@@ -282,8 +272,7 @@ const operatorSchemas: any = {
       },
       "secondary-sink-buffer-size": {
         "type": "integer",
-        "default": 1000,
-        "required": true
+        "default": 1000
       }
     }
   },
@@ -341,43 +330,44 @@ const sinkSchemas: any = {
       },
       "concurrent-requests": {
         "type": "integer",
-        "default": 1,
-        "required": true
+        "default": 1
+      },
+      "request-buffer-size": {
+        "type": "integer",
+        "default": 100
       },
       "expected-response": {
         "type": "string",
-        "default": "ok",
-        "required": true
+        "default": "ok"
       },
       "allow-extra-signals": {
         "type": "boolean",
-        "default": true,
-        "required": true
+        "default": true
       },
-      "retry-on-error": {
+      "use-retry-sender": {
         "type": "boolean",
-        "default": true,
-        "required": true
+        "default": true
       },
-      "min-backoff": {
-        "type": "string",
-        "default": "1 s",
-        "required": true
-      },
-      "max-backoff": {
-        "type": "string",
-        "default": "30 s",
-        "required": true
-      },
-      "random-factor": {
-        "type": "number",
-        "default": 0.2,
-        "required": true
-      },
-      "retry-duration": {
-        "type": "string",
-        "default": "12 h",
-        "required": true
+      "retry-sender": {
+        "type": "object",
+        "properties": {
+          "min-backoff": {
+            "type": "string",
+            "default": "1 s"
+          },
+          "max-backoff": {
+            "type": "string",
+            "default": "30 s"
+          },
+          "random-factor": {
+            "type": "number",
+            "default": 0.2
+          },
+          "retry-duration": {
+            "type": "string",
+            "default": "12 h"
+          }
+        }
       },
       "pool": {
         "type": "object",
@@ -385,7 +375,7 @@ const sinkSchemas: any = {
         "properties": {
           "max-connections": {
             "type": "integer",
-            "default": 4
+            "default": 32
           },
           "min-connections": {
             "type": "integer",
@@ -397,7 +387,7 @@ const sinkSchemas: any = {
           },
           "max-open-requests": {
             "type": "integer",
-            "default": 32
+            "default": 256
           },
           "pipelining-limit": {
             "type": "integer",
@@ -425,46 +415,45 @@ const sinkSchemas: any = {
       },
       "default-topic": {
         "type": "string",
-        "default": "event-default",
-        "required": true
+        "default": "event-v2-{app_name}{app_env}-default"
       },
-      "parallelism": {
-        "type": "integer",
-        "default": 100,
-        "required": true
-      },
-      "close-timeout": {
-        "type": "string",
-        "default": "60 s"
-      },
-      "use-dispatcher": {
-        "type": "string",
-        "default": "akka.kafka.default-dispatcher"
+      "akka-kafka": {
+        "type": "object",
+        "title": "Akka Kafka Settings",
+        "properties": {
+          "parallelism": {
+            "type": "integer",
+            "default": 100
+          },
+          "close-timeout": {
+            "type": "string",
+            "default": "60 s"
+          },
+          "use-dispatcher": {
+            "type": "string",
+            "default": "akka.kafka.default-dispatcher"
+          }
+        }
       },
       "properties": {
         "type": "object",
         "title": "Kafka Producer Properties",
-        "required": true,
         "properties": {
           "acks": {
             "type": "string",
-            "default": "all",
-            "required": true
+            "default": "all"
           },
           "retries": {
             "type": "integer",
-            "default": 30,
-            "required": true
+            "default": 30
           },
           "max.in.flight.requests.per.connection": {
             "type": "integer",
-            "default": 5,
-            "required": true
+            "default": 5
           },
           "enable.idempotence": {
             "type": "boolean",
-            "default": true,
-            "required": true
+            "default": true
           }
         }
       }
