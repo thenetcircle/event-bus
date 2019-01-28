@@ -124,6 +124,7 @@ class FileOperatorBuilder extends ITaskBuilder[FileOperator] {
   override val defaultConfig: Config =
     ConfigFactory.parseString(
       """{
+        |  # path = ""
         |  line-delimiter = "<tab>"
         |  event-delimiter = "<newline>#-:#:-#<newline>"
         |}""".stripMargin

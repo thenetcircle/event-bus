@@ -54,11 +54,12 @@ case class DefaultEventImpl(
   override def withExtra(_key: String, _value: String): Event =
     copy(metadata = metadata.copy(extra = metadata.extra + (_key -> _value)))
 
-  override def summary: String =
-    s"""EventSummary(
-       |uuid: $uuid,
-       |name: ${metadata.name}, 
-       |channel: ${metadata.channel},  
-       |createdAt: $createdAt
-       |)""".stripMargin
+  override def summary: String = {
+    var extraSummary = ""
+    if (metadata.channel.isDefined) extraSummary += s", channel: ${metadata.channel.get}"
+    if (metadata.topic.isDefined) extraSummary += s", topic: ${metadata.topic.get}"
+    if (metadata.extra.nonEmpty) extraSummary += s", extra: ${metadata.extra}"
+    if (metadata.transportMode.isDefined) extraSummary += s", trans_mode: ${metadata.transportMode.get}"
+    s"Event(uuid: $uuid, name: ${metadata.name.getOrElse("unknown")}, createdAt: $createdAt$extraSummary)"
+  }
 }

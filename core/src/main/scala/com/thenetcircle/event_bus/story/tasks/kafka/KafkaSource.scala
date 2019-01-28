@@ -186,7 +186,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     }
 
                   case (STAGING(exOp, _), event) =>
-                    taskLogger.error(
+                    taskLogger.warn(
                       s"A event ${event.summary} reaches the end with STAGING status" +
                         exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
                     )
@@ -195,11 +195,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                         taskLogger.info(
                           s"A event ${event.summary} is going to be committed with offset $co"
                         )
-                        throw new CommittableException(co, "Non handled STAGING status")
+                        Success(co)
                       case None =>
-                        throw new RuntimeException(
-                          "Non handled STAGING status without CommittableOffset"
-                        )
+                        val errorMessage =
+                          s"A event ${event.summary} with STAGING status missed PassThrough[CommittableOffset]"
+                        taskLogger.error(errorMessage)
+                        throw new IllegalStateException(errorMessage)
                     }
 
                   case (FAILED(ex, _), event) =>
