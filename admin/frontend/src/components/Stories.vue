@@ -21,7 +21,7 @@ import {RunnerStatus} from '../lib/runner-utils';
         <router-link class="box" :to="{ name: 'story', params: { 'storyName': story.name } }">
 
           <div class="columns" style="margin-bottom: 0px;">
-            <div class="column is-narrow">
+            <div class="column">
               <h4 class="subtitle is-4">
                 {{ story.name }}
               </h4>
