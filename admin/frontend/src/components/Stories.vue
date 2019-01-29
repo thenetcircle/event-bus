@@ -3,51 +3,56 @@ import {RunnerStatus} from '../lib/runner-utils';
 
   <div class="container">
 
+    <div class="tabs">
+      <ul>
+        <li :class="currTab == 'all' ? 'is-active' : null" @click="changeTab('all')"><a>ALL</a></li>
+        <li :class="currTab == 'running' ? 'is-active' : null" @click="changeTab('running')"><a>RUNNING</a></li>
+        <li :class="currTab == 'stopped' ? 'is-active' : null" @click="changeTab('stopped')"><a>STOPPED</a></li>
+      </ul>
+    </div>
+
+    <div style="margin-bottom: 1.5rem;">
+      <input class="input" type="text" placeholder="Filter By Story Name" v-model="filterValue"/>
+    </div>
+
     <div class="columns is-multiline">
 
-      <div class="column is-12">
-        <div class="tabs">
-          <ul>
-            <li :class="currTab == 'all' ? 'is-active' : null" @click="changeTab('all')"><a>ALL</a></li>
-            <li :class="currTab == 'running' ? 'is-active' : null" @click="changeTab('running')"><a>RUNNING</a></li>
-            <li :class="currTab == 'stopped' ? 'is-active' : null" @click="changeTab('stopped')"><a>STOPPED</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="column is-12" v-for="story in currStories">
+      <div class="column is-6" v-for="story in currStories">
         <router-link class="box" :to="{ name: 'story', params: { 'storyName': story.name } }">
-          <div  class="columns">
+
+          <div class="columns" style="margin-bottom: 0px;">
             <div class="column is-narrow">
               <h4 class="subtitle is-4">
                 {{ story.name }}
               </h4>
             </div>
-            <div class="column">
-              <span v-html="story.summary"></span>
-            </div>
             <div class="column is-narrow">
-              <a class="icon" @click.stop.prevent="onRemoveStory(story)"><i class="fas fa-trash-alt"></i></a>
+              <a class="icon" @click.stop.prevent="onRemoveStory(story)"><i
+                class="fas fa-trash-alt"></i></a>
             </div>
+          </div>
+
+          <div style="margin-bottom: 1.2rem;">
+            <span v-html="story.summary"></span>
           </div>
 
           <div v-if="story.runners.length">
             <table class="table is-bordered" style="margin-bottom: 0;">
               <thead>
-                <tr>
-                  <th>name</th>
-                  <th>host</th>
-                  <th>version</th>
-                  <th>status</th>
-                </tr>
+              <tr>
+                <th>name</th>
+                <th>host</th>
+                <th>version</th>
+                <th>status</th>
+              </tr>
               </thead>
               <tbody>
-                <tr v-for="runner in story.runners">
-                  <td>{{ runner.name }}</td>
-                  <td>{{ runner.host }}</td>
-                  <td>{{ runner.version }}</td>
-                  <td>{{ runner.status }}</td>
-                </tr>
+              <tr v-for="runner in story.runners">
+                <td>{{ runner.name }}</td>
+                <td>{{ runner.host }}</td>
+                <td>{{ runner.version }}</td>
+                <td>{{ runner.status }}</td>
+              </tr>
               </tbody>
             </table>
           </div>
@@ -77,8 +82,10 @@ import {RunnerStatus} from '../lib/runner-utils';
     data() {
       return {
         stories: <StorySummary[]>[],
+        fullCurrStories: <StorySummary[]>[],
         currStories: <StorySummary[]>[],
-        currTab: 'all'
+        currTab: 'all',
+        filterValue: ''
       }
     },
 
@@ -87,10 +94,23 @@ import {RunnerStatus} from '../lib/runner-utils';
     },
 
     watch: {
-      '$route': 'fetchData'
+      '$route': 'fetchData',
+      filterValue: function () {
+        this.filterCurrStoriesByFilterValue()
+      }
     },
 
     methods: {
+      filterCurrStoriesByFilterValue() {
+        let filterValue = this.filterValue
+        if (filterValue == '') {
+          this.currStories = this.fullCurrStories
+        }
+        else {
+          this.currStories = this.fullCurrStories.filter(ssu => ssu.name.indexOf(filterValue) !== -1)
+        }
+      },
+
       fetchData() {
         request.getStories()
           .then(result => {
@@ -127,11 +147,12 @@ import {RunnerStatus} from '../lib/runner-utils';
 
       changeTab(tab: string) {
         this.currTab = tab
+        this.filterValue = ''
         if (tab == 'all') {
-          this.currStories = this.sortStories(this.stories);
+          this.fullCurrStories = this.sortStories(this.stories);
         }
         else {
-          this.currStories = this.sortStories(this.stories.filter(storySummary => {
+          this.fullCurrStories = this.sortStories(this.stories.filter(storySummary => {
             let runningRunners = this.getStoryRunningRunnerNum(storySummary)
             if (tab == 'running')
               return runningRunners > 0
@@ -139,6 +160,7 @@ import {RunnerStatus} from '../lib/runner-utils';
               return runningRunners === 0
           }))
         }
+        this.filterCurrStoriesByFilterValue()
       },
 
       sortStories(stories: StorySummary[]) {
