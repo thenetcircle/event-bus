@@ -121,11 +121,11 @@ import {OpExecPos} from "../lib/story-utils";
   import ConfirmationBox from './ConfirmationBox.vue'
 
   export default Vue.extend({
-    props: ['info'],
+    props: ['info', 'showButtons'],
 
     data() {
       return {
-        changed: false,
+        changed: this.showButtons || false,
         storyInfo: StoryUtils.copyStoryInfo(this.info),
         taskEditor: {show: false, title: '', action: {} as TaskEditAction},
         confirmation: {

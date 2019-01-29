@@ -27,6 +27,10 @@ import {RunnerStatus} from '../lib/runner-utils';
               </h4>
             </div>
             <div class="column is-narrow">
+              <router-link class="icon" :to="{ name: 'duplicate-story', params: { 'storyName': story.name } }">
+                <i class="fas fa-copy"></i>
+              </router-link>
+
               <a class="icon" @click.stop.prevent="onRemoveStory(story)"><i
                 class="fas fa-trash-alt"></i></a>
             </div>

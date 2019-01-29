@@ -28,7 +28,7 @@
         <label class="label">Story Workflow:</label>
       </div>
 
-      <story-graph :info="storyInfo"
+      <story-graph v-if="storyInfo.source !== undefined" :info="storyInfo" :showButtons="showButtons"
                    @save="onSaveStory"></story-graph>
 
     </div>
@@ -46,13 +46,9 @@
   export default Vue.extend({
     data() {
       return {
-        storyName: '',
-        storyInfo: {
-          source: {type: 'click to set', settings: '{}'},
-          sink: {type: 'click to set', settings: '{}'},
-          status: 'INIT',
-          operators: []
-        } as StoryInfo
+        storyName: this.$route.params.storyName || '',
+        storyInfo: {} as StoryInfo,
+        showButtons: false
       }
     },
 
@@ -60,7 +56,31 @@
       StoryGraph
     },
 
+    created() {
+      this.fetchData()
+    },
+
     methods: {
+      fetchData() {
+        let storyName = this.storyName
+        if (storyName != '') {
+          this.storyName += '_copy'
+          this.showButtons = true
+          request.getStory(storyName)
+            .then(storyInfo => {
+              this.storyInfo = storyInfo
+            })
+        }
+        else {
+          this.storyInfo = {
+            source: {type: 'click to set', settings: '{}'},
+            sink: {type: 'click to set', settings: '{}'},
+            status: 'INIT',
+            operators: []
+          } as StoryInfo
+        }
+      },
+
       onSaveStory(newStoryInfo: StoryInfo) {
         let storyNameCheck = StoryUtils.checkStoryName(this.storyName)
         if (storyNameCheck !== true) {
