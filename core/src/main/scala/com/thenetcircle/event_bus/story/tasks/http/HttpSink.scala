@@ -127,18 +127,18 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
       .mapTo[Try[HttpResponse]]
       .map[(EventStatus, Event)] {
         case Success(resp) =>
-          taskLogger.info(s"A event successfully sent to HTTP endpoint [$endPoint], ${event.summary}")
+          taskLogger.info(s"A event was successfully sent to HTTP endpoint [$endPoint], ${event.summary}")
           (NORMAL, event)
         case Failure(ex) =>
           taskLogger.warn(
-            s"A event unsuccessfully sent to HTTP endpoint [$endPoint], ${event.summary}, failed with error $ex"
+            s"A event was sent to HTTP endpoint [$endPoint] failed, ${event.summary}, With error $ex"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }
       .recover {
         case ex: AskTimeoutException =>
           taskLogger.warn(
-            s"A event sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], ${event.summary}"
+            s"A event was sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], ${event.summary}"
           )
           (STAGING(Some(ex), getTaskName()), event)
       }

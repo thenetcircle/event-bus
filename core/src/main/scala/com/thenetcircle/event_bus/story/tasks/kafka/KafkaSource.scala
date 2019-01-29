@@ -170,46 +170,46 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                 .mapAsync(1)(extractEventFromMessage)
                 .via(storyFlow)
                 .map {
-                  case (_: SuccStatus, event) =>
+                  case (eventStatus: SuccStatus, event) =>
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"A event ${event.summary} is going to be committed with offset $co"
+                          s"A event is going to be committed to Kafka with $eventStatus status,  ${event.summary}, With offset $co"
                         )
                         // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
-                          s"A event ${event.summary} missed PassThrough[CommittableOffset]"
+                          s"A event missed PassThrough[CommittableOffset] with $eventStatus status, ${event.summary}"
                         taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
 
                   case (STAGING(exOp, _), event) =>
                     taskLogger.warn(
-                      s"A event ${event.summary} reaches the end with STAGING status" +
-                        exOp.map(e => s" and error ${e.getMessage}").getOrElse("")
+                      s"A event reaches the end with STAGING status, ${event.summary}" +
+                        exOp.map(ex => s", With error: $ex").getOrElse("")
                     )
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"A event ${event.summary} is going to be committed with offset $co"
+                          s"A event is going to be committed to Kafka with STAGING status, ${event.summary}, With offset $co"
                         )
                         Success(co)
                       case None =>
                         val errorMessage =
-                          s"A event ${event.summary} with STAGING status missed PassThrough[CommittableOffset]"
+                          s"A event missed PassThrough[CommittableOffset] with STAGING status, ${event.summary}"
                         taskLogger.error(errorMessage)
                         throw new IllegalStateException(errorMessage)
                     }
 
                   case (FAILED(ex, _), event) =>
-                    taskLogger.error(s"A event ${event.summary} reaches the end with error $ex")
+                    taskLogger.error(s"A event reaches the end with error, ${event.summary}, Error: $ex")
                     // complete the stream if failure, before was using Future.successful(Done)
                     event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
-                          s"A event ${event.summary} is going to be committed with offset $co"
+                          s"A event is going to be committed to Kafka with FAILED status, ${event.summary}, With offset $co"
                         )
                         throw new CommittableException(co, "FAILED status event")
                       case None =>
@@ -232,7 +232,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                 }
                 .collect {
                   case Success(co) =>
-                    taskLogger.debug(s"going to commit offset $co")
+                    taskLogger.debug(s"Going to commit to Kafka with offset $co")
                     co
                 }
                 .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
