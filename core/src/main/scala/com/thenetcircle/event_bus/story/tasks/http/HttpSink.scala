@@ -228,7 +228,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     implicit val materializer: Materializer = runningContext.getMaterializer()
 
     val http = Http()(runningContext.getActorSystem())
-    val host = settings.defaultRequest.uri.authority.host.address()
+    val host = settings.defaultRequest.uri.authority.host.toString()
     val port = settings.defaultRequest.uri.effectivePort
 
     val poolClientFlow = if (settings.connectionPoolSettings.isDefined) {
