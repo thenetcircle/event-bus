@@ -29,7 +29,7 @@ import akka.pattern.{ask, AskTimeoutException}
 import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
 import akka.util.Timeout
-import com.thenetcircle.event_bus.event.EventStatus.{NORMAL, STAGING}
+import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, ITaskLogging}
@@ -83,20 +83,29 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
 
   def doNormalSend(payload: Payload)(implicit runningContext: TaskRunningContext): Future[Payload] = {
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
-    val event                                       = payload._2
-    send(createHttpRequest(event))
-      .flatMap(checkResponse)
-      .map {
-        case CheckResponseResult.Passed => (NORMAL, event)
-        case result =>
-          (
-            STAGING(
-              Some(new UnexpectedResponseException(s"Check response failed with result $result")),
-              getTaskName()
-            ),
-            event
-          )
-      }
+
+    val event = payload._2
+    try {
+      send(createHttpRequest(event))
+        .flatMap(checkResponse)
+        .map {
+          case CheckResponseResult.Passed => (NORMAL, event)
+          case result =>
+            (
+              STAGING(
+                Some(new UnexpectedResponseException(s"Check response failed with result $result")),
+                getTaskName()
+              ),
+              event
+            )
+        }
+    } catch {
+      case NonFatal(ex) =>
+        taskLogger.warn(
+          s"A event was sent to HTTP endpoint failed by by doNormalSend, ${event.summary}, With error $ex"
+        )
+        Future.successful((FAILED(ex, getTaskName()), event))
+    }
   }
 
   def retrySendingFlow()(
@@ -119,29 +128,35 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     implicit val askTimeout: Timeout                = Timeout(retryDuration)
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    val event    = payload._2
-    val request  = createHttpRequest(event)
-    val endPoint = request.getUri().toString
+    val event = payload._2
+    try {
+      val request  = createHttpRequest(event)
+      val endPoint = request.getUri().toString
 
-    (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
-      .mapTo[Try[HttpResponse]]
-      .map[(EventStatus, Event)] {
-        case Success(resp) =>
-          taskLogger.info(s"A event was successfully sent to HTTP endpoint [$endPoint], ${event.summary}")
-          (NORMAL, event)
-        case Failure(ex) =>
-          taskLogger.warn(
-            s"A event was sent to HTTP endpoint [$endPoint] failed, ${event.summary}, With error $ex"
-          )
-          (STAGING(Some(ex), getTaskName()), event)
-      }
-      .recover {
-        case ex: AskTimeoutException =>
-          taskLogger.warn(
-            s"A event was sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], ${event.summary}"
-          )
-          (STAGING(Some(ex), getTaskName()), event)
-      }
+      (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
+        .mapTo[Try[HttpResponse]]
+        .map[(EventStatus, Event)] {
+          case Success(resp) =>
+            taskLogger.info(s"A event was successfully sent to HTTP endpoint [$endPoint], ${event.summary}")
+            (NORMAL, event)
+          case Failure(ex) =>
+            taskLogger.warn(
+              s"A event was sent to HTTP endpoint [$endPoint] failed, ${event.summary}, With error $ex"
+            )
+            (STAGING(Some(ex), getTaskName()), event)
+        }
+        .recover {
+          case ex: AskTimeoutException =>
+            taskLogger.warn(
+              s"A event was sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], ${event.summary}"
+            )
+            (STAGING(Some(ex), getTaskName()), event)
+        }
+    } catch {
+      case NonFatal(ex) =>
+        taskLogger.warn(s"A event was sent to HTTP endpoint failed by doRetrySend, ${event.summary}, With error $ex")
+        Future.successful((FAILED(ex, getTaskName()), event))
+    }
   }
 
   override def sinkFlow()(
@@ -406,10 +421,10 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
 
   override val taskType: String = "http"
 
-  override val defaultConfig: Config =
+  override def defaultConfig: Config =
     ConfigFactory.parseString(
       s"""{
-      |  # the default request could be overrided by info of the event
+      |  # this could be overwritten by event info later
       |  default-request {
       |    # uri = "http://www.google.com"
       |    method = POST
@@ -476,34 +491,36 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
                               |}""".stripMargin)
   }
 
+  protected def createHttpSinkSettings(config: Config)(implicit appContext: AppContext): HttpSinkSettings = {
+    val defaultRequest: HttpRequest = buildHttpRequestFromConfig(config.getConfig("default-request"))
+    val connectionPoolSettings =
+      config.as[Option[Map[String, String]]]("pool").filter(_.nonEmpty).map(buildConnectionPoolSettings)
+
+    val retrySenderConfig = config.getConfig("retry-sender")
+    val retrySenderSettings = RetrySenderSettings(
+      retrySenderConfig.as[FiniteDuration]("min-backoff"),
+      retrySenderConfig.as[FiniteDuration]("max-backoff"),
+      retrySenderConfig.as[Double]("random-factor"),
+      retrySenderConfig.as[FiniteDuration]("retry-duration")
+    )
+
+    HttpSinkSettings(
+      defaultRequest,
+      config.as[Boolean]("use-retry-sender"),
+      retrySenderSettings,
+      connectionPoolSettings,
+      config.as[Int]("concurrent-requests"),
+      config.as[Int]("request-buffer-size"),
+      config.as[Option[String]]("expected-response").filter(_.trim != ""),
+      config.as[Boolean]("allow-extra-signals")
+    )
+  }
+
   override def buildTask(
       config: Config
   )(implicit appContext: AppContext): HttpSink =
     try {
-      val defaultRequest: HttpRequest = buildHttpRequestFromConfig(config.getConfig("default-request"))
-      val connectionPoolSettings =
-        config.as[Option[Map[String, String]]]("pool").filter(_.nonEmpty).map(buildConnectionPoolSettings)
-
-      val retrySenderConfig = config.getConfig("retry-sender")
-      val retrySenderSettings = RetrySenderSettings(
-        retrySenderConfig.as[FiniteDuration]("min-backoff"),
-        retrySenderConfig.as[FiniteDuration]("max-backoff"),
-        retrySenderConfig.as[Double]("random-factor"),
-        retrySenderConfig.as[FiniteDuration]("retry-duration")
-      )
-
-      new HttpSink(
-        HttpSinkSettings(
-          defaultRequest,
-          config.as[Boolean]("use-retry-sender"),
-          retrySenderSettings,
-          connectionPoolSettings,
-          config.as[Int]("concurrent-requests"),
-          config.as[Int]("request-buffer-size"),
-          config.as[Option[String]]("expected-response").filter(_.trim != ""),
-          config.as[Boolean]("allow-extra-signals")
-        )
-      )
+      new HttpSink(createHttpSinkSettings(config))
     } catch {
       case ex: Throwable =>
         logger.error(s"Build HttpSink failed with error: ${ex.getMessage}")

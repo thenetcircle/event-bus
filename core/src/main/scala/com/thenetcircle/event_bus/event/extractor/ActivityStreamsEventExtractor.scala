@@ -37,11 +37,11 @@ case class Activity(
     published: Option[String],
     verb: Option[String],
     actor: Option[GeneralObject],
-    `object`: Option[GeneralObject],
     target: Option[GeneralObject],
     provider: Option[GeneralObject],
     // content: Option[Any],
-    generator: Option[GeneratorObject]
+    `object`: Option[RichObject],
+    generator: Option[RichObject]
 )
 
 sealed trait ActivityObject {
@@ -61,16 +61,16 @@ case class GeneralObject(
     // author: Option[ActivityObject]
 ) extends ActivityObject
 
-case class GeneratorObject(
+case class RichObject(
     id: Option[String],
     objectType: Option[String],
     content: Option[String]
 ) extends ActivityObject
 
 trait ActivityStreamsProtocol extends DefaultJsonProtocol {
-  implicit val generalObjectFormat   = jsonFormat2(GeneralObject)
-  implicit val generatorObjectFormat = jsonFormat3(GeneratorObject)
-  implicit val activityFormat        = jsonFormat9(Activity)
+  implicit val generalObjectFormat = jsonFormat2(GeneralObject)
+  implicit val richObjectFormat    = jsonFormat3(RichObject)
+  implicit val activityFormat      = jsonFormat9(Activity)
 }
 
 class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsProtocol {
@@ -97,10 +97,14 @@ class ActivityStreamsEventExtractor extends EventExtractor with ActivityStreamsP
           objOption.foreach(o => {
             o.id.foreach(s => extra = extra + (s"${prefix}Id"           -> s))
             o.objectType.foreach(s => extra = extra + (s"${prefix}Type" -> s))
+
+            if (o.isInstanceOf[RichObject]) {
+              o.asInstanceOf[RichObject].content.foreach(s => extra = extra + (s"${prefix}Content" -> s))
+            }
           })
         }
 
-      // TODO performance test for parse how many fields
+      // TODO performance for json parsing
       activity.verb.foreach(s => extra = extra + ("verb" -> s))
       setExtraFromActivityObject(activity.provider, "provider")
       setExtraFromActivityObject(activity.actor, "actor")

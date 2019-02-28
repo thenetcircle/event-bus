@@ -403,6 +403,117 @@ const sinkSchemas: any = {
     }
   },
 
+  'firebase': {
+    "title": "Firebase Sink",
+    "type": "object",
+    "properties": {
+      "default-request": {
+        "type": "object",
+        "title": "Server",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": [
+              "POST", "GET", "PUT", "OPTIONS", "DELETE", "HEAD", "PATCH"
+            ]
+          },
+          "uri": {
+            "type": "string",
+            "description": "when event does not include url info, use this default one",
+            "required": true
+          },
+          "auth-key": {
+            "type": "string",
+            "title": "Authorization Key",
+            "required": true
+          },
+          "protocol": {
+            "type": "string",
+            "default": "HTTP/1.1"
+          },
+          "headers": {
+            "type": "object",
+            "title": "Headers",
+            "properties": {}
+          }
+        },
+        "required": true
+      },
+      "concurrent-requests": {
+        "type": "integer",
+        "default": 1
+      },
+      "request-buffer-size": {
+        "type": "integer",
+        "default": 100
+      },
+      "expected-response": {
+        "type": "string",
+        "default": ""
+      },
+      "allow-extra-signals": {
+        "type": "boolean",
+        "default": false
+      },
+      "use-retry-sender": {
+        "type": "boolean",
+        "default": true
+      },
+      "retry-sender": {
+        "type": "object",
+        "properties": {
+          "min-backoff": {
+            "type": "string",
+            "default": "1 s"
+          },
+          "max-backoff": {
+            "type": "string",
+            "default": "30 s"
+          },
+          "random-factor": {
+            "type": "number",
+            "default": 0.2
+          },
+          "retry-duration": {
+            "type": "string",
+            "default": "12 h"
+          }
+        }
+      },
+      "pool": {
+        "type": "object",
+        "title": "Http Connection Pool",
+        "properties": {
+          "max-connections": {
+            "type": "integer",
+            "default": 32
+          },
+          "min-connections": {
+            "type": "integer",
+            "default": 0
+          },
+          "max-retries": {
+            "type": "integer",
+            "default": 1
+          },
+          "max-open-requests": {
+            "type": "integer",
+            "default": 256
+          },
+          "pipelining-limit": {
+            "type": "integer",
+            "default": 1
+          },
+          "idle-timeout": {
+            "type": "string",
+            "default": "30 s",
+            "description": "possible units: (s)econd, (m)inute, (h)ours"
+          }
+        }
+      }
+    }
+  },
+
   'kafka': {
     "title": "Kafka Sink",
     "type": "object",
@@ -460,6 +571,7 @@ const sinkSchemas: any = {
     }
   }
 }
+
 
 export default {
   'source': sourceSchemas,
