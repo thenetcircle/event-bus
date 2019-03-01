@@ -50,6 +50,7 @@ class FirebaseSinkBuilderTest extends TestBase {
     settings.requestBufferSize shouldEqual 100
     settings.expectedResponse shouldEqual None
     settings.allowExtraSignals shouldEqual false
+    settings.useHttpsConnectionPool shouldEqual true
 
     settings.useRetrySender shouldEqual true
     settings.retrySenderSettings.minBackoff shouldEqual 1.second

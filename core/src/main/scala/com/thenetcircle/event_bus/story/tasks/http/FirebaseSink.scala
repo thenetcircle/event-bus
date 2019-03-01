@@ -18,7 +18,7 @@
 package com.thenetcircle.event_bus.story.tasks.http
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, HttpRequest}
+import akka.http.scaladsl.model._
 import com.thenetcircle.event_bus.event.Event
 import com.thenetcircle.event_bus.story.interfaces.ITaskBuilder
 import com.thenetcircle.event_bus.{AppContext, BuildInfo}
@@ -67,6 +67,8 @@ class FirebaseSinkBuilder() extends HttpSinkBuilder with ITaskBuilder[FirebaseSi
         |  # set this to be empty, so only check response code
         |  expected-response = ""
         |  allow-extra-signals = false
+        |
+        |  use-https-connection-pool = true
         |
         |  pool {
         |    max-connections = 4

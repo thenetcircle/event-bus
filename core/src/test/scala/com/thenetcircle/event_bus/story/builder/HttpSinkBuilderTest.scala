@@ -44,6 +44,7 @@ class HttpSinkBuilderTest extends TestBase {
     settings.requestBufferSize shouldEqual 100
     settings.expectedResponse shouldEqual Some("ok")
     settings.allowExtraSignals shouldEqual true
+    settings.useHttpsConnectionPool shouldEqual false
 
     settings.useRetrySender shouldEqual true
     settings.retrySenderSettings.minBackoff shouldEqual 1.second

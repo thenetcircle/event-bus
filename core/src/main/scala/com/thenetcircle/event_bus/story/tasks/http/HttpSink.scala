@@ -55,7 +55,8 @@ case class HttpSinkSettings(
     requestBufferSize: Int = 100,
     expectedResponse: Option[String] = Some("ok"),
     allowExtraSignals: Boolean = true,
-    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`
+    requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`,
+    useHttpsConnectionPool: Boolean = false
 )
 
 case class RetrySenderSettings(
@@ -242,25 +243,12 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
 
     implicit val materializer: Materializer = runningContext.getMaterializer()
 
-    val http = Http()(runningContext.getActorSystem())
-    val host = settings.defaultRequest.uri.authority.host.toString()
-    val port = settings.defaultRequest.uri.effectivePort
-
-    val poolClientFlow = if (settings.connectionPoolSettings.isDefined) {
-      val connectionPoolSettings = settings.connectionPoolSettings.get
-      taskLogger.info(
-        s"Initializing a new HttpSender of $host:$port with connection pool settings: $connectionPoolSettings"
-      )
-      http.newHostConnectionPool[Promise[HttpResponse]](host, port, connectionPoolSettings)
-    } else {
-      taskLogger.info(s"Initializing a new HttpSender of $host:$port")
-      http.newHostConnectionPool[Promise[HttpResponse]](host, port)
-    }
+    val connectionPool = newHostConnectionPool()
 
     httpSender = Some(
       Source
         .queue[(HttpRequest, Promise[HttpResponse])](settings.requestBufferSize, OverflowStrategy.backpressure)
-        .via(poolClientFlow)
+        .via(connectionPool)
         .toMat(Sink.foreach {
           case (Success(resp), p) => p.success(resp)
           case (Failure(e), p)    => p.failure(e)
@@ -268,7 +256,36 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
         .run()
     )
 
-    taskLogger.info(s"The HttpSender of $host:$port is initialized.")
+    taskLogger.info(s"HttpSender is initialized.")
+  }
+
+  protected def newHostConnectionPool()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), Http.HostConnectionPool] = {
+    implicit val materializer: Materializer = runningContext.getMaterializer()
+
+    val http = Http()(runningContext.getActorSystem())
+    val host = settings.defaultRequest.uri.authority.host.toString()
+    val port = settings.defaultRequest.uri.effectivePort
+
+    if (settings.connectionPoolSettings.isDefined) {
+      val connectionPoolSettings = settings.connectionPoolSettings.get
+      taskLogger.info(
+        s"Initializing a new HttpSender of $host:$port with connection pool settings: $connectionPoolSettings"
+      )
+      if (settings.useHttpsConnectionPool) {
+        http.newHostConnectionPoolHttps[Promise[HttpResponse]](host, port, settings = connectionPoolSettings)
+      } else {
+        http.newHostConnectionPool[Promise[HttpResponse]](host, port, settings = connectionPoolSettings)
+      }
+    } else {
+      taskLogger.info(s"Initializing a new HttpSender of $host:$port")
+      if (settings.useHttpsConnectionPool) {
+        http.newHostConnectionPoolHttps[Promise[HttpResponse]](host, port)
+      } else {
+        http.newHostConnectionPool[Promise[HttpResponse]](host, port)
+      }
+    }
   }
 
   protected var retrySender: Option[ActorRef] = None
@@ -447,6 +464,8 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |    retry-duration = 12 h
       |  }
       |
+      |  use-https-connection-pool = false
+      |
       |  # pool settings will override the default settings of akka.http.host-connection-pool
       |  pool {
       |    max-connections = 32
@@ -512,7 +531,8 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       config.as[Int]("concurrent-requests"),
       config.as[Int]("request-buffer-size"),
       config.as[Option[String]]("expected-response").filter(_.trim != ""),
-      config.as[Boolean]("allow-extra-signals")
+      config.as[Boolean]("allow-extra-signals"),
+      useHttpsConnectionPool = config.as[Boolean]("use-https-connection-pool")
     )
   }
 
