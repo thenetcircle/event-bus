@@ -33,6 +33,7 @@ import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserialize
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
+import org.apache.kafka.clients.consumer.RetriableCommitFailedException
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration._
@@ -239,8 +240,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                   (batch, elem) =>
                     batch.updated(elem)
                 }
-                // TODO update parallelism and test order
-                .mapAsyncUnordered(1)(_.commitScaladsl())
+                .mapAsyncUnordered(1) { co =>
+                  val reCommitFunc = {
+                    case ex: RetriableCommitFailedException =>
+                      taskLogger.warn(s"Commit offsets to kafka failed and recommitting now. offset: $co")
+                      co.commitScaladsl().recoverWith(reCommitFunc)
+                  }
+                  co.commitScaladsl().recoverWith(reCommitFunc)
+                }
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
@@ -250,13 +257,14 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     )
                   done
                 })
-                .recover { // recover after run, to recover the stream running status
+              // comment this to let the stream fail when error happens
+              /*.recover {
                   case NonFatal(ex) =>
                     taskLogger.error(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex"
                     )
                     Done
-                }
+                }*/
             } catch {
               case NonFatal(ex) ⇒
                 taskLogger.error(
