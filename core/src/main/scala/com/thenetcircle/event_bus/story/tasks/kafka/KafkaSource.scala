@@ -18,9 +18,10 @@
 package com.thenetcircle.event_bus.story.tasks.kafka
 
 import akka.Done
-import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset, CommittableOffsetBatch}
-import akka.kafka.scaladsl.Consumer
-import akka.kafka.{AutoSubscription, ConsumerSettings, Subscriptions}
+import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset}
+import akka.kafka.scaladsl.Consumer.DrainingControl
+import akka.kafka.scaladsl.{Committer, Consumer}
+import akka.kafka.{AutoSubscription, CommitterSettings, ConsumerSettings, Subscriptions}
 import akka.stream._
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 import com.thenetcircle.event_bus.AppContext
@@ -33,7 +34,6 @@ import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserialize
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
-import org.apache.kafka.clients.consumer.RetriableCommitFailedException
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration._
@@ -96,6 +96,12 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
     // .withProperty("client.id", clientId)
   }
 
+  // TODO config committer settings
+  def getCommitterSettings()(
+      implicit runningContext: TaskRunningContext
+  ): CommitterSettings =
+    CommitterSettings(runningContext.getActorSystem())
+
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
   )(implicit executionContext: ExecutionContext): Future[Payload] = {
@@ -143,7 +149,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
       }
   }
 
-  var killSwitchOption: Option[KillSwitch] = None
+  var streamControlOption: Option[DrainingControl[Done]] = None
 
   override def run(
       storyFlow: Flow[Payload, Payload, StoryMat]
@@ -156,10 +162,9 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
     val kafkaSubscription     = getSubscription()
     taskLogger.info(s"Going to subscribe kafka topics: $kafkaSubscription")
 
-    val (killSwitch, doneFuture) =
+    val (control, doneFuture) =
       Consumer
         .committablePartitionedSource(kafkaConsumerSettings, kafkaSubscription)
-        .viaMat(KillSwitches.single)(Keep.right)
         .mapAsyncUnordered(settings.maxConcurrentPartitions) {
           case (topicPartition, source) =>
             try {
@@ -177,7 +182,6 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                         taskLogger.info(
                           s"A event is going to be committed to Kafka with $eventStatus status,  ${event.summary}, With offset $co"
                         )
-                        // co.commitScaladsl() // the commit logic
                         Success(co)
                       case None =>
                         val errorMessage =
@@ -206,8 +210,9 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
 
                   case (FAILED(ex, _), event) =>
                     taskLogger.error(s"A event reaches the end with error, ${event.summary}, Error: $ex")
-                    // complete the stream if failure, before was using Future.successful(Done)
-                    event.getPassThrough[CommittableOffset] match {
+                    throw ex
+                  // complete the stream if failure, before was using Future.successful(Done)
+                  /*event.getPassThrough[CommittableOffset] match {
                       case Some(co) =>
                         taskLogger.info(
                           s"A event is going to be committed to Kafka with FAILED status, ${event.summary}, With offset $co"
@@ -215,7 +220,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                         throw new CommittableException(co, "FAILED status event")
                       case None =>
                         throw ex
-                    }
+                    }*/
                 }
                 .recover {
                   case ex: CommittableException =>
@@ -224,19 +229,21 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                         s"Now recovering the last item to be a Success()"
                     )
                     Success(ex.getCommittableOffset())
-                  case NonFatal(ex) =>
+                  /*case NonFatal(ex) =>
                     taskLogger.info(
                       s"The substream listening on topicPartition $topicPartition was failed with error: $ex, " +
                         s"Now recovering the last item to be a Failure()"
                     )
-                    Failure(ex)
+                    Failure(ex)*/
                 }
                 .collect {
                   case Success(co) =>
-                    taskLogger.debug(s"Going to commit to Kafka with offset $co")
+                    taskLogger.debug(s"Sending offset $co to Committer flow")
                     co
                 }
-                .batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
+                // TODO maybe handler RetriableCommitFailedException
+                .via(Committer.flow(getCommitterSettings()))
+                /*.batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
                   (batch, elem) =>
                     batch.updated(elem)
                 }
@@ -247,7 +254,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                       co.commitScaladsl().recoverWith(reCommitFunc)
                   }
                   co.commitScaladsl().recoverWith(reCommitFunc)
-                }
+                }*/
                 .toMat(Sink.ignore)(Keep.right)
                 .run()
                 .map(done => {
@@ -276,14 +283,15 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
         .toMat(Sink.ignore)(Keep.both)
         .run()
 
-    killSwitchOption = Some(killSwitch)
+    streamControlOption = Some(DrainingControl(control, doneFuture))
     doneFuture
   }
 
   override def shutdown()(implicit runningContext: TaskRunningContext): Unit = {
     taskLogger.info(s"Shutting down Kafka Source.")
-    killSwitchOption.foreach(k => {
-      k.shutdown(); killSwitchOption = None
+    streamControlOption.foreach(control => {
+      control.drainAndShutdown()(runningContext.getExecutionContext())
+      streamControlOption = None
     })
   }
 }
@@ -344,11 +352,13 @@ class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
         |    # close-timeout = 20s
         |    # commit-timeout = 15s
         |    # commit-time-warning = 1s
-        |    # wakeup-timeout = 3s
-        |    # max-wakeups = 10
         |    # use-dispatcher = "akka.kafka.default-dispatcher"
         |    # wait-close-partition = 500ms
+        |
+        |    # wakeup options are Not used anymore (since 1.0-RC1), TODO remove from code
         |    # wakeup-debug = true
+        |    # wakeup-timeout = 3s
+        |    # max-wakeups = 10
         |  }
         |
         |  # Properties defined by org.apache.kafka.clients.consumer.ConsumerConfig

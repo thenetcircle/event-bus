@@ -6,7 +6,7 @@ import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Monitor
 import com.thenetcircle.event_bus.story.StoryMonitor.StoryMetrics
 import kamon.Kamon
-import kamon.metric.instrument.{Counter, InstrumentFactory}
+import kamon.metric.instrument.{Counter, Histogram, InstrumentFactory}
 import kamon.metric.{EntityRecorderFactory, GenericEntityRecorder}
 
 import scala.collection.mutable
@@ -58,6 +58,11 @@ class StoryMonitor(storyName: String) {
     this
   }
 
+  def onHttpSinkGetResponse(requestTime: Long): StoryMonitor = {
+    entity.foreach(_.httpSinkRequestTime.record(requestTime))
+    this
+  }
+
 }
 
 object StoryMonitor {
@@ -72,15 +77,16 @@ object StoryMonitor {
     })
 
   class StoryMetrics(instrumentFactory: InstrumentFactory) extends GenericEntityRecorder(instrumentFactory) {
-    val newEvent: Counter       = counter("new-event")
-    val normalEvent: Counter    = counter("processed.normal")
-    val stagingEvent: Counter   = counter("processed.staging")
-    val skippingEvent: Counter  = counter("processed.skipping")
-    val stagedEvent: Counter    = counter("processed.staged")
-    val failedEvent: Counter    = counter("processed.failed")
-    val badFormatEvent: Counter = counter("processed.badformat")
-    val completion: Counter     = counter("completion")
-    val termination: Counter    = counter("termination")
+    val newEvent: Counter              = counter("new-event")
+    val normalEvent: Counter           = counter("processed.normal")
+    val stagingEvent: Counter          = counter("processed.staging")
+    val skippingEvent: Counter         = counter("processed.skipping")
+    val stagedEvent: Counter           = counter("processed.staged")
+    val failedEvent: Counter           = counter("processed.failed")
+    val badFormatEvent: Counter        = counter("processed.badformat")
+    val completion: Counter            = counter("completion")
+    val termination: Counter           = counter("termination")
+    val httpSinkRequestTime: Histogram = histogram("http_sink.request_time")
 
     def exception(ex: Throwable) = try { counter("exceptions." + ex.getClass.getSimpleName) } catch {
       case _: Throwable => counter("exceptions.unknown")

@@ -47,7 +47,7 @@ class KafkaSourceBuilderTest extends TestBase {
     consumerSettings.pollInterval shouldEqual 50.milliseconds
     consumerSettings.pollTimeout shouldEqual 50.milliseconds
     consumerSettings.stopTimeout shouldEqual 30.seconds
-    consumerSettings.maxWakeups shouldEqual 10
+    // consumerSettings.maxWakeups shouldEqual 10
     consumerSettings.waitClosePartition shouldEqual 500.milliseconds
 
     consumerSettings.getProperty("bootstrap.servers") shouldEqual "test-server"
@@ -95,11 +95,11 @@ class KafkaSourceBuilderTest extends TestBase {
     consumerSettings.closeTimeout shouldEqual 12.seconds
     consumerSettings.commitTimeout shouldEqual 1.second
     consumerSettings.commitTimeWarning shouldEqual 5.seconds
-    consumerSettings.wakeupTimeout shouldEqual 5.seconds
-    consumerSettings.maxWakeups shouldEqual 30
+    // consumerSettings.wakeupTimeout shouldEqual 5.seconds
+    // consumerSettings.maxWakeups shouldEqual 30
     consumerSettings.dispatcher shouldEqual "test-dispatcher"
     consumerSettings.waitClosePartition shouldEqual 20.milliseconds
-    consumerSettings.wakeupDebug shouldEqual false
+    // consumerSettings.wakeupDebug shouldEqual false
 
     consumerSettings.getProperty("bootstrap.servers") shouldEqual "test-server"
     consumerSettings.getProperty("group.id") shouldEqual "test-group"

@@ -1,8 +1,8 @@
 import sbt._
 
 object Dependencies {
-  val akkaVersion      = "2.5.7"
-  val akkaHttpVersion  = "10.0.11"
+  val akkaVersion      = "2.5.21"
+  val akkaHttpVersion  = "10.0.15"
   val kamonVersion     = "0.6.7"
   val gatlingVersion   = "2.2.2"
   val zookeeperVersion = "3.4.11"
@@ -14,7 +14,7 @@ object Dependencies {
   val akkaHttp            = "com.typesafe.akka"          %% "akka-http"                     % akkaHttpVersion
   val akkaHttpTestkit     = "com.typesafe.akka"          %% "akka-http-testkit"             % akkaHttpVersion % Test
   val akkaHttpSprayJson   = "com.typesafe.akka"          %% "akka-http-spray-json"          % akkaHttpVersion
-  val akkaStreamKafka     = "com.typesafe.akka"          %% "akka-stream-kafka"             % "0.22"
+  val akkaStreamKafka     = "com.typesafe.akka"          %% "akka-stream-kafka"             % "1.0.1"
   val akkaStreamCassandra = "com.lightbend.akka"         %% "akka-stream-alpakka-cassandra" % "0.16"
   val akkaStreamFile      = "com.lightbend.akka"         %% "akka-stream-alpakka-file"      % "1.0-M1"
   val scalaLogging        = "com.typesafe.scala-logging" %% "scala-logging"                 % "3.7.2"

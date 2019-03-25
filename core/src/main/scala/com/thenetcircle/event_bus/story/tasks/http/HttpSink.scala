@@ -33,15 +33,16 @@ import com.thenetcircle.event_bus.event.EventStatus.{FAILED, NORMAL, STAGING}
 import com.thenetcircle.event_bus.event.{Event, EventStatus}
 import com.thenetcircle.event_bus.misc.Logging
 import com.thenetcircle.event_bus.story.interfaces.{ISink, ITaskBuilder, ITaskLogging}
-import com.thenetcircle.event_bus.story.tasks.http.HttpSink.{CheckResponseResult, RetrySender}
-import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskLogger, TaskRunningContext}
+import com.thenetcircle.event_bus.story.tasks.http.HttpSink.{CheckResponseResult, RequestException, RetrySender}
+import com.thenetcircle.event_bus.story._
+import com.thenetcircle.event_bus.story.tasks.http.HttpSink.RetrySender.Result
 import com.thenetcircle.event_bus.{AppContext, BuildInfo}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.control.NonFatal
+import scala.util.control.{NoStackTrace, NonFatal}
 import scala.util.{Failure, Random, Success, Try}
 
 class UnexpectedResponseException(info: String) extends RuntimeException(info)
@@ -130,32 +131,48 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     val event = payload._2
+    val t0    = System.nanoTime()
     try {
       val request  = createHttpRequest(event)
       val endPoint = request.getUri().toString
 
       (retrySender.get ? RetrySender.Commands.Req(request, retryDuration.fromNow))
-        .mapTo[Try[HttpResponse]]
+        .mapTo[Try[Result]]
         .map[(EventStatus, Event)] {
-          case Success(resp) =>
-            taskLogger.info(s"A event was successfully sent to HTTP endpoint [$endPoint], ${event.summary}")
+          case Success(Result(None)) =>
+            val t1 = calRequestTime(t0)
+            StoryMonitor(getStoryName()).onHttpSinkGetResponse(t1)
+            taskLogger.info(
+              s"A event was successfully sent to HTTP endpoint [$endPoint] in $t1 ms, ${event.summary}"
+            )
             (NORMAL, event)
-          case Failure(ex) =>
+
+          case Success(Result(Some(ex))) =>
+            val t1 = calRequestTime(t0)
+            StoryMonitor(getStoryName()).onHttpSinkGetResponse(t1)
             taskLogger.warn(
-              s"A event was sent to HTTP endpoint [$endPoint] failed, ${event.summary}, With error $ex"
+              s"A event was sent to HTTP endpoint [$endPoint] failed in $t1 ms because of unexpected status, ${event.summary}, Throwable: $ex"
             )
             (STAGING(Some(ex), getTaskName()), event)
+
+          case Failure(ex) =>
+            taskLogger.warn(
+              s"A event was sent to HTTP endpoint [$endPoint] failed in ${calRequestTime(t0)} ms, ${event.summary}, With error $ex"
+            )
+            (FAILED(ex, getTaskName()), event)
         }
         .recover {
           case ex: AskTimeoutException =>
             taskLogger.warn(
-              s"A event was sent to HTTP endpoint [$endPoint] timeout, exceed [$retryDuration], ${event.summary}"
+              s"A event was sent to HTTP endpoint [$endPoint] timeout in ${calRequestTime(t0)} ms, exceed [$retryDuration], ${event.summary}"
             )
-            (STAGING(Some(ex), getTaskName()), event)
+            (FAILED(ex, getTaskName()), event)
         }
     } catch {
       case NonFatal(ex) =>
-        taskLogger.warn(s"A event was sent to HTTP endpoint failed by doRetrySend, ${event.summary}, With error $ex")
+        taskLogger.warn(
+          s"A event was sent to HTTP endpoint failed by doRetrySend in ${calRequestTime(t0)} ms, ${event.summary}, With error $ex"
+        )
         Future.successful((FAILED(ex, getTaskName()), event))
     }
   }
@@ -177,7 +194,10 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
       runningContext.getActorSystem().stop(s)
       retrySender = None
     })
-    httpSender.foreach(_.complete())
+    httpSender.foreach(s => {
+      s.complete()
+      httpSender = None
+    })
   }
 
   def createHttpRequest(event: Event): HttpRequest =
@@ -188,16 +208,13 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     httpSender.get
       .offer(request -> responsePromise)
       .flatMap {
-        case QueueOfferResult.Enqueued => responsePromise.future
-        case QueueOfferResult.Dropped =>
-          Future.failed(new RuntimeException(s"HttpSender buffer overflowed. Try again later."))
+        case QueueOfferResult.Enqueued =>
+          responsePromise.future
         case QueueOfferResult.Failure(ex) => Future.failed(ex)
+        case QueueOfferResult.Dropped =>
+          Future.failed(new RequestException(s"HttpSender buffer is overflowed"))
         case QueueOfferResult.QueueClosed =>
-          Future.failed(
-            new RuntimeException(
-              s"HttpSender Buffer was closed (pool shut down) while running the request. Try again later."
-            )
-          )
+          Future.failed(new RequestException(s"HttpSender Buffer was closed (pool shut down)"))
       }(runningContext.getExecutionContext())
   }
 
@@ -307,6 +324,9 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
           )
       )
     }
+
+  // protected def calRequestTime(t0: Long): String = "%.3f".format((System.nanoTime().toFloat - t0.toFloat) / 1000000)
+  protected def calRequestTime(t0: Long): Long = (System.nanoTime() - t0) / 1000000
 }
 
 object HttpSink {
@@ -327,6 +347,8 @@ object HttpSink {
       }
   }
 
+  class RequestException(msg: String) extends RuntimeException(msg) with NoStackTrace
+
   object RetrySender {
     object Commands {
       case class Req(request: HttpRequest, deadline: Deadline, retryTimes: Int = 1) {
@@ -334,6 +356,8 @@ object HttpSink {
       }
       case class ExpBackoffRetry(req: Req)
     }
+
+    case class Result(ex: Option[Throwable])
 
     private def calculateDelay(
         retryTimes: Int,
@@ -365,7 +389,7 @@ object HttpSink {
 
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    def replyToReceiver(result: Try[HttpResponse], receiver: ActorRef): Unit = {
+    def replyToReceiver(result: Try[Result], receiver: ActorRef): Unit = {
       taskLogger.debug(s"Replying response to http-sink")
       receiver ! result
     }
@@ -382,6 +406,9 @@ object HttpSink {
           .scheduleOnce(retryDelay, self, req.retry())(executionContext, receiver)
     }
 
+    def isRetryableException(ex: Throwable): Boolean =
+      ex.isInstanceOf[StreamTcpException]
+
     override def receive: Receive = {
       case req @ Req(request, _, retryTimes) =>
         val receiver   = sender()
@@ -389,19 +416,23 @@ object HttpSink {
         sendFunc(request) andThen {
           case Success(resp) =>
             checkRespFunc(resp) andThen {
-              case Success(CheckResponseResult.Passed) => replyToReceiver(Success(resp), receiver)
+              case Success(CheckResponseResult.Passed) => replyToReceiver(Success(Result(None)), receiver)
               case Success(CheckResponseResult.UnexpectedHttpCode) =>
                 replyToReceiver(
-                  Failure(
-                    new UnexpectedResponseException(
-                      s"Get a response from upstream with non-200 [${resp.status}] status code"
+                  Success(
+                    Result(
+                      Some(
+                        new UnexpectedResponseException(
+                          s"Get a response from upstream with non-200 [${resp.status}] status code"
+                        )
+                      )
                     )
                   ),
                   receiver
                 )
               case Success(CheckResponseResult.UnexpectedBody) =>
                 replyToReceiver(
-                  Failure(new UnexpectedResponseException(s"The response body was not expected.")),
+                  Success(Result(Some(new UnexpectedResponseException(s"The response body was not expected.")))),
                   receiver
                 )
               case Success(CheckResponseResult.Retry) =>
@@ -412,10 +443,10 @@ object HttpSink {
               case Failure(ex) =>
                 taskLogger.info(s"Checking a http response failed with error message: ${ex.getMessage}")
                 try { resp.discardEntityBytes()(runningContext.getMaterializer()) } catch { case NonFatal(_) => }
-                replyToReceiver(Failure(ex), receiver)
+                replyToReceiver(Success(Result(Some(ex))), receiver)
             }
 
-          case Failure(ex) =>
+          case Failure(ex) if isRetryableException(ex) =>
             if (retryTimes == 1)
               taskLogger.warn(
                 s"Sending request to $requestUrl failed with error $ex, going to retry now."
@@ -424,8 +455,11 @@ object HttpSink {
               taskLogger.info(
                 s"Resending request to $requestUrl failed with error $ex, retry-times is $retryTimes"
               )
-
             self.tell(ExpBackoffRetry(req), receiver)
+
+          case Failure(ex) =>
+            taskLogger.error(s"Sending request to $requestUrl failed with error $ex, Set stream to failure.")
+            replyToReceiver(Failure(ex), receiver)
         }
 
       case ExpBackoffRetry(req) =>

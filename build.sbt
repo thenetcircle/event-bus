@@ -8,8 +8,8 @@ import scala.util.Try
 
 lazy val commonSettings = Seq(
   organization := "com.thenetcircle",
-  scalaVersion := "2.12.4",
-  crossScalaVersions := Seq(scalaVersion.value, "2.11.8"),
+  scalaVersion := "2.12.8",
+  crossScalaVersions := Seq(scalaVersion.value, "2.11.12"),
   crossVersion := CrossVersion.binary,
   scalacOptions ++= Seq("-unchecked", "-deprecation"),
   libraryDependencies ++= commonDependencies,
