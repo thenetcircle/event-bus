@@ -213,10 +213,10 @@ class KafkaSinkBuilder() extends ITaskBuilder[KafkaSink] {
         |
         |  # Properties defined by org.apache.kafka.clients.producer.ProducerConfig
         |  properties {
-        |    acks = all
-        |    retries = 30
-        |    "max.in.flight.requests.per.connection" = 5
-        |    "enable.idempotence" = true
+        |    # "enable.idempotence" = true
+        |    # acks = all
+        |    # "max.in.flight.requests.per.connection" = 5
+        |    retries = 5
         |  }
         |}""".stripMargin
     )

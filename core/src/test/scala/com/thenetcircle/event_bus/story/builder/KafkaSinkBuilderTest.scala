@@ -43,10 +43,11 @@ class KafkaSinkBuilderTest extends TestBase {
     producerSettings.closeTimeout shouldEqual 60.seconds
     producerSettings.parallelism shouldEqual 100
     producerSettings.dispatcher shouldEqual "akka.kafka.default-dispatcher"
-    producerSettings.properties("acks") shouldEqual "all"
-    producerSettings.properties("retries") shouldEqual "30"
+
+    producerSettings.properties("retries") shouldEqual "5"
+    /*producerSettings.properties("acks") shouldEqual "1"
     producerSettings.properties("max.in.flight.requests.per.connection") shouldEqual "5"
-    producerSettings.properties("enable.idempotence") shouldEqual "true"
+    producerSettings.properties("enable.idempotence") shouldEqual "false"*/
 
   }
 
@@ -76,11 +77,8 @@ class KafkaSinkBuilderTest extends TestBase {
     producerSettings.parallelism shouldEqual 50
     producerSettings.dispatcher shouldEqual "test-dispatcher"
 
-    producerSettings.properties("acks") shouldEqual "all"
-    producerSettings.properties("retries") shouldEqual "30"
+    producerSettings.properties("retries") shouldEqual "5"
     producerSettings.properties("max.in.flight.requests.per.connection") shouldEqual "10"
-    producerSettings.properties("enable.idempotence") shouldEqual "true"
-
     producerSettings.properties("batch.size") shouldEqual "1024"
     producerSettings.properties("connections.max.idle.ms") shouldEqual "100"
 
