@@ -71,6 +71,7 @@ class StoryBuilderTest extends TestBase {
       None,
       Left(Set("event-test-filter", "event-test-user", "event-test-default")),
       clientSettings = KafkaSourceClientSettings(
+        commitTimeWarning = Some(FiniteDuration(5, "s")),
         pollInterval = Some(FiniteDuration(50, "ms")),
         wakeupTimeout = Some(FiniteDuration(3, "s")),
         maxWakeups = Some(10),

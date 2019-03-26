@@ -351,7 +351,7 @@ class KafkaSourceBuilder() extends ITaskBuilder[KafkaSource] {
         |    # stop-timeout = 30s
         |    # close-timeout = 20s
         |    # commit-timeout = 15s
-        |    # commit-time-warning = 1s
+        |    commit-time-warning = 5s
         |    # use-dispatcher = "akka.kafka.default-dispatcher"
         |    # wait-close-partition = 500ms
         |

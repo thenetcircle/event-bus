@@ -47,7 +47,7 @@ class FirebaseSinkBuilderTest extends TestBase {
     print(settings.defaultRequest.headers)
 
     settings.concurrentRequests shouldEqual 1
-    settings.requestBufferSize shouldEqual 100
+    settings.requestBufferSize shouldEqual 1000
     settings.expectedResponse shouldEqual None
     settings.allowExtraSignals shouldEqual false
     settings.useHttpsConnectionPool shouldEqual true

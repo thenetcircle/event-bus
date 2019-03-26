@@ -17,7 +17,7 @@
 
 package com.thenetcircle.event_bus.story.tasks.http
 
-import java.util.concurrent.ThreadLocalRandom
+import java.util.concurrent.{ThreadLocalRandom, TimeoutException}
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.http.scaladsl.Http
@@ -53,7 +53,7 @@ case class HttpSinkSettings(
     retrySenderSettings: RetrySenderSettings = RetrySenderSettings(),
     connectionPoolSettings: Option[ConnectionPoolSettings] = None,
     concurrentRequests: Int = 1,
-    requestBufferSize: Int = 100,
+    requestBufferSize: Int = 1000,
     expectedResponse: Option[String] = Some("ok"),
     allowExtraSignals: Boolean = true,
     requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`,
@@ -406,8 +406,10 @@ object HttpSink {
           .scheduleOnce(retryDelay, self, req.retry())(executionContext, receiver)
     }
 
-    def isRetryableException(ex: Throwable): Boolean =
-      ex.isInstanceOf[StreamTcpException]
+    def isRetryableException(ex: Throwable): Boolean = ex match {
+      case _: StreamTcpException | _: TimeoutException | _: RequestTimeoutException => true
+      case _                                                                        => false
+    }
 
     override def receive: Receive = {
       case req @ Req(request, _, retryTimes) =>
@@ -486,7 +488,7 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |  }
       |
       |  concurrent-requests = 1
-      |  request-buffer-size = 100
+      |  request-buffer-size = 1000
       |  expected-response = "ok"
       |  allow-extra-signals = true
       |

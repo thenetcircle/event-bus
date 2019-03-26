@@ -41,7 +41,7 @@ class HttpSinkBuilderTest extends TestBase {
     val settings = task.settings
 
     settings.concurrentRequests shouldEqual 1
-    settings.requestBufferSize shouldEqual 100
+    settings.requestBufferSize shouldEqual 1000
     settings.expectedResponse shouldEqual Some("ok")
     settings.allowExtraSignals shouldEqual true
     settings.useHttpsConnectionPool shouldEqual false
@@ -84,7 +84,7 @@ class HttpSinkBuilderTest extends TestBase {
     val settings = sink.settings
 
     settings.concurrentRequests shouldEqual 1
-    settings.requestBufferSize shouldEqual 100
+    settings.requestBufferSize shouldEqual 1000
     settings.expectedResponse shouldEqual Some("ok")
     settings.allowExtraSignals shouldEqual true
 
