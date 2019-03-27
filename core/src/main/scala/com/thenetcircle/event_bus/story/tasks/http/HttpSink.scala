@@ -406,7 +406,7 @@ object HttpSink {
           .scheduleOnce(retryDelay, self, req.retry())(executionContext, receiver)
     }
 
-    def isRetryableException(ex: Throwable): Boolean = ex match {
+    def isRetriableException(ex: Throwable): Boolean = ex match {
       case _: StreamTcpException | _: TimeoutException | _: RequestTimeoutException => true
       case _                                                                        => false
     }
@@ -448,7 +448,7 @@ object HttpSink {
                 replyToReceiver(Success(Result(Some(ex))), receiver)
             }
 
-          case Failure(ex) if isRetryableException(ex) =>
+          case Failure(ex) if isRetriableException(ex) =>
             if (retryTimes == 1)
               taskLogger.warn(
                 s"Sending request to $requestUrl failed with error $ex, going to retry now."

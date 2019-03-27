@@ -17,8 +17,8 @@
 
 package com.thenetcircle.event_bus.story.tasks.kafka
 
-import akka.Done
-import akka.kafka.ConsumerMessage.{CommittableMessage, CommittableOffset}
+import akka.{Done, NotUsed}
+import akka.kafka.ConsumerMessage.{Committable, CommittableMessage, CommittableOffset, CommittableOffsetBatch}
 import akka.kafka.scaladsl.Consumer.DrainingControl
 import akka.kafka.scaladsl.{Committer, Consumer}
 import akka.kafka.{AutoSubscription, CommitterSettings, ConsumerSettings, Subscriptions}
@@ -34,6 +34,7 @@ import com.thenetcircle.event_bus.story.tasks.kafka.extended.KafkaKeyDeserialize
 import com.thenetcircle.event_bus.story.{Payload, StoryMat, TaskRunningContext}
 import com.typesafe.config.{Config, ConfigFactory}
 import net.ceedubs.ficus.Ficus._
+import org.apache.kafka.clients.consumer.RetriableCommitFailedException
 import org.apache.kafka.common.serialization.ByteArrayDeserializer
 
 import scala.concurrent.duration._
@@ -101,6 +102,27 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
       implicit runningContext: TaskRunningContext
   ): CommitterSettings =
     CommitterSettings(runningContext.getActorSystem())
+
+  def getCommitterFlow()(
+      implicit runningContext: TaskRunningContext
+  ): Flow[Committable, Done, NotUsed] = {
+    implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
+
+    val commitRetryTimes  = 3
+    val committerSettings = getCommitterSettings()
+
+    Flow[Committable]
+      .groupedWeightedWithin(committerSettings.maxBatch, committerSettings.maxInterval)(_.batchSize)
+      .map(CommittableOffsetBatch.apply)
+      .mapAsync(committerSettings.parallelism) { co =>
+        val reCommitFunc: Int => PartialFunction[Throwable, Future[Done]] = (i: Int) => {
+          case ex: RetriableCommitFailedException if i <= commitRetryTimes =>
+            taskLogger.warn(s"Commit offsets to kafka failed with a retriable exception, recommitting now. offset: $co")
+            co.commitScaladsl().recoverWith(reCommitFunc(i + 1))
+        }
+        co.commitScaladsl().recoverWith(reCommitFunc(1))
+      }
+  }
 
   def extractEventFromMessage(
       message: CommittableMessage[ConsumerKey, ConsumerValue]
@@ -241,8 +263,7 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
                     taskLogger.debug(s"Sending offset $co to Committer flow")
                     co
                 }
-                // TODO maybe handler RetriableCommitFailedException
-                .via(Committer.flow(getCommitterSettings()))
+                .via(getCommitterFlow())
                 /*.batch(max = settings.commitMaxBatches, first => CommittableOffsetBatch.empty.updated(first)) {
                   (batch, elem) =>
                     batch.updated(elem)

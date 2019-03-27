@@ -20,7 +20,7 @@ package com.thenetcircle.event_bus.story.tasks.kafka
 import java.util.concurrent.TimeUnit
 
 import akka.NotUsed
-import akka.kafka.ProducerMessage.{Envelope, Message, Result}
+import akka.kafka.ProducerMessage.{Envelope, Message, PassThroughResult, Result}
 import akka.kafka.scaladsl.Producer
 import akka.kafka.{ProducerMessage, ProducerSettings}
 import akka.stream.scaladsl.Flow
@@ -155,7 +155,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
       .map {
         case payload @ (status, event) if statusDecider(status) =>
           createMessage(payload)
-        case payload @ (_, event) =>
+        case payload =>
           ProducerMessage.passThrough[ProducerKey, ProducerValue, Payload](payload)
       }
       .via(Producer.flexiFlow(kafkaSettings, _kafkaProducer))
@@ -169,7 +169,7 @@ class KafkaSink(val settings: KafkaSinkSettings) extends ISink with IFailoverTas
           )
           (status, event)
 
-        case Result(_, Message(_, payload)) => payload
+        case PassThroughResult(payload) => payload
       }
   }
 
