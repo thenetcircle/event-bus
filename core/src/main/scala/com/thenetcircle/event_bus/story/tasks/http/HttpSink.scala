@@ -104,7 +104,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     } catch {
       case NonFatal(ex) =>
         taskLogger.warn(
-          s"A event was sent to HTTP endpoint failed by by doNormalSend, ${event.summary}, With error $ex"
+          s"A event was sent to HTTP endpoint failed by by doNormalSend, ${getEventSummary(event)}, With error $ex"
         )
         Future.successful((FAILED(ex, getTaskName()), event))
     }
@@ -143,7 +143,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
             val t1 = calRequestTime(t0)
             StoryMonitor(getStoryName()).onHttpSinkGetResponse(t1)
             taskLogger.info(
-              s"A event was successfully sent to HTTP endpoint [$endPoint] in $t1 ms, ${event.summary}"
+              s"A event was successfully sent to HTTP endpoint [$endPoint] in $t1 ms, ${getEventSummary(event)}"
             )
             (NORMAL, event)
 
@@ -151,27 +151,27 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
             val t1 = calRequestTime(t0)
             StoryMonitor(getStoryName()).onHttpSinkGetResponse(t1)
             taskLogger.warn(
-              s"A event was sent to HTTP endpoint [$endPoint] failed in $t1 ms because of unexpected status, ${event.summary}, Throwable: $ex"
+              s"A event was sent to HTTP endpoint [$endPoint] failed in $t1 ms because of unexpected status, ${getEventSummary(event)}, Throwable: $ex"
             )
             (STAGING(Some(ex), getTaskName()), event)
 
           case Failure(ex) =>
             taskLogger.warn(
-              s"A event was sent to HTTP endpoint [$endPoint] failed in ${calRequestTime(t0)} ms, ${event.summary}, With error $ex"
+              s"A event was sent to HTTP endpoint [$endPoint] failed in ${calRequestTime(t0)} ms, ${getEventSummary(event)}, With error $ex"
             )
             (FAILED(ex, getTaskName()), event)
         }
         .recover {
           case ex: AskTimeoutException =>
             taskLogger.warn(
-              s"A event was sent to HTTP endpoint [$endPoint] timeout in ${calRequestTime(t0)} ms, exceed [$retryDuration], ${event.summary}"
+              s"A event was sent to HTTP endpoint [$endPoint] timeout in ${calRequestTime(t0)} ms, exceed [$retryDuration], ${getEventSummary(event)}"
             )
             (FAILED(ex, getTaskName()), event)
         }
     } catch {
       case NonFatal(ex) =>
         taskLogger.warn(
-          s"A event was sent to HTTP endpoint failed by doRetrySend in ${calRequestTime(t0)} ms, ${event.summary}, With error $ex"
+          s"A event was sent to HTTP endpoint failed by doRetrySend in ${calRequestTime(t0)} ms, ${getEventSummary(event)}, With error $ex"
         )
         Future.successful((FAILED(ex, getTaskName()), event))
     }
@@ -326,7 +326,8 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     }
 
   // protected def calRequestTime(t0: Long): String = "%.3f".format((System.nanoTime().toFloat - t0.toFloat) / 1000000)
-  protected def calRequestTime(t0: Long): Long = (System.nanoTime() - t0) / 1000000
+  protected def calRequestTime(t0: Long): Long        = (System.nanoTime() - t0) / 1000000
+  protected def getEventSummary(event: Event): String = event.summary
 }
 
 object HttpSink {
@@ -407,8 +408,9 @@ object HttpSink {
     }
 
     def isRetriableException(ex: Throwable): Boolean = ex match {
-      case _: StreamTcpException | _: TimeoutException | _: RequestTimeoutException => true
-      case _                                                                        => false
+      case _: StreamTcpException | _: TimeoutException | _: RequestTimeoutException        => true
+      case _ if ex.getClass.getSimpleName.contains("UnexpectedConnectionClosureException") => true
+      case _                                                                               => false
     }
 
     override def receive: Receive = {
@@ -459,6 +461,7 @@ object HttpSink {
               )
             self.tell(ExpBackoffRetry(req), receiver)
 
+          // TODO maybe think about retry a few times when get other exceptions
           case Failure(ex) =>
             taskLogger.error(s"Sending request to $requestUrl failed with error $ex, Set stream to failure.")
             replyToReceiver(Failure(ex), receiver)

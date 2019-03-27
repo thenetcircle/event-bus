@@ -43,6 +43,8 @@ class FirebaseSink(val fbSinkSettings: FirebaseSinkSettings) extends HttpSink(fb
     settings.defaultRequest.withEntity(HttpEntity(requestContentType, requestData))
   }
 
+  override protected def getEventSummary(event: Event): String = event.summaryWithContent
+
 }
 
 class FirebaseSinkBuilder() extends HttpSinkBuilder with ITaskBuilder[FirebaseSink] {

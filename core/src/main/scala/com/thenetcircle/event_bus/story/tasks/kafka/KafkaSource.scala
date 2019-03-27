@@ -108,20 +108,22 @@ class KafkaSource(val settings: KafkaSourceSettings) extends ISource with ITaskL
   ): Flow[Committable, Done, NotUsed] = {
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
-    val commitRetryTimes  = 3
     val committerSettings = getCommitterSettings()
 
     Flow[Committable]
       .groupedWeightedWithin(committerSettings.maxBatch, committerSettings.maxInterval)(_.batchSize)
       .map(CommittableOffsetBatch.apply)
       .mapAsync(committerSettings.parallelism) { co =>
-        val reCommitFunc: Int => PartialFunction[Throwable, Future[Done]] = (i: Int) => {
-          case ex: RetriableCommitFailedException if i <= commitRetryTimes =>
-            taskLogger.warn(s"Commit offsets to kafka failed with a retriable exception, recommitting now. offset: $co")
-            co.commitScaladsl().recoverWith(reCommitFunc(i + 1))
-        }
-        co.commitScaladsl().recoverWith(reCommitFunc(1))
+        co.commitScaladsl().recoverWith(reCommitOffset(co)(1))
       }
+  }
+
+  def reCommitOffset(co: CommittableOffsetBatch)(i: Int)(
+      implicit executor: ExecutionContext
+  ): PartialFunction[Throwable, Future[Done]] = {
+    case ex: RetriableCommitFailedException if i <= settings.commitRetryTimes =>
+      taskLogger.warn(s"Commit offsets to kafka failed with a retriable exception, recommitting now. offset: $co")
+      co.commitScaladsl().recoverWith(reCommitOffset(co)(i + 1))
   }
 
   def extractEventFromMessage(
@@ -331,7 +333,8 @@ case class KafkaSourceSettings(
     subscribedTopics: Either[Set[String], String],
     maxConcurrentPartitions: Int = 1024,
     commitMaxBatches: Int = 50,
-    clientSettings: KafkaSourceClientSettings
+    clientSettings: KafkaSourceClientSettings,
+    commitRetryTimes: Int = 6
 )
 
 case class KafkaSourceClientSettings(

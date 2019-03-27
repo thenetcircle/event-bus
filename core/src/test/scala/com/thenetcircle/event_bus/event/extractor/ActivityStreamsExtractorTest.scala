@@ -307,4 +307,33 @@ class ActivityStreamsExtractorTest extends TestBase {
     testevent5.metadata.transportMode shouldEqual None
   }
 
+  it should "generate proper event summary" in {
+    var testdata = s"""
+         |{
+         |  "version": "1.0",
+         |  "object": {
+         |    "id": "objectId",
+         |    "objectType": "objectType",
+         |    "content": "{\\"v1\\":\\"d1\\",\\"v2\\":\\"d2\\"}"
+         |  },
+         |  "published": "2017-08-15T13:49:55Z",
+         |  "title": "message.send",
+         |  "verb": "send",
+         |  "id": "ED-providerId-message.send-actorId-59e704843e9cb",
+         |  "generator": {
+         |    "id": "tnc-event-dispatcher",
+         |    "objectType": "library",
+         |    "content": "{\\"mode\\":\\"async\\",\\"class\\":\\"dfEvent_Profile_Visit\\"}"
+         |  }
+         |}
+      """.stripMargin
+
+    val testevent =
+      Await.result(activityStreamsExtractor.extract(testdata.getBytes), 3.seconds)
+
+    testevent.summary shouldEqual "Event(uuid: ED-providerId-message.send-actorId-59e704843e9cb, name: message.send, createdAt: Tue Aug 15 21:49:55 CST 2017, extra: Map(generatorType -> library, generatorId -> tnc-event-dispatcher, objectType -> objectType, verb -> send, objectId -> objectId), trans_mode: ASYNC)"
+    testevent.summaryWithContent shouldEqual "Event(uuid: ED-providerId-message.send-actorId-59e704843e9cb, name: message.send, createdAt: Tue Aug 15 21:49:55 CST 2017, extra: Map(objectContent -> {\"v1\":\"d1\",\"v2\":\"d2\"}, generatorType -> library, generatorContent -> {\"mode\":\"async\",\"class\":\"dfEvent_Profile_Visit\"}, generatorId -> tnc-event-dispatcher, objectType -> objectType, verb -> send, objectId -> objectId), trans_mode: ASYNC)"
+
+  }
+
 }

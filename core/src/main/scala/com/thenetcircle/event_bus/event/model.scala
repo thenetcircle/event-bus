@@ -29,6 +29,7 @@ trait Event {
   def createdAt: Date
   def passThrough: Option[Any]
   def summary: String
+  def summaryWithContent: String
 
   def withPassThrough[T](_passThrough: T): Event
   def getPassThrough[T]: Option[T] = passThrough.map(_.asInstanceOf[T])
