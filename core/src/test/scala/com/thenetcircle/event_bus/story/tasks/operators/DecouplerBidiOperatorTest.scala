@@ -110,7 +110,7 @@ class DecouplerBidiOperatorTest extends TestBase with BeforeAndAfter {
         pl
       })
     try {
-      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 6 seconds)
+      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 10 seconds)
     } catch { case _ => }
 
     resultToList(operatedResult) shouldEqual List("event1", "event2", "event3", "event4") // 4 get into operated, since buffer size is 2, and operation size is 2, so rest 2 gone to failover
@@ -138,7 +138,7 @@ class DecouplerBidiOperatorTest extends TestBase with BeforeAndAfter {
       }
 
     try {
-      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 6 seconds)
+      Await.result(testSource.via(providers.join(task.flow())).runWith(returnSink), 30 seconds)
     } catch { case NonFatal(ex) => }
 
     resultToList(returnedResult) shouldEqual expectedReturnedResult
