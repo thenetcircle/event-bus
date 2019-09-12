@@ -344,6 +344,10 @@ const sinkSchemas: any = {
         "type": "boolean",
         "default": true
       },
+      "use-https-connection-pool": {
+        "type": "boolean",
+        "default": false
+      },
       "use-retry-sender": {
         "type": "boolean",
         "default": true
