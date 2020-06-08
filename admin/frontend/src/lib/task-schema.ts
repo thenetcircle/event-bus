@@ -344,6 +344,10 @@ const sinkSchemas: any = {
         "type": "boolean",
         "default": true
       },
+      "content-type": {
+        "type": "string",
+        "default": "text"
+      },
       "use-https-connection-pool": {
         "type": "boolean",
         "default": false

@@ -494,6 +494,7 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |  request-buffer-size = 1000
       |  expected-response = "ok"
       |  allow-extra-signals = true
+      |  content-type = "text"
       |
       |  use-retry-sender = true
       |  retry-sender {
@@ -562,6 +563,13 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       retrySenderConfig.as[FiniteDuration]("retry-duration")
     )
 
+    val mediaType = MediaTypes.forExtensionOption(config.getString("content-type")).getOrElse(MediaTypes.`text/plain`)
+    // val contentType = ContentType(mediaType, () => HttpCharsets.`UTF-8`)
+    val contentType = mediaType match {
+      case x: MediaType.WithFixedCharset ⇒ ContentType(x)
+      case x: MediaType.WithOpenCharset  ⇒ ContentType(x, HttpCharsets.`UTF-8`)
+    }
+
     HttpSinkSettings(
       defaultRequest,
       config.as[Boolean]("use-retry-sender"),
@@ -571,6 +579,7 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       config.as[Int]("request-buffer-size"),
       config.as[Option[String]]("expected-response").filter(_.trim != ""),
       config.as[Boolean]("allow-extra-signals"),
+      requestContentType = contentType,
       useHttpsConnectionPool = config.as[Boolean]("use-https-connection-pool")
     )
   }
