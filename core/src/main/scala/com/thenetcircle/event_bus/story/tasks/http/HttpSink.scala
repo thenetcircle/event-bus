@@ -244,7 +244,16 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
               CheckResponseResult.UnexpectedBody
           }
       } else {
-        response.discardEntityBytes()
+        Unmarshaller
+          .byteStringUnmarshaller(response.entity)
+          .map { _body =>
+            val body = _body.utf8String
+            taskLogger.info(
+              s"Get a response from upstream with status code ${status.value} and body $body."
+            )
+          }
+        // response.discardEntityBytes()
+
         Future.successful(CheckResponseResult.Passed)
       }
     } else {
