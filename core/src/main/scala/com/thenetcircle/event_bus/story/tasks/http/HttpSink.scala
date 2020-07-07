@@ -87,9 +87,10 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     implicit val executionContext: ExecutionContext = runningContext.getExecutionContext()
 
     val event = payload._2
+    val req   = createHttpRequest(event)
     try {
-      send(createHttpRequest(event))
-        .flatMap(checkResponse)
+      send(req)
+        .flatMap(resp => checkResponse(req, resp))
         .map {
           case CheckResponseResult.Passed => (NORMAL, event)
           case result =>
@@ -219,6 +220,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
   }
 
   def checkResponse(
+      request: HttpRequest,
       response: HttpResponse
   )(implicit runningContext: TaskRunningContext): Future[CheckResponseResult] = {
     implicit val materializer: Materializer         = runningContext.getMaterializer()
@@ -227,13 +229,20 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     val status = response.status
 
     if (status.isSuccess()) {
+      val requestBody: String = request.entity match {
+        case strict: HttpEntity.Strict =>
+          strict.data.utf8String
+        case _ =>
+          "Unknown"
+      }
+
       if (settings.expectedResponse.isDefined) {
         Unmarshaller
           .byteStringUnmarshaller(response.entity)
           .map { _body =>
             val body = _body.utf8String
             taskLogger.info(
-              s"Get a response from upstream with status code ${status.value} and body $body"
+              s"[CheckResponse] Response: status_code ${status.value}, body $body. Request: $requestBody"
             )
 
             if (body.trim == settings.expectedResponse.get.trim)
@@ -249,7 +258,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
           .map { _body =>
             val body = _body.utf8String
             taskLogger.info(
-              s"Get a response from upstream with status code ${status.value} and body $body."
+              s"[CheckResponse] Response status_code ${status.value}, body $body. Request: $requestBody"
             )
           }
         // response.discardEntityBytes()
@@ -324,7 +333,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
             Props(
               classOf[RetrySender],
               (request: HttpRequest) => this.send(request)(runningContext),
-              (response: HttpResponse) => this.checkResponse(response)(runningContext),
+              (request: HttpRequest, response: HttpResponse) => this.checkResponse(request, response)(runningContext),
               settings.retrySenderSettings,
               taskLogger,
               runningContext
@@ -388,7 +397,7 @@ object HttpSink {
 
   class RetrySender(
       sendFunc: HttpRequest => Future[HttpResponse],
-      checkRespFunc: HttpResponse => Future[CheckResponseResult],
+      checkRespFunc: (HttpRequest, HttpResponse) => Future[CheckResponseResult],
       retrySettings: RetrySenderSettings,
       taskLogger: TaskLogger
   )(
@@ -428,7 +437,7 @@ object HttpSink {
         val requestUrl = request.getUri().toString
         sendFunc(request) andThen {
           case Success(resp) =>
-            checkRespFunc(resp) andThen {
+            checkRespFunc(request, resp) andThen {
               case Success(CheckResponseResult.Passed) => replyToReceiver(Success(Result(None)), receiver)
               case Success(CheckResponseResult.UnexpectedHttpCode) =>
                 replyToReceiver(
