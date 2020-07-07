@@ -71,6 +71,7 @@ class FirebaseSinkBuilder() extends HttpSinkBuilder with ITaskBuilder[FirebaseSi
         |  allow-extra-signals = false
         |
         |  use-https-connection-pool = true
+        |  log-request-body = true
         |
         |  pool {
         |    max-connections = 4

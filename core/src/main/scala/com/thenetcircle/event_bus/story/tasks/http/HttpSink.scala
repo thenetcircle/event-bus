@@ -57,7 +57,8 @@ case class HttpSinkSettings(
     expectedResponse: Option[String] = Some("ok"),
     allowExtraSignals: Boolean = true,
     requestContentType: ContentType.NonBinary = ContentTypes.`text/plain(UTF-8)`,
-    useHttpsConnectionPool: Boolean = false
+    useHttpsConnectionPool: Boolean = false,
+    logRequestBody: Boolean = false
 )
 
 case class RetrySenderSettings(
@@ -229,11 +230,15 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
     val status = response.status
 
     if (status.isSuccess()) {
-      val requestBody: String = request.entity match {
-        case strict: HttpEntity.Strict =>
-          strict.data.utf8String
-        case _ =>
-          "Unknown"
+      var requestBodyLog: String = ""
+      if (settings.logRequestBody) {
+        val theBody = request.entity match {
+          case strict: HttpEntity.Strict =>
+            strict.data.utf8String
+          case _ =>
+            "Unknown"
+        }
+        requestBodyLog = s"Request: $theBody"
       }
 
       if (settings.expectedResponse.isDefined) {
@@ -242,7 +247,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
           .map { _body =>
             val body = _body.utf8String
             taskLogger.info(
-              s"[CheckResponse] Response: status_code ${status.value}, body $body. Request: $requestBody"
+              s"[CheckResponse] Response: status_code ${status.value}, body $body. $requestBodyLog"
             )
 
             if (body.trim == settings.expectedResponse.get.trim)
@@ -258,7 +263,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
           .map { _body =>
             val body = _body.utf8String
             taskLogger.info(
-              s"[CheckResponse] Response status_code ${status.value}, body $body. Request: $requestBody"
+              s"[CheckResponse] Response status_code ${status.value}, body $body. $requestBodyLog"
             )
           }
         // response.discardEntityBytes()
@@ -523,6 +528,7 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       |  }
       |
       |  use-https-connection-pool = false
+      |  log-request-body = false
       |
       |  # pool settings will override the default settings of akka.http.host-connection-pool
       |  pool {
@@ -598,7 +604,8 @@ class HttpSinkBuilder() extends ITaskBuilder[HttpSink] with Logging {
       config.as[Option[String]]("expected-response").filter(_.trim != ""),
       config.as[Boolean]("allow-extra-signals"),
       requestContentType = contentType,
-      useHttpsConnectionPool = config.as[Boolean]("use-https-connection-pool")
+      useHttpsConnectionPool = config.as[Boolean]("use-https-connection-pool"),
+      logRequestBody = config.as[Boolean]("log-request-body")
     )
   }
 
