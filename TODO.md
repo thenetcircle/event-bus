@@ -27,7 +27,7 @@
 - kafka consumer offset update
 - update story status and register runner on story
 - dont send syncplus and so on events to community side
-- upgrade document
+- upgrade document 
 - ~~remove version from application.conf~~
 - test that if zookeeper fully down / partly down, how system working?
 - ~~prevent the case update multiple zookeeper nodes at once (like create story, update story)~~
