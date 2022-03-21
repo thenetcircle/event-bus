@@ -203,7 +203,7 @@ class HttpSink(val settings: HttpSinkSettings) extends ISink with ITaskLogging {
   }
 
   def createHttpRequest(event: Event): HttpRequest = {
-    req = settings.defaultRequest.withEntity(HttpEntity(settings.requestContentType, event.body.data))
+    val req = settings.defaultRequest.withEntity(HttpEntity(settings.requestContentType, event.body.data))
     taskLogger.debug(s"Created a new Request ${req}.")
     return req
   }
